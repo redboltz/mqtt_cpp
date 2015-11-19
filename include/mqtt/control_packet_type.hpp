@@ -1,32 +1,41 @@
 // Copyright Takatoshi Kondo 2015
+//
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#if !defined(CONTROL_PACKET_TYPE_HPP)
-#define CONTROL_PACKET_TYPE_HPP
+#if !defined(MQTT_CONTROL_PACKET_TYPE_HPP)
+#define MQTT_CONTROL_PACKET_TYPE_HPP
+
+#include <cstdint>
 
 namespace mqtt {
 
-enum class control_packet_type {
+namespace control_packet_type {
  // reserved    =  0,
-    connect     =  1,
-    connack     =  2,
-    publish     =  3,
-    puback      =  4,
-    pubrec      =  5,
-    pubrel      =  6,
-    pubcomp     =  7,
-    subscribe   =  8,
-    suback      =  9,
-    unsubscribe = 10,
-    unsuback    = 11,
-    pingreq     = 12,
-    pingresp    = 13,
-    disconnect  = 14,
+constexpr std::uint8_t const connect     =  1;
+constexpr std::uint8_t const connack     =  2;
+constexpr std::uint8_t const publish     =  3;
+constexpr std::uint8_t const puback      =  4;
+constexpr std::uint8_t const pubrec      =  5;
+constexpr std::uint8_t const pubrel      =  6;
+constexpr std::uint8_t const pubcomp     =  7;
+constexpr std::uint8_t const subscribe   =  8;
+constexpr std::uint8_t const suback      =  9;
+constexpr std::uint8_t const unsubscribe = 10;
+constexpr std::uint8_t const unsuback    = 11;
+constexpr std::uint8_t const pingreq     = 12;
+constexpr std::uint8_t const pingresp    = 13;
+constexpr std::uint8_t const disconnect  = 14;
  // reserved    = 15
-};
+
+} // namespace control_packet_type
+
+inline
+constexpr std::uint8_t get_control_packet_type(std::uint8_t v) {
+    return v >> 4;
+}
 
 } // namespace mqtt
 
-#endif // CONTROL_PACKET_TYPE_HPP
+#endif // MQTT_CONTROL_PACKET_TYPE_HPP

@@ -1,0 +1,13 @@
+version: 0.1.0.{build}
+environment:
+  matrix:
+    - notls: -DMQTT_NO_TLS=ON
+    - notls: -DMQTT_NO_TLS=OFF
+build_script:
+- md build
+- cd build
+- cmake %notls% ..
+- cmake --build . --config Release
+
+test_script:
+- ctest -V
