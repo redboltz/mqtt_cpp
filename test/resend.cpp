@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 break;
             case 2:
                 BOOST_TEST(sp == false);
-                pid_pub = c.publish_at_least_once("mqtt_cpp_client/test/topic1", "topic1_contents");
+                pid_pub = c.publish_at_least_once(topic_base() + "/topic1", "topic1_contents");
                 c.force_disconnect();
                 break;
             case 4:
@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 break;
             case 2:
                 BOOST_TEST(sp == false);
-                pid_pub = c.publish_exactly_once("mqtt_cpp_client/test/topic1", "topic1_contents");
+                pid_pub = c.publish_exactly_once(topic_base() + "/topic1", "topic1_contents");
                 c.force_disconnect();
                 break;
             case 4:
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 break;
             case 2:
                 BOOST_TEST(sp == false);
-                pid_pub = c.publish_exactly_once("mqtt_cpp_client/test/topic1", "topic1_contents");
+                pid_pub = c.publish_exactly_once(topic_base() + "/topic1", "topic1_contents");
                 break;
             case 5:
                 BOOST_TEST(sp == true);
@@ -234,7 +234,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                 break;
             case 2:
                 BOOST_TEST(sp == false);
-                pid_pub = c.publish_exactly_once("mqtt_cpp_client/test/topic1", "topic1_contents");
+                pid_pub = c.publish_exactly_once(topic_base() + "/topic1", "topic1_contents");
                 c.force_disconnect();
                 break;
             case 4:
@@ -318,8 +318,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 break;
             case 2:
                 BOOST_TEST(sp == false);
-                pid_pub1 = c.publish_at_least_once("mqtt_cpp_client/test/topic1", "topic1_contents1");
-                pid_pub2 = c.publish_at_least_once("mqtt_cpp_client/test/topic1", "topic1_contents2");
+                pid_pub1 = c.publish_at_least_once(topic_base() + "/topic1", "topic1_contents1");
+                pid_pub2 = c.publish_at_least_once(topic_base() + "/topic1", "topic1_contents2");
                 c.force_disconnect();
                 break;
             case 4:

@@ -27,12 +27,12 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
 
             // Clear retaind contents
-            c.publish_at_most_once("mqtt_cpp_client/test/topic1", "", true);
-            c.publish_at_most_once("mqtt_cpp_client/test/topic2", "", true);
+            c.publish_at_most_once(topic_base() + "/topic1", "", true);
+            c.publish_at_most_once(topic_base() + "/topic2", "", true);
 
             pid_sub = c.subscribe(
-                "mqtt_cpp_client/test/topic1", mqtt::qos::at_most_once,
-                "mqtt_cpp_client/test/topic2", mqtt::qos::at_most_once);
+                topic_base() + "/topic1", mqtt::qos::at_most_once,
+                topic_base() + "/topic2", mqtt::qos::at_most_once);
         });
     c.set_close_handler(
         [&order]
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
             BOOST_TEST(results.size() == 2);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             BOOST_TEST(*results[1] == mqtt::qos::at_most_once);
-            c.publish_at_most_once("mqtt_cpp_client/test/topic1", "topic1_contents");
+            c.publish_at_most_once(topic_base() + "/topic1", "topic1_contents");
         });
     c.set_unsuback_handler(
         [&order, &c, &pid_unsub]
@@ -88,16 +88,16 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
             BOOST_CHECK(!packet_id);
             switch (order++) {
             case 2:
-                BOOST_TEST(topic == "mqtt_cpp_client/test/topic1");
+                BOOST_TEST(topic == topic_base() + "/topic1");
                 BOOST_TEST(contents == "topic1_contents");
-                c.publish_at_most_once("mqtt_cpp_client/test/topic2", "topic2_contents");
+                c.publish_at_most_once(topic_base() + "/topic2", "topic2_contents");
                 break;
             case 3:
-                BOOST_TEST(topic == "mqtt_cpp_client/test/topic2");
+                BOOST_TEST(topic == topic_base() + "/topic2");
                 BOOST_TEST(contents == "topic2_contents");
                 pid_unsub = c.unsubscribe(
-                    "mqtt_cpp_client/test/topic1",
-                    "mqtt_cpp_client/test/topic2");
+                    topic_base() + "/topic1",
+                    topic_base() + "/topic2");
                 break;
             default:
                 BOOST_CHECK(false);
@@ -128,9 +128,9 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
 
             // Clear retaind contents
-            c1.publish_at_most_once("mqtt_cpp_client/test/topic1", "", true);
+            c1.publish_at_most_once(topic_base() + "/topic1", "", true);
 
-            pid_sub1 = c1.subscribe("mqtt_cpp_client/test/topic1", mqtt::qos::at_most_once);
+            pid_sub1 = c1.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
         });
     c1.set_close_handler(
         [&order1]
@@ -165,7 +165,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             if (++sub_count == 2)
-                c1.publish_at_most_once("mqtt_cpp_client/test/topic1", "topic1_contents");
+                c1.publish_at_most_once(topic_base() + "/topic1", "topic1_contents");
         });
     c1.set_unsuback_handler(
         [&order1, &c1, &pid_unsub1]
@@ -185,9 +185,9 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
             BOOST_TEST(mqtt::publish::is_retain(header) == false);
             BOOST_CHECK(!packet_id);
             BOOST_TEST(order1++ == 2);
-            BOOST_TEST(topic == "mqtt_cpp_client/test/topic1");
+            BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
-            pid_unsub1 = c1.unsubscribe("mqtt_cpp_client/test/topic1");
+            pid_unsub1 = c1.unsubscribe(topic_base() + "/topic1");
         });
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
@@ -205,9 +205,9 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
 
             // Clear retaind contents
-            c2.publish_at_most_once("mqtt_cpp_client/test/topic1", "", true);
+            c2.publish_at_most_once(topic_base() + "/topic1", "", true);
 
-            pid_sub2 = c2.subscribe("mqtt_cpp_client/test/topic1", mqtt::qos::at_most_once);
+            pid_sub2 = c2.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
         });
     c2.set_close_handler(
         [&order2]
@@ -242,7 +242,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             if (++sub_count == 2)
-                c2.publish_at_most_once("mqtt_cpp_client/test/topic1", "topic1_contents");
+                c2.publish_at_most_once(topic_base() + "/topic1", "topic1_contents");
         });
     c2.set_unsuback_handler(
         [&order2, &c2, &pid_unsub2]
@@ -262,9 +262,9 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
             BOOST_TEST(mqtt::publish::is_retain(header) == false);
             BOOST_CHECK(!packet_id);
             BOOST_TEST(order2++ == 2);
-            BOOST_TEST(topic == "mqtt_cpp_client/test/topic1");
+            BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
-            pid_unsub2 = c2.unsubscribe("mqtt_cpp_client/test/topic1");
+            pid_unsub2 = c2.unsubscribe(topic_base() + "/topic1");
         });
 
     c1.connect();
@@ -306,9 +306,9 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
 
             // Clear retaind contents
-            c1.publish_at_most_once("mqtt_cpp_client/test/topic1", "", true);
+            c1.publish_at_most_once(topic_base() + "/topic1", "", true);
 
-            pid_sub1 = c1.subscribe("mqtt_cpp_client/test/topic1", mqtt::qos::at_least_once);
+            pid_sub1 = c1.subscribe(topic_base() + "/topic1", mqtt::qos::at_least_once);
         });
     c1.set_close_handler(
         [&order1]
@@ -330,7 +330,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
 
             c1ready = true;
             if (c1ready && c2ready && c3ready) {
-                pid_pub3 = c3.publish_at_least_once("mqtt_cpp_client/test/topic1", "topic1_contents");
+                pid_pub3 = c3.publish_at_least_once(topic_base() + "/topic1", "topic1_contents");
             }
         });
     c1.set_unsuback_handler(
@@ -351,9 +351,9 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
             BOOST_TEST(mqtt::publish::is_retain(header) == false);
             BOOST_TEST(*packet_id != 0);
             BOOST_TEST(order1++ == 2);
-            BOOST_TEST(topic == "mqtt_cpp_client/test/topic1");
+            BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
-            pid_unsub1 = c1.unsubscribe("mqtt_cpp_client/test/topic1");
+            pid_unsub1 = c1.unsubscribe(topic_base() + "/topic1");
         });
 
     std::uint16_t pid_sub2;
@@ -367,9 +367,9 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
 
             // Clear retaind contents
-            c2.publish_at_most_once("mqtt_cpp_client/test/topic1", "", true);
+            c2.publish_at_most_once(topic_base() + "/topic1", "", true);
 
-            pid_sub2 = c2.subscribe("mqtt_cpp_client/test/topic1", mqtt::qos::at_least_once);
+            pid_sub2 = c2.subscribe(topic_base() + "/topic1", mqtt::qos::at_least_once);
         });
     c2.set_close_handler(
         [&order2]
@@ -391,7 +391,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
 
             c2ready = true;
             if (c1ready && c2ready && c3ready) {
-                pid_pub3 = c3.publish_at_least_once("mqtt_cpp_client/test/topic1", "topic1_contents");
+                pid_pub3 = c3.publish_at_least_once(topic_base() + "/topic1", "topic1_contents");
             }
         });
     c2.set_unsuback_handler(
@@ -412,9 +412,9 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
             BOOST_TEST(mqtt::publish::is_retain(header) == false);
             BOOST_TEST(*packet_id != 0);
             BOOST_TEST(order2++ == 2);
-            BOOST_TEST(topic == "mqtt_cpp_client/test/topic1");
+            BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
-            pid_unsub2 = c2.unsubscribe("mqtt_cpp_client/test/topic1");
+            pid_unsub2 = c2.unsubscribe(topic_base() + "/topic1");
         });
 
     c3.set_connack_handler(
@@ -425,10 +425,10 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
 
             // Clear retaind contents
-            c3.publish_at_most_once("mqtt_cpp_client/test/topic1", "", true);
+            c3.publish_at_most_once(topic_base() + "/topic1", "", true);
             c3ready = true;
             if (c1ready && c2ready && c3ready) {
-                pid_pub3 = c3.publish_at_least_once("mqtt_cpp_client/test/topic1", "topic1_contents");
+                pid_pub3 = c3.publish_at_least_once(topic_base() + "/topic1", "topic1_contents");
             }
         });
     c3.set_close_handler(

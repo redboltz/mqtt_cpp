@@ -14,19 +14,19 @@ FOREACH (source_file ${exec_PROGRAMS})
         ${source_file_we}
         ${source_file}
     )
-    IF (MQTT_NO_TLS)
-        TARGET_LINK_LIBRARIES (${source_file_we}
-            boost_system
-            pthread
-        )
-    ELSE ()
-        TARGET_LINK_LIBRARIES (${source_file_we}
-            boost_system
-            pthread
-            ssl
-            crypto
+    LIST (APPEND MQTT_LINK_LIBRARIES
+        ${Boost_SYSTEM_LIBRARY}
+        ${CMAKE_THREAD_LIBS_INIT}
+    )
+    IF (NOT MQTT_NO_TLS)
+        LIST (APPEND MQTT_LINK_LIBRARIES
+            ${OPENSSL_LIBRARIES}
         )
     ENDIF ()
+    LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
+    TARGET_LINK_LIBRARIES (${source_file_we}
+        ${MQTT_LINK_LIBRARIES}
+    )
     IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         SET_PROPERTY (TARGET ${source_file_we}
                       APPEND_STRING PROPERTY COMPILE_FLAGS "-std=c++14 -Wall -Wextra -pthread -g -O0")

@@ -1,7 +1,7 @@
 MQTT client for C++14 based on Boost.Asio
 =========================================
 
-Version 0.1.0 [![Build Status](https://travis-ci.org/redboltz/mqtt_client_cpp.svg?branch=master)](https://travis-ci.org/redboltz/mqtt_client_cpp) [![Build status](https://ci.appveyor.com/api/projects/status/8kstcgt79qj123mw/branch/master?svg=true)](https://ci.appveyor.com/project/redboltz/mqtt_client_cpp/branch/master)
+Version 0.1.0 [![Build Status](https://travis-ci.org/redboltz/mqtt_client_cpp.svg?branch=master)](https://travis-ci.org/redboltz/mqtt_client_cpp) [![Build status](https://ci.appveyor.com/api/projects/status/21a267hd34s0kqu5?svg=true)](https://ci.appveyor.com/project/redboltz/mqtt_client_cpp/branch/master)
 
 Overview
 --------
@@ -36,6 +36,14 @@ make test
 
 In order to build tests, you need to prepare the Boost Libraries 1.59.0.
 
+Documents
+---------
+
+You can create html documents using doxygen.
+
+```
+make doxygen
+```
 
 License
 -------
