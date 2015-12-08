@@ -13,7 +13,7 @@ BOOST_AUTO_TEST_SUITE(test_resend)
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c.set_client_id("cid1");
+    c.set_client_id(cid1());
     c.set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c.set_client_id("cid1");
+    c.set_client_id(cid1());
     c.set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c.set_client_id("cid1");
+    c.set_client_id(cid1());
     c.set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c.set_client_id("cid1");
+    c.set_client_id(cid1());
     c.set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -300,7 +300,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c.set_client_id("cid1");
+    c.set_client_id(cid1());
     c.set_clean_session(true);
 
     std::uint16_t pid_pub1;
