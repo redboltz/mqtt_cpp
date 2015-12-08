@@ -14,13 +14,13 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
     boost::asio::io_service ios;
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c1.set_client_id("cid1");
+    c1.set_client_id(cid1());
     c1.set_clean_session(true);
     c1.set_will(
         mqtt::will(topic_base() + "/topic1", "will_contents"));
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c2.set_client_id("cid2");
+    c2.set_client_id(cid2());
     c2.set_clean_session(true);
 
     int order1 = 0;
@@ -115,13 +115,13 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
     boost::asio::io_service ios;
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c1.set_client_id("cid1");
+    c1.set_client_id(cid1());
     c1.set_clean_session(true);
     c1.set_will(
         mqtt::will(topic_base() + "/topic1", "will_contents", mqtt::qos::at_least_once));
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c2.set_client_id("cid2");
+    c2.set_client_id(cid2());
     c2.set_clean_session(true);
 
     int order1 = 0;
@@ -216,13 +216,13 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
     boost::asio::io_service ios;
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c1.set_client_id("cid1");
+    c1.set_client_id(cid1());
     c1.set_clean_session(true);
     c1.set_will(
         mqtt::will(topic_base() + "/topic1", "will_contents", mqtt::qos::exactly_once));
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c2.set_client_id("cid2");
+    c2.set_client_id(cid2());
     c2.set_clean_session(true);
 
     int order1 = 0;
@@ -317,13 +317,13 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
     boost::asio::io_service ios;
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c1.set_client_id("cid1");
+    c1.set_client_id(cid1());
     c1.set_clean_session(true);
     c1.set_will(
         mqtt::will(topic_base() + "/topic1", "will_contents", true));
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c2.set_client_id("cid2");
+    c2.set_client_id(cid2());
     c2.set_clean_session(true);
 
     int order1 = 0;

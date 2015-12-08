@@ -33,4 +33,14 @@ inline std::string const& topic_base() {
     return test_topic;
 }
 
+inline std::string const& cid1() {
+    static std::string test_cid = boost::uuids::to_string(uuid());
+    return test_cid;
+}
+
+inline std::string const& cid2() {
+    static std::string test_cid = boost::uuids::to_string(uuid());
+    return test_cid;
+}
+
 #endif // MQTT_TEST_SETTINGS_HPP

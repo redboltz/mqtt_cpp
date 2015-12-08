@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_SUITE(test_connect)
 BOOST_AUTO_TEST_CASE( tls_connect ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_tls_client(ios, broker_url, broker_tls_port);
-    c.set_client_id("cid1");
+    c.set_client_id(cid1());
     c.set_ca_cert_file("mosquitto.org.crt");
     c.set_clean_session(true);
 
@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE( tls_connect ) {
 BOOST_AUTO_TEST_CASE( notls_connect ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c.set_client_id("cid1");
+    c.set_client_id(cid1());
     c.set_clean_session(true);
 
     int order = 0;
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE( notls_connect ) {
 BOOST_AUTO_TEST_CASE( notls_keep_alive ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c.set_client_id("cid1");
+    c.set_client_id(cid1());
     c.set_clean_session(true);
 
     int order = 0;
@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE( notls_keep_alive ) {
 BOOST_AUTO_TEST_CASE( notls_connect_again ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c.set_client_id("cid1");
+    c.set_client_id(cid1());
     c.set_clean_session(true);
 
     bool first = true;
@@ -214,7 +214,7 @@ BOOST_AUTO_TEST_CASE( notls_nocid_noclean ) {
 BOOST_AUTO_TEST_CASE( notls_noclean ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c.set_client_id("cid1");
+    c.set_client_id(cid1());
 
     int order = 0;
     int connect = 0;
