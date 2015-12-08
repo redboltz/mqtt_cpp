@@ -11,6 +11,7 @@
 #include <vector>
 #include <functional>
 #include <set>
+#include <memory>
 
 #include <boost/optional.hpp>
 #include <boost/lexical_cast.hpp>
@@ -296,8 +297,8 @@ public:
      * Before calling connect(), call set_xxx member functions to configure the connection.
      */
     void connect() {
-        static as::ip::tcp::resolver r(ios_);
-        static as::ip::tcp::resolver::query q(host_, port_);
+        as::ip::tcp::resolver r(ios_);
+        as::ip::tcp::resolver::query q(host_, port_);
         auto it = r.resolve(q);
 #if defined(MQTT_NO_TLS)
         socket_.reset(new Socket(ios_));
@@ -774,28 +775,28 @@ private:
 
     class send_buffer {
     public:
-        send_buffer():buf_(payload_position_, 0) {}
+        send_buffer():buf_(std::make_shared<std::string>(static_cast<int>(payload_position_), 0)) {}
 
         std::string const& buf() const {
-            return buf_;
+            return *buf_;
         }
 
         std::string& buf() {
-            return buf_;
+            return *buf_;
         }
 
         std::pair<char const*, std::size_t>  finalize(std::uint8_t fixed_header) {
-            auto rb = remaining_bytes(buf_.size() - payload_position_);
+            auto rb = remaining_bytes(buf_->size() - payload_position_);
             std::size_t start_position = payload_position_ - rb.size() - 1;
-            buf_[start_position] = fixed_header;
-            buf_.replace(start_position + 1, rb.size(), rb);
+            (*buf_)[start_position] = fixed_header;
+            buf_->replace(start_position + 1, rb.size(), rb);
             return std::make_pair(
-                buf_.data() + start_position,
-                buf_.size() - start_position);
+                buf_->data() + start_position,
+                buf_->size() - start_position);
         }
     private:
         static constexpr std::size_t const payload_position_ = 5;
-        std::string buf_;
+        std::shared_ptr<std::string> buf_;
     };
 
     struct resend {
@@ -1211,7 +1212,7 @@ private:
         std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
-        params.push_back(std::make_pair(topic_name, qos));
+        params.push_back(std::make_pair(std::cref(topic_name), qos));
         send_subscribe(params, packet_id, args...);
     }
 
@@ -1239,7 +1240,7 @@ private:
         std::uint16_t packet_id,
         std::string const& topic_name,
         Args... args) {
-        params.push_back(topic_name);
+        params.push_back(std::cref(topic_name));
         send_unsubscribe(params, packet_id, args...);
     }
 

@@ -25,22 +25,22 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
 
             // Clear retaind contents
-            c.publish_at_most_once("mqtt_cpp_client/test/topic1", "", true);
+            c.publish_at_most_once(topic_base() + "/topic1", "", true);
 
             BOOST_TEST(
                 c.subscribe(
                     0,
-                    "mqtt_cpp_client/test/topic1",
+                    topic_base() + "/topic1",
                     mqtt::qos::at_most_once) == false);
             BOOST_TEST(
                 c.subscribe(
                     1,
-                    "mqtt_cpp_client/test/topic1",
+                    topic_base() + "/topic1",
                     mqtt::qos::at_most_once) == true);
             BOOST_TEST(
                 c.subscribe(
                     1,
-                    "mqtt_cpp_client/test/topic1",
+                    topic_base() + "/topic1",
                     mqtt::qos::at_most_once) == false);
         });
     c.set_close_handler(
@@ -65,12 +65,12 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 {
                     std::uint16_t packet_id = 0;
                     BOOST_TEST(
-                        c.unsubscribe(packet_id, "mqtt_cpp_client/test/topic1") == false);
+                        c.unsubscribe(packet_id, topic_base() + "/topic1") == false);
                 }
                 BOOST_TEST(
-                    c.unsubscribe(1, "mqtt_cpp_client/test/topic1") == true);
+                    c.unsubscribe(1, topic_base() + "/topic1") == true);
                 BOOST_TEST(
-                    c.unsubscribe(1, "mqtt_cpp_client/test/topic1") == false);
+                    c.unsubscribe(1, topic_base() + "/topic1") == false);
                 break;
             default:
                 BOOST_CHECK(false);
@@ -96,17 +96,17 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             BOOST_TEST(c.publish(
                            0,
-                           "mqtt_cpp_client/test/topic1",
+                           topic_base() + "/topic1",
                            "topic1_contents",
                            mqtt::qos::at_least_once) == false);
             BOOST_TEST(c.publish(
                            1,
-                           "mqtt_cpp_client/test/topic1",
+                           topic_base() + "/topic1",
                            "topic1_contents",
                            mqtt::qos::at_least_once) == true);
             BOOST_TEST(c.publish(
                            1,
-                           "mqtt_cpp_client/test/topic1",
+                           topic_base() + "/topic1",
                            "topic1_contents",
                            mqtt::qos::at_least_once) == false);
         });
@@ -128,13 +128,13 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
             BOOST_TEST(mqtt::publish::is_retain(header) == false);
             BOOST_CHECK(!packet_id);
-            BOOST_TEST(topic == "mqtt_cpp_client/test/topic1");
+            BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
             switch (order++) {
             case 2:
                 break;
             case 3:
-                c.unsubscribe("mqtt_cpp_client/test/topic1");
+                c.unsubscribe(topic_base() + "/topic1");
                 break;
             default:
                 BOOST_CHECK(false);

@@ -1,46 +1,30 @@
+sudo: false
 language: cpp
-os:
-  - linux
-  - osx
-cache:
-  - apt
 compiler:
-  - clang
-  - gcc
-os:
-  - osx
-  - linux
-before_install:
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo add-apt-repository -y ppa:h-rayflood/llvm-upper; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get update -qq; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get update; fi
-install:
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -qq gcc-5-multilib g++-5-multilib; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install --allow-unauthenticated -qq clang-3.6; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 90; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -y lib32gcc1; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -y libc6-i386; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -y lib32z1-dev; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -y lib32stdc++6; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -y bzip2; fi
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -y libc6-dbg; fi
+  - clang++
+# - g++
 
-- if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew unlink boost; fi
-  - if [ "$BOOST" == "boost" ]; then wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.zip && unzip -q boost_1_59_0.zip && cd boost_1_59_0 && ./bootstrap.sh && ./b2 --with-timer --with-chrono address-model="$ARCH" > /dev/null && sudo ./b2 --with-timer --with-chrono address-model="$ARCH" install > /dev/null && cd ..; fi
+install:
+  - if [ "$CXX" = "g++" ]; then export CXXFLAGS="-std=c++14"; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
+  - if [ "$CXX" = "clang++" ]; then export CXXFLAGS="-std=c++14"; fi
+  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
+  - wget -O boost_1_59_0.tar.bz2 http://sourceforge.net/projects/boost/files/latest/download?source=files && tar xf boost_1_59_0.tar.bz2 && cd boost_1_59_0 && cp ../user-config.jam . && cat user-config.jam && ./bootstrap.sh && ./b2 install --address-model=64 --with-system --with-test --prefix=../boost > /dev/null  && cd ..
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-precise-3.7
+      - llvm-toolchain-precise
+    packages:
+      - clang-3.7
+      - g++-5
+      - gcc-5
+      - cmake
 
 env:
   - FLAGS="-DMQTT_NO_TLS=ON"
   - FLAGS="-DMQTT_NO_TLS=OFF"
 
-before_script:
- - export PATH=/usr/local/bin:$PATH
-
-matrix:
-  exclude:
-    - os: osx
-      compiler: gcc
-
 script:
-  - git clean -xdf && mkdir build && cd build && cmake $FLAGS .. && make && make test
+  - mkdir build && cd build && cmake $FLAGS -DBoost_NO_SYSTEM_PATHS=ON -DBOOST_ROOT=`pwd`/../boost -DBOOST_INCLUDEDIR=`pwd`/../boost/include -DBOOST_LIBRARYDIR=`pwd`/../boost/lib .. && make VERBOSE=1 && ctest -VV

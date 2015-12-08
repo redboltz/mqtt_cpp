@@ -12,8 +12,8 @@
 namespace mqtt {
 
 inline
-constexpr char const* connect_return_code_to_str(std::uint8_t v) {
-    constexpr char const* str[] = {
+char const* connect_return_code_to_str(std::uint8_t v) {
+    char const * const str[] = {
         "accepted",
         " unacceptable_protocol_version",
         "identifier_rejected",

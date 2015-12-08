@@ -14,8 +14,8 @@ namespace mqtt {
 namespace qos {
 
 inline
-constexpr char const* to_str(std::uint8_t v) {
-    constexpr char const* str[] = {
+char const* to_str(std::uint8_t v) {
+    char const * const str[] = {
         "at_most_once",
         "at_least_once",
         "at_exactly_once"
