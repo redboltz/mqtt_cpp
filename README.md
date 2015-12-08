@@ -16,7 +16,7 @@ Add mqtt_client_cpp/include to your include path. Then, include mqtt_client_cpp.
 Example
 -------
 
-See ./example/no_tls.cpp and ./example/tls.cpp
+See [example/no_tls.cpp](https://github.com/redboltz/mqtt_client_cpp/blob/master/example/no_tls.cpp) and [example/tls.cpp](https://github.com/redboltz/mqtt_client_cpp/blob/master/example/tls.cpp)
 
 Test
 ----
