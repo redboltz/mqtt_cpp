@@ -236,9 +236,9 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
             }
         });
     c.set_unsuback_handler(
-        [&order, &c, &pid_sub]
+        [&order, &c, &pid_sub, &pid_unsub]
         (std::uint16_t packet_id) {
-            BOOST_TEST(packet_id == 1);
+            BOOST_TEST(packet_id == pid_unsub);
             switch (order++) {
             case 3:
                 pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
