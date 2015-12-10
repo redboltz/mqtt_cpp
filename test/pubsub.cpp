@@ -222,18 +222,18 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             BOOST_CHECK(false);
         });
     c.set_pubrec_handler(
-        [&order]
+        [&order, &pid_pub]
         (std::uint16_t packet_id) {
             BOOST_CHECK(order == 2 || order == 3);
             ++order;
-            BOOST_TEST(packet_id == 1);
+            BOOST_TEST(packet_id == pid_pub);
         });
     c.set_pubcomp_handler(
-        [&order, &c, &pub_seq_finished, &pid_unsub]
+        [&order, &c, &pub_seq_finished, &pid_unsub, &pid_pub]
         (std::uint16_t packet_id) {
             BOOST_CHECK(order == 3 || order == 4);
             ++order;
-            BOOST_TEST(packet_id == 1);
+            BOOST_TEST(packet_id == pid_pub);
             if (order == 5) {
                 pub_seq_finished = true;
                 pid_unsub = c.unsubscribe(topic_base() + "/topic1");
@@ -332,10 +332,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             c.publish_at_most_once(topic_base() + "/topic1", "topic1_contents");
         });
     c.set_unsuback_handler(
-        [&order, &c]
+        [&order, &c, &pid_unsub]
         (std::uint16_t packet_id) {
             BOOST_TEST(order++ == 3);
-            BOOST_TEST(packet_id == 1);
+            BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
         });
     c.set_publish_handler(
@@ -489,11 +489,11 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             BOOST_CHECK(false);
         });
     c.set_pubrec_handler(
-        [&order]
+        [&order, &pid_pub]
         (std::uint16_t packet_id) {
             BOOST_CHECK(order == 2 || order == 3);
             ++order;
-            BOOST_TEST(packet_id == 1);
+            BOOST_TEST(packet_id == pid_pub);
         });
     c.set_pubcomp_handler(
         [&order, &c, &pub_seq_finished, &pid_pub, &pid_unsub]

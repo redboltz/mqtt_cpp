@@ -21,6 +21,7 @@
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/member.hpp>
+#include <boost/multi_index/composite_key.hpp>
 
 #if !defined(MQTT_NO_TLS)
 #include <boost/asio/ssl.hpp>
@@ -777,12 +778,12 @@ private:
     public:
         send_buffer():buf_(std::make_shared<std::string>(static_cast<int>(payload_position_), 0)) {}
 
-        std::string const& buf() const {
-            return *buf_;
+        std::shared_ptr<std::string> const& buf() const {
+            return buf_;
         }
 
-        std::string& buf() {
-            return *buf_;
+        std::shared_ptr<std::string>& buf() {
+            return buf_;
         }
 
         std::pair<char const*, std::size_t>  finalize(std::uint8_t fixed_header) {
@@ -799,23 +800,51 @@ private:
         std::shared_ptr<std::string> buf_;
     };
 
-    struct resend {
+    struct store {
+        store(
+            std::uint16_t id,
+            std::uint8_t type,
+            std::shared_ptr<std::string> const& b = nullptr,
+            char const* p = nullptr,
+            std::size_t s = 0)
+            :
+            packet_id(id),
+            expected_control_packet_type(type),
+            buf(b),
+            ptr(p),
+            size(s) {}
         std::uint16_t packet_id;
-        send_buffer sb;
+        std::uint8_t expected_control_packet_type;
+        std::shared_ptr<std::string> buf;
         char const* ptr;
         std::size_t size;
     };
 
     struct tag_packet_id {};
+    struct tag_packet_id_type {};
     struct tag_seq {};
-    using mi_resend = mi::multi_index_container<
-        resend,
+    using mi_store = mi::multi_index_container<
+        store,
         mi::indexed_by<
             mi::ordered_unique<
+                mi::tag<tag_packet_id_type>,
+                mi::composite_key<
+                    store,
+                    mi::member<
+                        store, std::uint16_t,
+                        &store::packet_id
+                    >,
+                    mi::member<
+                        store, std::uint8_t,
+                        &store::expected_control_packet_type
+                    >
+                >
+            >,
+            mi::ordered_non_unique<
                 mi::tag<tag_packet_id>,
                 mi::member<
-                    resend, std::uint16_t,
-                    &resend::packet_id
+                    store, std::uint16_t,
+                    &store::packet_id
                 >
             >,
             mi::sequenced<
@@ -828,62 +857,62 @@ private:
 
         send_buffer sb;
         std::size_t payload_position = 5; // Fixed Header + max size of Remaining bytes
-        sb.buf().resize(payload_position);
-        sb.buf().push_back(0x00);   // Length MSB(0)
-        sb.buf().push_back(0x04);   // Length LSB(4)
-        sb.buf().push_back('M');
-        sb.buf().push_back('Q');
-        sb.buf().push_back('T');
-        sb.buf().push_back('T');
-        sb.buf().push_back(0x04);   // Level(4) MQTT version 3.1.1
-        std::size_t connect_flags_position = sb.buf().size();
+        sb.buf()->resize(payload_position);
+        sb.buf()->push_back(0x00);   // Length MSB(0)
+        sb.buf()->push_back(0x04);   // Length LSB(4)
+        sb.buf()->push_back('M');
+        sb.buf()->push_back('Q');
+        sb.buf()->push_back('T');
+        sb.buf()->push_back('T');
+        sb.buf()->push_back(0x04);   // Level(4) MQTT version 3.1.1
+        std::size_t connect_flags_position = sb.buf()->size();
         char initial_value = clean_session_ ? 0b00000010 : 0;
-        sb.buf().push_back(initial_value); // Connect Flags
+        sb.buf()->push_back(initial_value); // Connect Flags
         // Keep Alive MSB
-        sb.buf().push_back(static_cast<std::uint8_t>(keep_alive_sec_ >> 8));
+        sb.buf()->push_back(static_cast<std::uint8_t>(keep_alive_sec_ >> 8));
         // Keep Alive LSB
-        sb.buf().push_back(static_cast<std::uint8_t>(keep_alive_sec_ & 0xff));
+        sb.buf()->push_back(static_cast<std::uint8_t>(keep_alive_sec_ & 0xff));
 
         // client id
         if (!utf8string::is_valid_length(client_id_)) throw utf8string_length_error();
         if (!utf8string::is_valid_contents(client_id_)) throw utf8string_contents_error();
-        sb.buf().insert(sb.buf().size(), encoded_length(client_id_));
-        sb.buf().insert(sb.buf().size(), client_id_);
+        sb.buf()->insert(sb.buf()->size(), encoded_length(client_id_));
+        sb.buf()->insert(sb.buf()->size(), client_id_);
 
         // will
         if (will_) {
-            char& c = sb.buf()[connect_flags_position];
+            char& c = (*sb.buf())[connect_flags_position];
             c |= connect_flags::will_flag;
             if (will_->retain()) c |= connect_flags::will_retain;
             connect_flags::set_will_qos(c, will_->qos());
 
             if (!utf8string::is_valid_length(will_->topic())) throw utf8string_length_error();
             if (!utf8string::is_valid_contents(will_->topic())) throw utf8string_contents_error();
-            sb.buf().insert(sb.buf().size(), encoded_length(will_->topic()));
-            sb.buf().insert(sb.buf().size(), will_->topic());
+            sb.buf()->insert(sb.buf()->size(), encoded_length(will_->topic()));
+            sb.buf()->insert(sb.buf()->size(), will_->topic());
 
             if (will_->message().size() > 0xffff) throw will_message_length_error();
-            sb.buf().insert(sb.buf().size(), encoded_length(will_->message()));
-            sb.buf().insert(sb.buf().size(), will_->message());
+            sb.buf()->insert(sb.buf()->size(), encoded_length(will_->message()));
+            sb.buf()->insert(sb.buf()->size(), will_->message());
         }
 
         // user_name, password
         if (user_name_) {
-            char& c = sb.buf()[connect_flags_position];
+            char& c = (*sb.buf())[connect_flags_position];
             c |= connect_flags::user_name_flag;
             std::string const& str = *user_name_;
             if (!utf8string::is_valid_length(str)) throw utf8string_length_error();
             if (!utf8string::is_valid_contents(str)) throw utf8string_contents_error();
-            sb.buf().insert(sb.buf().size(), encoded_length(str));
-            sb.buf().insert(sb.buf().size(), str);
+            sb.buf()->insert(sb.buf()->size(), encoded_length(str));
+            sb.buf()->insert(sb.buf()->size(), str);
         }
         if (password_) {
-            char& c = sb.buf()[connect_flags_position];
+            char& c = (*sb.buf())[connect_flags_position];
             c |= connect_flags::password_flag;
             std::string const& str = *password_;
             if (str.size() > 0xffff) throw password_length_error();
-            sb.buf().insert(sb.buf().size(), encoded_length(str));
-            sb.buf().insert(sb.buf().size(), str);
+            sb.buf()->insert(sb.buf()->size(), encoded_length(str));
+            sb.buf()->insert(sb.buf()->size(), str);
         }
 
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::connect, 0));
@@ -1014,21 +1043,20 @@ private:
     void handle_connack() {
         if (static_cast<std::uint8_t>(payload_[1]) == connect_return_code::accepted) {
             if (clean_session_) {
-                resend_publish_.clear();
-                resend_pubrel_.clear();
-                used_packet_ids_.clear();
+                store_.clear();
             }
             else {
-                {
-                    auto const& idx = resend_publish_.template get<tag_seq>();
-                    for (auto const& e : idx) {
-                        as::write(*socket_, as::buffer(e.ptr, e.size));
+                auto& idx = store_.template get<tag_seq>();
+                auto it = idx.begin();
+                auto end = idx.end();
+                while (it != end) {
+                    if (it->buf) {
+                        as::write(*socket_, as::buffer(it->ptr, it->size));
+                        ++it;
                     }
-                }
-                {
-                    auto const& idx = resend_pubrel_.template get<tag_seq>();
-                    for (auto const& e : idx)
-                        as::write(*socket_, as::buffer(e.ptr, e.size));
+                    else {
+                        it = idx.erase(it);
+                    }
                 }
             }
         }
@@ -1039,9 +1067,9 @@ private:
     void handle_puback() {
         std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
         if (!clean_session_) {
-            auto& idx = resend_publish_.template get<tag_packet_id>();
-            idx.erase(packet_id);
-            used_packet_ids_.erase(packet_id);
+            auto& idx = store_.template get<tag_packet_id_type>();
+            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::puback));
+            idx.erase(r.first, r.second);
         }
         if (h_puback_) h_puback_(packet_id);
     }
@@ -1049,8 +1077,9 @@ private:
     void handle_pubrec() {
         std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
         if (!clean_session_) {
-            auto& idx = resend_publish_.template get<tag_packet_id>();
-            idx.erase(packet_id);
+            auto& idx = store_.template get<tag_packet_id_type>();
+            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubrec));
+            idx.erase(r.first, r.second);
         }
         send_pubrel(packet_id);
         if (h_pubrec_) h_pubrec_(packet_id);
@@ -1064,9 +1093,9 @@ private:
     void handle_pubcomp() {
         std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
         if (!clean_session_) {
-            auto& idx = resend_pubrel_.template get<tag_packet_id>();
-            idx.erase(packet_id);
-            used_packet_ids_.erase(packet_id);
+            auto& idx = store_.template get<tag_packet_id_type>();
+            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubcomp));
+            idx.erase(r.first, r.second);
         }
         if (h_pubcomp_) h_pubcomp_(packet_id);
     }
@@ -1101,7 +1130,9 @@ private:
 
     void handle_suback() {
         std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
-        used_packet_ids_.erase(packet_id);
+        auto& idx = store_.template get<tag_packet_id_type>();
+        auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::suback));
+        idx.erase(r.first, r.second);
         std::vector<boost::optional<std::uint8_t>> results;
         results.reserve(payload_.size() - 2);
         auto it = payload_.cbegin() + 2;
@@ -1119,7 +1150,9 @@ private:
 
     void handle_unsuback() {
         std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
-        used_packet_ids_.erase(packet_id);
+        auto& idx = store_.template get<tag_packet_id_type>();
+        auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::unsuback));
+        idx.erase(r.first, r.second);
         if (h_unsuback_) h_unsuback_(packet_id);
     }
 
@@ -1149,14 +1182,14 @@ private:
         send_buffer sb;
         if (!utf8string::is_valid_length(topic_name)) throw utf8string_length_error();
         if (!utf8string::is_valid_contents(topic_name)) throw utf8string_contents_error();
-        sb.buf().insert(sb.buf().size(), encoded_length(topic_name));
-        sb.buf().insert(sb.buf().size(), topic_name);
+        sb.buf()->insert(sb.buf()->size(), encoded_length(topic_name));
+        sb.buf()->insert(sb.buf()->size(), topic_name);
         if (qos == qos::at_least_once ||
             qos == qos::exactly_once) {
-            sb.buf().push_back(static_cast<char>(packet_id >> 8));
-            sb.buf().push_back(static_cast<char>(packet_id & 0xff));
+            sb.buf()->push_back(static_cast<char>(packet_id >> 8));
+            sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         }
-        sb.buf().insert(sb.buf().size(), payload);
+        sb.buf()->insert(sb.buf()->size(), payload);
         std::uint8_t flags = 0;
         if (retain) flags |= 0b00000001;
         flags |= qos << 1;
@@ -1165,45 +1198,58 @@ private:
         if (qos > 0) {
             flags |= 0b00001000;
             ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
-            resend_publish_.emplace(resend { packet_id, sb, ptr_size.first, ptr_size.second });
-            used_packet_ids_.insert(packet_id);
+            store_.emplace(
+                packet_id,
+                qos == qos::at_least_once ? control_packet_type::puback
+                                          : control_packet_type::pubrec,
+                sb.buf(),
+                ptr_size.first,
+                ptr_size.second);
         }
     }
 
     void send_pubrel(std::uint16_t packet_id) {
         send_buffer sb;
-        sb.buf().push_back(static_cast<char>(packet_id >> 8));
-        sb.buf().push_back(static_cast<char>(packet_id & 0xff));
+        sb.buf()->push_back(static_cast<char>(packet_id >> 8));
+        sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
-        resend_pubrel_.emplace(resend { packet_id, sb, ptr_size.first, ptr_size.second });
+        store_.emplace(
+            packet_id,
+            control_packet_type::pubcomp,
+            sb.buf(),
+            ptr_size.first,
+            ptr_size.second);
     }
 
     void send_puback(std::uint16_t packet_id) {
         send_buffer sb;
-        sb.buf().push_back(static_cast<char>(packet_id >> 8));
-        sb.buf().push_back(static_cast<char>(packet_id & 0xff));
+        sb.buf()->push_back(static_cast<char>(packet_id >> 8));
+        sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::puback, 0b0010));
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
-        resend_pubrel_.emplace(resend { packet_id, sb, ptr_size.first, ptr_size.second });
     }
 
     void send_pubrec(std::uint16_t packet_id) {
         send_buffer sb;
-        sb.buf().push_back(static_cast<char>(packet_id >> 8));
-        sb.buf().push_back(static_cast<char>(packet_id & 0xff));
+        sb.buf()->push_back(static_cast<char>(packet_id >> 8));
+        sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrec, 0b0010));
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
-        resend_pubrel_.emplace(resend { packet_id, sb, ptr_size.first, ptr_size.second });
+        store_.emplace(
+            packet_id,
+            control_packet_type::pubrel,
+            sb.buf(),
+            ptr_size.first,
+            ptr_size.second);
     }
 
     void send_pubcomp(std::uint16_t packet_id) {
         send_buffer sb;
-        sb.buf().push_back(static_cast<char>(packet_id >> 8));
-        sb.buf().push_back(static_cast<char>(packet_id & 0xff));
+        sb.buf()->push_back(static_cast<char>(packet_id >> 8));
+        sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubcomp, 0b0010));
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
-        resend_pubrel_.emplace(resend { packet_id, sb, ptr_size.first, ptr_size.second });
     }
 
     template <typename... Args>
@@ -1220,17 +1266,17 @@ private:
         std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>>& params,
         std::uint16_t packet_id) {
         send_buffer sb;
-        sb.buf().push_back(static_cast<char>(packet_id >> 8));
-        sb.buf().push_back(static_cast<char>(packet_id & 0xff));
+        sb.buf()->push_back(static_cast<char>(packet_id >> 8));
+        sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         for (auto const& e : params) {
             if (!utf8string::is_valid_length(e.first)) throw utf8string_length_error();
             if (!utf8string::is_valid_contents(e.first)) throw utf8string_contents_error();
-            sb.buf().insert(sb.buf().size(), encoded_length(e.first));
-            sb.buf().insert(sb.buf().size(), e.first);
-            sb.buf().push_back(e.second);
+            sb.buf()->insert(sb.buf()->size(), encoded_length(e.first));
+            sb.buf()->insert(sb.buf()->size(), e.first);
+            sb.buf()->push_back(e.second);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::subscribe, 0b0010));
-        used_packet_ids_.insert(packet_id);
+        store_.emplace(packet_id, control_packet_type::suback);
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
     }
 
@@ -1248,16 +1294,16 @@ private:
         std::vector<std::reference_wrapper<std::string const>>& params,
         std::uint16_t packet_id) {
         send_buffer sb;
-        sb.buf().push_back(static_cast<char>(packet_id >> 8));
-        sb.buf().push_back(static_cast<char>(packet_id & 0xff));
+        sb.buf()->push_back(static_cast<char>(packet_id >> 8));
+        sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         for (auto const& e : params) {
             if (!utf8string::is_valid_length(e)) throw utf8string_length_error();
             if (!utf8string::is_valid_contents(e)) throw utf8string_contents_error();
-            sb.buf().insert(sb.buf().size(), encoded_length(e));
-            sb.buf().insert(sb.buf().size(), e);
+            sb.buf()->insert(sb.buf()->size(), encoded_length(e));
+            sb.buf()->insert(sb.buf()->size(), e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsubscribe, 0b0010));
-        used_packet_ids_.insert(packet_id);
+        store_.emplace(packet_id, control_packet_type::unsuback);
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
     }
 
@@ -1275,12 +1321,27 @@ private:
     }
 
     std::uint16_t create_unique_packet_id() {
-        while (!is_unique_packet_id(packet_id_master_)) ++packet_id_master_;
+        do {
+            ++packet_id_master_;
+        } while (!is_unique_packet_id(packet_id_master_));
         return packet_id_master_;
     }
 
     bool is_unique_packet_id(std::uint16_t packet_id) {
-        return packet_id != 0 && used_packet_ids_.find(packet_id) == used_packet_ids_.end();
+        if (packet_id == 0) return false;
+        auto& idx = store_.template get<tag_packet_id>();
+        auto r = idx.equal_range(packet_id);
+        for (; r.first != r.second; ++r.first) {
+            if (r.first->expected_control_packet_type == control_packet_type::puback ||
+                r.first->expected_control_packet_type == control_packet_type::pubrec ||
+                r.first->expected_control_packet_type == control_packet_type::pubcomp ||
+                r.first->expected_control_packet_type == control_packet_type::suback ||
+                r.first->expected_control_packet_type == control_packet_type::unsuback) {
+                // Packet id that is generated by the client
+                return false;
+            }
+        }
+        return true;
     }
 
 private:
@@ -1316,9 +1377,7 @@ private:
 #endif // !defined(MQTT_NO_TLS)
     boost::optional<std::string> user_name_;
     boost::optional<std::string> password_;
-    mi_resend resend_publish_;
-    mi_resend resend_pubrel_;
-    std::set<std::uint16_t> used_packet_ids_;
+    mi_store store_;
     std::uint16_t packet_id_master_;
 };
 
