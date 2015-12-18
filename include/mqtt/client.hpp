@@ -936,7 +936,7 @@ private:
     void handle_control_packet_type() {
         fixed_header_ = static_cast<std::uint8_t>(buf_);
         remaining_length_ = 0;
-        remaining_length_count_ = 0;
+        remaining_length_multiplier_ = 1;
         as::async_read(
             *socket_,
             as::buffer(&buf_, 1),
@@ -951,9 +951,10 @@ private:
     }
 
     void handle_remaining_length() {
+        remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
+        remaining_length_multiplier_ *= 128;
+        if (remaining_length_multiplier_ > 128 * 128 * 128) throw remaining_length_error();
         if (buf_ & 0b10000000) {
-            if (++remaining_length_count_  > 4) throw remaining_length_error();
-            remaining_length_ += buf_ & 0b01111111;
             as::async_read(
                 *socket_,
                 as::buffer(&buf_, 1),
@@ -967,7 +968,6 @@ private:
                 });
         }
         else {
-            remaining_length_ += buf_;
             payload_.resize(remaining_length_);
             as::async_read(
                 *socket_,
@@ -1343,7 +1343,7 @@ private:
     std::size_t ping_duration_ms_;
     char buf_;
     std::uint8_t fixed_header_;
-    std::size_t remaining_length_count_;
+    std::size_t remaining_length_multiplier_;
     std::size_t remaining_length_;
     std::vector<char> payload_;
     close_handler h_close_;
