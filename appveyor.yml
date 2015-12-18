@@ -4,10 +4,6 @@ environment:
     - notls: -DMQTT_NO_TLS=ON
     - notls: -DMQTT_NO_TLS=OFF
 
-install:
-- ps: Start-FileDownload 'http://slproweb.com/download/Win32OpenSSL-1_0_2e.exe'
-- ps: Start-Process "Win32OpenSSL-1_0_2e.exe" -ArgumentList "/silent /verysilent /sp- /suppressmsgboxes" -Wait
-
 build_script:
 - md build
 - cd build
