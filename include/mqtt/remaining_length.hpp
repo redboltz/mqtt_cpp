@@ -17,7 +17,7 @@ remaining_bytes(std::size_t size) {
     if (size > 0xfffffff) throw remaining_length_error();
     std::string bytes;
     while (size > 127) {
-        bytes.push_back(size & 0b01111111);
+        bytes.push_back((size & 0b01111111) | 0b10000000);
         size >>= 7;
     }
     bytes.push_back(size & 0b01111111);
