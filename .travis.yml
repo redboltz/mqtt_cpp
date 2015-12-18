@@ -9,7 +9,7 @@ install:
   - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
   - if [ "$CXX" = "clang++" ]; then export CXXFLAGS="-std=c++14"; fi
   - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
-  - wget -O boost_1_59_0.tar.bz2 http://sourceforge.net/projects/boost/files/latest/download?source=files && tar xf boost_1_59_0.tar.bz2 && cd boost_1_59_0 && cp ../user-config.jam . && cat user-config.jam && ./bootstrap.sh && ./b2 install --address-model=64 --with-system --with-test --prefix=../boost > /dev/null  && cd ..
+  - wget -O boost_1_60_0.tar.bz2 http://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.bz2/download && tar xf boost_1_60_0.tar.bz2 && cd boost_1_60_0 && cp ../user-config.jam . && cat user-config.jam && ./bootstrap.sh && ./b2 install --address-model=64 --with-system --with-test --prefix=../boost > /dev/null  && cd ..
 addons:
   apt:
     sources:
