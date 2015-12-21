@@ -243,7 +243,7 @@ public:
      * 3.1.3.5 Password
      */
     void set_password(std::string password) {
-        password_ = std::move(password_);
+        password_ = std::move(password);
     }
 
     /**
