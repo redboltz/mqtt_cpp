@@ -301,11 +301,7 @@ public:
         as::ip::tcp::resolver r(ios_);
         as::ip::tcp::resolver::query q(host_, port_);
         auto it = r.resolve(q);
-#if defined(MQTT_NO_TLS)
-        socket_.reset(new Socket(ios_));
-#else  // defined(MQTT_NO_TLS)
         setup_socket(socket_);
-#endif // defined(MQTT_NO_TLS)
         as::async_connect(
             socket_->lowest_layer(), it,
             [this]
