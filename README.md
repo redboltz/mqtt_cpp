@@ -6,11 +6,24 @@ Version 0.1.0 [![Build Status](https://travis-ci.org/redboltz/mqtt_client_cpp.sv
 Overview
 --------
 
-mqtt_client_cpp is a header only library. It requires C++14 and the Boost Libraries.
+mqtt_client_cpp is a header only library. It requires C++14 and the Boost Libraries. The only feature that mqtt_client_cpp uses C++14 is binary literals. e.g.) 0b00001111
+
+You may be able to use mqtt_client_cpp on C++11 with binary literal extension environment such as g++ and clang++.
+
 Add mqtt_client_cpp/include to your include path. Then, include mqtt_client_cpp.hpp as follows:
 
 ```c++
 #include <mqtt_client_cpp.hpp>
+```
+
+You can compile your program as follows:
+
+```
+g++ -std=c++14 -Ipath_to_mqtt_client_cpp/include -DMQTT_NO_TLS no_tls.cpp -lboost_system -lpthread
+```
+
+```
+g++ -std=c++14 -Ipath_to_mqtt_client_cpp/include tls.cpp -lboost_system -lssl -lcrypto -lpthread
 ```
 
 Example
