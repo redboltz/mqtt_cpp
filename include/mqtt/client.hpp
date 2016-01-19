@@ -1222,7 +1222,7 @@ private:
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
-        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::puback, 0b0010));
+        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::puback, 0b0000));
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
     }
 
@@ -1230,7 +1230,7 @@ private:
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
-        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrec, 0b0010));
+        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrec, 0b0000));
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
     }
 
@@ -1238,7 +1238,7 @@ private:
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
-        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubcomp, 0b0010));
+        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubcomp, 0b0000));
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
     }
 
