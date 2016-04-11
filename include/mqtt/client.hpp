@@ -1067,7 +1067,7 @@ private:
 
     void handle_puback() {
         if (remaining_length_ != 2) throw remaining_length_error();
-        std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
+        std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         if (!clean_session_) {
             auto& idx = store_.template get<tag_packet_id_type>();
             auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::puback));
@@ -1078,7 +1078,7 @@ private:
 
     void handle_pubrec() {
         if (remaining_length_ != 2) throw remaining_length_error();
-        std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
+        std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         if (!clean_session_) {
             auto& idx = store_.template get<tag_packet_id_type>();
             auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubrec));
@@ -1090,13 +1090,13 @@ private:
 
     void handle_pubrel() {
         if (remaining_length_ != 2) throw remaining_length_error();
-        std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
+        std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         send_pubcomp(packet_id);
     }
 
     void handle_pubcomp() {
         if (remaining_length_ != 2) throw remaining_length_error();
-        std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
+        std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         if (!clean_session_) {
             auto& idx = store_.template get<tag_packet_id_type>();
             auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubcomp));
@@ -1108,7 +1108,7 @@ private:
     void handle_publish() {
         if (remaining_length_ < 2) throw remaining_length_error();
         std::size_t i = 0;
-        std::uint16_t topic_name_length = (payload_[i] << 8) | payload_[i + 1];
+        std::uint16_t topic_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
         i += 2;
         if (remaining_length_ < i + topic_name_length) throw remaining_length_error();
         std::string topic_name(payload_.data() + i, topic_name_length);
@@ -1120,13 +1120,13 @@ private:
             break;
         case qos::at_least_once:
             if (remaining_length_ < i + 2) throw remaining_length_error();
-            packet_id = (payload_[i] << 8) | payload_[i + 1];
+            packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
             send_puback(*packet_id);
             break;
         case qos::exactly_once:
             if (remaining_length_ < i + 2) throw remaining_length_error();
-            packet_id = (payload_[i] << 8) | payload_[i + 1];
+            packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
             send_pubrec(*packet_id);
             break;
@@ -1139,7 +1139,7 @@ private:
 
     void handle_suback() {
         if (remaining_length_ < 2) throw remaining_length_error();
-        std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
+        std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         auto& idx = store_.template get<tag_packet_id_type>();
         auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::suback));
         idx.erase(r.first, r.second);
@@ -1160,7 +1160,7 @@ private:
 
     void handle_unsuback() {
         if (remaining_length_ != 2) throw remaining_length_error();
-        std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
+        std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         auto& idx = store_.template get<tag_packet_id_type>();
         auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::unsuback));
         idx.erase(r.first, r.second);
@@ -1338,6 +1338,12 @@ private:
         auto& idx = store_.template get<tag_packet_id>();
         auto r = idx.equal_range(packet_id);
         return r.first == r.second;
+    }
+
+    static std::uint16_t make_uint16_t(char b1, char b2) {
+        return
+            ((static_cast<std::uint16_t>(b1) & 0xff)) << 8 |
+            (static_cast<std::uint16_t>(b2) & 0xff);
     }
 
 private:
