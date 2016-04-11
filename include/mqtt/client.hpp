@@ -965,6 +965,10 @@ private:
         }
         else {
             payload_.resize(remaining_length_);
+            if (remaining_length_ == 0) {
+                handle_payload();
+                return;
+            }
             as::async_read(
                 *socket_,
                 as::buffer(payload_),
@@ -1037,6 +1041,7 @@ private:
     }
 
     void handle_connack() {
+        if (remaining_length_ != 2) throw remaining_length_error();
         if (static_cast<std::uint8_t>(payload_[1]) == connect_return_code::accepted) {
             if (clean_session_) {
                 store_.clear();
@@ -1061,6 +1066,7 @@ private:
     }
 
     void handle_puback() {
+        if (remaining_length_ != 2) throw remaining_length_error();
         std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
         if (!clean_session_) {
             auto& idx = store_.template get<tag_packet_id_type>();
@@ -1071,6 +1077,7 @@ private:
     }
 
     void handle_pubrec() {
+        if (remaining_length_ != 2) throw remaining_length_error();
         std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
         if (!clean_session_) {
             auto& idx = store_.template get<tag_packet_id_type>();
@@ -1082,11 +1089,13 @@ private:
     }
 
     void handle_pubrel() {
+        if (remaining_length_ != 2) throw remaining_length_error();
         std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
         send_pubcomp(packet_id);
     }
 
     void handle_pubcomp() {
+        if (remaining_length_ != 2) throw remaining_length_error();
         std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
         if (!clean_session_) {
             auto& idx = store_.template get<tag_packet_id_type>();
@@ -1097,9 +1106,11 @@ private:
     }
 
     void handle_publish() {
+        if (remaining_length_ < 2) throw remaining_length_error();
         std::size_t i = 0;
         std::uint16_t topic_name_length = (payload_[i] << 8) | payload_[i + 1];
         i += 2;
+        if (remaining_length_ < i + topic_name_length) throw remaining_length_error();
         std::string topic_name(payload_.data() + i, topic_name_length);
         i += topic_name_length;
         boost::optional<std::uint16_t> packet_id;
@@ -1108,11 +1119,13 @@ private:
         case qos::at_most_once:
             break;
         case qos::at_least_once:
+            if (remaining_length_ < i + 2) throw remaining_length_error();
             packet_id = (payload_[i] << 8) | payload_[i + 1];
             i += 2;
             send_puback(*packet_id);
             break;
         case qos::exactly_once:
+            if (remaining_length_ < i + 2) throw remaining_length_error();
             packet_id = (payload_[i] << 8) | payload_[i + 1];
             i += 2;
             send_pubrec(*packet_id);
@@ -1125,6 +1138,7 @@ private:
     }
 
     void handle_suback() {
+        if (remaining_length_ < 2) throw remaining_length_error();
         std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
         auto& idx = store_.template get<tag_packet_id_type>();
         auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::suback));
@@ -1145,6 +1159,7 @@ private:
     }
 
     void handle_unsuback() {
+        if (remaining_length_ != 2) throw remaining_length_error();
         std::uint16_t packet_id = payload_[0] << 8 | payload_[1];
         auto& idx = store_.template get<tag_packet_id_type>();
         auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::unsuback));
@@ -1153,6 +1168,7 @@ private:
     }
 
     void handle_pingresp() {
+        if (remaining_length_ != 0) throw remaining_length_error();
         if (h_pingresp_) h_pingresp_();
     }
 
