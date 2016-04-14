@@ -173,6 +173,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
 }
 
 BOOST_AUTO_TEST_CASE( retain_and_publish ) {
+    fixture_clear_retain();
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
     c.set_clean_session(true);
@@ -187,10 +188,6 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
             BOOST_TEST(order++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-
-            // Clear retaind contents
-            c.publish_at_most_once(topic_base() + "/topic1", "", true);
-
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
         });
     c.set_close_handler(

@@ -11,6 +11,7 @@
 BOOST_AUTO_TEST_SUITE(test_remaining_length)
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
+    fixture_clear_retain();
     std::string test_contents;
     for (std::size_t i = 0; i < 128; ++i) {
         test_contents.push_back(i);
@@ -30,10 +31,6 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
             BOOST_TEST(order++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-
-            // Clear retaind contents
-            c.publish_at_most_once(topic_base() + "/topic1", "", true);
-
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
         });
     c.set_close_handler(
@@ -98,6 +95,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
+    fixture_clear_retain();
     std::string test_contents;
     for (std::size_t i = 0; i < 16384; ++i) {
         test_contents.push_back(i);
@@ -117,10 +115,6 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
             BOOST_TEST(order++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-
-            // Clear retaind contents
-            c.publish_at_most_once(topic_base() + "/topic1", "", true);
-
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
         });
     c.set_close_handler(
@@ -187,6 +181,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
 # if 0 // It would make network load too much.
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
+    fixture_clear_retain();
     std::string test_contents;
     for (std::size_t i = 0; i < 2097152; ++i) {
         test_contents.push_back(i);
@@ -206,10 +201,6 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
             BOOST_TEST(order++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-
-            // Clear retaind contents
-            c.publish_at_most_once(topic_base() + "/topic1", "", true);
-
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
         });
     c.set_close_handler(

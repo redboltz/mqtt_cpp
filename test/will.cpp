@@ -11,6 +11,7 @@
 BOOST_AUTO_TEST_SUITE(test_will)
 
 BOOST_AUTO_TEST_CASE( will_qos0 ) {
+    fixture_clear_retain();
     boost::asio::io_service ios;
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
@@ -30,9 +31,6 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             BOOST_TEST(order1++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-
-            // Clear retaind contents
-            c1.publish_at_most_once(topic_base() + "/topic1", "", true);
         });
     c1.set_close_handler(
         []
@@ -55,10 +53,6 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             BOOST_TEST(order2++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-
-            // Clear retaind contents
-            c2.publish_at_most_once(topic_base() + "/topic1", "", true);
-
             pid_sub2 = c2.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
         });
     c2.set_close_handler(
@@ -112,6 +106,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
 }
 
 BOOST_AUTO_TEST_CASE( will_qos1 ) {
+    fixture_clear_retain();
     boost::asio::io_service ios;
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
@@ -131,9 +126,6 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             BOOST_TEST(order1++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-
-            // Clear retaind contents
-            c1.publish_at_most_once(topic_base() + "/topic1", "", true);
         });
     c1.set_close_handler(
         []
@@ -156,10 +148,6 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             BOOST_TEST(order2++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-
-            // Clear retaind contents
-            c2.publish_at_most_once(topic_base() + "/topic1", "", true);
-
             pid_sub2 = c2.subscribe(topic_base() + "/topic1", mqtt::qos::at_least_once);
         });
     c2.set_close_handler(
@@ -213,6 +201,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
 }
 
 BOOST_AUTO_TEST_CASE( will_qos2 ) {
+    fixture_clear_retain();
     boost::asio::io_service ios;
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
@@ -232,9 +221,6 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             BOOST_TEST(order1++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-
-            // Clear retaind contents
-            c1.publish_at_most_once(topic_base() + "/topic1", "", true);
         });
     c1.set_close_handler(
         []
@@ -257,10 +243,6 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             BOOST_TEST(order2++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-
-            // Clear retaind contents
-            c2.publish_at_most_once(topic_base() + "/topic1", "", true);
-
             pid_sub2 = c2.subscribe(topic_base() + "/topic1", mqtt::qos::exactly_once);
         });
     c2.set_close_handler(
@@ -314,6 +296,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( will_retain ) {
+    fixture_clear_retain();
     boost::asio::io_service ios;
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
@@ -333,9 +316,6 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
             BOOST_TEST(order1++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-
-            // Clear retaind contents
-            c1.publish_at_most_once(topic_base() + "/topic1", "", true);
         });
     c1.set_close_handler(
         []
@@ -358,10 +338,6 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
             BOOST_TEST(order2++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-
-            // Clear retaind contents
-            c2.publish_at_most_once(topic_base() + "/topic1", "", true);
-
             pid_sub2 = c2.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
         });
     c2.set_close_handler(
