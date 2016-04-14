@@ -1068,22 +1068,18 @@ private:
     void handle_puback() {
         if (remaining_length_ != 2) throw remaining_length_error();
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
-        if (!clean_session_) {
-            auto& idx = store_.template get<tag_packet_id_type>();
-            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::puback));
-            idx.erase(r.first, r.second);
-        }
+        auto& idx = store_.template get<tag_packet_id_type>();
+        auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::puback));
+        idx.erase(r.first, r.second);
         if (h_puback_) h_puback_(packet_id);
     }
 
     void handle_pubrec() {
         if (remaining_length_ != 2) throw remaining_length_error();
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
-        if (!clean_session_) {
-            auto& idx = store_.template get<tag_packet_id_type>();
-            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubrec));
-            idx.erase(r.first, r.second);
-        }
+        auto& idx = store_.template get<tag_packet_id_type>();
+        auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubrec));
+        idx.erase(r.first, r.second);
         send_pubrel(packet_id);
         if (h_pubrec_) h_pubrec_(packet_id);
     }
@@ -1097,11 +1093,9 @@ private:
     void handle_pubcomp() {
         if (remaining_length_ != 2) throw remaining_length_error();
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
-        if (!clean_session_) {
-            auto& idx = store_.template get<tag_packet_id_type>();
-            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubcomp));
-            idx.erase(r.first, r.second);
-        }
+        auto& idx = store_.template get<tag_packet_id_type>();
+        auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubcomp));
+        idx.erase(r.first, r.second);
         if (h_pubcomp_) h_pubcomp_(packet_id);
     }
 
