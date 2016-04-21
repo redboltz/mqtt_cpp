@@ -195,8 +195,7 @@ private:
            std::string host,
            std::string port,
            bool tls)
-        :endpoint<Socket>(ios),
-         ios_(ios),
+        :ios_(ios),
          tim_(new boost::asio::deadline_timer(ios_)),
          host_(std::move(host)),
          port_(std::move(port)),

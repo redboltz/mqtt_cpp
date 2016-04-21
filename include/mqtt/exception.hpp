@@ -14,6 +14,12 @@
 
 namespace mqtt {
 
+struct protocol_error : std::exception {
+    virtual char const* what() const noexcept {
+        return "protocol error";
+    }
+};
+
 struct remaining_length_error : std::exception {
     virtual char const* what() const noexcept {
         return "remaining length error";

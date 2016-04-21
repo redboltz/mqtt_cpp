@@ -56,6 +56,45 @@ public:
 
     /**
      * @breif Conack handler
+     * @param username
+     *        User Name.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349245<BR>
+     *        3.1.3.4 User Name
+     * @param password
+     *        Password.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349246<BR>
+     *        3.1.3.5 Password
+     * @param will
+     *        Will. It contains retain, QoS, topic, and message.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349232<BR>
+     *        3.1.2.5 Will Flag<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349233<BR>
+     *        3.1.2.6 Will QoS<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349234<BR>
+     *        3.1.2.7 Will Retain<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349243<BR>
+     *        3.1.3.2 Will Topic<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349244<BR>
+     *        3.1.3.3 Will Message<BR>
+     * @param clean_session
+     *        Clean Session<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349231<BR>
+     *        3.1.2.4 Clean Session
+     * @param keep_alive
+     *        Keep Alive<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349237<BR>
+     *        3.1.2.10 Keep Alive
+     *
+     */
+    using connect_handler = std::function<
+        void(boost::optional<std::string> const& username,
+             boost::optional<std::string> const& password,
+             boost::optional<will> will,
+             bool clean_session,
+             std::uint16_t keep_alive)>;
+
+    /**
+     * @breif Conack handler
      * @param session_present
      *        Session present flag.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718035<BR>
@@ -66,33 +105,6 @@ public:
      *        3.2.2.3 Connect Return code
      */
     using connack_handler = std::function<void(bool session_present, std::uint8_t return_code)>;
-
-    /**
-     * @breif Puback handler
-     * @param packet_id
-     *        packet identifier<BR>
-     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718045<BR>
-     *        3.4.2 Variable header
-     */
-    using puback_handler = std::function<void(std::uint16_t packet_id)>;
-
-    /**
-     * @breif Pubrec handler
-     * @param packet_id
-     *        packet identifier<BR>
-     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718050<BR>
-     *        3.5.2 Variable header
-     */
-    using pubrec_handler = std::function<void(std::uint16_t packet_id)>;
-
-    /**
-     * @breif Pubcomp handler
-     * @param packet_id
-     *        packet identifier<BR>
-     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718060<BR>
-     *        3.7.2 Variable header
-     */
-    using pubcomp_handler = std::function<void(std::uint16_t packet_id)>;
 
     /**
      * @breif Publish handler
@@ -116,6 +128,54 @@ public:
                                                std::string contents)>;
 
     /**
+     * @breif Puback handler
+     * @param packet_id
+     *        packet identifier<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718045<BR>
+     *        3.4.2 Variable header
+     */
+    using puback_handler = std::function<void(std::uint16_t packet_id)>;
+
+    /**
+     * @breif Pubrec handler
+     * @param packet_id
+     *        packet identifier<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718050<BR>
+     *        3.5.2 Variable header
+     */
+    using pubrec_handler = std::function<void(std::uint16_t packet_id)>;
+
+    /**
+     * @breif Pubrel handler
+     * @param packet_id
+     *        packet identifier<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349791<BR>
+     *        3.6.2 Variable header
+     */
+    using pubrel_handler = std::function<void(std::uint16_t packet_id)>;
+
+    /**
+     * @breif Pubcomp handler
+     * @param packet_id
+     *        packet identifier<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718060<BR>
+     *        3.7.2 Variable header
+     */
+    using pubcomp_handler = std::function<void(std::uint16_t packet_id)>;
+
+    /**
+     * @breif Subscribe handler
+     * @param packet_id packet identifier<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349801<BR>
+     *        3.8.2 Variable header
+     * @param entries
+     *        Collection of a pair of Topic Filter and QoS.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349802<BR>
+     */
+    using subscribe_handler = std::function<void(std::uint16_t packet_id,
+                                                 std::vector<std::tuple<std::string, std::uint8_t>> entries)>;
+
+    /**
      * @breif Suback handler
      * @param packet_id packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718070<BR>
@@ -129,6 +189,18 @@ public:
                                               std::vector<boost::optional<std::uint8_t>> qoss)>;
 
     /**
+     * @breif Unsubscribe handler
+     * @param packet_id packet identifier<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349810<BR>
+     *        3.10.2 Variable header
+     * @param topics
+     *        Collection of Topic Filters<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800448<BR>
+     */
+    using unsubscribe_handler = std::function<void(std::uint16_t packet_id,
+                                                   std::vector<std::string> topics)>;
+
+    /**
      * @breif Unsuback handler
      * @param packet_id packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718045<BR>
@@ -137,11 +209,25 @@ public:
     using unsuback_handler = std::function<void(std::uint16_t)>;
 
     /**
+     * @breif Pingreq handler
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718081<BR>
+     *        3.13 PINGREQ – PING request
+     */
+    using pingreq_handler = std::function<void()>;
+
+    /**
      * @breif Pingresp handler
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718086<BR>
      *        3.13 PINGRESP – PING response
      */
     using pingresp_handler = std::function<void()>;
+
+    /**
+     * @breif Disconnect handler
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800463<BR>
+     *        3.14 DISCONNECT – Disconnect notification
+     */
+    using disconnect_handler = std::function<void()>;
 
     /**
      * @breif Move constructor
@@ -230,11 +316,27 @@ public:
     }
 
     /**
+     * @brief Set connect handler
+     * @param h handler
+     */
+    void set_connect_handler(connect_handler h) {
+        h_connect_ = std::move(h);
+    }
+
+    /**
      * @brief Set connack handler
      * @param h handler
      */
     void set_connack_handler(connack_handler h) {
         h_connack_ = std::move(h);
+    }
+
+    /**
+     * @brief Set puback handler
+     * @param h handler
+     */
+    void set_publish_handler(publish_handler h) {
+        h_publish_ = std::move(h);
     }
 
     /**
@@ -254,6 +356,14 @@ public:
     }
 
     /**
+     * @brief Set pubrel handler
+     * @param h handler
+     */
+    void set_pubrel_handler(pubrel_handler h) {
+        h_pubrel_ = std::move(h);
+    }
+
+    /**
      * @brief Set pubcomp handler
      * @param h handler
      */
@@ -262,11 +372,11 @@ public:
     }
 
     /**
-     * @brief Set publish handler
+     * @brief Set subscribe handler
      * @param h handler
      */
-    void set_publish_handler(publish_handler h) {
-        h_publish_ = std::move(h);
+    void set_subscribe_handler(subscribe_handler h) {
+        h_subscribe_ = std::move(h);
     }
 
     /**
@@ -278,6 +388,14 @@ public:
     }
 
     /**
+     * @brief Set unsubscribe handler
+     * @param h handler
+     */
+    void set_unsubscribe_handler(unsubscribe_handler h) {
+        h_unsubscribe_ = std::move(h);
+    }
+
+    /**
      * @brief Set unsuback handler
      * @param h handler
      */
@@ -286,11 +404,27 @@ public:
     }
 
     /**
+     * @brief Set pingreq handler
+     * @param h handler
+     */
+    void set_pingreq_handler(pingreq_handler h) {
+        h_pingreq_ = std::move(h);
+    }
+
+    /**
      * @brief Set pingresp handler
      * @param h handler
      */
     void set_pingresp_handler(pingresp_handler h) {
         h_pingresp_ = std::move(h);
+    }
+
+    /**
+     * @brief Set disconnect handler
+     * @param h handler
+     */
+    void set_disconnect_handler(disconnect_handler h) {
+        h_disconnect_ = std::move(h);
     }
 
     /**
@@ -596,9 +730,15 @@ public:
     }
 
 protected:
-    endpoint(as::io_service& ios)
-        :ios_(ios),
-         connected_(false),
+    endpoint()
+        :connected_(false),
+         clean_session_(false),
+         packet_id_master_(0)
+    {}
+
+    endpoint(std::unique_ptr<Socket>&& socket)
+        :socket_(std::move(socket)),
+         connected_(true),
          clean_session_(false),
          packet_id_master_(0)
     {}
@@ -782,8 +922,14 @@ private:
     void handle_payload() {
         auto control_packet_type = get_control_packet_type(fixed_header_);
         switch (control_packet_type) {
+        case control_packet_type::connect:
+            handle_connect();
+            break;
         case control_packet_type::connack:
             handle_connack();
+            break;
+        case control_packet_type::publish:
+            handle_publish();
             break;
         case control_packet_type::puback:
             handle_puback();
@@ -797,17 +943,26 @@ private:
         case control_packet_type::pubcomp:
             handle_pubcomp();
             break;
+        case control_packet_type::subscribe:
+            handle_subscribe();
+            break;
         case control_packet_type::suback:
             handle_suback();
+            break;
+        case control_packet_type::unsubscribe:
+            handle_unsubscribe();
             break;
         case control_packet_type::unsuback:
             handle_unsuback();
             break;
-        case control_packet_type::publish:
-            handle_publish();
+        case control_packet_type::pingreq:
+            handle_pingreq();
             break;
         case control_packet_type::pingresp:
             handle_pingresp();
+            break;
+        case control_packet_type::disconnect:
+            handle_disconnect();
             break;
         default:
             break;
@@ -821,6 +976,74 @@ private:
 
     void handle_error(boost::system::error_code const& ec) {
         if (h_error_) h_error_(ec);
+    }
+
+    void handle_connect() {
+        std::size_t i = 0;
+        if (remaining_length_ < 10 ||
+            payload_[i++] != 0x00 ||
+            payload_[i++] != 0x04 ||
+            payload_[i++] != 'M' ||
+            payload_[i++] != 'Q' ||
+            payload_[i++] != 'T' ||
+            payload_[i++] != 'T' ||
+            payload_[i++] != 0x04) {
+        } throw protocol_error();
+        char byte8 = payload_[i++];
+
+        std::uint16_t keep_alive;
+        keep_alive = make_uint16_t(payload_[i], payload_[i + 1]);
+        i += 2;
+
+        if (remaining_length_ < i + 2)  throw remaining_length_error();
+
+        std::uint16_t client_id_length;
+        client_id_length = make_uint16_t(payload_[i], payload_[i + 1]);
+        i += 2;
+        if (remaining_length_ < i + client_id_length) throw remaining_length_error();
+
+        std::string client_id(payload_.data() + i, client_id_length);
+        i += client_id_length;
+
+        bool clean_session = connect_flags::has_clean_session(byte8);
+        boost::optional<will> w;
+        if (connect_flags::has_will_flag(byte8)) {
+            std::uint16_t topic_name_length;
+            topic_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
+            i += 2;
+            if (remaining_length_ < i + topic_name_length) throw remaining_length_error();
+            std::string topic_name(payload_.data() + i, topic_name_length);
+            i += topic_name_length;
+            std::uint16_t will_message_length;
+            will_message_length = make_uint16_t(payload_[i], payload_[i + 1]);
+            i += 2;
+            if (remaining_length_ < i + will_message_length)  throw remaining_length_error();
+            std::string will_message(payload_.data() + i, topic_name_length);
+            i += will_message_length;
+            w = will(topic_name,
+                        will_message,
+                        connect_flags::has_will_retain(byte8),
+                        connect_flags::will_qos(byte8));
+        }
+        boost::optional<std::string> user_name;
+        if (connect_flags::has_user_name_flag(byte8)) {
+            std::uint16_t user_name_length;
+            user_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
+            i += 2;
+            if (remaining_length_ < i + user_name_length)  throw remaining_length_error();
+            user_name = std::string(payload_.data() + i, user_name_length);
+            i += user_name_length;
+        }
+        boost::optional<std::string> password;
+        if (connect_flags::has_password_flag(byte8)) {
+            std::uint16_t password_length;
+            password_length = make_uint16_t(payload_[i], payload_[i + 1]);
+            i += 2;
+            if (remaining_length_ < i + password_length)  throw remaining_length_error();
+            password = std::string(payload_.data() + i, password_length);
+            i += password_length;
+        }
+        if (h_connect_) h_connect_(user_name, password, std::move(w), clean_session, keep_alive);
     }
 
     void handle_connack() {
@@ -846,6 +1069,38 @@ private:
         }
         bool session_present = is_session_present(payload_[0]);
         if (h_connack_) h_connack_(session_present, static_cast<std::uint8_t>(payload_[1]));
+    }
+
+    void handle_publish() {
+        if (remaining_length_ < 2) throw remaining_length_error();
+        std::size_t i = 0;
+        std::uint16_t topic_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
+        i += 2;
+        if (remaining_length_ < i + topic_name_length) throw remaining_length_error();
+        std::string topic_name(payload_.data() + i, topic_name_length);
+        i += topic_name_length;
+        boost::optional<std::uint16_t> packet_id;
+        auto qos = publish::get_qos(fixed_header_);
+        switch (qos) {
+        case qos::at_most_once:
+            break;
+        case qos::at_least_once:
+            if (remaining_length_ < i + 2) throw remaining_length_error();
+            packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
+            i += 2;
+            send_puback(*packet_id);
+            break;
+        case qos::exactly_once:
+            if (remaining_length_ < i + 2) throw remaining_length_error();
+            packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
+            i += 2;
+            send_pubrec(*packet_id);
+            break;
+        default:
+            break;
+        }
+        std::string contents(payload_.data() + i, payload_.size() - i);
+        if (h_publish_) h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents));
     }
 
     void handle_puback() {
@@ -882,36 +1137,25 @@ private:
         if (h_pubcomp_) h_pubcomp_(packet_id);
     }
 
-    void handle_publish() {
-        if (remaining_length_ < 2) throw remaining_length_error();
+    void handle_subscribe() {
         std::size_t i = 0;
-        std::uint16_t topic_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
+        if (remaining_length_ < 2) throw remaining_length_error();
+        std::uint16_t packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
         i += 2;
-        if (remaining_length_ < i + topic_name_length) throw remaining_length_error();
-        std::string topic_name(payload_.data() + i, topic_name_length);
-        i += topic_name_length;
-        boost::optional<std::uint16_t> packet_id;
-        auto qos = publish::get_qos(fixed_header_);
-        switch (qos) {
-        case qos::at_most_once:
-            break;
-        case qos::at_least_once:
+        std::vector<std::tuple<std::string, std::uint8_t>> entries;
+        while (i < remaining_length_) {
             if (remaining_length_ < i + 2) throw remaining_length_error();
-            packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
+            std::uint16_t topic_length = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
-            send_puback(*packet_id);
-            break;
-        case qos::exactly_once:
-            if (remaining_length_ < i + 2) throw remaining_length_error();
-            packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
-            i += 2;
-            send_pubrec(*packet_id);
-            break;
-        default:
-            break;
+            if (remaining_length_ < i + topic_length) throw remaining_length_error();
+            std::string topic_filter(payload_.data() + i, topic_length);
+            i += topic_length;
+
+            std::uint8_t qos = payload_[i] & 0b00000011;
+            ++i;
+            entries.emplace_back(std::move(topic_filter), qos);
         }
-        std::string contents(payload_.data() + i, payload_.size() - i);
-        if (h_publish_) h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents));
+        if (h_subscribe_) h_subscribe_(packet_id, std::move(entries));
     }
 
     void handle_suback() {
@@ -935,6 +1179,25 @@ private:
         if (h_suback_) h_suback_(packet_id, std::move(results));
     }
 
+    void handle_unsubscribe() {
+        std::size_t i = 0;
+        if (remaining_length_ < 2) throw remaining_length_error();
+        std::uint16_t packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
+        i += 2;
+        std::vector<std::string> topic_filters;
+        while (i < remaining_length_) {
+            if (remaining_length_ < i + 2) throw remaining_length_error();
+            std::uint16_t topic_length = make_uint16_t(payload_[i], payload_[i + 1]);
+            i += 2;
+            if (remaining_length_ < i + topic_length) throw remaining_length_error();
+            std::string topic_filter(payload_.data() + i, topic_length);
+            i += topic_length;
+
+            topic_filters.emplace_back(std::move(topic_filter));
+        }
+        if (h_unsubscribe_) h_unsubscribe_(packet_id, std::move(topic_filters));
+    }
+
     void handle_unsuback() {
         if (remaining_length_ != 2) throw remaining_length_error();
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
@@ -944,9 +1207,19 @@ private:
         if (h_unsuback_) h_unsuback_(packet_id);
     }
 
+    void handle_pingreq() {
+        if (remaining_length_ != 0) throw remaining_length_error();
+        if (h_pingreq_) h_pingreq_();
+    }
+
     void handle_pingresp() {
         if (remaining_length_ != 0) throw remaining_length_error();
         if (h_pingresp_) h_pingresp_();
+    }
+
+    void handle_disconnect() {
+        if (remaining_length_ != 0) throw remaining_length_error();
+        if (h_disconnect_) h_disconnect_();
     }
 
 protected:
@@ -1016,7 +1289,14 @@ protected:
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
     }
 
-private:
+    void send_conack(bool session_present, std::uint8_t return_code) {
+        send_buffer sb;
+        sb.buf()->push_back(static_cast<char>(session_present ? 1 : 0));
+        sb.buf()->push_back(static_cast<char>(return_code));
+        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::connack, 0b0000));
+        as::write(*socket_, ptr_size.first, ptr_size.second);
+    }
+
     void send_publish(
         std::string const& topic_name,
         std::uint16_t qos,
@@ -1053,20 +1333,6 @@ private:
         }
     }
 
-    void send_pubrel(std::uint16_t packet_id) {
-        send_buffer sb;
-        sb.buf()->push_back(static_cast<char>(packet_id >> 8));
-        sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
-        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
-        store_.emplace(
-            packet_id,
-            control_packet_type::pubcomp,
-            sb.buf(),
-            ptr_size.first,
-            ptr_size.second);
-    }
-
     void send_puback(std::uint16_t packet_id) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
@@ -1081,6 +1347,20 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrec, 0b0000));
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+    }
+
+    void send_pubrel(std::uint16_t packet_id) {
+        send_buffer sb;
+        sb.buf()->push_back(static_cast<char>(packet_id >> 8));
+        sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
+        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
+        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        store_.emplace(
+            packet_id,
+            control_packet_type::pubcomp,
+            sb.buf(),
+            ptr_size.first,
+            ptr_size.second);
     }
 
     void send_pubcomp(std::uint16_t packet_id) {
@@ -1120,6 +1400,29 @@ private:
     }
 
     template <typename... Args>
+    void send_suback(
+        std::vector<std::uint8_t>& params,
+        std::uint16_t packet_id,
+        std::uint8_t qos, Args... args) {
+        params.push_back(qos);
+        send_suback(params, packet_id, args...);
+    }
+
+    void send_suback(
+        std::vector<std::uint8_t>& params,
+        std::uint16_t packet_id) {
+        send_buffer sb;
+        sb.buf()->push_back(static_cast<char>(packet_id >> 8));
+        sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
+        for (auto const& e : params) {
+            sb.buf()->push_back(e);
+        }
+        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::suback, 0b0000));
+        store_.emplace(packet_id, control_packet_type::suback);
+        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+    }
+
+    template <typename... Args>
     void send_unsubscribe(
         std::vector<std::reference_wrapper<std::string const>>& params,
         std::uint16_t packet_id,
@@ -1146,14 +1449,27 @@ private:
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
     }
 
-protected:
+    void send_unsuback(
+        std::uint16_t packet_id) {
+        send_buffer sb;
+        sb.buf()->push_back(static_cast<char>(packet_id >> 8));
+        sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
+        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsuback, 0b0010));
+        store_.emplace(packet_id, control_packet_type::unsuback);
+        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+    }
+
     void send_pingreq() {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingreq, 0b0000));
         as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
     }
 
-private:
+    void send_pingresp() {
+        send_buffer sb;
+        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingresp, 0b0000));
+        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+    }
     void send_disconnect() {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::disconnect, 0b0000));
@@ -1161,6 +1477,7 @@ private:
         connected_ = false;
     }
 
+private:
     std::uint16_t create_unique_packet_id() {
         do {
             ++packet_id_master_;
@@ -1182,7 +1499,6 @@ private:
     }
 
 private:
-    as::io_service& ios_;
     std::unique_ptr<Socket> socket_;
     std::string host_;
     std::string port_;
@@ -1197,14 +1513,20 @@ private:
     std::vector<char> payload_;
     close_handler h_close_;
     error_handler h_error_;
+    connect_handler h_connect_;
     connack_handler h_connack_;
+    publish_handler h_publish_;
     puback_handler h_puback_;
     pubrec_handler h_pubrec_;
+    pubrec_handler h_pubrel_;
     pubcomp_handler h_pubcomp_;
-    publish_handler h_publish_;
+    subscribe_handler h_subscribe_;
     suback_handler h_suback_;
+    unsubscribe_handler h_unsubscribe_;
     unsuback_handler h_unsuback_;
+    pingreq_handler h_pingreq_;
     pingresp_handler h_pingresp_;
+    disconnect_handler h_disconnect_;
     boost::optional<std::string> user_name_;
     boost::optional<std::string> password_;
     mi_store store_;
