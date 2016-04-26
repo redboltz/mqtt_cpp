@@ -55,7 +55,11 @@ public:
     using error_handler = std::function<void(boost::system::error_code const& ec)>;
 
     /**
-     * @breif Conack handler
+     * @breif Connect handler
+     * @param client_id
+     *        User Name.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349245<BR>
+     *        3.1.3.4 User Name
      * @param username
      *        User Name.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349245<BR>
@@ -87,7 +91,8 @@ public:
      *
      */
     using connect_handler = std::function<
-        void(boost::optional<std::string> const& username,
+        void(std::string const& client_id,
+             boost::optional<std::string> const& username,
              boost::optional<std::string> const& password,
              boost::optional<will> will,
              bool clean_session,
@@ -1043,7 +1048,7 @@ private:
             password = std::string(payload_.data() + i, password_length);
             i += password_length;
         }
-        if (h_connect_) h_connect_(user_name, password, std::move(w), clean_session, keep_alive);
+        if (h_connect_) h_connect_(client_id, user_name, password, std::move(w), clean_session, keep_alive);
     }
 
     void handle_connack() {
