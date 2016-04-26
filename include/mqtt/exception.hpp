@@ -69,6 +69,13 @@ struct read_bytes_transferred_error : bytes_transferred_error {
     }
 };
 
+struct write_bytes_transferred_error : bytes_transferred_error {
+    write_bytes_transferred_error(std::size_t expected, std::size_t actual)
+        :bytes_transferred_error(expected, actual) {
+        msg = "[write] " + msg;
+    }
+};
+
 } // namespace mqtt
 
 #endif // MQTT_EXCEPTION_HPP

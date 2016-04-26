@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <deque>
 #include <functional>
 #include <set>
 #include <memory>
@@ -21,6 +22,7 @@
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/member.hpp>
+#include <boost/multi_index/mem_fun.hpp>
 #include <boost/multi_index/composite_key.hpp>
 
 #include <mqtt/fixed_header.hpp>
@@ -39,9 +41,9 @@ namespace mqtt {
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
-template <typename Socket>
+template <typename Socket, typename Strand>
 class endpoint {
-    using this_type = endpoint<Socket>;
+    using this_type = endpoint<Socket, Strand>;
 public:
     /**
      * @breif Close handler
@@ -735,9 +737,10 @@ public:
     }
 
 protected:
-    endpoint()
+    endpoint(as::io_service& ios)
         :connected_(false),
          clean_session_(false),
+         strand_(ios),
          packet_id_master_(0)
     {}
 
@@ -745,6 +748,7 @@ protected:
         :socket_(std::move(socket)),
          connected_(true),
          clean_session_(false),
+         strand_(socket_.get_io_service()),
          packet_id_master_(0)
     {}
 
@@ -787,13 +791,13 @@ private:
             return buf_;
         }
 
-        std::pair<char const*, std::size_t>  finalize(std::uint8_t fixed_header) {
+        std::pair<char*, std::size_t>  finalize(std::uint8_t fixed_header) {
             auto rb = remaining_bytes(buf_->size() - payload_position_);
             std::size_t start_position = payload_position_ - rb.size() - 1;
             (*buf_)[start_position] = fixed_header;
             buf_->replace(start_position + 1, rb.size(), rb);
             return std::make_pair(
-                buf_->data() + start_position,
+                &(*buf_)[start_position],
                 buf_->size() - start_position);
         }
     private:
@@ -801,24 +805,47 @@ private:
         std::shared_ptr<std::string> buf_;
     };
 
-    struct store {
+    class packet {
+    public:
+        packet(
+            std::shared_ptr<std::string> const& b = nullptr,
+            char* p = nullptr,
+            std::size_t s = 0)
+            :
+            buf_(b),
+            ptr_(p),
+            size_(s) {}
+        std::shared_ptr<std::string> const& buf() const { return buf_; }
+        char const* ptr() const { return ptr_; }
+        char* ptr() { return ptr_; }
+        std::size_t size() const { return size_; }
+    private:
+        std::shared_ptr<std::string> buf_;
+        char* ptr_;
+        std::size_t size_;
+    };
+    class store {
+    public:
         store(
             std::uint16_t id,
             std::uint8_t type,
             std::shared_ptr<std::string> const& b = nullptr,
-            char const* p = nullptr,
+            char* p = nullptr,
             std::size_t s = 0)
             :
-            packet_id(id),
-            expected_control_packet_type(type),
-            buf(b),
-            ptr(p),
-            size(s) {}
-        std::uint16_t packet_id;
-        std::uint8_t expected_control_packet_type;
-        std::shared_ptr<std::string> buf;
-        char const* ptr;
-        std::size_t size;
+            packet_id_(id),
+            expected_control_packet_type_(type),
+            packet_(b, p, s) {}
+        std::uint16_t packet_id() const { return packet_id_; }
+        std::uint8_t expected_control_packet_type() const { return expected_control_packet_type_; }
+        std::shared_ptr<std::string> const& buf() const { return packet_.buf(); }
+        char const* ptr() const { return packet_.ptr(); }
+        char* ptr() { return packet_.ptr(); }
+        std::size_t size() const { return packet_.size(); }
+    private:
+        std::uint16_t packet_id_;
+        std::uint8_t expected_control_packet_type_;
+        packet packet_;
     };
 
     struct tag_packet_id {};
@@ -831,11 +858,11 @@ private:
                 mi::tag<tag_packet_id_type>,
                 mi::composite_key<
                     store,
-                    mi::member<
+                    mi::const_mem_fun<
                         store, std::uint16_t,
                         &store::packet_id
                     >,
-                    mi::member<
+                    mi::const_mem_fun<
                         store, std::uint8_t,
                         &store::expected_control_packet_type
                     >
@@ -843,7 +870,7 @@ private:
             >,
             mi::ordered_non_unique<
                 mi::tag<tag_packet_id>,
-                mi::member<
+                mi::const_mem_fun<
                     store, std::uint16_t,
                     &store::packet_id
                 >
@@ -870,6 +897,43 @@ protected:
     }
 
 private:
+    void write(std::shared_ptr<std::string> const& buf, char* ptr, std::size_t size) {
+        strand_.post(
+            [this, buf, ptr, size]
+            () {
+                queue_.emplace_back(buf, ptr, size);
+                if (queue_.size() > 1) return;
+                write();
+            }
+        );
+    }
+    void write() {
+        auto& elem = queue_.front();
+        auto size = elem.size();
+        as::async_write(
+            *socket_,
+            as::buffer(elem.ptr(), size),
+            strand_.wrap(
+                [this, size]
+                (boost::system::error_code const& ec,
+                 std::size_t bytes_transferred) {
+                    if (ec) { // Error is handled by async_read.
+                        queue_.clear();
+                        return;
+                    }
+                    if (size != bytes_transferred) {
+                        queue_.clear();
+                        throw write_bytes_transferred_error(size, bytes_transferred);
+                    }
+                    queue_.pop_front();
+                    if (!queue_.empty()) {
+                        write();
+                    }
+                }
+            )
+        );
+    }
+
     void handle_control_packet_type() {
         fixed_header_ = static_cast<std::uint8_t>(buf_);
         remaining_length_ = 0;
@@ -1062,8 +1126,17 @@ private:
                 auto it = idx.begin();
                 auto end = idx.end();
                 while (it != end) {
-                    if (it->buf) {
-                        as::write(*socket_, as::buffer(it->ptr, it->size));
+                    if (it->buf()) {
+                        idx.modify(
+                            it,
+                            [this](auto& e){
+                                if (e.expected_control_packet_type() == control_packet_type::puback ||
+                                    e.expected_control_packet_type() == control_packet_type::pubrec) {
+                                    *e.ptr() |= 0b00001000; // set DUP flag
+                                }
+                                this->write(e.buf(), e.ptr(), e.size());
+                            }
+                        );
                         ++it;
                     }
                     else {
@@ -1291,7 +1364,7 @@ protected:
         }
 
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::connect, 0));
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
     }
 
     void send_conack(bool session_present, std::uint8_t return_code) {
@@ -1299,7 +1372,7 @@ protected:
         sb.buf()->push_back(static_cast<char>(session_present ? 1 : 0));
         sb.buf()->push_back(static_cast<char>(return_code));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::connack, 0b0000));
-        as::write(*socket_, ptr_size.first, ptr_size.second);
+        write(sb.buf(), ptr_size.first, ptr_size.second);
     }
 
     void send_publish(
@@ -1324,10 +1397,8 @@ protected:
         if (retain) flags |= 0b00000001;
         flags |= qos << 1;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
         if (qos > 0) {
-            flags |= 0b00001000;
-            ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
             store_.emplace(
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
@@ -1343,7 +1414,7 @@ protected:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::puback, 0b0000));
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
     }
 
     void send_pubrec(std::uint16_t packet_id) {
@@ -1351,7 +1422,7 @@ protected:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrec, 0b0000));
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
     }
 
     void send_pubrel(std::uint16_t packet_id) {
@@ -1359,7 +1430,7 @@ protected:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
         store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
@@ -1373,7 +1444,7 @@ protected:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubcomp, 0b0000));
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
     }
 
     template <typename... Args>
@@ -1401,7 +1472,7 @@ protected:
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::subscribe, 0b0010));
         store_.emplace(packet_id, control_packet_type::suback);
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
     }
 
     template <typename... Args>
@@ -1424,7 +1495,7 @@ protected:
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::suback, 0b0000));
         store_.emplace(packet_id, control_packet_type::suback);
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
     }
 
     template <typename... Args>
@@ -1451,7 +1522,7 @@ protected:
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsubscribe, 0b0010));
         store_.emplace(packet_id, control_packet_type::unsuback);
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
     }
 
     void send_unsuback(
@@ -1461,24 +1532,24 @@ protected:
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsuback, 0b0010));
         store_.emplace(packet_id, control_packet_type::unsuback);
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
     }
 
     void send_pingreq() {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingreq, 0b0000));
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
     }
 
     void send_pingresp() {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingresp, 0b0000));
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
     }
     void send_disconnect() {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::disconnect, 0b0000));
-        as::write(*socket_, as::buffer(ptr_size.first, ptr_size.second));
+        write(sb.buf(), ptr_size.first, ptr_size.second);
         connected_ = false;
     }
 
@@ -1535,6 +1606,8 @@ private:
     boost::optional<std::string> user_name_;
     boost::optional<std::string> password_;
     mi_store store_;
+    std::deque<packet> queue_;
+    Strand strand_;
     std::uint16_t packet_id_master_;
 };
 

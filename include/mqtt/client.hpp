@@ -34,10 +34,22 @@ namespace mqtt {
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
-template <typename Socket>
-class client : public endpoint<Socket> {
-    using this_type = client<Socket>;
-    using base = endpoint<Socket>;
+struct null_strand {
+    null_strand(as::io_service&){}
+    template <typename Func>
+    void post(Func const&f) {
+        f();
+    }
+    template <typename Func>
+    Func const& wrap(Func const&f) {
+        return f;
+    }
+};
+
+template <typename Socket, typename Strand>
+class client : public endpoint<Socket, Strand> {
+    using this_type = client<Socket, Strand>;
+    using base = endpoint<Socket, Strand>;
 public:
     using close_handler = typename base::close_handler;
     using error_handler = typename base::error_handler;
@@ -69,25 +81,45 @@ public:
     client& operator=(client&&) = default;
 
     /**
-     * @breif Create no tls client.
+     * @breif Create no tls client with strand.
      * @param ios io_service object.
      * @param host hostname
      * @param port port number
      * @return client object
      */
-    friend client<as::ip::tcp::socket>
+    friend client<as::ip::tcp::socket, as::io_service::strand>
     make_client(as::io_service& ios, std::string host, std::string port);
+
+    /**
+     * @breif Create no tls client without strand.
+     * @param ios io_service object.
+     * @param host hostname
+     * @param port port number
+     * @return client object
+     */
+    friend client<as::ip::tcp::socket, null_strand>
+    make_client_no_strand(as::io_service& ios, std::string host, std::string port);
 
 #if !defined(MQTT_NO_TLS)
     /**
-     * @breif Create tls client.
+     * @breif Create tls client with strand.
      * @param ios io_service object.
      * @param host hostname
      * @param port port number
      * @return client object
      */
-    friend client<as::ssl::stream<as::ip::tcp::socket>>
+    friend client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>
     make_tls_client(as::io_service& ios, std::string host, std::string port);
+
+    /**
+     * @breif Create tls client without strand.
+     * @param ios io_service object.
+     * @param host hostname
+     * @param port port number
+     * @return client object
+     */
+    friend client<as::ssl::stream<as::ip::tcp::socket>, null_strand>
+    make_tls_client_no_strand(as::io_service& ios, std::string host, std::string port);
 
     void set_ca_cert_file(std::string file) {
         ctx_.load_verify_file(std::move(file));
@@ -195,7 +227,8 @@ private:
            std::string host,
            std::string port,
            bool tls)
-        :ios_(ios),
+        :endpoint<Socket, Strand>(ios),
+         ios_(ios),
          tim_(new boost::asio::deadline_timer(ios_)),
          host_(std::move(host)),
          port_(std::move(port)),
@@ -292,27 +325,47 @@ private:
     error_handler h_error_;
 };
 
-
-inline client<as::ip::tcp::socket>
+inline client<as::ip::tcp::socket, as::io_service::strand>
 make_client(as::io_service& ios, std::string host, std::string port) {
-    return client<as::ip::tcp::socket>(ios, std::move(host), std::move(port), false);
+    return client<as::ip::tcp::socket, as::io_service::strand>(ios, std::move(host), std::move(port), false);
 }
 
-inline client<as::ip::tcp::socket>
+inline client<as::ip::tcp::socket, as::io_service::strand>
 make_client(as::io_service& ios, std::string host, std::uint16_t port) {
     return make_client(ios, std::move(host), boost::lexical_cast<std::string>(port));
 }
 
-#if !defined(MQTT_NO_TLS)
-
-inline client<as::ssl::stream<as::ip::tcp::socket>>
-make_tls_client(as::io_service& ios, std::string host, std::string port) {
-    return client<as::ssl::stream<as::ip::tcp::socket>>(ios, std::move(host), std::move(port), true);
+inline client<as::ip::tcp::socket, null_strand>
+make_client_no_strand(as::io_service& ios, std::string host, std::string port) {
+    return client<as::ip::tcp::socket, null_strand>(ios, std::move(host), std::move(port), false);
 }
 
-inline client<as::ssl::stream<as::ip::tcp::socket>>
+inline client<as::ip::tcp::socket, null_strand>
+make_client_no_strand(as::io_service& ios, std::string host, std::uint16_t port) {
+    return make_client_no_strand(ios, std::move(host), boost::lexical_cast<std::string>(port));
+}
+
+#if !defined(MQTT_NO_TLS)
+
+inline client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>
+make_tls_client(as::io_service& ios, std::string host, std::string port) {
+    return client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>
+        (ios, std::move(host), std::move(port), true);
+}
+
+inline client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>
 make_tls_client(as::io_service& ios, std::string host, std::uint16_t port) {
     return make_tls_client(ios, std::move(host), boost::lexical_cast<std::string>(port));
+}
+
+inline client<as::ssl::stream<as::ip::tcp::socket>, null_strand>
+make_tls_client_no_strand(as::io_service& ios, std::string host, std::string port) {
+    return client<as::ssl::stream<as::ip::tcp::socket>, null_strand>(ios, std::move(host), std::move(port), true);
+}
+
+inline client<as::ssl::stream<as::ip::tcp::socket>, null_strand>
+make_tls_client_no_strand(as::io_service& ios, std::string host, std::uint16_t port) {
+    return make_tls_client_no_strand(ios, std::move(host), boost::lexical_cast<std::string>(port));
 }
 
 #endif // !defined(MQTT_NO_TLS)

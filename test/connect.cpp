@@ -43,11 +43,72 @@ BOOST_AUTO_TEST_CASE( tls_connect ) {
     BOOST_TEST(order++ == 2);
 }
 
+BOOST_AUTO_TEST_CASE( tls_connect_no_strand ) {
+    boost::asio::io_service ios;
+    auto c = mqtt::make_tls_client_no_strand(ios, broker_url, broker_tls_port);
+    c.set_client_id(cid1());
+    c.set_ca_cert_file("mosquitto.org.crt");
+    c.set_clean_session(true);
+
+    int order = 0;
+    c.set_connack_handler(
+        [&order, &c]
+        (bool sp, std::uint8_t connack_return_code) {
+            BOOST_TEST(order++ == 0);
+            BOOST_TEST(sp == false);
+            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+            c.disconnect();
+        });
+    c.set_close_handler(
+        [&order]
+        () {
+            BOOST_TEST(order++ == 1);
+        });
+    c.set_error_handler(
+        []
+        (boost::system::error_code const&) {
+            BOOST_CHECK(false);
+        });
+    c.connect();
+    ios.run();
+    BOOST_TEST(order++ == 2);
+}
+
 #endif // !defined(MQTT_NO_TLS)
 
 BOOST_AUTO_TEST_CASE( notls_connect ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    c.set_client_id(cid1());
+    c.set_clean_session(true);
+
+    int order = 0;
+    c.set_connack_handler(
+        [&order, &c]
+        (bool sp, std::uint8_t connack_return_code) {
+            BOOST_TEST(order++ == 0);
+            BOOST_TEST(sp == false);
+            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+            c.disconnect();
+        });
+    c.set_close_handler(
+        [&order]
+        () {
+            BOOST_TEST(order++ == 1);
+        });
+    c.set_error_handler(
+        []
+        (boost::system::error_code const&) {
+            BOOST_CHECK(false);
+        });
+    c.connect();
+    ios.run();
+    BOOST_TEST(order++ == 2);
+}
+
+BOOST_AUTO_TEST_CASE( notls_connect_no_strand ) {
+    boost::asio::io_service ios;
+    auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c.set_client_id(cid1());
     c.set_clean_session(true);
 
