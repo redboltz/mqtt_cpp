@@ -127,7 +127,7 @@ public:
      * @param contents
      *        Published contents
      */
-    using publish_handler = std::function<void(std::uint8_t fixed_hader,
+    using publish_handler = std::function<void(std::uint8_t fixed_header,
                                                boost::optional<std::uint16_t> packet_id,
                                                std::string topic_name,
                                                std::string contents)>;
