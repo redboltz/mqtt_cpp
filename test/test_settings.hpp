@@ -13,10 +13,14 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <mqtt/client.hpp>
-
+/*
 constexpr char const* broker_url = "test.mosquitto.org";
 constexpr uint16_t const broker_notls_port = 1883;
 constexpr uint16_t const broker_tls_port = 8883;
+*/
+constexpr char const* broker_url = "localhost";
+constexpr uint16_t const broker_notls_port = 10001;
+constexpr uint16_t const broker_tls_port = 10002;
 
 class uuid : public boost::uuids::uuid {
 public:

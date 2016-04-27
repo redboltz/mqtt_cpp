@@ -46,6 +46,28 @@ class endpoint {
     using this_type = endpoint<Socket, Strand>;
 public:
     /**
+     * @brief Constructor for client
+     */
+    endpoint(as::io_service& ios)
+        :connected_(false),
+         clean_session_(false),
+         strand_(ios),
+         packet_id_master_(0)
+    {}
+
+    /**
+     * @brief Constructor for server.
+     *        socket should have already been connected with another endpoint.
+     */
+    endpoint(std::unique_ptr<Socket>&& socket)
+        :socket_(std::move(socket)),
+         connected_(true),
+         clean_session_(false),
+         strand_(socket_->get_io_service()),
+         packet_id_master_(0)
+    {}
+
+    /**
      * @breif Close handler
      */
     using close_handler = std::function<void()>;
@@ -435,6 +457,14 @@ public:
     }
 
     /**
+     * @brief start session with a connected endpoint.
+     *
+     */
+    void start_session(std::shared_ptr<void> const& resource = nullptr) {
+        async_read_control_packet_type(resource);
+    }
+
+    /**
      * @brief Publish QoS0
      * @param topic_name
      *        A topic name to publish
@@ -588,7 +618,7 @@ public:
      */
     void force_disconnect() {
         if (connected_) {
-            socket_->close();
+            socket_->lowest_layer().close();
             connected_ = false;
         }
     }
@@ -736,21 +766,47 @@ public:
         return false;
     }
 
-protected:
-    endpoint(as::io_service& ios)
-        :connected_(false),
-         clean_session_(false),
-         strand_(ios),
-         packet_id_master_(0)
-    {}
+    void pingreq() {
+        send_pingreq();
+    }
 
-    endpoint(std::unique_ptr<Socket>&& socket)
-        :socket_(std::move(socket)),
-         connected_(true),
-         clean_session_(false),
-         strand_(socket_.get_io_service()),
-         packet_id_master_(0)
-    {}
+    void connect(std::uint16_t keep_alive_sec) {
+        send_connect(keep_alive_sec);
+    }
+
+    // For broke side
+    void conack(bool session_present, std::uint8_t return_code) {
+        send_conack(session_present, return_code);
+    }
+
+    void puback(std::uint16_t packet_id) {
+        send_puback(packet_id);
+    }
+
+    void pubrec(std::uint16_t packet_id) {
+        send_pubrec(packet_id);
+    }
+
+    void pubcomp(std::uint16_t packet_id) {
+        send_pubcomp(packet_id);
+    }
+
+    template <typename... Args>
+    void suback(
+        std::uint16_t packet_id,
+        std::uint8_t qos, Args... args) {
+        std::vector<std::uint8_t> params;
+        send_suback(params, packet_id, qos, std::forward<Args>(args)...);
+    }
+
+    void unsuback(
+        std::uint16_t packet_id) {
+        send_unsuback(packet_id);
+    }
+
+    void pingresp() {
+        send_pingresp();
+    }
 
     bool handle_close_or_error(boost::system::error_code const& ec) {
         if (!ec) return false;
@@ -778,6 +834,24 @@ protected:
         return socket_;
     }
 
+protected:
+    void async_read_control_packet_type(std::shared_ptr<void> const& resource = nullptr) {
+        as::async_read(
+            *socket_,
+            as::buffer(&buf_, 1),
+            strand_.wrap(
+                [this, resource](
+                    boost::system::error_code const& ec,
+                    std::size_t bytes_transferred){
+                    if (handle_close_or_error(ec)) return;
+                    if (bytes_transferred != 1)
+                        throw read_bytes_transferred_error(1, bytes_transferred);
+                    handle_control_packet_type(resource);
+                }
+            )
+        );
+    }
+
 private:
     class send_buffer {
     public:
@@ -791,7 +865,7 @@ private:
             return buf_;
         }
 
-        std::pair<char*, std::size_t>  finalize(std::uint8_t fixed_header) {
+        std::pair<char*, std::size_t> finalize(std::uint8_t fixed_header) {
             auto rb = remaining_bytes(buf_->size() - payload_position_);
             std::size_t start_position = payload_position_ - rb.size() - 1;
             (*buf_)[start_position] = fixed_header;
@@ -824,8 +898,7 @@ private:
         char* ptr_;
         std::size_t size_;
     };
-    class store {
-    public:
+    struct store {
         store(
             std::uint16_t id,
             std::uint8_t type,
@@ -881,22 +954,6 @@ private:
         >
     >;
 
-protected:
-    void async_read_control_packet_type() {
-        as::async_read(
-            *socket_,
-            as::buffer(&buf_, 1),
-            [this](
-                boost::system::error_code const& ec,
-                std::size_t bytes_transferred){
-                if (handle_close_or_error(ec)) return;
-                if (bytes_transferred != 1)
-                    throw read_bytes_transferred_error(1, bytes_transferred);
-                handle_control_packet_type();
-            });
-    }
-
-private:
     void write(std::shared_ptr<std::string> const& buf, char* ptr, std::size_t size) {
         strand_.post(
             [this, buf, ptr, size]
@@ -934,24 +991,27 @@ private:
         );
     }
 
-    void handle_control_packet_type() {
+    void handle_control_packet_type(std::shared_ptr<void> const& resource) {
         fixed_header_ = static_cast<std::uint8_t>(buf_);
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
         as::async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            [this](
-                boost::system::error_code const& ec,
-                std::size_t bytes_transferred){
-                if (handle_close_or_error(ec)) return;
-                if (bytes_transferred != 1)
-                    throw read_bytes_transferred_error(1, bytes_transferred);
-                handle_remaining_length();
-            });
+            strand_.wrap(
+                [this, resource](
+                    boost::system::error_code const& ec,
+                    std::size_t bytes_transferred){
+                    if (handle_close_or_error(ec)) return;
+                    if (bytes_transferred != 1)
+                        throw read_bytes_transferred_error(1, bytes_transferred);
+                    handle_remaining_length(resource);
+                }
+            )
+        );
     }
 
-    void handle_remaining_length() {
+    void handle_remaining_length(std::shared_ptr<void> const& resource) {
         remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
         remaining_length_multiplier_ *= 128;
         if (remaining_length_multiplier_ > 128 * 128 * 128) throw remaining_length_error();
@@ -959,14 +1019,17 @@ private:
             as::async_read(
                 *socket_,
                 as::buffer(&buf_, 1),
-                [this](
-                    boost::system::error_code const& ec,
-                    std::size_t bytes_transferred){
-                    if (handle_close_or_error(ec)) return;
-                    if (bytes_transferred != 1)
-                        throw read_bytes_transferred_error(1, bytes_transferred);
-                    handle_remaining_length();
-                });
+                strand_.wrap(
+                    [this, resource](
+                        boost::system::error_code const& ec,
+                        std::size_t bytes_transferred){
+                        if (handle_close_or_error(ec)) return;
+                        if (bytes_transferred != 1)
+                            throw read_bytes_transferred_error(1, bytes_transferred);
+                        handle_remaining_length(resource);
+                    }
+                )
+            );
         }
         else {
             payload_.resize(remaining_length_);
@@ -977,14 +1040,17 @@ private:
             as::async_read(
                 *socket_,
                 as::buffer(payload_),
-                [this](
-                    boost::system::error_code const& ec,
-                    std::size_t bytes_transferred){
-                    if (handle_close_or_error(ec)) return;
-                    if (bytes_transferred != remaining_length_)
-                        throw read_bytes_transferred_error(remaining_length_, bytes_transferred);
-                    handle_payload();
-                });
+                strand_.wrap(
+                    [this, resource](
+                        boost::system::error_code const& ec,
+                        std::size_t bytes_transferred){
+                        if (handle_close_or_error(ec)) return;
+                        if (bytes_transferred != remaining_length_)
+                            throw read_bytes_transferred_error(remaining_length_, bytes_transferred);
+                        handle_payload();
+                    }
+                )
+            );
         }
     }
 
@@ -1057,7 +1123,8 @@ private:
             payload_[i++] != 'T' ||
             payload_[i++] != 'T' ||
             payload_[i++] != 0x04) {
-        } throw protocol_error();
+            throw protocol_error();
+        }
         char byte8 = payload_[i++];
 
         std::uint16_t keep_alive;
@@ -1300,7 +1367,6 @@ private:
         if (h_disconnect_) h_disconnect_();
     }
 
-protected:
     void send_connect(std::uint16_t keep_alive_sec) {
 
         send_buffer sb;
@@ -1399,6 +1465,8 @@ protected:
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
         write(sb.buf(), ptr_size.first, ptr_size.second);
         if (qos > 0) {
+            flags |= 0b00001000;
+            ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
             store_.emplace(
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
@@ -1553,7 +1621,6 @@ protected:
         connected_ = false;
     }
 
-private:
     std::uint16_t create_unique_packet_id() {
         do {
             ++packet_id_master_;

@@ -275,7 +275,7 @@ private:
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 base::async_read_control_packet_type();
-                base::send_connect(keep_alive_sec_);
+                base::connect(keep_alive_sec_);
             });
     }
 #endif // defined(MQTT_NO_TLS)
@@ -284,12 +284,12 @@ private:
         std::is_same<T, std::unique_ptr<as::ip::tcp::socket>>::value
     >::type handshake_socket(T&) {
         base::async_read_control_packet_type();
-        base::send_connect(keep_alive_sec_);
+        base::connect(keep_alive_sec_);
     }
 
     void handle_timer(boost::system::error_code const& ec) {
         if (!ec) {
-            base::send_pingreq();
+            base::pingreq();
             tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
             tim_->async_wait(
                 [this](boost::system::error_code const& ec) {
