@@ -13,14 +13,10 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <mqtt/client.hpp>
-/*
+
 constexpr char const* broker_url = "test.mosquitto.org";
 constexpr uint16_t const broker_notls_port = 1883;
 constexpr uint16_t const broker_tls_port = 8883;
-*/
-constexpr char const* broker_url = "localhost";
-constexpr uint16_t const broker_notls_port = 10001;
-constexpr uint16_t const broker_tls_port = 10002;
 
 class uuid : public boost::uuids::uuid {
 public:
@@ -69,6 +65,7 @@ struct fixture_clear_retain {
                 // Clear retaind contents
                 pid_sub1 = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_least_once);
                 pid_sub2 = c.subscribe(topic_base() + "/topic2", mqtt::qos::at_least_once);
+                return true;
             });
         c.set_suback_handler(
             [&]
@@ -79,6 +76,7 @@ struct fixture_clear_retain {
                     pid_clear1 = c.publish_at_least_once(topic_base() + "/topic1", "", true);
                     pid_clear2 = c.publish_at_least_once(topic_base() + "/topic2", "", true);
                 }
+                return true;
             });
         c.set_puback_handler(
             [&]
@@ -88,6 +86,7 @@ struct fixture_clear_retain {
                 if (count == 2 && clear1 && clear2) {
                     c.disconnect();
                 }
+                return true;
             });
         c.set_publish_handler(
             [&]
@@ -99,6 +98,7 @@ struct fixture_clear_retain {
                 if (count == 2 && clear1 && clear2) {
                     c.disconnect();
                 }
+                return true;
             });
         c.connect();
         ios.run();

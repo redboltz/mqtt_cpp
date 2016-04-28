@@ -29,6 +29,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
             c.publish_at_most_once(topic_base() + "/topic1", "retained_contents", true);
 
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -44,16 +45,19 @@ BOOST_AUTO_TEST_CASE( simple ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_sub]
@@ -62,6 +66,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
             BOOST_TEST(packet_id == pid_sub);
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pid_unsub]
@@ -69,6 +74,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
             BOOST_TEST(order++ == 3);
             BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -84,6 +90,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
             BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "retained_contents");
             pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+            return true;
         });
     c.connect();
     ios.run();
@@ -111,6 +118,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
             c.publish_at_most_once(topic_base() + "/topic1", "retained_contents3", false);
 
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -126,16 +134,19 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_sub]
@@ -144,6 +155,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
             BOOST_TEST(packet_id == pid_sub);
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pid_unsub]
@@ -151,6 +163,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
             BOOST_TEST(order++ == 3);
             BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -166,6 +179,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
             BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "retained_contents2");
             pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+            return true;
         });
     c.connect();
     ios.run();
@@ -189,6 +203,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -204,16 +219,19 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_sub]
@@ -231,6 +249,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                 BOOST_CHECK(false);
                 break;
             }
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pid_sub, &pid_unsub]
@@ -247,6 +266,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                 BOOST_CHECK(false);
                 break;
             }
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -271,6 +291,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                 BOOST_CHECK(false);
                 break;
             }
+            return true;
         });
     c.connect();
     ios.run();

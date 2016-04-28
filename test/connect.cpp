@@ -27,6 +27,7 @@ BOOST_AUTO_TEST_CASE( tls_connect ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             c.disconnect();
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -58,6 +59,7 @@ BOOST_AUTO_TEST_CASE( tls_connect_no_strand ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             c.disconnect();
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -90,6 +92,7 @@ BOOST_AUTO_TEST_CASE( notls_connect ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             c.disconnect();
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -120,6 +123,7 @@ BOOST_AUTO_TEST_CASE( notls_connect_no_strand ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             c.disconnect();
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -149,6 +153,7 @@ BOOST_AUTO_TEST_CASE( notls_keep_alive ) {
             BOOST_TEST(order++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -165,6 +170,7 @@ BOOST_AUTO_TEST_CASE( notls_keep_alive ) {
         () {
             BOOST_TEST(order++ == 1);
             c.disconnect();
+            return true;
         });
     c.set_keep_alive_sec(3);
     c.connect();
@@ -193,6 +199,7 @@ BOOST_AUTO_TEST_CASE( notls_connect_again ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             c.disconnect();
+            return true;
         });
     c.set_close_handler(
         [&first, &order, &c]
@@ -229,6 +236,7 @@ BOOST_AUTO_TEST_CASE( notls_nocid ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             c.disconnect();
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -256,6 +264,7 @@ BOOST_AUTO_TEST_CASE( notls_nocid_noclean ) {
             BOOST_TEST(order++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::identifier_rejected);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -302,6 +311,7 @@ BOOST_AUTO_TEST_CASE( notls_noclean ) {
             }
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             c.disconnect();
+            return true;
         });
     c.set_close_handler(
         [&order, &connect, &c]

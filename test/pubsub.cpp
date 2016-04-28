@@ -27,6 +27,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -42,16 +43,19 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_sub]
@@ -61,6 +65,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             c.publish_at_most_once(topic_base() + "/topic1", "topic1_contents");
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pid_unsub]
@@ -68,6 +73,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             BOOST_TEST(order++ == 3);
             BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -83,6 +89,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
             pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+            return true;
         });
     c.connect();
     ios.run();
@@ -108,6 +115,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -129,16 +137,19 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                 pub_seq_finished = true;
                 pid_unsub = c.unsubscribe(topic_base() + "/topic1");
             }
+            return true;
         });
     c.set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_pub, &pid_sub]
@@ -148,6 +159,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             pid_pub = c.publish_at_least_once(topic_base() + "/topic1", "topic1_contents");
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pub_seq_finished, &pid_unsub]
@@ -155,6 +167,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             BOOST_TEST(order++ == 4);
             BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -171,6 +184,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
             if (order == 4) pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+            return true;
         });
     c.connect();
     ios.run();
@@ -196,6 +210,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -211,6 +226,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubrec_handler(
         [&order, &pid_pub]
@@ -218,6 +234,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             BOOST_CHECK(order == 2 || order == 3);
             ++order;
             BOOST_TEST(packet_id == pid_pub);
+            return true;
         });
     c.set_pubcomp_handler(
         [&order, &c, &pub_seq_finished, &pid_unsub, &pid_pub]
@@ -229,6 +246,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                 pub_seq_finished = true;
                 pid_unsub = c.unsubscribe(topic_base() + "/topic1");
             }
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_pub]
@@ -238,6 +256,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             pid_pub = c.publish_exactly_once(topic_base() + "/topic1", "topic1_contents");
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pub_seq_finished, &pid_unsub]
@@ -245,6 +264,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             BOOST_TEST(order++ == 5);
             BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -261,6 +281,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
             if (order == 5) pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+            return true;
         });
     c.connect();
     ios.run();
@@ -284,6 +305,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_least_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -299,16 +321,19 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_sub]
@@ -318,6 +343,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
             c.publish_at_most_once(topic_base() + "/topic1", "topic1_contents");
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pid_unsub]
@@ -325,6 +351,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             BOOST_TEST(order++ == 3);
             BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -340,6 +367,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
             pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+            return true;
         });
     c.connect();
     ios.run();
@@ -365,6 +393,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_least_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -386,16 +415,19 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                 pub_seq_finished = true;
                 pid_unsub = c.unsubscribe(topic_base() + "/topic1");
             }
+            return true;
         });
     c.set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_sub, &pid_pub]
@@ -405,6 +437,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
             pid_pub = c.publish_at_least_once(topic_base() + "/topic1", "topic1_contents");
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pub_seq_finished, &pid_unsub]
@@ -413,6 +446,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             ++order;
             BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -429,6 +463,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
             if (order == 4) pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+            return true;
         });
     c.connect();
     ios.run();
@@ -454,6 +489,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_least_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -469,6 +505,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubrec_handler(
         [&order, &pid_pub]
@@ -476,6 +513,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             BOOST_CHECK(order == 2 || order == 3);
             ++order;
             BOOST_TEST(packet_id == pid_pub);
+            return true;
         });
     c.set_pubcomp_handler(
         [&order, &c, &pub_seq_finished, &pid_pub, &pid_unsub]
@@ -487,6 +525,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                 pub_seq_finished = true;
                 pid_unsub = c.unsubscribe(topic_base() + "/topic1");
             }
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_sub, &pid_pub]
@@ -496,6 +535,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
             pid_pub = c.publish_exactly_once(topic_base() + "/topic1", "topic1_contents");
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pub_seq_finished, &pid_unsub]
@@ -504,6 +544,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             ++order;
             BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -520,6 +561,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
             if (order == 5) pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+            return true;
         });
     c.connect();
     ios.run();
@@ -543,6 +585,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::exactly_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -558,16 +601,19 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_sub]
@@ -577,6 +623,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::exactly_once);
             c.publish_at_most_once(topic_base() + "/topic1", "topic1_contents");
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pid_unsub]
@@ -584,6 +631,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             BOOST_TEST(order++ == 3);
             BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -599,6 +647,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
             pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+            return true;
         });
     c.connect();
     ios.run();
@@ -624,6 +673,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::exactly_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -645,16 +695,19 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                 pub_seq_finished = true;
                 pid_unsub = c.unsubscribe(topic_base() + "/topic1");
             }
+            return true;
         });
     c.set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_sub, &pid_pub]
@@ -664,6 +717,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::exactly_once);
             pid_pub = c.publish_at_least_once(topic_base() + "/topic1", "topic1_contents");
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pub_seq_finished, &pid_unsub]
@@ -672,6 +726,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             ++order;
             BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -688,6 +743,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
             if (order == 4) pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+            return true;
         });
     c.connect();
     ios.run();
@@ -713,6 +769,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::exactly_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -728,6 +785,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubrec_handler(
         [&order, &pid_pub]
@@ -735,6 +793,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             BOOST_CHECK(order == 2 || order == 3);
             ++order;
             BOOST_TEST(packet_id == pid_pub);
+            return true;
         });
     c.set_pubcomp_handler(
         [&order, &c, &pub_seq_finished, &pid_pub, &pid_unsub]
@@ -746,6 +805,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                 pub_seq_finished = true;
                 pid_unsub = c.unsubscribe(topic_base() + "/topic1");
             }
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_sub, &pid_pub]
@@ -755,6 +815,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::exactly_once);
             pid_pub = c.publish_exactly_once(topic_base() + "/topic1", "topic1_contents");
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pub_seq_finished, &pid_unsub]
@@ -763,6 +824,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             ++order;
             BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -779,6 +841,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
             if (order == 5) pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+            return true;
         });
     c.connect();
     ios.run();
@@ -802,6 +865,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -817,16 +881,19 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_suback_handler(
         [&order, &c, &pid_sub]
@@ -836,6 +903,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
             BOOST_TEST(results.size() == 1);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             c.publish(topic_base() + "/topic1", "topic1_contents", mqtt::qos::at_most_once);
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pid_unsub]
@@ -843,6 +911,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
             BOOST_TEST(order++ == 3);
             BOOST_TEST(packet_id == pid_unsub);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c, &pid_unsub]
@@ -858,6 +927,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
             BOOST_TEST(topic == topic_base() + "/topic1");
             BOOST_TEST(contents == "topic1_contents");
             pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+            return true;
         });
     c.connect();
     ios.run();

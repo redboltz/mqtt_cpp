@@ -39,6 +39,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 BOOST_CHECK(false);
                 break;
             }
+            return true;
         });
     c.set_close_handler(
         [&order, &c]
@@ -67,6 +68,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             BOOST_TEST(order++ == 5);
             BOOST_TEST(packet_id == pid_pub);
             c.disconnect();
+            return true;
         });
     c.connect();
     ios.run();
@@ -103,6 +105,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 BOOST_CHECK(false);
                 break;
             }
+            return true;
         });
     c.set_close_handler(
         [&order, &c]
@@ -130,6 +133,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         (std::uint16_t packet_id) {
             BOOST_TEST(order++ == 5);
             BOOST_TEST(packet_id == pid_pub);
+            return true;
         });
     c.set_pubcomp_handler(
         [&order, &c, &pid_pub]
@@ -137,6 +141,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             BOOST_TEST(order++ == 6);
             BOOST_TEST(packet_id == pid_pub);
             c.disconnect();
+            return true;
         });
     c.connect();
     ios.run();
@@ -172,6 +177,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 BOOST_CHECK(false);
                 break;
             }
+            return true;
         });
     c.set_close_handler(
         [&order, &c]
@@ -200,6 +206,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             BOOST_TEST(order++ == 3);
             BOOST_TEST(packet_id == pid_pub);
             c.force_disconnect();
+            return true;
         });
     c.set_pubcomp_handler(
         [&order, &c]
@@ -207,6 +214,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             BOOST_TEST(order++ == 6);
             BOOST_TEST(packet_id == 1);
             c.disconnect();
+            return true;
         });
     c.connect();
     ios.run();
@@ -246,6 +254,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                 BOOST_CHECK(false);
                 break;
             }
+            return true;
         });
     c.set_close_handler(
         [&order, &c]
@@ -283,6 +292,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
             BOOST_TEST(order++ == 5);
             BOOST_TEST(packet_id == pid_pub);
             c.force_disconnect();
+            return true;
         });
     c.set_pubcomp_handler(
         [&order, &c, &pid_pub]
@@ -290,6 +300,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
             BOOST_TEST(order++ == 8);
             BOOST_TEST(packet_id == pid_pub);
             c.disconnect();
+            return true;
         });
     c.connect();
     ios.run();
@@ -328,6 +339,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 BOOST_CHECK(false);
                 break;
             }
+            return true;
         });
     c.set_close_handler(
         [&order, &c]
@@ -362,6 +374,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 break;
             }
             c.disconnect();
+            return true;
         });
     c.connect();
     ios.run();
