@@ -28,23 +28,12 @@
 #endif // !defined(MQTT_NO_TLS)
 
 #include <mqtt/endpoint.hpp>
+#include <mqtt/null_strand.hpp>
 
 namespace mqtt {
 
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
-
-struct null_strand {
-    null_strand(as::io_service&){}
-    template <typename Func>
-    void post(Func const&f) {
-        f();
-    }
-    template <typename Func>
-    Func const& wrap(Func const&f) {
-        return f;
-    }
-};
 
 template <typename Socket, typename Strand>
 class client : public endpoint<Socket, Strand> {
