@@ -160,6 +160,7 @@ public:
     /**
      * @breif Connect to a broker
      * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param resource the library holds any shared_ptr to keep its lifetime
      */
     void connect(std::shared_ptr<void> const& resource = nullptr) {
         as::ip::tcp::resolver r(ios_);

@@ -115,6 +115,7 @@ public:
      *        Keep Alive<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349237<BR>
      *        3.1.2.10 Keep Alive
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      *
      */
     using connect_handler = std::function<
@@ -135,6 +136,7 @@ public:
      *        connect_return_code<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718035<BR>
      *        3.2.2.3 Connect Return code
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using connack_handler = std::function<bool(bool session_present, std::uint8_t return_code)>;
 
@@ -153,6 +155,7 @@ public:
      *        Topic name
      * @param contents
      *        Published contents
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using publish_handler = std::function<bool(std::uint8_t fixed_header,
                                                boost::optional<std::uint16_t> packet_id,
@@ -165,6 +168,7 @@ public:
      *        packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718045<BR>
      *        3.4.2 Variable header
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using puback_handler = std::function<bool(std::uint16_t packet_id)>;
 
@@ -174,6 +178,7 @@ public:
      *        packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718050<BR>
      *        3.5.2 Variable header
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using pubrec_handler = std::function<bool(std::uint16_t packet_id)>;
 
@@ -183,6 +188,7 @@ public:
      *        packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349791<BR>
      *        3.6.2 Variable header
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using pubrel_handler = std::function<bool(std::uint16_t packet_id)>;
 
@@ -192,6 +198,7 @@ public:
      *        packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718060<BR>
      *        3.7.2 Variable header
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using pubcomp_handler = std::function<bool(std::uint16_t packet_id)>;
 
@@ -203,6 +210,7 @@ public:
      * @param entries
      *        Collection of a pair of Topic Filter and QoS.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349802<BR>
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using subscribe_handler = std::function<bool(std::uint16_t packet_id,
                                                  std::vector<std::tuple<std::string, std::uint8_t>> entries)>;
@@ -216,6 +224,7 @@ public:
      *        Collection of QoS that is corresponding to subscribed topic order.<BR>
      *        If subscription is failure, the value is boost::none.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718071<BR>
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using suback_handler = std::function<bool(std::uint16_t packet_id,
                                               std::vector<boost::optional<std::uint8_t>> qoss)>;
@@ -228,6 +237,7 @@ public:
      * @param topics
      *        Collection of Topic Filters<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800448<BR>
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using unsubscribe_handler = std::function<bool(std::uint16_t packet_id,
                                                    std::vector<std::string> topics)>;
@@ -237,6 +247,7 @@ public:
      * @param packet_id packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718045<BR>
      *        3.11.2 Variable header
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using unsuback_handler = std::function<bool(std::uint16_t)>;
 
@@ -244,6 +255,7 @@ public:
      * @breif Pingreq handler
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718081<BR>
      *        3.13 PINGREQ – PING request
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using pingreq_handler = std::function<bool()>;
 
@@ -251,6 +263,7 @@ public:
      * @breif Pingresp handler
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718086<BR>
      *        3.13 PINGRESP – PING response
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using pingresp_handler = std::function<bool()>;
 
@@ -258,6 +271,7 @@ public:
      * @breif Disconnect handler
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800463<BR>
      *        3.14 DISCONNECT – Disconnect notification
+     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using disconnect_handler = std::function<bool()>;
 
@@ -461,6 +475,7 @@ public:
 
     /**
      * @brief start session with a connected endpoint.
+     * @param resource the library holds any shared_ptr to keep its lifetime
      *
      */
     void start_session(std::shared_ptr<void> const& resource = nullptr) {
