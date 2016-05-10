@@ -475,11 +475,11 @@ public:
 
     /**
      * @brief start session with a connected endpoint.
-     * @param resource the library holds any shared_ptr to keep its lifetime
+     * @param func finish handler that is called when the session is finished
      *
      */
-    void start_session(std::shared_ptr<void> const& resource = nullptr) {
-        async_read_control_packet_type(resource);
+    void start_session(std::function<void()> const& func = std::function<void()>()) {
+        async_read_control_packet_type(func);
     }
 
     // Blocking APIs
@@ -1382,15 +1382,12 @@ public:
     }
 
 protected:
-    void async_read_control_packet_type() {
-        async_read_control_packet_type(nullptr);
-    }
-    void async_read_control_packet_type(std::shared_ptr<void> const& resource) {
+    void async_read_control_packet_type(std::function<void()> const& func) {
         as::async_read(
             *socket_,
             as::buffer(&buf_, 1),
             strand_.wrap(
-                [this, resource](
+                [this, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
                     if (handle_close_or_error(ec)) {
@@ -1398,7 +1395,7 @@ protected:
                     }
                     if (bytes_transferred != 1)
                         throw read_bytes_transferred_error(1, bytes_transferred);
-                    handle_control_packet_type(resource);
+                    handle_control_packet_type(func);
                 }
             )
         );
@@ -1507,7 +1504,7 @@ private:
         >
     >;
 
-    void handle_control_packet_type(std::shared_ptr<void> const& resource) {
+    void handle_control_packet_type(std::function<void()> const& func) {
         fixed_header_ = static_cast<std::uint8_t>(buf_);
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
@@ -1515,21 +1512,24 @@ private:
             *socket_,
             as::buffer(&buf_, 1),
             strand_.wrap(
-                [this, resource](
+                [this, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
                     if (handle_close_or_error(ec)) {
+                        if (func) func();
                         return;
                     }
-                    if (bytes_transferred != 1)
+                    if (bytes_transferred != 1) {
+                        if (func) func();
                         throw read_bytes_transferred_error(1, bytes_transferred);
-                    handle_remaining_length(resource);
+                    }
+                    handle_remaining_length(func);
                 }
             )
         );
     }
 
-    void handle_remaining_length(std::shared_ptr<void> const& resource) {
+    void handle_remaining_length(std::function<void()> const& func) {
         remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
         remaining_length_multiplier_ *= 128;
         if (remaining_length_multiplier_ > 128 * 128 * 128) throw remaining_length_error();
@@ -1538,15 +1538,18 @@ private:
                 *socket_,
                 as::buffer(&buf_, 1),
                 strand_.wrap(
-                    [this, resource](
+                    [this, func](
                         boost::system::error_code const& ec,
                         std::size_t bytes_transferred){
                         if (handle_close_or_error(ec)) {
+                            if (func) func();
                             return;
                         }
-                        if (bytes_transferred != 1)
+                        if (bytes_transferred != 1) {
+                            if (func) func();
                             throw read_bytes_transferred_error(1, bytes_transferred);
-                        handle_remaining_length(resource);
+                        }
+                        handle_remaining_length(func);
                     }
                 )
             );
@@ -1554,29 +1557,32 @@ private:
         else {
             payload_.resize(remaining_length_);
             if (remaining_length_ == 0) {
-                handle_payload(resource);
+                handle_payload(func);
                 return;
             }
             as::async_read(
                 *socket_,
                 as::buffer(payload_),
                 strand_.wrap(
-                    [this, resource](
+                    [this, func](
                         boost::system::error_code const& ec,
                         std::size_t bytes_transferred){
                         if (handle_close_or_error(ec)) {
+                            if (func) func();
                             return;
                         }
-                        if (bytes_transferred != remaining_length_)
+                        if (bytes_transferred != remaining_length_) {
+                            if (func) func();
                             throw read_bytes_transferred_error(remaining_length_, bytes_transferred);
-                        handle_payload(resource);
+                        }
+                        handle_payload(func);
                     }
                 )
             );
         }
     }
 
-    void handle_payload(std::shared_ptr<void> const& resource) {
+    void handle_payload(std::function<void()> const& func) {
         auto control_packet_type = get_control_packet_type(fixed_header_);
         bool ret = false;
         switch (control_packet_type) {
@@ -1625,7 +1631,8 @@ private:
         default:
             break;
         }
-        if (ret) async_read_control_packet_type(resource);
+        if (ret) async_read_control_packet_type(func);
+        else if (func) func();
     }
 
     void handle_close() {

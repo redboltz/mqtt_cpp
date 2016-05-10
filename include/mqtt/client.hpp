@@ -160,16 +160,16 @@ public:
     /**
      * @breif Connect to a broker
      * Before calling connect(), call set_xxx member functions to configure the connection.
-     * @param resource the library holds any shared_ptr to keep its lifetime
+     * @param func finish handler that is called when the session is finished
      */
-    void connect(std::shared_ptr<void> const& resource = nullptr) {
+    void connect(std::function<void()> const& func = std::function<void()>()) {
         as::ip::tcp::resolver r(ios_);
         as::ip::tcp::resolver::query q(host_, port_);
         auto it = r.resolve(q);
         setup_socket(base::socket());
         as::async_connect(
             base::socket()->lowest_layer(), it,
-            [this, resource]
+            [this, func]
             (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
                 base::set_close_handler([this](){ handle_close(); });
                 base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
@@ -185,7 +185,7 @@ public:
                     }
                 }
                 if (base::handle_close_or_error(ec)) return;
-                handshake_socket(base::socket(), resource);
+                handshake_socket(base::socket(), func);
             });
     }
 
@@ -258,13 +258,13 @@ private:
     template <typename T>
     typename std::enable_if<
         std::is_same<T, std::unique_ptr<as::ssl::stream<as::ip::tcp::socket>>>::value
-    >::type handshake_socket(T& socket, std::shared_ptr<void> const& resource) {
+    >::type handshake_socket(T& socket, std::function<void()> const& func) {
         socket->async_handshake(
             as::ssl::stream_base::client,
-            [this, resource]
+            [this, func]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
-                base::async_read_control_packet_type(resource);
+                base::async_read_control_packet_type(func);
                 base::connect(keep_alive_sec_);
             });
     }
@@ -272,8 +272,8 @@ private:
     template <typename T>
     typename std::enable_if<
         std::is_same<T, std::unique_ptr<as::ip::tcp::socket>>::value
-    >::type handshake_socket(T&, std::shared_ptr<void> const& resource) {
-        base::async_read_control_packet_type(resource);
+    >::type handshake_socket(T&, std::function<void()> const& func) {
+        base::async_read_control_packet_type(func);
         base::connect(keep_alive_sec_);
     }
 
