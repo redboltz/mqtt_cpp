@@ -40,6 +40,7 @@ class client : public endpoint<Socket, Strand> {
     using this_type = client<Socket, Strand>;
     using base = endpoint<Socket, Strand>;
 public:
+    using async_handler_t = typename base::async_handler_t;
     using close_handler = typename base::close_handler;
     using error_handler = typename base::error_handler;
     using connack_handler = typename base::connack_handler;
@@ -162,7 +163,7 @@ public:
      * Before calling connect(), call set_xxx member functions to configure the connection.
      * @param func finish handler that is called when the session is finished
      */
-    void connect(std::function<void()> const& func = std::function<void()>()) {
+    void connect(async_handler_t const& func = async_handler_t()) {
         as::ip::tcp::resolver r(ios_);
         as::ip::tcp::resolver::query q(host_, port_);
         auto it = r.resolve(q);
@@ -258,7 +259,7 @@ private:
     template <typename T>
     typename std::enable_if<
         std::is_same<T, std::unique_ptr<as::ssl::stream<as::ip::tcp::socket>>>::value
-    >::type handshake_socket(T& socket, std::function<void()> const& func) {
+    >::type handshake_socket(T& socket, async_handler_t const& func) {
         socket->async_handshake(
             as::ssl::stream_base::client,
             [this, func]
@@ -272,7 +273,7 @@ private:
     template <typename T>
     typename std::enable_if<
         std::is_same<T, std::unique_ptr<as::ip::tcp::socket>>::value
-    >::type handshake_socket(T&, std::function<void()> const& func) {
+    >::type handshake_socket(T&, async_handler_t const& func) {
         base::async_read_control_packet_type(func);
         base::connect(keep_alive_sec_);
     }
