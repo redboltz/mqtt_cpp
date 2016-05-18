@@ -128,7 +128,7 @@ public:
              std::uint16_t keep_alive)>;
 
     /**
-     * @breif Conack handler
+     * @breif Connack handler
      * @param session_present
      *        Session present flag.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718035<BR>
@@ -796,8 +796,8 @@ public:
     }
 
     // For broker side
-    void conack(bool session_present, std::uint8_t return_code) {
-        send_conack(session_present, return_code);
+    void connack(bool session_present, std::uint8_t return_code) {
+        send_connack(session_present, return_code);
     }
 
     void puback(std::uint16_t packet_id) {
@@ -1291,11 +1291,11 @@ public:
     }
 
     // For broker side
-    void async_conack(
+    void async_connack(
         bool session_present,
         std::uint8_t return_code,
         async_handler_t const& func = async_handler_t()) {
-        async_send_conack(session_present, return_code, func);
+        async_send_connack(session_present, return_code, func);
     }
 
     void async_puback(std::uint16_t packet_id, async_handler_t const& func = async_handler_t()) {
@@ -2069,7 +2069,7 @@ private:
         write(ptr_size.first, ptr_size.second);
     }
 
-    void send_conack(bool session_present, std::uint8_t return_code) {
+    void send_connack(bool session_present, std::uint8_t return_code) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(session_present ? 1 : 0));
         sb.buf()->push_back(static_cast<char>(return_code));
@@ -2332,7 +2332,7 @@ private:
     }
 
     template <typename F>
-    void async_send_conack(bool session_present, std::uint8_t return_code, F const& func) {
+    void async_send_connack(bool session_present, std::uint8_t return_code, F const& func) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(session_present ? 1 : 0));
         sb.buf()->push_back(static_cast<char>(return_code));
