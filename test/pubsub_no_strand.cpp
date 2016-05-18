@@ -8,12 +8,12 @@
 
 #include <mqtt/client.hpp>
 
-BOOST_AUTO_TEST_SUITE(test_pubsub)
+BOOST_AUTO_TEST_SUITE(test_pubsub_no_strand)
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
     fixture_clear_retain();
     boost::asio::io_service ios;
-    auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c.set_clean_session(true);
 
     std::uint16_t pid_sub;
@@ -33,11 +33,13 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
         [&order]
         () {
             BOOST_TEST(order++ == 4);
+            return true;
         });
     c.set_error_handler(
         []
         (boost::system::error_code const&) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_puback_handler(
         []
@@ -99,7 +101,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
     fixture_clear_retain();
     boost::asio::io_service ios;
-    auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c.set_clean_session(true);
     bool pub_seq_finished = false;
 
@@ -194,7 +196,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
     fixture_clear_retain();
     boost::asio::io_service ios;
-    auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c.set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -291,7 +293,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
     fixture_clear_retain();
     boost::asio::io_service ios;
-    auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c.set_clean_session(true);
 
     std::uint16_t pid_sub;
@@ -377,7 +379,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
     fixture_clear_retain();
     boost::asio::io_service ios;
-    auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c.set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -473,7 +475,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
     fixture_clear_retain();
     boost::asio::io_service ios;
-    auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c.set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -571,7 +573,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
     fixture_clear_retain();
     boost::asio::io_service ios;
-    auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c.set_clean_session(true);
 
     std::uint16_t pid_sub;
@@ -657,7 +659,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
     fixture_clear_retain();
     boost::asio::io_service ios;
-    auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c.set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -753,7 +755,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
     fixture_clear_retain();
     boost::asio::io_service ios;
-    auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c.set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -851,7 +853,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
 BOOST_AUTO_TEST_CASE( publish_function ) {
     fixture_clear_retain();
     boost::asio::io_service ios;
-    auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c.set_clean_session(true);
 
     std::uint16_t pid_sub;

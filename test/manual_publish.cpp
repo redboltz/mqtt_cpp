@@ -39,6 +39,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     1,
                     topic_base() + "/topic1",
                     mqtt::qos::at_most_once) == false);
+            return true;
         });
     c.set_close_handler(
         [&order]
@@ -73,16 +74,19 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 BOOST_CHECK(false);
                 break;
             }
+            return true;
         });
     c.set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
+            return true;
         });
     c.set_suback_handler(
         [&order, &c]
@@ -106,6 +110,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                            topic_base() + "/topic1",
                            "topic1_contents",
                            mqtt::qos::at_least_once) == false);
+            return true;
         });
     c.set_unsuback_handler(
         [&order, &c, &pub_seq_finished]
@@ -114,6 +119,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             if (pub_seq_finished) BOOST_TEST(packet_id == 1);
             else BOOST_TEST(packet_id == 1);
             c.disconnect();
+            return true;
         });
     c.set_publish_handler(
         [&order, &c]
@@ -137,6 +143,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 BOOST_CHECK(false);
                 break;
             }
+            return true;
         });
     c.connect();
     ios.run();

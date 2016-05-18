@@ -65,6 +65,7 @@ struct fixture_clear_retain {
                 // Clear retaind contents
                 pid_sub1 = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_least_once);
                 pid_sub2 = c.subscribe(topic_base() + "/topic2", mqtt::qos::at_least_once);
+                return true;
             });
         c.set_suback_handler(
             [&]
@@ -75,6 +76,7 @@ struct fixture_clear_retain {
                     pid_clear1 = c.publish_at_least_once(topic_base() + "/topic1", "", true);
                     pid_clear2 = c.publish_at_least_once(topic_base() + "/topic2", "", true);
                 }
+                return true;
             });
         c.set_puback_handler(
             [&]
@@ -84,6 +86,7 @@ struct fixture_clear_retain {
                 if (count == 2 && clear1 && clear2) {
                     c.disconnect();
                 }
+                return true;
             });
         c.set_publish_handler(
             [&]
@@ -95,6 +98,7 @@ struct fixture_clear_retain {
                 if (count == 2 && clear1 && clear2) {
                     c.disconnect();
                 }
+                return true;
             });
         c.connect();
         ios.run();

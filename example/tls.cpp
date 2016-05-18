@@ -38,6 +38,7 @@ int main() {
                 pid_sub2 = c.subscribe("mqtt_client_cpp/topic2_1", mqtt::qos::at_least_once,
                                        "mqtt_client_cpp/topic2_2", mqtt::qos::exactly_once);
             }
+            return true;
         });
     c.set_close_handler(
         []
@@ -53,16 +54,19 @@ int main() {
         [&c]
         (std::uint16_t packet_id){
             std::cout << "puback received. packet_id: " << packet_id << std::endl;
+            return true;
         });
     c.set_pubrec_handler(
         [&c]
         (std::uint16_t packet_id){
             std::cout << "pubrec received. packet_id: " << packet_id << std::endl;
+            return true;
         });
     c.set_pubcomp_handler(
         [&c]
         (std::uint16_t packet_id){
             std::cout << "pubcomp received. packet_id: " << packet_id << std::endl;
+            return true;
         });
     bool first = true;
     c.set_suback_handler(
@@ -84,6 +88,7 @@ int main() {
                 c.publish_at_least_once("mqtt_client_cpp/topic2_1", "test2_1");
                 c.publish_exactly_once("mqtt_client_cpp/topic2_2", "test2_2");
             }
+            return true;
         });
     c.set_publish_handler(
         [&c, &count]
@@ -100,6 +105,7 @@ int main() {
             std::cout << "topic_name: " << topic_name << std::endl;
             std::cout << "contents: " << contents << std::endl;
             if (++count == 3) c.disconnect();
+            return true;
         });
 
     // Connect

@@ -14,6 +14,12 @@
 
 namespace mqtt {
 
+struct protocol_error : std::exception {
+    virtual char const* what() const noexcept {
+        return "protocol error";
+    }
+};
+
 struct remaining_length_error : std::exception {
     virtual char const* what() const noexcept {
         return "remaining length error";
@@ -60,6 +66,13 @@ struct read_bytes_transferred_error : bytes_transferred_error {
     read_bytes_transferred_error(std::size_t expected, std::size_t actual)
         :bytes_transferred_error(expected, actual) {
         msg = "[read] " + msg;
+    }
+};
+
+struct write_bytes_transferred_error : bytes_transferred_error {
+    write_bytes_transferred_error(std::size_t expected, std::size_t actual)
+        :bytes_transferred_error(expected, actual) {
+        msg = "[write] " + msg;
     }
 };
 
