@@ -13,6 +13,7 @@
 #include <functional>
 #include <set>
 #include <memory>
+#include <mutex>
 
 #include <boost/any.hpp>
 #include <boost/optional.hpp>
@@ -43,7 +44,7 @@ namespace mqtt {
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
-template <typename Socket, typename Strand>
+template <typename Socket, typename Strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
 class endpoint {
     using this_type = endpoint<Socket, Strand>;
 public:
@@ -56,6 +57,7 @@ public:
         :strand_(ios),
          connected_(false),
          clean_session_(false),
+         store_mtx_(std::make_shared<Mutex>()),
          packet_id_master_(0)
     {}
 
@@ -68,6 +70,7 @@ public:
          socket_(std::move(socket)),
          connected_(true),
          clean_session_(false),
+         store_mtx_(std::make_shared<Mutex>()),
          packet_id_master_(0)
     {}
 
@@ -1747,9 +1750,11 @@ private:
         }
         if (static_cast<std::uint8_t>(payload_[1]) == connect_return_code::accepted) {
             if (clean_session_) {
+                LockGuard<Mutex> lck (*store_mtx_);
                 store_.clear();
             }
             else {
+                LockGuard<Mutex> lck (*store_mtx_);
                 auto& idx = store_.template get<tag_seq>();
                 auto it = idx.begin();
                 auto end = idx.end();
@@ -1832,9 +1837,12 @@ private:
             return false;
         }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
-        auto& idx = store_.template get<tag_packet_id_type>();
-        auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::puback));
-        idx.erase(r.first, r.second);
+        {
+            LockGuard<Mutex> lck (*store_mtx_);
+            auto& idx = store_.template get<tag_packet_id_type>();
+            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::puback));
+            idx.erase(r.first, r.second);
+        }
         if (h_puback_) return h_puback_(packet_id);
         return true;
     }
@@ -1845,9 +1853,12 @@ private:
             return false;
         }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
-        auto& idx = store_.template get<tag_packet_id_type>();
-        auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubrec));
-        idx.erase(r.first, r.second);
+        {
+            LockGuard<Mutex> lck (*store_mtx_);
+            auto& idx = store_.template get<tag_packet_id_type>();
+            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubrec));
+            idx.erase(r.first, r.second);
+        }
         send_pubrel(packet_id);
         if (h_pubrec_) return h_pubrec_(packet_id);
         return true;
@@ -1870,9 +1881,12 @@ private:
             return false;
         }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
-        auto& idx = store_.template get<tag_packet_id_type>();
-        auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubcomp));
-        idx.erase(r.first, r.second);
+        {
+            LockGuard<Mutex> lck (*store_mtx_);
+            auto& idx = store_.template get<tag_packet_id_type>();
+            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubcomp));
+            idx.erase(r.first, r.second);
+        }
         if (h_pubcomp_) return h_pubcomp_(packet_id);
         return true;
     }
@@ -1914,9 +1928,12 @@ private:
             return false;
         }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
-        auto& idx = store_.template get<tag_packet_id_type>();
-        auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::suback));
-        idx.erase(r.first, r.second);
+        {
+            LockGuard<Mutex> lck (*store_mtx_);
+            auto& idx = store_.template get<tag_packet_id_type>();
+            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::suback));
+            idx.erase(r.first, r.second);
+        }
         std::vector<boost::optional<std::uint8_t>> results;
         results.reserve(payload_.size() - 2);
         auto it = payload_.cbegin() + 2;
@@ -1968,9 +1985,12 @@ private:
             return false;
         }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
-        auto& idx = store_.template get<tag_packet_id_type>();
-        auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::unsuback));
-        idx.erase(r.first, r.second);
+        {
+            LockGuard<Mutex> lck (*store_mtx_);
+            auto& idx = store_.template get<tag_packet_id_type>();
+            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::unsuback));
+            idx.erase(r.first, r.second);
+        }
         if (h_unsuback_) return h_unsuback_(packet_id);
         return true;
     }
@@ -2103,6 +2123,7 @@ private:
         if (qos > 0) {
             flags |= 0b00001000;
             ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
+            LockGuard<Mutex> lck (*store_mtx_);
             store_.emplace(
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
@@ -2135,6 +2156,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
         write(ptr_size.first, ptr_size.second);
+        LockGuard<Mutex> lck (*store_mtx_);
         store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
@@ -2175,7 +2197,10 @@ private:
             sb.buf()->push_back(e.second);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::subscribe, 0b0010));
-        store_.emplace(packet_id, control_packet_type::suback);
+        {
+            LockGuard<Mutex> lck (*store_mtx_);
+            store_.emplace(packet_id, control_packet_type::suback);
+        }
         write(ptr_size.first, ptr_size.second);
     }
 
@@ -2198,7 +2223,6 @@ private:
             sb.buf()->push_back(e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::suback, 0b0000));
-        store_.emplace(packet_id, control_packet_type::suback);
         write(ptr_size.first, ptr_size.second);
     }
 
@@ -2225,7 +2249,10 @@ private:
             sb.buf()->insert(sb.buf()->size(), e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsubscribe, 0b0010));
-        store_.emplace(packet_id, control_packet_type::unsuback);
+        {
+            LockGuard<Mutex> lck (*store_mtx_);
+            store_.emplace(packet_id, control_packet_type::unsuback);
+        }
         write(ptr_size.first, ptr_size.second);
     }
 
@@ -2235,7 +2262,6 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsuback, 0b0010));
-        store_.emplace(packet_id, control_packet_type::unsuback);
         write(ptr_size.first, ptr_size.second);
     }
 
@@ -2366,6 +2392,7 @@ private:
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
         async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
         if (qos > 0) {
+            LockGuard<Mutex> lck (*store_mtx_);
             store_.emplace(
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
@@ -2401,6 +2428,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
         async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        LockGuard<Mutex> lck (*store_mtx_);
         store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
@@ -2444,7 +2472,10 @@ private:
             sb.buf()->push_back(e.second);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::subscribe, 0b0010));
-        store_.emplace(packet_id, control_packet_type::suback);
+        {
+            LockGuard<Mutex> lck (*store_mtx_);
+            store_.emplace(packet_id, control_packet_type::suback);
+        }
         async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
     }
 
@@ -2469,7 +2500,6 @@ private:
             sb.buf()->push_back(e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::suback, 0b0000));
-        store_.emplace(packet_id, control_packet_type::suback);
         async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
     }
 
@@ -2498,7 +2528,10 @@ private:
             sb.buf()->insert(sb.buf()->size(), e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsubscribe, 0b0010));
-        store_.emplace(packet_id, control_packet_type::unsuback);
+        {
+            LockGuard<Mutex> lck (*store_mtx_);
+            store_.emplace(packet_id, control_packet_type::unsuback);
+        }
         async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
     }
 
@@ -2509,7 +2542,6 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsuback, 0b0010));
-        store_.emplace(packet_id, control_packet_type::unsuback);
         async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
     }
 
@@ -2606,6 +2638,7 @@ private:
 
     bool is_unique_packet_id(std::uint16_t packet_id) {
         if (packet_id == 0) return false;
+        LockGuard<Mutex> lck (*store_mtx_);
         auto& idx = store_.template get<tag_packet_id>();
         auto r = idx.equal_range(packet_id);
         return r.first == r.second;
@@ -2649,6 +2682,7 @@ private:
     disconnect_handler h_disconnect_;
     boost::optional<std::string> user_name_;
     boost::optional<std::string> password_;
+    std::shared_ptr<Mutex> store_mtx_;
     mi_store store_;
     std::deque<async_packet> queue_;
     std::uint16_t packet_id_master_;
