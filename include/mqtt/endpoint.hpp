@@ -44,7 +44,7 @@ namespace mqtt {
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
-template <typename Socket, typename Strand, typename Mutex = std::mutex, template<typename> class LockGuard = std::lock_guard>
+template <typename Socket, typename Strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
 class endpoint {
     using this_type = endpoint<Socket, Strand>;
 public:
