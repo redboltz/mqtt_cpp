@@ -523,7 +523,7 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         send_publish(topic_name, qos::at_least_once, retain, packet_id, contents);
         return packet_id;
     }
@@ -545,7 +545,7 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         send_publish(topic_name, qos::exactly_once, retain, packet_id, contents);
         return packet_id;
     }
@@ -570,7 +570,7 @@ public:
         std::string const& contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         send_publish(topic_name, qos, retain, packet_id, contents);
         return packet_id;
     }
@@ -592,7 +592,7 @@ public:
     std::uint16_t subscribe(
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
         send_subscribe(params, packet_id, topic_name, qos, args...);
@@ -614,7 +614,7 @@ public:
     std::uint16_t unsubscribe(
         std::string const& topic_name,
         Args... args) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         std::vector<std::reference_wrapper<std::string const>> params;
         params.reserve(sizeof...(args) + 1);
         send_unsubscribe(params, packet_id, topic_name, args...);
@@ -670,7 +670,7 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             send_publish(topic_name, qos::at_least_once, retain, packet_id, contents);
             return true;
         }
@@ -697,7 +697,7 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             send_publish(topic_name, qos::exactly_once, retain, packet_id, contents);
             return true;
         }
@@ -727,7 +727,7 @@ public:
         std::string const& contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             send_publish(topic_name, qos, retain, packet_id, contents);
             return true;
         }
@@ -754,7 +754,7 @@ public:
         std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
             params.reserve((sizeof...(args) + 2) / 2);
             send_subscribe(params, packet_id, topic_name, qos, args...);
@@ -781,7 +781,7 @@ public:
         std::uint16_t packet_id,
         std::string const& topic_name,
         Args... args) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             std::vector<std::reference_wrapper<std::string const>> params;
             params.reserve(sizeof...(args) + 1);
             send_unsubscribe(params, packet_id, topic_name, args...);
@@ -870,7 +870,7 @@ public:
         std::string const& contents,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         async_send_publish(topic_name, qos::at_least_once, retain, packet_id, contents, func);
         return packet_id;
     }
@@ -893,7 +893,7 @@ public:
         std::string const& contents,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         async_send_publish(topic_name, qos::exactly_once, retain, packet_id, contents, func);
         return packet_id;
     }
@@ -919,7 +919,7 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         async_send_publish(topic_name, qos, retain, packet_id, contents, func);
         return packet_id;
     }
@@ -948,7 +948,7 @@ public:
     async_subscribe(
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
         async_send_subscribe(params, packet_id, topic_name, qos, args...);
@@ -966,7 +966,7 @@ public:
     async_subscribe(
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
         async_send_subscribe(params, packet_id, topic_name, qos, args..., async_handler_t());
@@ -977,7 +977,7 @@ public:
         std::string const& topic_name,
         std::uint8_t qos,
         async_handler_t const& func = async_handler_t()) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
         params.reserve(1);
         async_send_subscribe(params, packet_id, topic_name, qos, func);
@@ -1006,7 +1006,7 @@ public:
     async_unsubscribe(
         std::string const& topic_name,
         Args... args) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         std::vector<std::reference_wrapper<std::string const>> params;
         params.reserve(sizeof...(args));
         async_send_unsubscribe(params, packet_id, topic_name, args...);
@@ -1024,7 +1024,7 @@ public:
     async_unsubscribe(
         std::string const& topic_name,
         Args... args) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         std::vector<std::reference_wrapper<std::string const>> params;
         params.reserve(sizeof...(args) + 1);
         async_send_unsubscribe(params, packet_id, topic_name, args..., async_handler_t());
@@ -1034,7 +1034,7 @@ public:
     std::uint16_t async_unsubscribe(
         std::string const& topic_name,
         async_handler_t const& func = async_handler_t()) {
-        std::uint16_t packet_id = create_unique_packet_id();
+        std::uint16_t packet_id = acquire_unique_packet_id();
         std::vector<std::reference_wrapper<std::string const>> params;
         params.reserve(1);
         async_send_unsubscribe(params, packet_id, topic_name, func);
@@ -1091,7 +1091,7 @@ public:
         std::string const& contents,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             async_send_publish(topic_name, qos::at_least_once, retain, packet_id, contents, func);
             return true;
         }
@@ -1119,7 +1119,7 @@ public:
         std::string const& contents,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             async_send_publish(topic_name, qos::exactly_once, retain, packet_id, contents, func);
             return true;
         }
@@ -1150,7 +1150,7 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             async_send_publish(topic_name, qos, retain, packet_id, contents, func);
             return true;
         }
@@ -1184,7 +1184,7 @@ public:
         std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
             params.reserve((sizeof...(args) + 2) / 2);
             async_send_subscribe(params, packet_id, topic_name, qos, args...);
@@ -1205,7 +1205,7 @@ public:
         std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
             params.reserve((sizeof...(args) + 2) / 2);
             async_send_subscribe(params, packet_id, topic_name, qos, args..., async_handler_t());
@@ -1219,7 +1219,7 @@ public:
         std::string const& topic_name,
         std::uint8_t qos,
         async_handler_t const& func = async_handler_t()) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
             params.reserve(1);
             async_send_subscribe(params, packet_id, topic_name, qos, func);
@@ -1253,7 +1253,7 @@ public:
         std::uint16_t packet_id,
         std::string const& topic_name,
         Args... args) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             std::vector<std::reference_wrapper<std::string const>> params;
             params.reserve(sizeof...(args));
             async_send_unsubscribe(params, packet_id, topic_name, args...);
@@ -1274,7 +1274,7 @@ public:
         std::uint16_t packet_id,
         std::string const& topic_name,
         Args... args) {
-        if (is_unique_packet_id(packet_id)) {
+        if (register_packet_id(packet_id)) {
             std::vector<std::reference_wrapper<std::string const>> params;
             params.reserve(sizeof...(args) + 1);
             async_send_unsubscribe(params, packet_id, topic_name, args..., async_handler_t());
@@ -1842,6 +1842,7 @@ private:
             auto& idx = store_.template get<tag_packet_id_type>();
             auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::puback));
             idx.erase(r.first, r.second);
+            packet_id_.erase(packet_id);
         }
         if (h_puback_) return h_puback_(packet_id);
         return true;
@@ -1858,6 +1859,8 @@ private:
             auto& idx = store_.template get<tag_packet_id_type>();
             auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubrec));
             idx.erase(r.first, r.second);
+            // packet_id shouldn't be erased here.
+            // It is reused for pubrel/pubcomp.
         }
         send_pubrel(packet_id);
         if (h_pubrec_) return h_pubrec_(packet_id);
@@ -1886,6 +1889,7 @@ private:
             auto& idx = store_.template get<tag_packet_id_type>();
             auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubcomp));
             idx.erase(r.first, r.second);
+            packet_id_.erase(packet_id);
         }
         if (h_pubcomp_) return h_pubcomp_(packet_id);
         return true;
@@ -1930,9 +1934,7 @@ private:
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
             LockGuard<Mutex> lck (*store_mtx_);
-            auto& idx = store_.template get<tag_packet_id_type>();
-            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::suback));
-            idx.erase(r.first, r.second);
+            packet_id_.erase(packet_id);
         }
         std::vector<boost::optional<std::uint8_t>> results;
         results.reserve(payload_.size() - 2);
@@ -1987,9 +1989,7 @@ private:
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
             LockGuard<Mutex> lck (*store_mtx_);
-            auto& idx = store_.template get<tag_packet_id_type>();
-            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::unsuback));
-            idx.erase(r.first, r.second);
+            packet_id_.erase(packet_id);
         }
         if (h_unsuback_) return h_unsuback_(packet_id);
         return true;
@@ -2197,10 +2197,6 @@ private:
             sb.buf()->push_back(e.second);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::subscribe, 0b0010));
-        {
-            LockGuard<Mutex> lck (*store_mtx_);
-            store_.emplace(packet_id, control_packet_type::suback);
-        }
         write(ptr_size.first, ptr_size.second);
     }
 
@@ -2249,10 +2245,6 @@ private:
             sb.buf()->insert(sb.buf()->size(), e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsubscribe, 0b0010));
-        {
-            LockGuard<Mutex> lck (*store_mtx_);
-            store_.emplace(packet_id, control_packet_type::unsuback);
-        }
         write(ptr_size.first, ptr_size.second);
     }
 
@@ -2472,10 +2464,6 @@ private:
             sb.buf()->push_back(e.second);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::subscribe, 0b0010));
-        {
-            LockGuard<Mutex> lck (*store_mtx_);
-            store_.emplace(packet_id, control_packet_type::suback);
-        }
         async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
     }
 
@@ -2528,10 +2516,6 @@ private:
             sb.buf()->insert(sb.buf()->size(), e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsubscribe, 0b0010));
-        {
-            LockGuard<Mutex> lck (*store_mtx_);
-            store_.emplace(packet_id, control_packet_type::unsuback);
-        }
         async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
     }
 
@@ -2629,19 +2613,18 @@ private:
         );
     }
 
-    std::uint16_t create_unique_packet_id() {
+    std::uint16_t acquire_unique_packet_id() {
+        LockGuard<Mutex> lck (*store_mtx_);
         do {
             ++packet_id_master_;
-        } while (!is_unique_packet_id(packet_id_master_));
+        } while (!packet_id_.insert(packet_id_master_).second);
         return packet_id_master_;
     }
 
-    bool is_unique_packet_id(std::uint16_t packet_id) {
+    bool register_packet_id(std::uint16_t packet_id) {
         if (packet_id == 0) return false;
         LockGuard<Mutex> lck (*store_mtx_);
-        auto& idx = store_.template get<tag_packet_id>();
-        auto r = idx.equal_range(packet_id);
-        return r.first == r.second;
+        return packet_id_.insert(packet_id).second;
     }
 
     static std::uint16_t make_uint16_t(char b1, char b2) {
@@ -2686,6 +2669,7 @@ private:
     mi_store store_;
     std::deque<async_packet> queue_;
     std::uint16_t packet_id_master_;
+    std::set<std::uint16_t> packet_id_;
 };
 
 } // namespace mqtt
