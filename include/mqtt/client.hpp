@@ -190,6 +190,33 @@ public:
             });
     }
 
+    void connect(std::unique_ptr<Socket>&& socket, async_handler_t const& func = async_handler_t()) {
+        as::ip::tcp::resolver r(ios_);
+        as::ip::tcp::resolver::query q(host_, port_);
+        auto it = r.resolve(q);
+        base::socket() = std::move(socket);
+        as::async_connect(
+            base::socket()->lowest_layer(), it,
+            [this, func]
+            (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
+                base::set_close_handler([this](){ handle_close(); });
+                base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
+                if (!ec) {
+                    base::set_connect();
+                    if (ping_duration_ms_ != 0) {
+                        tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
+                        tim_->async_wait(
+                            [this](boost::system::error_code const& ec) {
+                                handle_timer(ec);
+                            }
+                        );
+                    }
+                }
+                if (base::handle_close_or_error(ec)) return;
+                handshake_socket(base::socket(), func);
+            });
+    }
+
     void disconnect() {
         if (base::connected()) {
             if (ping_duration_ms_ != 0) tim_->cancel();
