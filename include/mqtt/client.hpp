@@ -190,6 +190,13 @@ public:
             });
     }
 
+    /**
+     * @breif Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param socket The library uses the socket instead of internal generation.
+     *               You can configure the socket prior to connect.
+     * @param func finish handler that is called when the session is finished
+     */
     void connect(std::unique_ptr<Socket>&& socket, async_handler_t const& func = async_handler_t()) {
         as::ip::tcp::resolver r(ios_);
         as::ip::tcp::resolver::query q(host_, port_);
