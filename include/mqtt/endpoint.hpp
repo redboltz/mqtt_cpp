@@ -2498,7 +2498,7 @@ private:
         std::string const& topic_name,
         Args... args) {
         params.push_back(std::cref(topic_name));
-        send_unsubscribe(params, packet_id, args...);
+        async_send_unsubscribe(params, packet_id, args...);
     }
 
     template <typename F>
