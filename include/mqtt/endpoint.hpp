@@ -38,6 +38,7 @@
 #include <mqtt/qos.hpp>
 #include <mqtt/publish.hpp>
 #include <mqtt/connect_return_code.hpp>
+#include <mqtt/exception.hpp>
 
 namespace mqtt {
 
@@ -570,7 +571,7 @@ public:
         std::string const& contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
-        std::uint16_t packet_id = acquire_unique_packet_id();
+        std::uint16_t packet_id = qos == 0 ? 0 : acquire_unique_packet_id();
         send_publish(topic_name, qos, retain, packet_id, contents);
         return packet_id;
     }
@@ -919,7 +920,7 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
-        std::uint16_t packet_id = acquire_unique_packet_id();
+        std::uint16_t packet_id = qos == 0 ? 0 : acquire_unique_packet_id();
         async_send_publish(topic_name, qos, retain, packet_id, contents, func);
         return packet_id;
     }
@@ -2615,8 +2616,9 @@ private:
 
     std::uint16_t acquire_unique_packet_id() {
         LockGuard<Mutex> lck (*store_mtx_);
+        if (packet_id_.size() == 0xffff - 1) throw packet_id_exhausted_error();
         do {
-            ++packet_id_master_;
+            if (++packet_id_master_ == 0) ++packet_id_master_;
         } while (!packet_id_.insert(packet_id_master_).second);
         return packet_id_master_;
     }

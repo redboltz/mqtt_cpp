@@ -76,6 +76,12 @@ struct write_bytes_transferred_error : bytes_transferred_error {
     }
 };
 
+struct packet_id_exhausted_error : std::exception {
+    virtual char const* what() const noexcept {
+        return "packet_id exhausted error";
+    }
+};
+
 } // namespace mqtt
 
 #endif // MQTT_EXCEPTION_HPP
