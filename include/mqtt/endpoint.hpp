@@ -824,6 +824,12 @@ public:
         send_suback(params, packet_id, qos, std::forward<Args>(args)...);
     }
 
+    void suback(
+        std::uint16_t packet_id,
+        std::vector<std::uint8_t> const& qoss) {
+        send_suback(qoss, packet_id);
+    }
+
     void unsuback(
         std::uint16_t packet_id) {
         send_unsuback(packet_id);
@@ -1348,6 +1354,13 @@ public:
         async_handler_t const& func = async_handler_t()) {
         std::vector<std::uint8_t> params;
         async_send_suback(params, packet_id, qos, func);
+    }
+
+    void async_suback(
+        std::uint16_t packet_id,
+        std::vector<std::uint8_t> const& qoss,
+        async_handler_t const& func = async_handler_t()) {
+        async_send_suback(qoss, packet_id, func);
     }
 
     void async_unsuback(
@@ -2211,7 +2224,7 @@ private:
     }
 
     void send_suback(
-        std::vector<std::uint8_t>& params,
+        std::vector<std::uint8_t> const& params,
         std::uint16_t packet_id) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
@@ -2479,7 +2492,7 @@ private:
 
     template <typename F>
     void async_send_suback(
-        std::vector<std::uint8_t>& params,
+        std::vector<std::uint8_t> const& params,
         std::uint16_t packet_id,
         F const& func) {
         send_buffer sb;
