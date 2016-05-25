@@ -601,6 +601,27 @@ public:
     }
 
     /**
+     * @brief Subscribe
+     * @param params a vector of the topic_filter and qos pair.
+     * @return packet_id. If qos is set to at_most_once, return 0.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
+    std::uint16_t subscribe(
+        std::vector<std::pair<std::string, std::uint8_t>> const& params
+    ) {
+        std::uint16_t packet_id = acquire_unique_packet_id();
+        std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
+        rparams.reserve(params.size());
+        for (auto const& e : params) {
+            rparams.emplace_back(e.first, e.second);
+        }
+        send_subscribe(rparams, packet_id);
+        return packet_id;
+    }
+
+    /**
      * @brief Unsubscribe
      * @param topic_name
      *        A topic name to subscribe
@@ -619,6 +640,27 @@ public:
         std::vector<std::reference_wrapper<std::string const>> params;
         params.reserve(sizeof...(args) + 1);
         send_unsubscribe(params, packet_id, topic_name, args...);
+        return packet_id;
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param params a collection of topic_filter.
+     * @return packet_id. If qos is set to at_most_once, return 0.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
+    std::uint16_t unsubscribe(
+        std::vector<std::string> const& params
+    ) {
+        std::uint16_t packet_id = acquire_unique_packet_id();
+        std::vector<std::reference_wrapper<std::string const>> rparams;
+        rparams.reserve(params.size());
+        for (auto const& e : params) {
+            rparams.emplace_back(e);
+        }
+        send_unsubscribe(rparams, packet_id);
         return packet_id;
     }
 
@@ -765,6 +807,32 @@ public:
     }
 
     /**
+     * @brief Subscribe with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param params a vector of the topic_filter and qos pair.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't subscribe, otherwise return true and subscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066<BR>
+     */
+    bool subscribe(
+        std::uint16_t packet_id,
+        std::vector<std::pair<std::string, std::uint8_t>> const& params
+    ) {
+        if (register_packet_id(packet_id)) {
+            std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
+            rparams.reserve(params.size());
+            for (auto const& e : params) {
+                rparams.emplace_back(e.first, e.second);
+            }
+            send_subscribe(rparams, packet_id);
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * @brief Unsubscribe with a manual set packet identifier
      * @param packet_id
      *        packet identifier
@@ -786,6 +854,32 @@ public:
             std::vector<std::reference_wrapper<std::string const>> params;
             params.reserve(sizeof...(args) + 1);
             send_unsubscribe(params, packet_id, topic_name, args...);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Unsubscribe with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param params a collection of topic_filter
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't unsubscribe, otherwise return true and unsubscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
+    bool unsubscribe(
+        std::uint16_t packet_id,
+        std::vector<std::string> const& params
+    ) {
+        if (register_packet_id(packet_id)) {
+            std::vector<std::reference_wrapper<std::string const>> rparams;
+            rparams.reserve(params.size());
+            for (auto const& e : params) {
+                rparams.emplace_back(e);
+            }
+            send_unsubscribe(rparams, packet_id);
             return true;
         }
         return false;
@@ -991,6 +1085,19 @@ public:
         return packet_id;
     }
 
+    std::uint16_t async_subscribe(
+        std::vector<std::pair<std::string, std::uint8_t>> const& params,
+        async_handler_t const& func = async_handler_t()) {
+        std::uint16_t packet_id = acquire_unique_packet_id();
+        std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
+        rparams.reserve(params.size());
+        for (auto const& e : params) {
+            rparams.emplace_back(e.first, e.second);
+        }
+        async_send_subscribe(rparams, packet_id, func);
+        return packet_id;
+    }
+
     /**
      * @brief Unsubscribe
      * @param topic_name
@@ -1045,6 +1152,19 @@ public:
         std::vector<std::reference_wrapper<std::string const>> params;
         params.reserve(1);
         async_send_unsubscribe(params, packet_id, topic_name, func);
+        return packet_id;
+    }
+
+    std::uint16_t async_unsubscribe(
+        std::vector<std::string> const& params,
+        async_handler_t const& func = async_handler_t()) {
+        std::uint16_t packet_id = acquire_unique_packet_id();
+        std::vector<std::reference_wrapper<std::string const>> rparams;
+        rparams.reserve(params.size());
+        for (auto const& e : params) {
+            rparams.emplace_back(e);
+        }
+        async_send_unsubscribe(rparams, packet_id, func);
         return packet_id;
     }
 
@@ -1235,6 +1355,22 @@ public:
         return false;
     }
 
+    bool async_subscribe(
+        std::uint16_t packet_id,
+        std::vector<std::pair<std::string, std::uint8_t>> const& params,
+        async_handler_t const& func = async_handler_t()) {
+        if (register_packet_id(packet_id)) {
+            std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
+            rparams.reserve(params.size());
+            for (auto const& e : params) {
+                rparams.emplace_back(e.first, e.second);
+            }
+            async_send_subscribe(rparams, packet_id, func);
+            return true;
+        }
+        return false;
+    }
+
     /**
      * @brief Unsubscribe with a manual set packet identifier
      * @param packet_id
@@ -1285,6 +1421,22 @@ public:
             std::vector<std::reference_wrapper<std::string const>> params;
             params.reserve(sizeof...(args) + 1);
             async_send_unsubscribe(params, packet_id, topic_name, args..., async_handler_t());
+            return true;
+        }
+        return false;
+    }
+
+    bool async_unsubscribe(
+        std::uint16_t packet_id,
+        std::vector<std::string> const& params,
+        async_handler_t const& func = async_handler_t()) {
+        if (register_packet_id(packet_id)) {
+            std::vector<std::reference_wrapper<std::string const>> rparams;
+            rparams.reserve(params.size());
+            for (auto const& e : params) {
+                rparams.emplace_back(e);
+            }
+            async_send_unsubscribe(rparams, packet_id, func);
             return true;
         }
         return false;

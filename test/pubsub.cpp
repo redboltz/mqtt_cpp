@@ -114,7 +114,11 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             BOOST_TEST(order++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-            pid_sub = c.subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
+            pid_sub = c.subscribe(
+                std::vector<std::pair<std::string, std::uint8_t>> {
+                    std::make_pair(topic_base() + "/topic1", mqtt::qos::at_most_once)
+                }
+            );
             return true;
         });
     c.set_close_handler(
@@ -135,7 +139,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             BOOST_TEST(packet_id == pid_pub);
             if (order == 4) {
                 pub_seq_finished = true;
-                pid_unsub = c.unsubscribe(topic_base() + "/topic1");
+                pid_unsub = c.unsubscribe(
+                    std::vector<std::string> {topic_base() + "/topic1"});
             }
             return true;
         });
