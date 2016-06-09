@@ -1,8 +1,8 @@
 sudo: false
 language: cpp
 compiler:
-  - clang++
-# - g++
+# - clang++
+  - g++
 
 install:
   - if [ "$CXX" = "g++" ]; then export CXXFLAGS="-std=c++14"; fi
@@ -14,10 +14,10 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-precise-3.7
-      - llvm-toolchain-precise
+#      - llvm-toolchain-precise-3.7
+#      - llvm-toolchain-precise
     packages:
-      - clang-3.7
+#      - clang-3.7
       - g++-5
       - gcc-5
       - cmake

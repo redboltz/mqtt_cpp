@@ -1705,7 +1705,7 @@ private:
     void handle_remaining_length(async_handler_t const& func) {
         remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
         remaining_length_multiplier_ *= 128;
-        if (remaining_length_multiplier_ > 128 * 128 * 128) throw remaining_length_error();
+        if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) throw remaining_length_error();
         if (buf_ & 0b10000000) {
             as::async_read(
                 *socket_,
