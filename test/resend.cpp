@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 c.set_clean_session(false);
                 c.connect();
                 break;
-            case 7:
+            case 8:
                 break;
             default:
                 BOOST_CHECK(false);
@@ -203,22 +203,30 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
     c.set_pubrec_handler(
         [&order, &c, &pid_pub]
         (std::uint16_t packet_id) {
-            BOOST_TEST(order++ == 3);
-            BOOST_TEST(packet_id == pid_pub);
-            c.force_disconnect();
+            switch (order++) {
+            case 3:
+                BOOST_TEST(packet_id == pid_pub);
+                c.force_disconnect();
+                break;
+            case 6:
+                break;
+            default:
+                BOOST_CHECK(false);
+                break;
+            }
             return true;
         });
     c.set_pubcomp_handler(
         [&order, &c]
         (std::uint16_t packet_id) {
-            BOOST_TEST(order++ == 6);
+            BOOST_TEST(order++ == 7);
             BOOST_TEST(packet_id == 1);
             c.disconnect();
             return true;
         });
     c.connect();
     ios.run();
-    BOOST_TEST(order++ == 8);
+    BOOST_TEST(order++ == 9);
 }
 
 BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
@@ -264,7 +272,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                 c.set_clean_session(false);
                 c.connect();
                 break;
-            case 9:
+            case 10:
                 break;
             default:
                 BOOST_CHECK(false);
@@ -289,22 +297,30 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
     c.set_pubrec_handler(
         [&order, &c, &pid_pub]
         (std::uint16_t packet_id) {
-            BOOST_TEST(order++ == 5);
-            BOOST_TEST(packet_id == pid_pub);
-            c.force_disconnect();
+            switch (order++) {
+            case 5:
+                BOOST_TEST(packet_id == pid_pub);
+                c.force_disconnect();
+                break;
+            case 8:
+                break;
+            default:
+                BOOST_CHECK(false);
+                break;
+            }
             return true;
         });
     c.set_pubcomp_handler(
         [&order, &c, &pid_pub]
         (std::uint16_t packet_id) {
-            BOOST_TEST(order++ == 8);
+            BOOST_TEST(order++ == 9);
             BOOST_TEST(packet_id == pid_pub);
             c.disconnect();
             return true;
         });
     c.connect();
     ios.run();
-    BOOST_TEST(order++ == 10);
+    BOOST_TEST(order++ == 11);
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
