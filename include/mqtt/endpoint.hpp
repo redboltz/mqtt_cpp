@@ -59,7 +59,9 @@ public:
          connected_(false),
          clean_session_(false),
          store_mtx_(std::make_shared<Mutex>()),
-         packet_id_master_(0)
+         packet_id_master_(0),
+         auto_pub_response_(true),
+         auto_pub_response_async_(false)
     {}
 
     /**
@@ -72,7 +74,9 @@ public:
          connected_(true),
          clean_session_(false),
          store_mtx_(std::make_shared<Mutex>()),
-         packet_id_master_(0)
+         packet_id_master_(0),
+         auto_pub_response_(true),
+         auto_pub_response_async_(false)
     {}
 
     /**
@@ -348,6 +352,17 @@ public:
      */
     void set_will(will w) {
         will_ = std::move(w);
+    }
+
+    /**
+     * @breif Set auto publish response mode.
+     * @param b set value
+     *
+     * When set auto publish response mode to true, puback, pubrec, pubrel,and pub comp automatically send.<BR>
+     */
+    void set_auto_pub_response(bool b = true, bool async = true) {
+        auto_pub_response_ = b;
+        auto_pub_response_async_ = async;
     }
 
     /**
@@ -1952,6 +1967,14 @@ private:
         return true;
     }
 
+    template <typename F, typename AF>
+    void auto_pub_response(F const& f, AF const& af) {
+        if (auto_pub_response_ && connected_) {
+            if (auto_pub_response_async_) af();
+            else f();
+        }
+    }
+
     bool handle_publish(async_handler_t const& func) {
         if (remaining_length_ < 2) {
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
@@ -1969,8 +1992,11 @@ private:
         boost::optional<std::uint16_t> packet_id;
         auto qos = publish::get_qos(fixed_header_);
         switch (qos) {
-        case qos::at_most_once:
-            break;
+        case qos::at_most_once: {
+            std::string contents(payload_.data() + i, payload_.size() - i);
+            if (h_publish_)
+                return h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents));
+        } break;
         case qos::at_least_once:
             if (remaining_length_ < i + 2) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
@@ -1978,7 +2004,17 @@ private:
             }
             packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
-            send_puback(*packet_id);
+            if (h_publish_) {
+                std::string contents(payload_.data() + i, payload_.size() - i);
+                if (h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents))) {
+                    auto_pub_response([this, &packet_id]{send_puback(*packet_id);},
+                                      [this, &packet_id, &func]{async_send_puback(*packet_id, func);});
+                    return true;
+                }
+                return false;
+            }
+            auto_pub_response([this, &packet_id]{send_puback(*packet_id);},
+                              [this, &packet_id, &func]{async_send_puback(*packet_id, func);});
             break;
         case qos::exactly_once:
             if (remaining_length_ < i + 2) {
@@ -1987,13 +2023,21 @@ private:
             }
             packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
-            send_pubrec(*packet_id);
+            if (h_publish_) {
+                std::string contents(payload_.data() + i, payload_.size() - i);
+                if (h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents))) {
+                    auto_pub_response([this, &packet_id]{send_pubrec(*packet_id);},
+                                      [this, &packet_id, &func]{async_send_pubrec(*packet_id, func);});
+                    return true;
+                }
+                return false;
+            }
+            auto_pub_response([this, &packet_id]{send_pubrec(*packet_id);},
+                              [this, &packet_id, &func]{async_send_pubrec(*packet_id, func);});
             break;
         default:
             break;
         }
-        std::string contents(payload_.data() + i, payload_.size() - i);
-        if (h_publish_) return h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents));
         return true;
     }
 
@@ -2028,8 +2072,16 @@ private:
             // packet_id shouldn't be erased here.
             // It is reused for pubrel/pubcomp.
         }
-        send_pubrel(packet_id);
-        if (h_pubrec_) return h_pubrec_(packet_id);
+        if (h_pubrec_) {
+            if (h_pubrec_(packet_id)) {
+                auto_pub_response([this, &packet_id]{send_pubrel(packet_id);},
+                                  [this, &packet_id, &func]{async_send_pubrel(packet_id, func);});
+                return true;
+            }
+            return false;
+        }
+        auto_pub_response([this, &packet_id]{send_pubrel(packet_id);},
+                          [this, &packet_id, &func]{async_send_pubrel(packet_id, func);});
         return true;
     }
 
@@ -2039,8 +2091,16 @@ private:
             return false;
         }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
-        send_pubcomp(packet_id);
-        if (h_pubrel_) return h_pubrel_(packet_id);
+        if (h_pubrel_) {
+            if (h_pubrel_(packet_id)) {
+                auto_pub_response([this, &packet_id]{send_pubcomp(packet_id);},
+                                  [this, &packet_id, &func]{async_send_pubcomp(packet_id, func);});
+                return true;
+            }
+            return false;
+        }
+        auto_pub_response([this, &packet_id]{send_pubcomp(packet_id);},
+                          [this, &packet_id, &func]{async_send_pubcomp(packet_id, func);});
         return true;
     }
 
@@ -2837,6 +2897,8 @@ private:
     std::deque<async_packet> queue_;
     std::uint16_t packet_id_master_;
     std::set<std::uint16_t> packet_id_;
+    bool auto_pub_response_;
+    bool auto_pub_response_async_;
 };
 
 } // namespace mqtt
