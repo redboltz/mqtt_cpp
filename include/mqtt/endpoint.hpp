@@ -1559,6 +1559,14 @@ public:
         connected_ = true;
     }
 
+    void clear_stored_publish(std::uint16_t packet_id) {
+        LockGuard<Mutex> lck (*store_mtx_);
+        auto& idx = store_.template get<tag_packet_id>();
+        auto r = idx.equal_range(packet_id);
+        idx.erase(r.first, r.second);
+        packet_id_.erase(packet_id);
+    }
+
     std::unique_ptr<Socket>& socket() {
         return socket_;
     }
