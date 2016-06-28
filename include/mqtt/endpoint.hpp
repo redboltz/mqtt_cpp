@@ -1951,7 +1951,7 @@ private:
                     if (it->buf()) {
                         idx.modify(
                             it,
-                            [this](auto& e){
+                            [this](store& e){
                                 if (e.expected_control_packet_type() == control_packet_type::puback ||
                                     e.expected_control_packet_type() == control_packet_type::pubrec) {
                                     *e.ptr() |= 0b00001000; // set DUP flag
