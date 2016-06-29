@@ -939,6 +939,10 @@ public:
         send_pubrec(packet_id);
     }
 
+    void pubrel(std::uint16_t packet_id) {
+        send_pubrel(packet_id);
+    }
+
     void pubcomp(std::uint16_t packet_id) {
         send_pubcomp(packet_id);
     }
@@ -1499,6 +1503,10 @@ public:
 
     void async_pubrec(std::uint16_t packet_id, async_handler_t const& func = async_handler_t()) {
         async_send_pubrec(packet_id, func);
+    }
+
+    void async_pubrel(std::uint16_t packet_id, async_handler_t const& func = async_handler_t()) {
+        async_send_pubrel(packet_id, func);
     }
 
     void async_pubcomp(std::uint16_t packet_id, async_handler_t const& func = async_handler_t()) {
