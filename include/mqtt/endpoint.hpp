@@ -433,7 +433,7 @@ public:
      * @brief Set pubcomp handler
      * @param h handler
      */
-    void set_pubcomp_handler(pubrec_handler h) {
+    void set_pubcomp_handler(pubcomp_handler h) {
         h_pubcomp_ = std::move(h);
     }
 
@@ -2889,7 +2889,7 @@ private:
     publish_handler h_publish_;
     puback_handler h_puback_;
     pubrec_handler h_pubrec_;
-    pubrec_handler h_pubrel_;
+    pubrel_handler h_pubrel_;
     pubcomp_handler h_pubcomp_;
     subscribe_handler h_subscribe_;
     suback_handler h_suback_;
