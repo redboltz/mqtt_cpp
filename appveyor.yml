@@ -1,5 +1,4 @@
 version: 0.1.0.{build}
-os: Previous Visual Studio 2015
 environment:
   matrix:
     - notls: -DMQTT_NO_TLS=ON
