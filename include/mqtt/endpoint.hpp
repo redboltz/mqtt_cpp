@@ -212,6 +212,16 @@ public:
     using pubcomp_handler = std::function<bool(std::uint16_t packet_id)>;
 
     /**
+     * @breif Publish response sent handler
+     *        This function is called just after puback sent on QoS1, or pubcomp sent on QoS2.
+     * @param packet_id
+     *        packet identifier<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718060<BR>
+     *        3.7.2 Variable header
+     */
+    using pub_res_sent_handler = std::function<void(std::uint16_t packet_id)>;
+
+    /**
      * @breif Subscribe handler
      * @param packet_id packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349801<BR>
@@ -435,6 +445,14 @@ public:
      */
     void set_pubcomp_handler(pubrec_handler h) {
         h_pubcomp_ = std::move(h);
+    }
+
+    /**
+     * @brief Set pubcomp handler
+     * @param h handler
+     */
+    void set_pub_res_sent_handler(pub_res_sent_handler h) {
+        h_pub_res_sent_ = std::move(h);
     }
 
     /**
@@ -2374,6 +2392,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::puback, 0b0000));
         write(ptr_size.first, ptr_size.second);
+        if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
     }
 
     void send_pubrec(std::uint16_t packet_id) {
@@ -2405,6 +2424,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubcomp, 0b0000));
         write(ptr_size.first, ptr_size.second);
+        if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
     }
 
     template <typename... Args>
@@ -2635,7 +2655,12 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::puback, 0b0000));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(
+            sb.buf(), ptr_size.first, ptr_size.second,
+            [this, packet_id, func](boost::system::error_code const& ec){
+                func(ec);
+                if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
+            });
     }
 
     template <typename F>
@@ -2669,7 +2694,12 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubcomp, 0b0000));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(
+            sb.buf(), ptr_size.first, ptr_size.second,
+            [this, packet_id, func](boost::system::error_code const& ec){
+                func(ec);
+                if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
+            });
     }
 
     template <typename... Args>
@@ -2891,6 +2921,7 @@ private:
     pubrec_handler h_pubrec_;
     pubrec_handler h_pubrel_;
     pubcomp_handler h_pubcomp_;
+    pub_res_sent_handler h_pub_res_sent_;
     subscribe_handler h_subscribe_;
     suback_handler h_suback_;
     unsubscribe_handler h_unsubscribe_;
