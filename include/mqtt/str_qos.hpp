@@ -18,7 +18,7 @@ char const* to_str(std::uint8_t v) {
     char const * const str[] = {
         "at_most_once",
         "at_least_once",
-        "at_exactly_once"
+        "exactly_once"
     };
     if (v < sizeof(str)) return str[v];
     return "invalid_qos";
