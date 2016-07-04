@@ -290,9 +290,8 @@ public:
      * @breif Disconnect handler
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800463<BR>
      *        3.14 DISCONNECT – Disconnect notification
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using disconnect_handler = std::function<bool()>;
+    using disconnect_handler = std::function<void()>;
 
     /**
      * @breif Move constructor
@@ -1848,7 +1847,8 @@ private:
             ret = handle_pingresp(func);
             break;
         case control_packet_type::disconnect:
-            ret = handle_disconnect(func);
+            handle_disconnect(func);
+            ret = false;
             break;
         default:
             break;
@@ -2273,13 +2273,12 @@ private:
         return true;
     }
 
-    bool handle_disconnect(async_handler_t const& func) {
+    void handle_disconnect(async_handler_t const& func) {
         if (remaining_length_ != 0) {
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
+            return;
         }
-        if (h_disconnect_) return h_disconnect_();
-        return true;
+        if (h_disconnect_) h_disconnect_();
     }
 
     // Blocking senders.
