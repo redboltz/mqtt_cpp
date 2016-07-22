@@ -2074,16 +2074,6 @@ private:
             }
             packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
-            auto res = [this, &packet_id, &func] {
-                auto_pub_response(
-                    [this, &packet_id] {
-                        if (connected_) send_pubrec(*packet_id);
-                    },
-                    [this, &packet_id, &func] {
-                        if (connected_) async_send_pubrec(*packet_id, func);
-                    }
-                );
-            };
             {
                 std::string contents(payload_.data() + i, payload_.size() - i);
                 qos2_publish_map_.emplace(
@@ -2091,7 +2081,21 @@ private:
                     std::forward_as_tuple(*packet_id),
                     std::forward_as_tuple(fixed_header_, std::move(topic_name), std::move(contents)));
             }
-            res();
+            if (auto_pub_response_) {
+                if (auto_pub_response_async_) {
+                    if (connected_) async_send_pubrec(*packet_id, func);
+                }
+                else {
+                    if (connected_) send_pubrec(*packet_id);
+                }
+            }
+            else {
+                // Even if auto_pub_response_ is not set,
+                // return pubrec. Because there is no change to
+                // send pubrec manually.
+                // NOTE: publish hander is called when pubrel is received on QoS2.
+                if (connected_) send_pubrec(*packet_id);
+            }
         } break;
         default:
             break;
