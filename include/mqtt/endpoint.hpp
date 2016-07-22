@@ -1599,6 +1599,15 @@ public:
         return socket_;
     }
 
+    template <typename F>
+    void for_each_store(F f) {
+        LockGuard<Mutex> lck (*store_mtx_);
+        auto& idx = store_.template get<tag_seq>();
+        for (auto const & e : idx) {
+            f(e.ptr(), e.size());
+        }
+    }
+
 protected:
     void async_read_control_packet_type(async_handler_t const& func) {
         as::async_read(
