@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 c.set_clean_session(false);
                 c.connect();
                 break;
-            case 8:
+            case 7:
                 break;
             default:
                 BOOST_CHECK(false);
@@ -208,8 +208,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 BOOST_TEST(packet_id == pid_pub);
                 c.force_disconnect();
                 break;
-            case 6:
-                break;
             default:
                 BOOST_CHECK(false);
                 break;
@@ -219,14 +217,14 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
     c.set_pubcomp_handler(
         [&order, &c]
         (std::uint16_t packet_id) {
-            BOOST_TEST(order++ == 7);
+            BOOST_TEST(order++ == 6);
             BOOST_TEST(packet_id == 1);
             c.disconnect();
             return true;
         });
     c.connect();
     ios.run();
-    BOOST_TEST(order++ == 9);
+    BOOST_TEST(order++ == 8);
 }
 
 BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
@@ -272,7 +270,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                 c.set_clean_session(false);
                 c.connect();
                 break;
-            case 10:
+            case 9:
                 break;
             default:
                 BOOST_CHECK(false);
@@ -302,8 +300,6 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                 BOOST_TEST(packet_id == pid_pub);
                 c.force_disconnect();
                 break;
-            case 8:
-                break;
             default:
                 BOOST_CHECK(false);
                 break;
@@ -313,14 +309,14 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
     c.set_pubcomp_handler(
         [&order, &c, &pid_pub]
         (std::uint16_t packet_id) {
-            BOOST_TEST(order++ == 9);
+            BOOST_TEST(order++ == 8);
             BOOST_TEST(packet_id == pid_pub);
             c.disconnect();
             return true;
         });
     c.connect();
     ios.run();
-    BOOST_TEST(order++ == 11);
+    BOOST_TEST(order++ == 10);
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
