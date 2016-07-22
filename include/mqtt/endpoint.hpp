@@ -2035,11 +2035,12 @@ private:
         boost::optional<std::uint16_t> packet_id;
         auto qos = publish::get_qos(fixed_header_);
         switch (qos) {
-        case qos::at_most_once: {
-            std::string contents(payload_.data() + i, payload_.size() - i);
-            if (h_publish_)
+        case qos::at_most_once:
+            if (h_publish_) {
+                std::string contents(payload_.data() + i, payload_.size() - i);
                 return h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents));
-        } break;
+            }
+            break;
         case qos::at_least_once: {
             if (remaining_length_ < i + 2) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
@@ -2063,7 +2064,6 @@ private:
                     res();
                     return true;
                 }
-                return false;
             }
             res();
         } break;
@@ -2084,13 +2084,12 @@ private:
                     }
                 );
             };
-            if (h_publish_) {
+            {
                 std::string contents(payload_.data() + i, payload_.size() - i);
-                if (h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents))) {
-                    res();
-                    return true;
-                }
-                return false;
+                qos2_publish_map_.emplace(
+                    std::piecewise_construct,
+                    std::forward_as_tuple(*packet_id),
+                    std::forward_as_tuple(fixed_header_, std::move(topic_name), std::move(contents)));
             }
             res();
         } break;
@@ -2170,13 +2169,72 @@ private:
                 }
             );
         };
-        if (h_pubrel_) {
-            if (h_pubrel_(packet_id)) {
+        auto it = qos2_publish_map_.find(packet_id);
+        if (it == qos2_publish_map_.end()) {
+            // In the case published data is already erased at *1
+            if (h_pubrel_) {
+                if (h_pubrel_(packet_id)) {
+                    // pubrel is successfully handled.
+                    res();
+                    return true;
+                }
+                // pubrel handler is failed so pubcomp won't send.
+                // client will retry sending pubrel.
+                return false;
+            }
+            // In the case pubrel handler is not set,
+            // regard as pubrel handler is successfully finished.
+            res();
+            return true;
+        }
+        // published data is found.
+        if (h_publish_) {
+            if (h_publish_(
+                    it->second.fixed_header,
+                    packet_id,
+                    std::move(it->second.topic_name),
+                    std::move(it->second.contents))) {
+                if (h_pubrel_) {
+                    if (h_pubrel_(packet_id)) {
+                        // pubrel is successfully handled.
+                        qos2_publish_map_.erase(it);
+                        res();
+                        return true;
+                    }
+                    // pubrel handler is failed so pubcomp won't send.
+                    // client will retry sending pubrel.
+                    // for memory efficiency, erase published data here. *1
+                    qos2_publish_map_.erase(it);
+                    return false;
+                }
+                // In the case pubrel handler is not set,
+                // regard as pubrel handler is successfully finished.
+                qos2_publish_map_.erase(it);
                 res();
                 return true;
             }
+            // publish handler is failed but pubrec has already been sent.
+            // pubcomp won't send.
+            // client will retry sending pubrel.
+            // for memory efficiency, erase published data here. *1
+            qos2_publish_map_.erase(it);
             return false;
         }
+        // publish handler is not set
+        if (h_pubrel_) {
+            if (h_pubrel_(packet_id)) {
+                // pubrel is successfully handled.
+                qos2_publish_map_.erase(it);
+                res();
+                return true;
+            }
+            // pubrel handler is failed so pubcomp won't send.
+            // client will retry sending pubrel.
+            return false;
+        }
+        // In the case pubrel handler is not set,
+        // regard as pubrel handler is successfully finished.
+        qos2_publish_map_.erase(it);
         res();
         return true;
     }
@@ -2963,6 +3021,20 @@ private:
     }
 
 private:
+    struct qos2_publish {
+        qos2_publish(
+            std::uint8_t fixed_header,
+            std::string topic_name,
+            std::string contents)
+            :fixed_header(fixed_header),
+             topic_name(std::move(topic_name)),
+             contents(std::move(contents)) {}
+        std::uint8_t fixed_header;
+        std::string topic_name;
+        std::string contents;
+    };
+
+private:
     Strand strand_;
     std::unique_ptr<Socket> socket_;
     std::string host_;
@@ -2997,6 +3069,7 @@ private:
     boost::optional<std::string> password_;
     std::shared_ptr<Mutex> store_mtx_;
     mi_store store_;
+    std::map<std::uint16_t, qos2_publish> qos2_publish_map_;
     std::deque<async_packet> queue_;
     std::uint16_t packet_id_master_;
     std::set<std::uint16_t> packet_id_;
