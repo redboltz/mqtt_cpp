@@ -2003,7 +2003,7 @@ private:
 
     template <typename F, typename AF>
     void auto_pub_response(F const& f, AF const& af) {
-        if (auto_pub_response_ && connected_) {
+        if (auto_pub_response_) {
             if (auto_pub_response_async_) af();
             else f();
         }
@@ -2031,44 +2031,60 @@ private:
             if (h_publish_)
                 return h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents));
         } break;
-        case qos::at_least_once:
+        case qos::at_least_once: {
             if (remaining_length_ < i + 2) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
             packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
+            auto res = [this, &packet_id, &func] {
+                auto_pub_response(
+                    [this, &packet_id] {
+                        if (connected_) send_puback(*packet_id);
+                    },
+                    [this, &packet_id, &func] {
+                        if (connected_) async_send_puback(*packet_id, func);
+                    }
+                );
+            };
             if (h_publish_) {
                 std::string contents(payload_.data() + i, payload_.size() - i);
                 if (h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents))) {
-                    auto_pub_response([this, &packet_id]{send_puback(*packet_id);},
-                                      [this, &packet_id, &func]{async_send_puback(*packet_id, func);});
+                    res();
                     return true;
                 }
                 return false;
             }
-            auto_pub_response([this, &packet_id]{send_puback(*packet_id);},
-                              [this, &packet_id, &func]{async_send_puback(*packet_id, func);});
-            break;
-        case qos::exactly_once:
+            res();
+        } break;
+        case qos::exactly_once: {
             if (remaining_length_ < i + 2) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
             packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
+            auto res = [this, &packet_id, &func] {
+                auto_pub_response(
+                    [this, &packet_id] {
+                        if (connected_) send_pubrec(*packet_id);
+                    },
+                    [this, &packet_id, &func] {
+                        if (connected_) async_send_pubrec(*packet_id, func);
+                    }
+                );
+            };
             if (h_publish_) {
                 std::string contents(payload_.data() + i, payload_.size() - i);
                 if (h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents))) {
-                    auto_pub_response([this, &packet_id]{send_pubrec(*packet_id);},
-                                      [this, &packet_id, &func]{async_send_pubrec(*packet_id, func);});
+                    res();
                     return true;
                 }
                 return false;
             }
-            auto_pub_response([this, &packet_id]{send_pubrec(*packet_id);},
-                              [this, &packet_id, &func]{async_send_pubrec(*packet_id, func);});
-            break;
+            res();
+        } break;
         default:
             break;
         }
@@ -2106,16 +2122,26 @@ private:
             // packet_id shouldn't be erased here.
             // It is reused for pubrel/pubcomp.
         }
+        auto res = [this, &packet_id, &func] {
+            auto_pub_response(
+                [this, &packet_id] {
+                    if (connected_) send_pubrel(packet_id);
+                    else store_pubrel(packet_id);
+                },
+                [this, &packet_id, &func] {
+                    if (connected_) async_send_pubrel(packet_id, func);
+                    else store_pubrel(packet_id);
+                }
+            );
+        };
         if (h_pubrec_) {
             if (h_pubrec_(packet_id)) {
-                auto_pub_response([this, &packet_id]{send_pubrel(packet_id);},
-                                  [this, &packet_id, &func]{async_send_pubrel(packet_id, func);});
+                res();
                 return true;
             }
             return false;
         }
-        auto_pub_response([this, &packet_id]{send_pubrel(packet_id);},
-                          [this, &packet_id, &func]{async_send_pubrel(packet_id, func);});
+        res();
         return true;
     }
 
@@ -2125,16 +2151,24 @@ private:
             return false;
         }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
+        auto res = [this, &packet_id, &func] {
+            auto_pub_response(
+                [this, &packet_id] {
+                    if (connected_) send_pubcomp(packet_id);
+                },
+                [this, &packet_id, &func] {
+                    if (connected_) async_send_pubcomp(packet_id, func);
+                }
+            );
+        };
         if (h_pubrel_) {
             if (h_pubrel_(packet_id)) {
-                auto_pub_response([this, &packet_id]{send_pubcomp(packet_id);},
-                                  [this, &packet_id, &func]{async_send_pubcomp(packet_id, func);});
+                res();
                 return true;
             }
             return false;
         }
-        auto_pub_response([this, &packet_id]{send_pubcomp(packet_id);},
-                          [this, &packet_id, &func]{async_send_pubcomp(packet_id, func);});
+        res();
         return true;
     }
 
@@ -2416,6 +2450,20 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
         write(ptr_size.first, ptr_size.second);
+        LockGuard<Mutex> lck (*store_mtx_);
+        store_.emplace(
+            packet_id,
+            control_packet_type::pubcomp,
+            sb.buf(),
+            ptr_size.first,
+            ptr_size.second);
+    }
+
+    void store_pubrel(std::uint16_t packet_id) {
+        send_buffer sb;
+        sb.buf()->push_back(static_cast<char>(packet_id >> 8));
+        sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
+        auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
         LockGuard<Mutex> lck (*store_mtx_);
         store_.emplace(
             packet_id,
