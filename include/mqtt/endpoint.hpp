@@ -536,7 +536,7 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false) {
-        send_publish(topic_name, qos::at_most_once, retain, 0, contents);
+        send_publish(topic_name, qos::at_most_once, retain, false, 0, contents);
     }
 
     /**
@@ -557,7 +557,7 @@ public:
         std::string const& contents,
         bool retain = false) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        send_publish(topic_name, qos::at_least_once, retain, packet_id, contents);
+        send_publish(topic_name, qos::at_least_once, retain, false, packet_id, contents);
         return packet_id;
     }
 
@@ -579,7 +579,7 @@ public:
         std::string const& contents,
         bool retain = false) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        send_publish(topic_name, qos::exactly_once, retain, packet_id, contents);
+        send_publish(topic_name, qos::exactly_once, retain, false, packet_id, contents);
         return packet_id;
     }
 
@@ -604,7 +604,7 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
         std::uint16_t packet_id = qos == 0 ? 0 : acquire_unique_packet_id();
-        send_publish(topic_name, qos, retain, packet_id, contents);
+        send_publish(topic_name, qos, retain, false, packet_id, contents);
         return packet_id;
     }
 
@@ -746,7 +746,7 @@ public:
         std::string const& contents,
         bool retain = false) {
         if (register_packet_id(packet_id)) {
-            send_publish(topic_name, qos::at_least_once, retain, packet_id, contents);
+            send_publish(topic_name, qos::at_least_once, retain, false, packet_id, contents);
             return true;
         }
         return false;
@@ -773,7 +773,7 @@ public:
         std::string const& contents,
         bool retain = false) {
         if (register_packet_id(packet_id)) {
-            send_publish(topic_name, qos::exactly_once, retain, packet_id, contents);
+            send_publish(topic_name, qos::exactly_once, retain, false, packet_id, contents);
             return true;
         }
         return false;
@@ -803,7 +803,37 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
         if (register_packet_id(packet_id)) {
-            send_publish(topic_name, qos, retain, packet_id, contents);
+            send_publish(topic_name, qos, retain, false, packet_id, contents);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Publish as dup with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        mqtt::qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
+     *        3.3.1.3 RETAIN
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         contents don't publish, otherwise return true and contents publish.
+     */
+    bool publish_dup(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::string const& contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false) {
+        if (register_packet_id(packet_id)) {
+            send_publish(topic_name, qos, retain, true, packet_id, contents);
             return true;
         }
         return false;
@@ -986,7 +1016,7 @@ public:
         std::string const& contents,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
-        async_send_publish(topic_name, qos::at_most_once, retain, 0, contents, func);
+        async_send_publish(topic_name, qos::at_most_once, retain, false, 0, contents, func);
     }
 
     /**
@@ -1008,7 +1038,7 @@ public:
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        async_send_publish(topic_name, qos::at_least_once, retain, packet_id, contents, func);
+        async_send_publish(topic_name, qos::at_least_once, retain, false, packet_id, contents, func);
         return packet_id;
     }
 
@@ -1031,7 +1061,7 @@ public:
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        async_send_publish(topic_name, qos::exactly_once, retain, packet_id, contents, func);
+        async_send_publish(topic_name, qos::exactly_once, retain, false, packet_id, contents, func);
         return packet_id;
     }
 
@@ -1057,7 +1087,7 @@ public:
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         std::uint16_t packet_id = qos == 0 ? 0 : acquire_unique_packet_id();
-        async_send_publish(topic_name, qos, retain, packet_id, contents, func);
+        async_send_publish(topic_name, qos, retain, false, packet_id, contents, func);
         return packet_id;
     }
 
@@ -1255,7 +1285,7 @@ public:
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            async_send_publish(topic_name, qos::at_least_once, retain, packet_id, contents, func);
+            async_send_publish(topic_name, qos::at_least_once, retain, false, packet_id, contents, func);
             return true;
         }
         return false;
@@ -1283,7 +1313,7 @@ public:
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            async_send_publish(topic_name, qos::exactly_once, retain, packet_id, contents, func);
+            async_send_publish(topic_name, qos::exactly_once, retain, false, packet_id, contents, func);
             return true;
         }
         return false;
@@ -1314,7 +1344,38 @@ public:
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            async_send_publish(topic_name, qos, retain, packet_id, contents, func);
+            async_send_publish(topic_name, qos, retain, false, packet_id, contents, func);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Publish as dup with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        mqtt::qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
+     *        3.3.1.3 RETAIN
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         contents don't publish, otherwise return true and contents publish.
+     */
+    bool async_publish_dup(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::string const& contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        async_handler_t const& func = async_handler_t()) {
+        if (register_packet_id(packet_id)) {
+            async_send_publish(topic_name, qos, retain, true, packet_id, contents, func);
             return true;
         }
         return false;
@@ -2465,6 +2526,7 @@ private:
         std::string const& topic_name,
         std::uint16_t qos,
         bool retain,
+        bool dup,
         std::uint16_t packet_id,
         std::string const& payload) {
 
@@ -2481,6 +2543,7 @@ private:
         sb.buf()->insert(sb.buf()->size(), payload);
         std::uint8_t flags = 0;
         if (retain) flags |= 0b00000001;
+        if (dup) flags |= 0b00001000;
         flags |= qos << 1;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
         write(ptr_size.first, ptr_size.second);
@@ -2743,6 +2806,7 @@ private:
         std::string const& topic_name,
         std::uint16_t qos,
         bool retain,
+        bool dup,
         std::uint16_t packet_id,
         std::string const& payload,
         F const& func) {
@@ -2760,6 +2824,7 @@ private:
         sb.buf()->insert(sb.buf()->size(), payload);
         std::uint8_t flags = 0;
         if (retain) flags |= 0b00000001;
+        if (dup) flags |= 0b00001000;
         flags |= qos << 1;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
         async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
