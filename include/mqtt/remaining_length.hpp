@@ -24,6 +24,21 @@ remaining_bytes(std::size_t size) {
     return bytes;
 }
 
+inline std::pair<std::size_t, std::size_t>
+remaining_length(std::string const& bytes) {
+    std::size_t len = 0;
+    std::size_t mul = 1;
+    std::size_t consumed = 0;
+    for (auto b : bytes) {
+        len += (b & 0b01111111) * mul;
+        mul *= 128;
+        ++consumed;
+        if (mul > 128 * 128 * 128 * 128) return std::make_pair(0, 0);
+        if (!(b & 0b10000000)) break;
+    }
+    return std::make_pair(len, consumed);
+}
+
 } // namespace mqtt
 
 #endif // MQTT_REMAINING_LENGTH_HPP
