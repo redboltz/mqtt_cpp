@@ -2125,6 +2125,7 @@ private:
                     res();
                     return true;
                 }
+                return false;
             }
             res();
         } break;
@@ -2135,28 +2136,29 @@ private:
             }
             packet_id = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
-            {
+            auto res = [this, &packet_id, &func] {
+                auto_pub_response(
+                    [this, &packet_id] {
+                        if (connected_) send_pubrec(*packet_id);
+                    },
+                    [this, &packet_id, &func] {
+                        if (connected_) async_send_pubrec(*packet_id, func);
+                    }
+                );
+            };
+            auto it = qos2_publish_handled_.find(*packet_id);
+            if (it == qos2_publish_handled_.end()) {
                 std::string contents(payload_.data() + i, payload_.size() - i);
-                qos2_publish_map_.emplace(
-                    std::piecewise_construct,
-                    std::forward_as_tuple(*packet_id),
-                    std::forward_as_tuple(fixed_header_, std::move(topic_name), std::move(contents)));
-            }
-            if (auto_pub_response_) {
-                if (auto_pub_response_async_) {
-                    if (connected_) async_send_pubrec(*packet_id, func);
-                }
-                else {
-                    if (connected_) send_pubrec(*packet_id);
+                if (h_publish_) {
+                    std::string contents(payload_.data() + i, payload_.size() - i);
+                    if (h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents))) {
+                        res();
+                        return true;
+                    }
+                    return false;
                 }
             }
-            else {
-                // Even if auto_pub_response_ is not set,
-                // return pubrec. Because there is no change to
-                // send pubrec manually.
-                // NOTE: publish hander is called when pubrel is received on QoS2.
-                if (connected_) send_pubrec(*packet_id);
-            }
+            res();
         } break;
         default:
             break;
@@ -2234,72 +2236,14 @@ private:
                 }
             );
         };
-        auto it = qos2_publish_map_.find(packet_id);
-        if (it == qos2_publish_map_.end()) {
-            // In the case published data is already erased at *1
-            if (h_pubrel_) {
-                if (h_pubrel_(packet_id)) {
-                    // pubrel is successfully handled.
-                    res();
-                    return true;
-                }
-                // pubrel handler is failed so pubcomp won't send.
-                // client will retry sending pubrel.
-                return false;
-            }
-            // In the case pubrel handler is not set,
-            // regard as pubrel handler is successfully finished.
-            res();
-            return true;
-        }
-        // published data is found.
-        if (h_publish_) {
-            if (h_publish_(
-                    it->second.fixed_header,
-                    packet_id,
-                    std::move(it->second.topic_name),
-                    std::move(it->second.contents))) {
-                if (h_pubrel_) {
-                    if (h_pubrel_(packet_id)) {
-                        // pubrel is successfully handled.
-                        qos2_publish_map_.erase(it);
-                        res();
-                        return true;
-                    }
-                    // pubrel handler is failed so pubcomp won't send.
-                    // client will retry sending pubrel.
-                    // for memory efficiency, erase published data here. *1
-                    qos2_publish_map_.erase(it);
-                    return false;
-                }
-                // In the case pubrel handler is not set,
-                // regard as pubrel handler is successfully finished.
-                qos2_publish_map_.erase(it);
-                res();
-                return true;
-            }
-            // publish handler is failed but pubrec has already been sent.
-            // pubcomp won't send.
-            // client will retry sending pubrel.
-            // for memory efficiency, erase published data here. *1
-            qos2_publish_map_.erase(it);
-            return false;
-        }
-        // publish handler is not set
+        qos2_publish_handled_.erase(packet_id);
         if (h_pubrel_) {
             if (h_pubrel_(packet_id)) {
-                // pubrel is successfully handled.
-                qos2_publish_map_.erase(it);
                 res();
                 return true;
             }
-            // pubrel handler is failed so pubcomp won't send.
-            // client will retry sending pubrel.
             return false;
         }
-        // In the case pubrel handler is not set,
-        // regard as pubrel handler is successfully finished.
-        qos2_publish_map_.erase(it);
         res();
         return true;
     }
@@ -3090,20 +3034,6 @@ private:
     }
 
 private:
-    struct qos2_publish {
-        qos2_publish(
-            std::uint8_t fixed_header,
-            std::string topic_name,
-            std::string contents)
-            :fixed_header(fixed_header),
-             topic_name(std::move(topic_name)),
-             contents(std::move(contents)) {}
-        std::uint8_t fixed_header;
-        std::string topic_name;
-        std::string contents;
-    };
-
-private:
     Strand strand_;
     std::unique_ptr<Socket> socket_;
     std::string host_;
@@ -3138,7 +3068,7 @@ private:
     boost::optional<std::string> password_;
     std::shared_ptr<Mutex> store_mtx_;
     mi_store store_;
-    std::map<std::uint16_t, qos2_publish> qos2_publish_map_;
+    std::set<std::uint16_t> qos2_publish_handled_;
     std::deque<async_packet> queue_;
     std::uint16_t packet_id_master_;
     std::set<std::uint16_t> packet_id_;
