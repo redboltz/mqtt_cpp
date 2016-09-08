@@ -706,7 +706,6 @@ public:
     void disconnect() {
         if (connected_) {
             send_disconnect();
-            connected_ = false;
         }
     }
 
@@ -717,7 +716,7 @@ public:
      */
     void force_disconnect() {
         if (connected_) {
-            socket_->lowest_layer().close();
+            shutdown(*socket_);
             connected_ = false;
         }
     }
@@ -1244,22 +1243,8 @@ public:
     void async_disconnect(async_handler_t const& func = async_handler_t()) {
         if (connected_) {
             async_send_disconnect(func);
-            connected_ = false;
         }
     }
-
-    /**
-     * @brief Disconnect by endpoint
-     * Force disconnect. It is not a clean disconnect sequence.<BR>
-     * When the endpoint disconnects using force_disconnect(), a will will send.<BR>
-     */
-    void async_force_disconnect(async_handler_t const& func = async_handler_t()) {
-        if (connected_) {
-            socket_->lowest_layer().close();
-            connected_ = false;
-        }
-    }
-
 
     // packet_id manual setting version
 
@@ -1628,6 +1613,8 @@ public:
 
     bool handle_close_or_error(boost::system::error_code const& ec) {
         if (!ec) return false;
+        connected_ = false;
+        shutdown(*socket_);
         if (ec == as::error::eof ||
             ec == as::error::connection_reset) {
             handle_close();
@@ -1693,6 +1680,26 @@ protected:
     }
 
 private:
+#if !defined(MQTT_NO_TLS)
+    template <typename T>
+    typename std::enable_if<
+        std::is_same<T, as::ssl::stream<as::ip::tcp::socket>>::value
+    >::type
+    shutdown(T& socket) {
+        boost::system::error_code ec;
+        socket.shutdown(ec);
+        socket.lowest_layer().close();
+    }
+#endif // defined(MQTT_NO_TLS)
+
+    template <typename T>
+    typename std::enable_if<
+        std::is_same<T, as::ip::tcp::socket>::value
+    >::type
+    shutdown(T& socket) {
+        socket.close();
+    }
+
     class send_buffer {
     public:
         send_buffer():buf_(std::make_shared<std::string>(static_cast<int>(payload_position_), 0)) {}
@@ -2659,7 +2666,6 @@ private:
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::disconnect, 0b0000));
         write(ptr_size.first, ptr_size.second);
-        connected_ = false;
     }
 
     // Blocking write
@@ -2946,7 +2952,6 @@ private:
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::disconnect, 0b0000));
         async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
-        connected_ = false;
     }
 
     // Non blocking (async) write

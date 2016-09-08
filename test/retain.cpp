@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order++ == 1);
             BOOST_TEST(packet_id == pid_sub);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             return true;
         });
@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order++ == 1);
             BOOST_TEST(packet_id == pid_sub);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             return true;
         });
@@ -237,7 +237,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
         [&order, &c, &pid_sub]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(packet_id == pid_sub);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             switch (order++) {
             case 1:

@@ -58,6 +58,7 @@ public:
      */
     ~client() {
         disconnect();
+        base::force_disconnect();
     }
 
     /**
