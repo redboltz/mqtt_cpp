@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             c1.force_disconnect();
             return true;
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
             c1.force_disconnect();
             return true;
@@ -272,7 +272,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::exactly_once);
             c1.force_disconnect();
             return true;
@@ -371,7 +371,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
         [&order2, &c2, &c1, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(packet_id == pid_sub2);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             switch (order2++) {
             case 1:

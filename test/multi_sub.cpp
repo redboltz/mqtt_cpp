@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order++ == 1);
             BOOST_TEST(packet_id == pid_sub);
-            BOOST_TEST(results.size() == 2);
+            BOOST_TEST(results.size() == 2U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             BOOST_TEST(*results[1] == mqtt::qos::at_most_once);
             c.publish_at_most_once(topic_base() + "/topic1", "topic1_contents");
@@ -167,7 +167,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order1++ == 1);
             BOOST_TEST(packet_id == pid_sub1);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             if (++sub_count == 2)
                 c1.publish_at_most_once(topic_base() + "/topic1", "topic1_contents");
@@ -247,7 +247,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             if (++sub_count == 2)
                 c2.publish_at_most_once(topic_base() + "/topic1", "topic1_contents");
@@ -334,7 +334,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order1++ == 1);
             BOOST_TEST(packet_id == pid_sub1);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
 
             c1ready = true;
@@ -395,7 +395,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
 
             c2ready = true;

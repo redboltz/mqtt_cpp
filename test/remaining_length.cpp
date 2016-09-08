@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order++ == 1);
             BOOST_TEST(packet_id == pid_sub);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             c.publish_at_most_once(topic_base() + "/topic1", test_contents);
             return true;
@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order++ == 1);
             BOOST_TEST(packet_id == pid_sub);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             c.publish_at_most_once(topic_base() + "/topic1", test_contents);
             return true;
@@ -251,7 +251,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order++ == 1);
             BOOST_TEST(packet_id == pid_sub);
-            BOOST_TEST(results.size() == 1);
+            BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             c.publish_at_most_once(topic_base() + "/topic1", test_contents);
             return true;
