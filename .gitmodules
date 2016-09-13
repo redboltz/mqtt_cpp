@@ -1,0 +1,3 @@
+[submodule "external/Beast"]
+	path = external/Beast
+	url = https://github.com/vinniefalco/Beast
