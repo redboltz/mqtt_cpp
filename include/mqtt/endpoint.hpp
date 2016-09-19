@@ -46,7 +46,7 @@ namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
 template <typename Socket, typename Strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
-class endpoint {
+class endpoint : public std::enable_shared_from_this<endpoint<Socket, Strand, Mutex, LockGuard>> {
     using this_type = endpoint<Socket, Strand>;
 public:
     using async_handler_t = std::function<void(boost::system::error_code const& ec)>;
@@ -58,7 +58,6 @@ public:
         :strand_(ios),
          connected_(false),
          clean_session_(false),
-         store_mtx_(std::make_shared<Mutex>()),
          packet_id_master_(0),
          auto_pub_response_(true),
          auto_pub_response_async_(false)
@@ -73,7 +72,6 @@ public:
          socket_(std::move(socket)),
          connected_(true),
          clean_session_(false),
-         store_mtx_(std::make_shared<Mutex>()),
          packet_id_master_(0),
          auto_pub_response_(true),
          auto_pub_response_async_(false)
@@ -293,15 +291,9 @@ public:
      */
     using disconnect_handler = std::function<void()>;
 
-    /**
-     * @breif Move constructor
-     */
-    endpoint(endpoint&&) = default;
+    endpoint(endpoint&&) = delete;
 
-    /**
-     * @breif Move assign operator
-     */
-    endpoint& operator=(endpoint&&) = default;
+    endpoint& operator=(endpoint&&) = delete;
 
     /**
      * @breif Set endpoint id.
@@ -1633,7 +1625,7 @@ public:
     }
 
     void clear_stored_publish(std::uint16_t packet_id) {
-        LockGuard<Mutex> lck (*store_mtx_);
+        LockGuard<Mutex> lck (store_mtx_);
         auto& idx = store_.template get<tag_packet_id>();
         auto r = idx.equal_range(packet_id);
         idx.erase(r.first, r.second);
@@ -1649,7 +1641,7 @@ public:
 
     template <typename F>
     void for_each_store(F f) {
-        LockGuard<Mutex> lck (*store_mtx_);
+        LockGuard<Mutex> lck (store_mtx_);
         auto& idx = store_.template get<tag_seq>();
         for (auto const & e : idx) {
             f(e.ptr(), e.size());
@@ -1658,11 +1650,12 @@ public:
 
 protected:
     void async_read_control_packet_type(async_handler_t const& func) {
+        auto self = this->shared_from_this();
         as::async_read(
             *socket_,
             as::buffer(&buf_, 1),
             strand_.wrap(
-                [this, func](
+                [this, self, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
                     if (handle_close_or_error(ec)) {
@@ -1806,11 +1799,12 @@ private:
         fixed_header_ = static_cast<std::uint8_t>(buf_);
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
+        auto self = this->shared_from_this();
         as::async_read(
             *socket_,
             as::buffer(&buf_, 1),
             strand_.wrap(
-                [this, func](
+                [this, self, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
                     if (handle_close_or_error(ec)) {
@@ -1831,12 +1825,13 @@ private:
         remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
         remaining_length_multiplier_ *= 128;
         if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) throw remaining_length_error();
+        auto self = this->shared_from_this();
         if (buf_ & 0b10000000) {
             as::async_read(
                 *socket_,
                 as::buffer(&buf_, 1),
                 strand_.wrap(
-                    [this, func](
+                    [this, self, func](
                         boost::system::error_code const& ec,
                         std::size_t bytes_transferred){
                         if (handle_close_or_error(ec)) {
@@ -1862,7 +1857,7 @@ private:
                 *socket_,
                 as::buffer(payload_),
                 strand_.wrap(
-                    [this, func](
+                    [this, self, func](
                         boost::system::error_code const& ec,
                         std::size_t bytes_transferred){
                         if (handle_close_or_error(ec)) {
@@ -2042,11 +2037,11 @@ private:
         }
         if (static_cast<std::uint8_t>(payload_[1]) == connect_return_code::accepted) {
             if (clean_session_) {
-                LockGuard<Mutex> lck (*store_mtx_);
+                LockGuard<Mutex> lck (store_mtx_);
                 store_.clear();
             }
             else {
-                LockGuard<Mutex> lck (*store_mtx_);
+                LockGuard<Mutex> lck (store_mtx_);
                 auto& idx = store_.template get<tag_seq>();
                 auto it = idx.begin();
                 auto end = idx.end();
@@ -2180,7 +2175,7 @@ private:
         }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
-            LockGuard<Mutex> lck (*store_mtx_);
+            LockGuard<Mutex> lck (store_mtx_);
             auto& idx = store_.template get<tag_packet_id_type>();
             auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::puback));
             idx.erase(r.first, r.second);
@@ -2197,7 +2192,7 @@ private:
         }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
-            LockGuard<Mutex> lck (*store_mtx_);
+            LockGuard<Mutex> lck (store_mtx_);
             auto& idx = store_.template get<tag_packet_id_type>();
             auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubrec));
             idx.erase(r.first, r.second);
@@ -2262,7 +2257,7 @@ private:
         }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
-            LockGuard<Mutex> lck (*store_mtx_);
+            LockGuard<Mutex> lck (store_mtx_);
             auto& idx = store_.template get<tag_packet_id_type>();
             auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubcomp));
             idx.erase(r.first, r.second);
@@ -2310,7 +2305,7 @@ private:
         }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
-            LockGuard<Mutex> lck (*store_mtx_);
+            LockGuard<Mutex> lck (store_mtx_);
             packet_id_.erase(packet_id);
         }
         std::vector<boost::optional<std::uint8_t>> results;
@@ -2365,7 +2360,7 @@ private:
         }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
-            LockGuard<Mutex> lck (*store_mtx_);
+            LockGuard<Mutex> lck (store_mtx_);
             packet_id_.erase(packet_id);
         }
         if (h_unsuback_) return h_unsuback_(packet_id);
@@ -2501,7 +2496,7 @@ private:
         if (qos > 0) {
             flags |= 0b00001000;
             ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
-            LockGuard<Mutex> lck (*store_mtx_);
+            LockGuard<Mutex> lck (store_mtx_);
             store_.emplace(
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
@@ -2535,7 +2530,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
         write(ptr_size.first, ptr_size.second);
-        LockGuard<Mutex> lck (*store_mtx_);
+        LockGuard<Mutex> lck (store_mtx_);
         store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
@@ -2549,7 +2544,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
-        LockGuard<Mutex> lck (*store_mtx_);
+        LockGuard<Mutex> lck (store_mtx_);
         store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
@@ -2779,7 +2774,7 @@ private:
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
         async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
         if (qos > 0) {
-            LockGuard<Mutex> lck (*store_mtx_);
+            LockGuard<Mutex> lck (store_mtx_);
             store_.emplace(
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
@@ -2796,9 +2791,10 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::puback, 0b0000));
+        auto self = this->shared_from_this();
         async_write(
             sb.buf(), ptr_size.first, ptr_size.second,
-            [this, packet_id, func](boost::system::error_code const& ec){
+            [this, self, packet_id, func](boost::system::error_code const& ec){
                 func(ec);
                 if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
             });
@@ -2820,7 +2816,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
         async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
-        LockGuard<Mutex> lck (*store_mtx_);
+        LockGuard<Mutex> lck (store_mtx_);
         store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
@@ -2835,9 +2831,10 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubcomp, 0b0000));
+        auto self = this->shared_from_this();
         async_write(
             sb.buf(), ptr_size.first, ptr_size.second,
-            [this, packet_id, func](boost::system::error_code const& ec){
+            [this, self, packet_id, func](boost::system::error_code const& ec){
                 func(ec);
                 if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
             });
@@ -2978,8 +2975,9 @@ private:
 
     template <typename F>
     void async_write(std::shared_ptr<std::string> const& buf, char* ptr, std::size_t size, F const& func) {
+        auto self = this->shared_from_this();
         strand_.post(
-            [this, buf, ptr, size, func]
+            [this, self, buf, ptr, size, func]
             () {
                 queue_.emplace_back(buf, ptr, size, func);
                 if (queue_.size() > 1) return;
@@ -2992,11 +2990,12 @@ private:
         auto& elem = queue_.front();
         auto size = elem.size();
         auto const& func = elem.handler();
+        auto self = this->shared_from_this();
         as::async_write(
             *socket_,
             as::buffer(elem.ptr(), size),
             strand_.wrap(
-                [this, size, func]
+                [this, self, size, func]
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) {
                     func(ec);
@@ -3018,7 +3017,7 @@ private:
     }
 
     std::uint16_t acquire_unique_packet_id() {
-        LockGuard<Mutex> lck (*store_mtx_);
+        LockGuard<Mutex> lck (store_mtx_);
         if (packet_id_.size() == 0xffff - 1) throw packet_id_exhausted_error();
         do {
             if (++packet_id_master_ == 0) ++packet_id_master_;
@@ -3028,7 +3027,7 @@ private:
 
     bool register_packet_id(std::uint16_t packet_id) {
         if (packet_id == 0) return false;
-        LockGuard<Mutex> lck (*store_mtx_);
+        LockGuard<Mutex> lck (store_mtx_);
         return packet_id_.insert(packet_id).second;
     }
 
@@ -3071,7 +3070,7 @@ private:
     disconnect_handler h_disconnect_;
     boost::optional<std::string> user_name_;
     boost::optional<std::string> password_;
-    std::shared_ptr<Mutex> store_mtx_;
+    Mutex store_mtx_;
     mi_store store_;
     std::set<std::uint16_t> qos2_publish_handled_;
     std::deque<async_packet> queue_;

@@ -62,23 +62,13 @@ public:
     }
 
     /**
-     * @breif Move constructor
-     */
-    client(client&&) = default;
-
-    /**
-     * @breif Move assign operator
-     */
-    client& operator=(client&&) = default;
-
-    /**
      * @breif Create no tls client with strand.
      * @param ios io_service object.
      * @param host hostname
      * @param port port number
      * @return client object
      */
-    friend client<as::ip::tcp::socket, as::io_service::strand>
+    friend std::shared_ptr<client<as::ip::tcp::socket, as::io_service::strand>>
     make_client(as::io_service& ios, std::string host, std::string port);
 
     /**
@@ -88,7 +78,7 @@ public:
      * @param port port number
      * @return client object
      */
-    friend client<as::ip::tcp::socket, null_strand>
+    friend std::shared_ptr<client<as::ip::tcp::socket, null_strand>>
     make_client_no_strand(as::io_service& ios, std::string host, std::string port);
 
 #if !defined(MQTT_NO_TLS)
@@ -99,7 +89,7 @@ public:
      * @param port port number
      * @return client object
      */
-    friend client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>
+    friend std::shared_ptr<client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>
     make_tls_client(as::io_service& ios, std::string host, std::string port);
 
     /**
@@ -109,7 +99,7 @@ public:
      * @param port port number
      * @return client object
      */
-    friend client<as::ssl::stream<as::ip::tcp::socket>, null_strand>
+    friend std::shared_ptr<client<as::ssl::stream<as::ip::tcp::socket>, null_strand>>
     make_tls_client_no_strand(as::io_service& ios, std::string host, std::string port);
 
     void set_ca_cert_file(std::string file) {
@@ -169,9 +159,10 @@ public:
         as::ip::tcp::resolver::query q(host_, port_);
         auto it = r.resolve(q);
         setup_socket(base::socket());
+        auto self = this->shared_from_this();
         as::async_connect(
             base::socket()->lowest_layer(), it,
-            [this, func]
+            [this, self, func]
             (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
                 base::set_close_handler([this](){ handle_close(); });
                 base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
@@ -180,7 +171,7 @@ public:
                     if (ping_duration_ms_ != 0) {
                         tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
                         tim_->async_wait(
-                            [this](boost::system::error_code const& ec) {
+                            [this, self](boost::system::error_code const& ec) {
                                 handle_timer(ec);
                             }
                         );
@@ -203,9 +194,10 @@ public:
         as::ip::tcp::resolver::query q(host_, port_);
         auto it = r.resolve(q);
         base::socket() = std::move(socket);
+        auto self = this->shared_from_this();
         as::async_connect(
             base::socket()->lowest_layer(), it,
-            [this, func]
+            [this, self, func]
             (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
                 base::set_close_handler([this](){ handle_close(); });
                 base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
@@ -214,7 +206,7 @@ public:
                     if (ping_duration_ms_ != 0) {
                         tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
                         tim_->async_wait(
-                            [this](boost::system::error_code const& ec) {
+                            [this, self](boost::system::error_code const& ec) {
                                 handle_timer(ec);
                             }
                         );
@@ -295,9 +287,10 @@ private:
     typename std::enable_if<
         std::is_same<T, std::unique_ptr<as::ssl::stream<as::ip::tcp::socket>>>::value
     >::type handshake_socket(T& socket, async_handler_t const& func) {
+        auto self = this->shared_from_this();
         socket->async_handshake(
             as::ssl::stream_base::client,
-            [this, func]
+            [this, self, func]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 base::async_read_control_packet_type(func);
@@ -317,8 +310,9 @@ private:
         if (!ec) {
             base::pingreq();
             tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
+            auto self = this->shared_from_this();
             tim_->async_wait(
-                [this](boost::system::error_code const& ec) {
+                [this, self](boost::system::error_code const& ec) {
                     handle_timer(ec);
                 }
             );
@@ -351,45 +345,73 @@ private:
     error_handler h_error_;
 };
 
-inline client<as::ip::tcp::socket, as::io_service::strand>
+inline std::shared_ptr<client<as::ip::tcp::socket, as::io_service::strand>>
 make_client(as::io_service& ios, std::string host, std::string port) {
-    return client<as::ip::tcp::socket, as::io_service::strand>(ios, std::move(host), std::move(port), false);
+    struct impl : client<as::ip::tcp::socket, as::io_service::strand> {
+        impl(as::io_service& ios,
+             std::string host,
+             std::string port,
+             bool tls)
+        : client<as::ip::tcp::socket, as::io_service::strand>(ios, std::move(host), std::move(port), tls) {}
+    };
+    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false);
 }
 
-inline client<as::ip::tcp::socket, as::io_service::strand>
+inline std::shared_ptr<client<as::ip::tcp::socket, as::io_service::strand>>
 make_client(as::io_service& ios, std::string host, std::uint16_t port) {
     return make_client(ios, std::move(host), boost::lexical_cast<std::string>(port));
 }
 
-inline client<as::ip::tcp::socket, null_strand>
+inline std::shared_ptr<client<as::ip::tcp::socket, null_strand>>
 make_client_no_strand(as::io_service& ios, std::string host, std::string port) {
-    return client<as::ip::tcp::socket, null_strand>(ios, std::move(host), std::move(port), false);
+    struct impl : client<as::ip::tcp::socket, null_strand> {
+        impl(as::io_service& ios,
+             std::string host,
+             std::string port,
+             bool tls)
+        : client<as::ip::tcp::socket, null_strand>(ios, std::move(host), std::move(port), tls) {}
+    };
+    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false);
 }
 
-inline client<as::ip::tcp::socket, null_strand>
+inline std::shared_ptr<client<as::ip::tcp::socket, null_strand>>
 make_client_no_strand(as::io_service& ios, std::string host, std::uint16_t port) {
     return make_client_no_strand(ios, std::move(host), boost::lexical_cast<std::string>(port));
 }
 
 #if !defined(MQTT_NO_TLS)
 
-inline client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>
+inline std::shared_ptr<client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>
 make_tls_client(as::io_service& ios, std::string host, std::string port) {
-    return client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>
-        (ios, std::move(host), std::move(port), true);
+    struct impl : client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand> {
+        impl(as::io_service& ios,
+             std::string host,
+             std::string port,
+             bool tls)
+        : client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>(ios, std::move(host), std::move(port), tls) {}
+    };
+    return std::make_shared<impl>
+        (std::ref(ios), std::move(host), std::move(port), true);
 }
 
-inline client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>
+inline std::shared_ptr<client<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>
 make_tls_client(as::io_service& ios, std::string host, std::uint16_t port) {
     return make_tls_client(ios, std::move(host), boost::lexical_cast<std::string>(port));
 }
 
-inline client<as::ssl::stream<as::ip::tcp::socket>, null_strand>
+inline std::shared_ptr<client<as::ssl::stream<as::ip::tcp::socket>, null_strand>>
 make_tls_client_no_strand(as::io_service& ios, std::string host, std::string port) {
-    return client<as::ssl::stream<as::ip::tcp::socket>, null_strand>(ios, std::move(host), std::move(port), true);
+    struct impl : client<as::ssl::stream<as::ip::tcp::socket>, null_strand> {
+        impl(as::io_service& ios,
+             std::string host,
+             std::string port,
+             bool tls)
+        : client<as::ssl::stream<as::ip::tcp::socket>, null_strand>(ios, std::move(host), std::move(port), tls) {}
+    };
+    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), true);
 }
 
-inline client<as::ssl::stream<as::ip::tcp::socket>, null_strand>
+inline std::shared_ptr<client<as::ssl::stream<as::ip::tcp::socket>, null_strand>>
 make_tls_client_no_strand(as::io_service& ios, std::string host, std::uint16_t port) {
     return make_tls_client_no_strand(ios, std::move(host), boost::lexical_cast<std::string>(port));
 }

@@ -21,12 +21,12 @@ int main() {
     auto c = mqtt::make_tls_client(ios, "test.mosquitto.org", 8883);
 
     // Setup client
-    c.set_client_id("cid1");
-    c.set_clean_session(true);
-    c.set_ca_cert_file("mosquitto.org.crt");
+    c->set_client_id("cid1");
+    c->set_clean_session(true);
+    c->set_ca_cert_file("mosquitto.org.crt");
 
     // Setup handlers
-    c.set_connack_handler(
+    c->set_connack_handler(
         [&c, &pid_sub1, &pid_sub2]
         (bool sp, std::uint8_t connack_return_code){
             std::cout << "Connack handler called" << std::endl;
@@ -34,42 +34,42 @@ int main() {
             std::cout << "Connack Return Code: "
                       << mqtt::connect_return_code_to_str(connack_return_code) << std::endl;
             if (connack_return_code == mqtt::connect_return_code::accepted) {
-                pid_sub1 = c.subscribe("mqtt_client_cpp/topic1", mqtt::qos::at_most_once);
-                pid_sub2 = c.subscribe("mqtt_client_cpp/topic2_1", mqtt::qos::at_least_once,
+                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", mqtt::qos::at_most_once);
+                pid_sub2 = c->subscribe("mqtt_client_cpp/topic2_1", mqtt::qos::at_least_once,
                                        "mqtt_client_cpp/topic2_2", mqtt::qos::exactly_once);
             }
             return true;
         });
-    c.set_close_handler(
+    c->set_close_handler(
         []
         (){
             std::cout << "closed." << std::endl;
         });
-    c.set_error_handler(
+    c->set_error_handler(
         []
         (boost::system::error_code const& ec){
             std::cout << "error: " << ec.message() << std::endl;
         });
-    c.set_puback_handler(
+    c->set_puback_handler(
         [&c]
         (std::uint16_t packet_id){
             std::cout << "puback received. packet_id: " << packet_id << std::endl;
             return true;
         });
-    c.set_pubrec_handler(
+    c->set_pubrec_handler(
         [&c]
         (std::uint16_t packet_id){
             std::cout << "pubrec received. packet_id: " << packet_id << std::endl;
             return true;
         });
-    c.set_pubcomp_handler(
+    c->set_pubcomp_handler(
         [&c]
         (std::uint16_t packet_id){
             std::cout << "pubcomp received. packet_id: " << packet_id << std::endl;
             return true;
         });
     bool first = true;
-    c.set_suback_handler(
+    c->set_suback_handler(
         [&c, &first, &pid_sub1, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results){
             std::cout << "suback received. packet_id: " << packet_id << std::endl;
@@ -82,15 +82,15 @@ int main() {
                 }
             }
             if (packet_id == pid_sub1) {
-                c.publish_at_most_once("mqtt_client_cpp/topic1", "test1");
+                c->publish_at_most_once("mqtt_client_cpp/topic1", "test1");
             }
             else if (packet_id == pid_sub2) {
-                c.publish_at_least_once("mqtt_client_cpp/topic2_1", "test2_1");
-                c.publish_exactly_once("mqtt_client_cpp/topic2_2", "test2_2");
+                c->publish_at_least_once("mqtt_client_cpp/topic2_1", "test2_1");
+                c->publish_exactly_once("mqtt_client_cpp/topic2_2", "test2_2");
             }
             return true;
         });
-    c.set_publish_handler(
+    c->set_publish_handler(
         [&c, &count]
         (std::uint8_t header,
          boost::optional<std::uint16_t> packet_id,
@@ -104,12 +104,12 @@ int main() {
                 std::cout << "packet_id: " << *packet_id << std::endl;
             std::cout << "topic_name: " << topic_name << std::endl;
             std::cout << "contents: " << contents << std::endl;
-            if (++count == 3) c.disconnect();
+            if (++count == 3) c->disconnect();
             return true;
         });
 
     // Connect
-    c.connect();
+    c->connect();
 
     ios.run();
 }
