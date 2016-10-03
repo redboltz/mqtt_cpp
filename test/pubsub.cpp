@@ -120,8 +120,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
             pid_sub = c->subscribe(
-                std::vector<std::pair<std::string, std::uint8_t>> {
-                    std::make_pair(topic_base() + "/topic1", mqtt::qos::at_most_once)
+                std::vector<std::tuple<std::string, std::uint8_t>> {
+                    std::make_tuple(topic_base() + "/topic1", mqtt::qos::at_most_once)
                 }
             );
             return true;
