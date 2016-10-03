@@ -618,7 +618,7 @@ public:
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
         send_subscribe(params, packet_id, topic_name, qos, args...);
         return packet_id;
@@ -633,13 +633,13 @@ public:
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
      */
     std::uint16_t subscribe(
-        std::vector<std::pair<std::string, std::uint8_t>> const& params
+        std::vector<std::tuple<std::string, std::uint8_t>> const& params
     ) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
         rparams.reserve(params.size());
         for (auto const& e : params) {
-            rparams.emplace_back(e.first, e.second);
+            rparams.emplace_back(std::get<0>(e), std::get<1>(e));
         }
         send_subscribe(rparams, packet_id);
         return packet_id;
@@ -851,7 +851,7 @@ public:
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
             params.reserve((sizeof...(args) + 2) / 2);
             send_subscribe(params, packet_id, topic_name, qos, args...);
             return true;
@@ -871,13 +871,13 @@ public:
      */
     bool subscribe(
         std::uint16_t packet_id,
-        std::vector<std::pair<std::string, std::uint8_t>> const& params
+        std::vector<std::tuple<std::string, std::uint8_t>> const& params
     ) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
+            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
             rparams.reserve(params.size());
             for (auto const& e : params) {
-                rparams.emplace_back(e.first, e.second);
+                rparams.emplace_back(std::get<0>(e), std::get<1>(e));
             }
             send_subscribe(rparams, packet_id);
             return true;
@@ -1107,7 +1107,7 @@ public:
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
         async_send_subscribe(params, packet_id, topic_name, qos, args...);
         return packet_id;
@@ -1125,7 +1125,7 @@ public:
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
         async_send_subscribe(params, packet_id, topic_name, qos, args..., async_handler_t());
         return packet_id;
@@ -1136,20 +1136,20 @@ public:
         std::uint8_t qos,
         async_handler_t const& func = async_handler_t()) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
         params.reserve(1);
         async_send_subscribe(params, packet_id, topic_name, qos, func);
         return packet_id;
     }
 
     std::uint16_t async_subscribe(
-        std::vector<std::pair<std::string, std::uint8_t>> const& params,
+        std::vector<std::tuple<std::string, std::uint8_t>> const& params,
         async_handler_t const& func = async_handler_t()) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
         rparams.reserve(params.size());
         for (auto const& e : params) {
-            rparams.emplace_back(e.first, e.second);
+            rparams.emplace_back(std::get<0>(e), std::get<1>(e));
         }
         async_send_subscribe(rparams, packet_id, func);
         return packet_id;
@@ -1386,7 +1386,7 @@ public:
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
             params.reserve((sizeof...(args) + 2) / 2);
             async_send_subscribe(params, packet_id, topic_name, qos, args...);
             return true;
@@ -1407,7 +1407,7 @@ public:
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
             params.reserve((sizeof...(args) + 2) / 2);
             async_send_subscribe(params, packet_id, topic_name, qos, args..., async_handler_t());
             return true;
@@ -1421,7 +1421,7 @@ public:
         std::uint8_t qos,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
             params.reserve(1);
             async_send_subscribe(params, packet_id, topic_name, qos, func);
             return true;
@@ -1431,13 +1431,13 @@ public:
 
     bool async_subscribe(
         std::uint16_t packet_id,
-        std::vector<std::pair<std::string, std::uint8_t>> const& params,
+        std::vector<std::tuple<std::string, std::uint8_t>> const& params,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
+            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
             rparams.reserve(params.size());
             for (auto const& e : params) {
-                rparams.emplace_back(e.first, e.second);
+                rparams.emplace_back(std::get<0>(e), std::get<1>(e));
             }
             async_send_subscribe(rparams, packet_id, func);
             return true;
@@ -1628,7 +1628,7 @@ public:
         LockGuard<Mutex> lck (store_mtx_);
         auto& idx = store_.template get<tag_packet_id>();
         auto r = idx.equal_range(packet_id);
-        idx.erase(r.first, r.second);
+        idx.erase(std::get<0>(r), std::get<1>(r));
         packet_id_.erase(packet_id);
     }
 
@@ -1705,12 +1705,12 @@ private:
             return buf_;
         }
 
-        std::pair<char*, std::size_t> finalize(std::uint8_t fixed_header) {
+        std::tuple<char*, std::size_t> finalize(std::uint8_t fixed_header) {
             auto rb = remaining_bytes(buf_->size() - payload_position_);
             std::size_t start_position = payload_position_ - rb.size() - 1;
             (*buf_)[start_position] = fixed_header;
             buf_->replace(start_position + 1, rb.size(), rb);
-            return std::make_pair(
+            return std::make_tuple(
                 &(*buf_)[start_position],
                 buf_->size() - start_position);
         }
@@ -2178,7 +2178,7 @@ private:
             LockGuard<Mutex> lck (store_mtx_);
             auto& idx = store_.template get<tag_packet_id_type>();
             auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::puback));
-            idx.erase(r.first, r.second);
+            idx.erase(std::get<0>(r), std::get<1>(r));
             packet_id_.erase(packet_id);
         }
         if (h_puback_) return h_puback_(packet_id);
@@ -2195,7 +2195,7 @@ private:
             LockGuard<Mutex> lck (store_mtx_);
             auto& idx = store_.template get<tag_packet_id_type>();
             auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubrec));
-            idx.erase(r.first, r.second);
+            idx.erase(std::get<0>(r), std::get<1>(r));
             // packet_id shouldn't be erased here.
             // It is reused for pubrel/pubcomp.
         }
@@ -2260,7 +2260,7 @@ private:
             LockGuard<Mutex> lck (store_mtx_);
             auto& idx = store_.template get<tag_packet_id_type>();
             auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubcomp));
-            idx.erase(r.first, r.second);
+            idx.erase(std::get<0>(r), std::get<1>(r));
             packet_id_.erase(packet_id);
         }
         if (h_pubcomp_) return h_pubcomp_(packet_id);
@@ -2457,7 +2457,7 @@ private:
         }
 
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::connect, 0));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     void send_connack(bool session_present, std::uint8_t return_code) {
@@ -2465,7 +2465,7 @@ private:
         sb.buf()->push_back(static_cast<char>(session_present ? 1 : 0));
         sb.buf()->push_back(static_cast<char>(return_code));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::connack, 0b0000));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     void send_publish(
@@ -2492,7 +2492,7 @@ private:
         if (dup) flags |= 0b00001000;
         flags |= qos << 1;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
         if (qos > 0) {
             flags |= 0b00001000;
             ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
@@ -2502,8 +2502,8 @@ private:
                 qos == qos::at_least_once ? control_packet_type::puback
                                           : control_packet_type::pubrec,
                 sb.buf(),
-                ptr_size.first,
-                ptr_size.second);
+                std::get<0>(ptr_size),
+                std::get<1>(ptr_size));
         }
     }
 
@@ -2512,7 +2512,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::puback, 0b0000));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
         if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
     }
 
@@ -2521,7 +2521,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrec, 0b0000));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     void send_pubrel(std::uint16_t packet_id) {
@@ -2529,14 +2529,14 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
         LockGuard<Mutex> lck (store_mtx_);
         store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
             sb.buf(),
-            ptr_size.first,
-            ptr_size.second);
+            std::get<0>(ptr_size),
+            std::get<1>(ptr_size));
     }
 
     void store_pubrel(std::uint16_t packet_id) {
@@ -2549,8 +2549,8 @@ private:
             packet_id,
             control_packet_type::pubcomp,
             sb.buf(),
-            ptr_size.first,
-            ptr_size.second);
+            std::get<0>(ptr_size),
+            std::get<1>(ptr_size));
     }
 
     void send_pubcomp(std::uint16_t packet_id) {
@@ -2558,35 +2558,35 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubcomp, 0b0000));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
         if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
     }
 
     template <typename... Args>
     void send_subscribe(
-        std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>>& params,
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>>& params,
         std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
-        params.push_back(std::make_pair(std::cref(topic_name), qos));
+        params.push_back(std::make_tuple(std::cref(topic_name), qos));
         send_subscribe(params, packet_id, args...);
     }
 
     void send_subscribe(
-        std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>>& params,
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>>& params,
         std::uint16_t packet_id) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         for (auto const& e : params) {
-            if (!utf8string::is_valid_length(e.first)) throw utf8string_length_error();
-            if (!utf8string::is_valid_contents(e.first)) throw utf8string_contents_error();
-            sb.buf()->insert(sb.buf()->size(), encoded_length(e.first));
-            sb.buf()->insert(sb.buf()->size(), e.first);
-            sb.buf()->push_back(e.second);
+            if (!utf8string::is_valid_length(std::get<0>(e))) throw utf8string_length_error();
+            if (!utf8string::is_valid_contents(std::get<0>(e))) throw utf8string_contents_error();
+            sb.buf()->insert(sb.buf()->size(), encoded_length(std::get<0>(e)));
+            sb.buf()->insert(sb.buf()->size(), std::get<0>(e));
+            sb.buf()->push_back(std::get<1>(e));
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::subscribe, 0b0010));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     template <typename... Args>
@@ -2608,7 +2608,7 @@ private:
             sb.buf()->push_back(e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::suback, 0b0000));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     template <typename... Args>
@@ -2634,7 +2634,7 @@ private:
             sb.buf()->insert(sb.buf()->size(), e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsubscribe, 0b0010));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     void send_unsuback(
@@ -2643,24 +2643,24 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsuback, 0b0010));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     void send_pingreq() {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingreq, 0b0000));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     void send_pingresp() {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingresp, 0b0000));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
     void send_disconnect() {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::disconnect, 0b0000));
-        write(ptr_size.first, ptr_size.second);
+        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     // Blocking write
@@ -2734,7 +2734,7 @@ private:
         }
 
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::connect, 0));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename F>
@@ -2743,7 +2743,7 @@ private:
         sb.buf()->push_back(static_cast<char>(session_present ? 1 : 0));
         sb.buf()->push_back(static_cast<char>(return_code));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::connack, 0b0000));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename F>
@@ -2772,7 +2772,7 @@ private:
         if (dup) flags |= 0b00001000;
         flags |= qos << 1;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
         if (qos > 0) {
             LockGuard<Mutex> lck (store_mtx_);
             store_.emplace(
@@ -2780,8 +2780,8 @@ private:
                 qos == qos::at_least_once ? control_packet_type::puback
                                           : control_packet_type::pubrec,
                 sb.buf(),
-                ptr_size.first,
-                ptr_size.second);
+                std::get<0>(ptr_size),
+                std::get<1>(ptr_size));
         }
     }
 
@@ -2793,7 +2793,7 @@ private:
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::puback, 0b0000));
         auto self = this->shared_from_this();
         async_write(
-            sb.buf(), ptr_size.first, ptr_size.second,
+            sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size),
             [this, self, packet_id, func](boost::system::error_code const& ec){
                 func(ec);
                 if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
@@ -2806,7 +2806,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrec, 0b0000));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename F>
@@ -2815,14 +2815,14 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
         LockGuard<Mutex> lck (store_mtx_);
         store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
             sb.buf(),
-            ptr_size.first,
-            ptr_size.second);
+            std::get<0>(ptr_size),
+            std::get<1>(ptr_size));
     }
 
     template <typename F>
@@ -2833,7 +2833,7 @@ private:
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubcomp, 0b0000));
         auto self = this->shared_from_this();
         async_write(
-            sb.buf(), ptr_size.first, ptr_size.second,
+            sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size),
             [this, self, packet_id, func](boost::system::error_code const& ec){
                 func(ec);
                 if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
@@ -2842,31 +2842,31 @@ private:
 
     template <typename... Args>
     void async_send_subscribe(
-        std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>>& params,
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>>& params,
         std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
-        params.push_back(std::make_pair(std::cref(topic_name), qos));
+        params.push_back(std::make_tuple(std::cref(topic_name), qos));
         async_send_subscribe(params, packet_id, args...);
     }
 
     template <typename F>
     void async_send_subscribe(
-        std::vector<std::pair<std::reference_wrapper<std::string const>, std::uint8_t>>& params,
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>>& params,
         std::uint16_t packet_id,
         F const& func) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         for (auto const& e : params) {
-            if (!utf8string::is_valid_length(e.first)) throw utf8string_length_error();
-            if (!utf8string::is_valid_contents(e.first)) throw utf8string_contents_error();
-            sb.buf()->insert(sb.buf()->size(), encoded_length(e.first));
-            sb.buf()->insert(sb.buf()->size(), e.first);
-            sb.buf()->push_back(e.second);
+            if (!utf8string::is_valid_length(std::get<0>(e))) throw utf8string_length_error();
+            if (!utf8string::is_valid_contents(std::get<0>(e))) throw utf8string_contents_error();
+            sb.buf()->insert(sb.buf()->size(), encoded_length(std::get<0>(e)));
+            sb.buf()->insert(sb.buf()->size(), std::get<0>(e));
+            sb.buf()->push_back(std::get<1>(e));
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::subscribe, 0b0010));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename... Args>
@@ -2890,7 +2890,7 @@ private:
             sb.buf()->push_back(e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::suback, 0b0000));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename... Args>
@@ -2918,7 +2918,7 @@ private:
             sb.buf()->insert(sb.buf()->size(), e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsubscribe, 0b0010));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename F>
@@ -2928,27 +2928,27 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsuback, 0b0010));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename F>
     void async_send_pingreq(F const& func) {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingreq, 0b0000));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename F>
     void async_send_pingresp(F const& func) {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingresp, 0b0000));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
     template <typename F>
     void async_send_disconnect(F const& func) {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::disconnect, 0b0000));
-        async_write(sb.buf(), ptr_size.first, ptr_size.second, func);
+        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     // Non blocking (async) write
