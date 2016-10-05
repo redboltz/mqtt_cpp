@@ -1097,38 +1097,13 @@ public:
      */
     template <typename... Args>
     typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
+        sizeof...(Args) != 0,
         std::uint16_t
     >::type
     async_subscribe(
         std::string const& topic_name,
-        std::uint8_t qos, Args... args) {
-        std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
-        params.reserve((sizeof...(args) + 2) / 2);
-        async_send_subscribe(params, packet_id, topic_name, qos, args...);
-        return packet_id;
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
-        std::uint16_t
-    >::type
-    async_subscribe(
-        std::string const& topic_name,
-        std::uint8_t qos, Args... args) {
-        std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
-        params.reserve((sizeof...(args) + 2) / 2);
-        async_send_subscribe(params, packet_id, topic_name, qos, args..., async_handler_t());
-        return packet_id;
+        std::uint8_t qos, Args&&... args) {
+        return subscribe_imp(topic_name, qos, std::forward<Args>(args)...);
     }
 
     std::uint16_t async_subscribe(
@@ -1168,38 +1143,13 @@ public:
      */
     template <typename... Args>
     typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
+        sizeof...(Args) != 0,
         std::uint16_t
     >::type
     async_unsubscribe(
         std::string const& topic_name,
-        Args... args) {
-        std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::reference_wrapper<std::string const>> params;
-        params.reserve(sizeof...(args));
-        async_send_unsubscribe(params, packet_id, topic_name, args...);
-        return packet_id;
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
-        std::uint16_t
-    >::type
-    async_unsubscribe(
-        std::string const& topic_name,
-        Args... args) {
-        std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::reference_wrapper<std::string const>> params;
-        params.reserve(sizeof...(args) + 1);
-        async_send_unsubscribe(params, packet_id, topic_name, args..., async_handler_t());
-        return packet_id;
+        Args&&... args) {
+        async_unsubscribe_imp(topic_name, std::forward<Args>(args)...);
     }
 
     std::uint16_t async_unsubscribe(
@@ -1375,44 +1325,14 @@ public:
      */
     template <typename... Args>
     typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
+        sizeof...(Args) != 0,
         bool
     >::type
     async_subscribe(
         std::uint16_t packet_id,
         std::string const& topic_name,
-        std::uint8_t qos, Args... args) {
-        if (register_packet_id(packet_id)) {
-            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
-            params.reserve((sizeof...(args) + 2) / 2);
-            async_send_subscribe(params, packet_id, topic_name, qos, args...);
-            return true;
-        }
-        return false;
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
-        bool
-    >::type
-    async_subscribe(
-        std::uint16_t packet_id,
-        std::string const& topic_name,
-        std::uint8_t qos, Args... args) {
-        if (register_packet_id(packet_id)) {
-            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
-            params.reserve((sizeof...(args) + 2) / 2);
-            async_send_subscribe(params, packet_id, topic_name, qos, args..., async_handler_t());
-            return true;
-        }
-        return false;
+        std::uint8_t qos, Args&&... args) {
+        return async_subscribe_imp(packet_id, topic_name, qos, std::forward<Args>(args)...);
     }
 
     bool async_subscribe(
@@ -1460,44 +1380,14 @@ public:
      */
     template <typename... Args>
     typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
+        sizeof...(Args) != 0,
         bool
     >::type
     async_unsubscribe(
         std::uint16_t packet_id,
         std::string const& topic_name,
-        Args... args) {
-        if (register_packet_id(packet_id)) {
-            std::vector<std::reference_wrapper<std::string const>> params;
-            params.reserve(sizeof...(args));
-            async_send_unsubscribe(params, packet_id, topic_name, args...);
-            return true;
-        }
-        return false;
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
-        bool
-    >::type
-    async_unsubscribe(
-        std::uint16_t packet_id,
-        std::string const& topic_name,
-        Args... args) {
-        if (register_packet_id(packet_id)) {
-            std::vector<std::reference_wrapper<std::string const>> params;
-            params.reserve(sizeof...(args) + 1);
-            async_send_unsubscribe(params, packet_id, topic_name, args..., async_handler_t());
-            return true;
-        }
-        return false;
+        Args&&... args) {
+        return async_unsubscribe_imp(packet_id, topic_name, std::forward<Args>(args)...);
     }
 
     bool async_unsubscribe(
@@ -1552,30 +1442,12 @@ public:
 
     template <typename... Args>
     typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value
+        sizeof...(Args) != 0
     >::type
     async_suback(
         std::uint16_t packet_id,
         std::uint8_t qos, Args&&... args) {
-        std::vector<std::uint8_t> params;
-        async_send_suback(params, packet_id, qos, std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value
-    >::type
-    async_suback(
-        std::uint16_t packet_id,
-        std::uint8_t qos, Args&&... args) {
-        std::vector<std::uint8_t> params;
-        async_send_suback(params, packet_id, qos, std::forward<Args>(args)..., async_handler_t());
+        async_suback_imp(packet_id, qos, std::forward<Args>(args)...);
     }
 
     void async_suback(
@@ -1689,6 +1561,190 @@ private:
     >::type
     shutdown(T& socket) {
         socket.close();
+    }
+
+    template <typename... Args>
+    typename std::enable_if<
+        std::is_convertible<
+            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
+            async_handler_t
+        >::value,
+        std::uint16_t
+    >::type
+    async_subscribe_imp(
+        std::string const& topic_name,
+        std::uint8_t qos, Args&&... args) {
+        std::uint16_t packet_id = acquire_unique_packet_id();
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+        params.reserve((sizeof...(args) + 2) / 2);
+        async_send_subscribe(params, packet_id, topic_name, qos, std::forward<Args>(args)...);
+        return packet_id;
+    }
+
+    template <typename... Args>
+    typename std::enable_if<
+        !std::is_convertible<
+            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
+            async_handler_t
+        >::value,
+        std::uint16_t
+    >::type
+    async_subscribe_imp(
+        std::string const& topic_name,
+        std::uint8_t qos, Args&&... args) {
+        std::uint16_t packet_id = acquire_unique_packet_id();
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+        params.reserve((sizeof...(args) + 2) / 2);
+        async_send_subscribe(params, packet_id, topic_name, qos, std::forward<Args>(args)..., async_handler_t());
+        return packet_id;
+    }
+
+    template <typename... Args>
+    typename std::enable_if<
+        std::is_convertible<
+            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
+            async_handler_t
+        >::value,
+        std::uint16_t
+    >::type
+    async_unsubscribe_imp(
+        std::string const& topic_name,
+        Args&&... args) {
+        std::uint16_t packet_id = acquire_unique_packet_id();
+        std::vector<std::reference_wrapper<std::string const>> params;
+        params.reserve(sizeof...(args));
+        async_send_unsubscribe(params, packet_id, topic_name, std::forward<Args>(args)...);
+        return packet_id;
+    }
+
+    template <typename... Args>
+    typename std::enable_if<
+        !std::is_convertible<
+            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
+            async_handler_t
+        >::value,
+        std::uint16_t
+    >::type
+    async_unsubscribe_imp(
+        std::string const& topic_name,
+        Args&&... args) {
+        std::uint16_t packet_id = acquire_unique_packet_id();
+        std::vector<std::reference_wrapper<std::string const>> params;
+        params.reserve(sizeof...(args) + 1);
+        async_send_unsubscribe(params, packet_id, topic_name, std::forward<Args>(args)..., async_handler_t());
+        return packet_id;
+    }
+
+    template <typename... Args>
+    typename std::enable_if<
+        std::is_convertible<
+            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
+            async_handler_t
+        >::value,
+        bool
+    >::type
+    async_subscribe_imp(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::uint8_t qos, Args&&... args) {
+        if (register_packet_id(packet_id)) {
+            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+            params.reserve((sizeof...(args) + 2) / 2);
+            async_send_subscribe(params, packet_id, topic_name, qos, std::forward<Args>(args)...);
+            return true;
+        }
+        return false;
+    }
+
+    template <typename... Args>
+    typename std::enable_if<
+        !std::is_convertible<
+            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
+            async_handler_t
+        >::value,
+        bool
+    >::type
+    async_subscribe_imp(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::uint8_t qos, Args&&... args) {
+        if (register_packet_id(packet_id)) {
+            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+            params.reserve((sizeof...(args) + 2) / 2);
+            async_send_subscribe(params, packet_id, topic_name, qos, std::forward<Args>(args)..., async_handler_t());
+            return true;
+        }
+        return false;
+    }
+
+    template <typename... Args>
+    typename std::enable_if<
+        std::is_convertible<
+            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
+            async_handler_t
+        >::value,
+        bool
+    >::type
+    async_unsubscribe_imp(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        Args&&... args) {
+        if (register_packet_id(packet_id)) {
+            std::vector<std::reference_wrapper<std::string const>> params;
+            params.reserve(sizeof...(args));
+            async_send_unsubscribe(params, packet_id, topic_name, std::forward<Args>(args)...);
+            return true;
+        }
+        return false;
+    }
+
+    template <typename... Args>
+    typename std::enable_if<
+        !std::is_convertible<
+            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
+            async_handler_t
+        >::value,
+        bool
+    >::type
+    async_unsubscribe_imp(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        Args&&... args) {
+        if (register_packet_id(packet_id)) {
+            std::vector<std::reference_wrapper<std::string const>> params;
+            params.reserve(sizeof...(args) + 1);
+            async_send_unsubscribe(params, packet_id, topic_name, std::forward<Args>(args)..., async_handler_t());
+            return true;
+        }
+        return false;
+    }
+
+    template <typename... Args>
+    typename std::enable_if<
+        std::is_convertible<
+            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
+            async_handler_t
+        >::value
+    >::type
+    async_suback_imp(
+        std::uint16_t packet_id,
+        std::uint8_t qos, Args&&... args) {
+        std::vector<std::uint8_t> params;
+        async_send_suback(params, packet_id, qos, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    typename std::enable_if<
+        !std::is_convertible<
+            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
+            async_handler_t
+        >::value
+    >::type
+    async_suback_imp(
+        std::uint16_t packet_id,
+        std::uint8_t qos, Args&&... args) {
+        std::vector<std::uint8_t> params;
+        async_send_suback(params, packet_id, qos, std::forward<Args>(args)..., async_handler_t());
     }
 
     class send_buffer {
