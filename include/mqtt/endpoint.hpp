@@ -1654,21 +1654,19 @@ protected:
         as::async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            strand_.wrap(
-                [this, self, func](
-                    boost::system::error_code const& ec,
-                    std::size_t bytes_transferred){
-                    if (handle_close_or_error(ec)) {
-                        if (func) func(ec);
-                        return;
-                    }
-                    if (bytes_transferred != 1) {
-                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                        return;
-                    }
-                    handle_control_packet_type(func);
+            [this, self, func](
+                boost::system::error_code const& ec,
+                std::size_t bytes_transferred){
+                if (handle_close_or_error(ec)) {
+                    if (func) func(ec);
+                    return;
                 }
-            )
+                if (bytes_transferred != 1) {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                    return;
+                }
+                handle_control_packet_type(func);
+            }
         );
     }
 
@@ -1803,7 +1801,31 @@ private:
         as::async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            strand_.wrap(
+            [this, self, func](
+                boost::system::error_code const& ec,
+                std::size_t bytes_transferred){
+                if (handle_close_or_error(ec)) {
+                    if (func) func(ec);
+                    return;
+                }
+                if (bytes_transferred != 1) {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                    return;
+                }
+                handle_remaining_length(func);
+            }
+        );
+    }
+
+    void handle_remaining_length(async_handler_t const& func) {
+        remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
+        remaining_length_multiplier_ *= 128;
+        if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) throw remaining_length_error();
+        auto self = this->shared_from_this();
+        if (buf_ & 0b10000000) {
+            as::async_read(
+                *socket_,
+                as::buffer(&buf_, 1),
                 [this, self, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
@@ -1817,34 +1839,6 @@ private:
                     }
                     handle_remaining_length(func);
                 }
-            )
-        );
-    }
-
-    void handle_remaining_length(async_handler_t const& func) {
-        remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
-        remaining_length_multiplier_ *= 128;
-        if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) throw remaining_length_error();
-        auto self = this->shared_from_this();
-        if (buf_ & 0b10000000) {
-            as::async_read(
-                *socket_,
-                as::buffer(&buf_, 1),
-                strand_.wrap(
-                    [this, self, func](
-                        boost::system::error_code const& ec,
-                        std::size_t bytes_transferred){
-                        if (handle_close_or_error(ec)) {
-                            if (func) func(ec);
-                            return;
-                        }
-                        if (bytes_transferred != 1) {
-                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                            return;
-                        }
-                        handle_remaining_length(func);
-                    }
-                )
             );
         }
         else {
@@ -1856,21 +1850,19 @@ private:
             as::async_read(
                 *socket_,
                 as::buffer(payload_),
-                strand_.wrap(
-                    [this, self, func](
-                        boost::system::error_code const& ec,
-                        std::size_t bytes_transferred){
-                        if (handle_close_or_error(ec)) {
-                            if (func) func(ec);
-                            return;
-                        }
-                        if (bytes_transferred != remaining_length_) {
-                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                            return;
-                        }
-                        handle_payload(func);
+                [this, self, func](
+                    boost::system::error_code const& ec,
+                    std::size_t bytes_transferred){
+                    if (handle_close_or_error(ec)) {
+                        if (func) func(ec);
+                        return;
                     }
-                )
+                    if (bytes_transferred != remaining_length_) {
+                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                        return;
+                    }
+                    handle_payload(func);
+                }
             );
         }
     }
@@ -2795,7 +2787,7 @@ private:
         async_write(
             sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size),
             [this, self, packet_id, func](boost::system::error_code const& ec){
-                func(ec);
+                if (func) func(ec);
                 if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
             });
     }
@@ -2835,7 +2827,7 @@ private:
         async_write(
             sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size),
             [this, self, packet_id, func](boost::system::error_code const& ec){
-                func(ec);
+                if (func) func(ec);
                 if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
             });
     }
@@ -2998,7 +2990,7 @@ private:
                 [this, self, size, func]
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) {
-                    func(ec);
+                    if (func) func(ec);
                     if (ec) { // Error is handled by async_read.
                         queue_.clear();
                         return;

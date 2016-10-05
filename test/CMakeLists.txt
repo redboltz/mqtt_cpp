@@ -12,6 +12,7 @@ LIST (APPEND check_PROGRAMS
      test_main.cpp
      connect.cpp
      pubsub.cpp
+     async_pubsub.cpp
      pubsub_no_strand.cpp
      remaining_length.cpp
      multi_sub.cpp
