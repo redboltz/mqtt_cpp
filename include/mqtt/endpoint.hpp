@@ -1608,7 +1608,8 @@ public:
         connected_ = false;
         shutdown(*socket_);
         if (ec == as::error::eof ||
-            ec == as::error::connection_reset) {
+            ec == as::error::connection_reset ||
+            ec.value() == ERR_PACK(ERR_LIB_SSL, 0, SSL_R_SHORT_READ)) {
             handle_close();
             return true;
         }
