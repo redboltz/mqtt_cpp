@@ -1614,12 +1614,13 @@ public:
             handle_close();
             return true;
         }
-        #endif // defined(MQTT_NO_TLS)
+        #else
         if (ec == as::error::eof ||
             ec == as::error::connection_reset) {
             handle_close();
             return true;
         }
+        #endif // defined(MQTT_NO_TLS)
         handle_error(ec);
         return true;
     }
