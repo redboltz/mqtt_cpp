@@ -1607,20 +1607,21 @@ public:
         if (!ec) return false;
         connected_ = false;
         shutdown(*socket_);
-        #if !defined(MQTT_NO_TLS)
         if (ec == as::error::eof ||
-            ec == as::error::connection_reset ||
-            ec.value() == ERR_PACK(ERR_LIB_SSL, 0, SSL_R_SHORT_READ)) {
+            ec == as::error::connection_reset
+            #if !defined(MQTT_NO_TLS)
+                ||
+                ec.value() == ERR_PACK(ERR_LIB_SSL, 0, SSL_R_SHORT_READ)
+            #endif // defined(MQTT_NO_TLS)
+            ) {
             handle_close();
             return true;
         }
-        #else
         if (ec == as::error::eof ||
             ec == as::error::connection_reset) {
             handle_close();
             return true;
         }
-        #endif // defined(MQTT_NO_TLS)
         handle_error(ec);
         return true;
     }
