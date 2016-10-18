@@ -1609,11 +1609,11 @@ public:
         shutdown(*socket_);
         if (ec == as::error::eof ||
             ec == as::error::connection_reset
-            #if !defined(MQTT_NO_TLS)
-                ||
-                ec.value() == ERR_PACK(ERR_LIB_SSL, 0, SSL_R_SHORT_READ)
-            #endif // defined(MQTT_NO_TLS)
-            ) {
+#if !defined(MQTT_NO_TLS)
+            ||
+            ec.value() == ERR_PACK(ERR_LIB_SSL, 0, SSL_R_SHORT_READ)
+#endif // defined(MQTT_NO_TLS)
+        ) {
             handle_close();
             return true;
         }
