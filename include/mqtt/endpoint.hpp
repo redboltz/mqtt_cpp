@@ -1103,7 +1103,7 @@ public:
     async_subscribe(
         std::string const& topic_name,
         std::uint8_t qos, Args&&... args) {
-        return subscribe_imp(topic_name, qos, std::forward<Args>(args)...);
+        return async_subscribe_imp(topic_name, qos, std::forward<Args>(args)...);
     }
 
     std::uint16_t async_subscribe(
@@ -1149,7 +1149,7 @@ public:
     async_unsubscribe(
         std::string const& topic_name,
         Args&&... args) {
-        async_unsubscribe_imp(topic_name, std::forward<Args>(args)...);
+        return async_unsubscribe_imp(topic_name, std::forward<Args>(args)...);
     }
 
     std::uint16_t async_unsubscribe(
@@ -2723,9 +2723,10 @@ private:
 
     // Blocking write
     void write(char* ptr, std::size_t size) {
-        as::write(*socket_, as::buffer(ptr, size));
+        boost::system::error_code ec;
+        as::write(*socket_, as::buffer(ptr, size), ec);
+        if (ec) handle_error(ec);
     }
-
 
     // Non blocking (async) senders
     template <typename F>
