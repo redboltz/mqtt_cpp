@@ -1566,7 +1566,6 @@ private:
 #endif // defined(MQTT_NO_TLS)
 
     template <typename T>
-        socket.close(ec);
     void shutdown(T& socket) {
         boost::system::error_code ec;
         socket.close(ec);
@@ -3059,23 +3058,11 @@ private:
             *socket_,
             as::buffer(elem.ptr(), size),
             strand_.wrap(
-                [this, self, size, func]
-                (boost::system::error_code const& ec,
-                 std::size_t bytes_transferred) {
-                    if (func) func(ec);
-                    if (ec) { // Error is handled by async_read.
-                        queue_.clear();
-                        return;
-                    }
-                    if (size != bytes_transferred) {
-                        queue_.clear();
-                        throw write_bytes_transferred_error(size, bytes_transferred);
-                    }
-                    queue_.pop_front();
-                    if (!queue_.empty()) {
-                        do_async_write();
-                    }
-                }
+                write_completion_handler(
+                    this->shared_from_this(),
+                    func,
+                    size
+                )
             )
         );
     }
@@ -3101,6 +3088,47 @@ private:
             (static_cast<std::uint16_t>(b2) & 0xff);
     }
 
+    struct write_completion_handler {
+        write_completion_handler(
+            std::shared_ptr<this_type> const& self,
+            async_handler_t const& func,
+            std::size_t expected)
+            :self_(self),
+             func_(func),
+             expected_(expected)
+        {}
+        void operator()(boost::system::error_code const& ec) const {
+            if (func_) func_(ec);
+            if (ec) { // Error is handled by async_read.
+                self_->queue_.clear();
+                return;
+            }
+            self_->queue_.pop_front();
+            if (!self_->queue_.empty()) {
+                self_->do_async_write();
+            }
+        }
+        void operator()(
+            boost::system::error_code const& ec,
+            std::size_t bytes_transferred) const {
+            if (func_) func_(ec);
+            if (ec) { // Error is handled by async_read.
+                self_->queue_.clear();
+                return;
+            }
+            if (expected_ != bytes_transferred) {
+                self_->queue_.clear();
+                throw write_bytes_transferred_error(expected_, bytes_transferred);
+            }
+            self_->queue_.pop_front();
+            if (!self_->queue_.empty()) {
+                self_->do_async_write();
+            }
+        }
+        std::shared_ptr<this_type> self_;
+        async_handler_t func_;
+        std::size_t expected_;
+    };
 private:
     Strand strand_;
     std::unique_ptr<Socket> socket_;
