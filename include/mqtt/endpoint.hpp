@@ -2808,7 +2808,7 @@ private:
     template <typename F>
     void async_send_publish(
         std::string const& topic_name,
-        std::uint16_t qos,
+        std::uint8_t qos,
         bool retain,
         bool dup,
         std::uint16_t packet_id,
