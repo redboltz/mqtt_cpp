@@ -53,15 +53,6 @@ public:
     using pingresp_handler = typename base::pingresp_handler;
 
     /**
-     * @breif Destructor
-     *        If client is connected, send a disconnect packet to the connected broker.
-     */
-    ~client() {
-        disconnect();
-        base::force_disconnect();
-    }
-
-    /**
      * @breif Create no tls client with strand.
      * @param ios io_service object.
      * @param host hostname

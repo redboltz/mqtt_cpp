@@ -1559,9 +1559,13 @@ private:
         std::is_same<T, as::ssl::stream<as::ip::tcp::socket>>::value
     >::type
     shutdown(T& socket) {
-        boost::system::error_code ec;
-        socket.shutdown(ec);
-        socket.lowest_layer().close();
+        strand_.dispatch(
+            [&socket] {
+                boost::system::error_code ec;
+                socket.shutdown(ec);
+                socket.lowest_layer().close(ec);
+            }
+        );
     }
 #endif // defined(MQTT_NO_TLS)
 
@@ -1570,7 +1574,12 @@ private:
         std::is_same<T, as::ip::tcp::socket>::value
     >::type
     shutdown(T& socket) {
-        socket.close();
+        strand_.dispatch(
+            [&socket] {
+                boost::system::error_code ec;
+                socket.close(ec);
+            }
+        );
     }
 
     template <typename... Args>
@@ -3101,7 +3110,7 @@ private:
     std::unique_ptr<Socket> socket_;
     std::string host_;
     std::string port_;
-    bool connected_;
+    std::atomic<bool> connected_;
     std::string client_id_;
     bool clean_session_;
     boost::optional<will> will_;
