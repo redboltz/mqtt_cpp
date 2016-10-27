@@ -1537,6 +1537,7 @@ protected:
         as::async_read(
             *socket_,
             as::buffer(&buf_, 1),
+            strand_.wrap(
             [this, self, func](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred){
@@ -1550,6 +1551,7 @@ protected:
                 }
                 handle_control_packet_type(func);
             }
+            )
         );
     }
 
@@ -1560,13 +1562,13 @@ private:
         std::is_same<T, as::ssl::stream<as::ip::tcp::socket>>::value
     >::type
     shutdown(T& socket) {
-        strand_.dispatch(
-            [&socket] {
+        // strand_.dispatch(
+        //     [&socket] {
                 boost::system::error_code ec;
                 socket.shutdown(ec);
                 socket.lowest_layer().close(ec);
-            }
-        );
+        //     }
+        // );
     }
 #endif // defined(MQTT_NO_TLS)
 
@@ -1575,12 +1577,12 @@ private:
         std::is_same<T, as::ip::tcp::socket>::value
     >::type
     shutdown(T& socket) {
-        strand_.dispatch(
-            [&socket] {
+        // strand_.dispatch(
+        //     [&socket] {
                 boost::system::error_code ec;
                 socket.close(ec);
-            }
-        );
+        //     }
+        // );
     }
 
     template <typename... Args>
@@ -1877,6 +1879,7 @@ private:
         as::async_read(
             *socket_,
             as::buffer(&buf_, 1),
+            strand_.wrap(
             [this, self, func](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred){
@@ -1890,6 +1893,7 @@ private:
                 }
                 handle_remaining_length(func);
             }
+            )
         );
     }
 
@@ -1902,6 +1906,7 @@ private:
             as::async_read(
                 *socket_,
                 as::buffer(&buf_, 1),
+                strand_.wrap(
                 [this, self, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
@@ -1915,6 +1920,7 @@ private:
                     }
                     handle_remaining_length(func);
                 }
+                )
             );
         }
         else {
@@ -1926,6 +1932,7 @@ private:
             as::async_read(
                 *socket_,
                 as::buffer(payload_),
+                strand_.wrap(
                 [this, self, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
@@ -1939,6 +1946,7 @@ private:
                     }
                     handle_payload(func);
                 }
+                )
             );
         }
     }
