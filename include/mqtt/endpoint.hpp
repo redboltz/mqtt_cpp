@@ -14,6 +14,7 @@
 #include <set>
 #include <memory>
 #include <mutex>
+#include <atomic>
 
 #include <boost/any.hpp>
 #include <boost/optional.hpp>
