@@ -1537,19 +1537,21 @@ protected:
         as::async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            [this, self, func](
-                boost::system::error_code const& ec,
-                std::size_t bytes_transferred){
-                if (handle_close_or_error(ec)) {
-                    if (func) func(ec);
-                    return;
+            strand_.wrap(
+                [this, self, func](
+                    boost::system::error_code const& ec,
+                    std::size_t bytes_transferred){
+                    if (handle_close_or_error(ec)) {
+                        if (func) func(ec);
+                        return;
+                    }
+                    if (bytes_transferred != 1) {
+                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                        return;
+                    }
+                    handle_control_packet_type(func);
                 }
-                if (bytes_transferred != 1) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return;
-                }
-                handle_control_packet_type(func);
-            }
+            )
         );
     }
 
@@ -1560,13 +1562,9 @@ private:
         std::is_same<T, as::ssl::stream<as::ip::tcp::socket>>::value
     >::type
     shutdown(T& socket) {
-        strand_.dispatch(
-            [&socket] {
-                boost::system::error_code ec;
-                socket.shutdown(ec);
-                socket.lowest_layer().close(ec);
-            }
-        );
+        boost::system::error_code ec;
+        socket.shutdown(ec);
+        socket.lowest_layer().close(ec);
     }
 #endif // defined(MQTT_NO_TLS)
 
@@ -1575,12 +1573,8 @@ private:
         std::is_same<T, as::ip::tcp::socket>::value
     >::type
     shutdown(T& socket) {
-        strand_.dispatch(
-            [&socket] {
-                boost::system::error_code ec;
-                socket.close(ec);
-            }
-        );
+        boost::system::error_code ec;
+        socket.close(ec);
     }
 
     template <typename... Args>
@@ -1877,31 +1871,7 @@ private:
         as::async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            [this, self, func](
-                boost::system::error_code const& ec,
-                std::size_t bytes_transferred){
-                if (handle_close_or_error(ec)) {
-                    if (func) func(ec);
-                    return;
-                }
-                if (bytes_transferred != 1) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return;
-                }
-                handle_remaining_length(func);
-            }
-        );
-    }
-
-    void handle_remaining_length(async_handler_t const& func) {
-        remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
-        remaining_length_multiplier_ *= 128;
-        if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) throw remaining_length_error();
-        auto self = this->shared_from_this();
-        if (buf_ & 0b10000000) {
-            as::async_read(
-                *socket_,
-                as::buffer(&buf_, 1),
+            strand_.wrap(
                 [this, self, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
@@ -1915,6 +1885,34 @@ private:
                     }
                     handle_remaining_length(func);
                 }
+            )
+        );
+    }
+
+    void handle_remaining_length(async_handler_t const& func) {
+        remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
+        remaining_length_multiplier_ *= 128;
+        if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) throw remaining_length_error();
+        auto self = this->shared_from_this();
+        if (buf_ & 0b10000000) {
+            as::async_read(
+                *socket_,
+                as::buffer(&buf_, 1),
+                strand_.wrap(
+                    [this, self, func](
+                        boost::system::error_code const& ec,
+                        std::size_t bytes_transferred){
+                        if (handle_close_or_error(ec)) {
+                            if (func) func(ec);
+                            return;
+                        }
+                        if (bytes_transferred != 1) {
+                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                            return;
+                        }
+                        handle_remaining_length(func);
+                    }
+                )
             );
         }
         else {
@@ -1926,19 +1924,21 @@ private:
             as::async_read(
                 *socket_,
                 as::buffer(payload_),
-                [this, self, func](
-                    boost::system::error_code const& ec,
-                    std::size_t bytes_transferred){
-                    if (handle_close_or_error(ec)) {
-                        if (func) func(ec);
-                        return;
+                strand_.wrap(
+                    [this, self, func](
+                        boost::system::error_code const& ec,
+                        std::size_t bytes_transferred){
+                        if (handle_close_or_error(ec)) {
+                            if (func) func(ec);
+                            return;
+                        }
+                        if (bytes_transferred != remaining_length_) {
+                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                            return;
+                        }
+                        handle_payload(func);
                     }
-                    if (bytes_transferred != remaining_length_) {
-                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                        return;
-                    }
-                    handle_payload(func);
-                }
+                )
             );
         }
     }
@@ -2061,9 +2061,9 @@ private:
             std::string will_message(payload_.data() + i, topic_name_length);
             i += will_message_length;
             w = will(topic_name,
-                        will_message,
-                        connect_flags::has_will_retain(byte8),
-                        connect_flags::will_qos(byte8));
+                     will_message,
+                     connect_flags::has_will_retain(byte8),
+                     connect_flags::will_qos(byte8));
         }
         boost::optional<std::string> user_name;
         if (connect_flags::has_user_name_flag(byte8)) {
@@ -3030,7 +3030,7 @@ private:
             std::size_t s = 0,
             async_handler_t h = async_handler_t())
             :
-        packet_(b, p, s), handler_(h) {}
+            packet_(b, p, s), handler_(h) {}
         std::shared_ptr<std::string> const& buf() const { return packet_.buf(); }
         char const* ptr() const { return packet_.ptr(); }
         char* ptr() { return packet_.ptr(); }
