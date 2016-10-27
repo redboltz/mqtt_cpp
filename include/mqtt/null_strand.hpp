@@ -14,15 +14,21 @@ namespace mqtt {
 namespace as = boost::asio;
 
 struct null_strand {
-    null_strand(as::io_service&){}
+    null_strand(as::io_service& ios) : ios_(ios) {}
     template <typename Func>
-    void post(Func const&f) {
+    void post(Func&& f) {
+        ios_.post([f = std::forward<Func>(f)]{ f(); });
+    }
+    template <typename Func>
+    void dispatch(Func&& f) {
         f();
     }
     template <typename Func>
-    Func const& wrap(Func const&f) {
-        return f;
+    Func wrap(Func&& f) {
+        return std::forward<Func>(f);
     }
+private:
+    as::io_service& ios_;
 };
 
 } // namespace mqtt
