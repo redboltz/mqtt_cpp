@@ -13,8 +13,6 @@
 
 #include <beast/websocket.hpp>
 
-#include <mqtt/endpoint.hpp>
-
 namespace mqtt {
 
 namespace as = boost::asio;

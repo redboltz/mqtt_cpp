@@ -355,6 +355,23 @@ private:
                 return preverified;
             });
     }
+
+#if defined(MQTT_USE_WS)
+    template <typename T>
+    typename std::enable_if<
+        std::is_same<T, std::unique_ptr<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>>>>::value
+    >::type setup_socket(T& socket) {
+        socket.reset(new Socket(ios_, ctx_));
+        socket->next_layer().set_verify_mode(as::ssl::verify_peer);
+        socket->next_layer().set_verify_callback([](bool preverified, as::ssl::verify_context& ctx) -> bool {
+                char subject_name[256];
+                X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+                X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
+                return preverified;
+            });
+    }
+#endif // defined(MQTT_USE_WS)
+
 #endif // defined(MQTT_NO_TLS)
 
     template <typename T>
@@ -398,6 +415,31 @@ private:
                 base::connect(keep_alive_sec_);
             });
     }
+
+#if defined(MQTT_USE_WS)
+    template <typename T>
+    typename std::enable_if<
+        std::is_same<T, std::unique_ptr<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>>>>::value
+    >::type handshake_socket(T& socket, async_handler_t const& func) {
+        auto self = this->shared_from_this();
+        socket->next_layer().async_handshake(
+            as::ssl::stream_base::client,
+            [this, self, func, &socket]
+            (boost::system::error_code const& ec) mutable {
+                if (base::handle_close_or_error(ec)) return;
+                socket->async_handshake(
+                    host_,
+                    path_,
+                    [this, self, func]
+                    (boost::system::error_code const& ec) mutable {
+                        if (base::handle_close_or_error(ec)) return;
+                        base::async_read_control_packet_type(func);
+                        base::connect(keep_alive_sec_);
+                    });
+            });
+    }
+#endif // defined(MQTT_USE_WS)
+
 #endif // defined(MQTT_NO_TLS)
 
     void handle_timer(boost::system::error_code const& ec) {

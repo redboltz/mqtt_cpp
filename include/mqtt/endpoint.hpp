@@ -41,6 +41,10 @@
 #include <mqtt/connect_return_code.hpp>
 #include <mqtt/exception.hpp>
 
+#if defined(MQTT_USE_WS)
+#include <mqtt/ws_endpoint.hpp>
+#endif // defined(MQTT_USE_WS)
+
 namespace mqtt {
 
 namespace as = boost::asio;
@@ -709,7 +713,7 @@ public:
      */
     void force_disconnect() {
         if (connected_) {
-            shutdown(*socket_);
+            shutdown_from_client(*socket_);
             connected_ = false;
         }
     }
@@ -1479,7 +1483,7 @@ public:
     bool handle_close_or_error(boost::system::error_code const& ec) {
         if (!ec) return false;
         connected_ = false;
-        shutdown(*socket_);
+        shutdown_from_server(*socket_);
         if (ec == as::error::eof ||
             ec == as::error::connection_reset
 #if !defined(MQTT_NO_TLS)
@@ -1556,28 +1560,49 @@ protected:
     }
 
 private:
+    template <typename T>
+    void shutdown_from_client(T& socket) {
+        boost::system::error_code ec;
+        socket.close(ec);
+    }
+
+    template <typename T>
+    void shutdown_from_server(T& socket) {
+        boost::system::error_code ec;
+        socket.close(ec);
+    }
+
+#if defined(MQTT_USE_WS)
+    template <typename T>
+    void shutdown_from_server(ws_endpoint<T>& socket) {
+    }
+#endif // defined(MQTT_USE_WS)
+
 #if !defined(MQTT_NO_TLS)
     template <typename T>
-    void shutdown(as::ssl::stream<T>& socket) {
+    void shutdown_from_client(as::ssl::stream<T>& socket) {
+        boost::system::error_code ec;
+        socket.shutdown(ec);
+        socket.lowest_layer().close(ec);
+    }
+    template <typename T>
+    void shutdown_from_server(as::ssl::stream<T>& socket) {
         boost::system::error_code ec;
         socket.shutdown(ec);
         socket.lowest_layer().close(ec);
     }
 #if defined(MQTT_USE_WS)
     template <typename T>
-    void shutdown(beast::websocket::stream<as::ssl::stream<T>>& socket) {
+    void shutdown_from_client(ws_endpoint<as::ssl::stream<T>>& socket) {
         boost::system::error_code ec;
-        socket.next_layer.shutdown(ec);
+        socket.next_layer().shutdown(ec);
         socket.lowest_layer().close(ec);
+    }
+    template <typename T>
+    void shutdown_from_server(ws_endpoint<as::ssl::stream<T>>& socket) {
     }
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_NO_TLS)
-
-    template <typename T>
-    void shutdown(T& socket) {
-        boost::system::error_code ec;
-        socket.close(ec);
-    }
 
     template <typename... Args>
     typename std::enable_if<
