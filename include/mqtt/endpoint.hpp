@@ -1563,6 +1563,14 @@ private:
         socket.shutdown(ec);
         socket.lowest_layer().close(ec);
     }
+#if defined(MQTT_USE_WS)
+    template <typename T>
+    void shutdown(beast::websocket::stream<as::ssl::stream<T>>& socket) {
+        boost::system::error_code ec;
+        socket.next_layer.shutdown(ec);
+        socket.lowest_layer().close(ec);
+    }
+#endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_NO_TLS)
 
     template <typename T>

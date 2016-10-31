@@ -7,6 +7,10 @@
 #if !defined(MQTT_WS_ENDPOINT_HPP)
 #define MQTT_WS_ENDPOINT_HPP
 
+#if !defined(MQTT_NO_TLS)
+#include <beast/websocket/ssl.hpp>
+#endif // !defined(MQTT_NO_TLS)
+
 #include <beast/websocket.hpp>
 
 #include <mqtt/endpoint.hpp>
@@ -18,8 +22,9 @@ namespace as = boost::asio;
 template <typename Socket>
 class ws_endpoint {
 public:
-    ws_endpoint(as::io_service& ios)
-        :ws_(ios),
+    template <typename... Args>
+    ws_endpoint(as::io_service& ios, Args&&... args)
+        :ws_(ios, std::forward<Args>(args)...),
          strand_(ios) {
         ws_.set_option(beast::websocket::message_type{beast::websocket::opcode::binary});
     }
@@ -61,7 +66,6 @@ public:
         ReadHandler&& handler) {
         auto req_size = as::buffer_size(buffers);
 
-        beast::websocket::opcode op;
         std::shared_ptr<std::function<void(boost::system::error_code const& ec)>> beast_read_handler;
 
         if (req_size <= sb_.size()) {
@@ -73,16 +77,20 @@ public:
 
         beast_read_handler.reset(
             new std::function<void(boost::system::error_code const& ec)>(
-                [this, req_size, buffers, &op, beast_read_handler, handler = std::forward<ReadHandler>(handler)]
+                [this, req_size, buffers, beast_read_handler, handler = std::forward<ReadHandler>(handler)]
                 (boost::system::error_code const& ec) mutable {
-                    if (op != beast::websocket::opcode::binary) {
+                    if (ec) {
+                        handler(ec, 0);
+                        return;
+                    }
+                    if (op_ != beast::websocket::opcode::binary) {
                         sb_.consume(sb_.size());
                         std::forward<ReadHandler>(handler)(boost::system::errc::make_error_code(boost::system::errc::bad_message), 0);
                         return;
                     }
                     if (req_size > sb_.size()) {
                         ws_.async_read(
-                            op,
+                            op_,
                             sb_,
                             *beast_read_handler
                         );
@@ -95,7 +103,7 @@ public:
             )
         );
         ws_.async_read(
-            op,
+            op_,
             sb_,
             *beast_read_handler
         );
@@ -124,6 +132,7 @@ public:
     }
 private:
     beast::websocket::stream<Socket> ws_;
+    beast::websocket::opcode op_;
     beast::streambuf sb_;
     as::io_service::strand strand_;
 };
