@@ -1486,8 +1486,8 @@ public:
         shutdown_from_server(*socket_);
         if (ec == as::error::eof ||
             ec == as::error::connection_reset
-            ||
 #if defined(MQTT_USE_WS)
+            ||
             ec == beast::websocket::error::closed
 #endif // defined(MQTT_USE_WS)
 #if !defined(MQTT_NO_TLS)
