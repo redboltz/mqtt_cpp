@@ -29,6 +29,14 @@ public:
 
     void close(boost::system::error_code ec) {
         ws_.close(beast::websocket::close_code::normal, ec);
+        if (ec) return;
+        do {
+            beast::streambuf sb;
+            beast::websocket::opcode op;
+            ws_.read(op, sb, ec);
+        } while (!ec);
+        if (ec != beast::websocket::error::closed) return;
+        ec = boost::system::errc::make_error_code(boost::system::errc::success);
     }
 
     as::io_service& get_io_service() {
