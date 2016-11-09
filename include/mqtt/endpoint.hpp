@@ -41,6 +41,10 @@
 #include <mqtt/connect_return_code.hpp>
 #include <mqtt/exception.hpp>
 
+#if defined(MQTT_USE_WS)
+#include <mqtt/ws_endpoint.hpp>
+#endif // defined(MQTT_USE_WS)
+
 namespace mqtt {
 
 namespace as = boost::asio;
@@ -709,7 +713,7 @@ public:
      */
     void force_disconnect() {
         if (connected_) {
-            shutdown(*socket_);
+            shutdown_from_client(*socket_);
             connected_ = false;
         }
     }
@@ -1479,9 +1483,13 @@ public:
     bool handle_close_or_error(boost::system::error_code const& ec) {
         if (!ec) return false;
         connected_ = false;
-        shutdown(*socket_);
+        shutdown_from_server(*socket_);
         if (ec == as::error::eof ||
             ec == as::error::connection_reset
+#if defined(MQTT_USE_WS)
+            ||
+            ec == beast::websocket::error::closed
+#endif // defined(MQTT_USE_WS)
 #if !defined(MQTT_NO_TLS)
             ||
             ec.value() == ERR_PACK(ERR_LIB_SSL, 0, SSL_R_SHORT_READ)
@@ -1534,7 +1542,7 @@ public:
 protected:
     void async_read_control_packet_type(async_handler_t const& func) {
         auto self = this->shared_from_this();
-        as::async_read(
+        async_read(
             *socket_,
             as::buffer(&buf_, 1),
             strand_.wrap(
@@ -1556,26 +1564,49 @@ protected:
     }
 
 private:
+    template <typename T>
+    void shutdown_from_client(T& socket) {
+        boost::system::error_code ec;
+        socket.close(ec);
+    }
+
+    template <typename T>
+    void shutdown_from_server(T& socket) {
+        boost::system::error_code ec;
+        socket.close(ec);
+    }
+
+#if defined(MQTT_USE_WS)
+    template <typename T>
+    void shutdown_from_server(ws_endpoint<T>& socket) {
+    }
+#endif // defined(MQTT_USE_WS)
+
 #if !defined(MQTT_NO_TLS)
     template <typename T>
-    typename std::enable_if<
-        std::is_same<T, as::ssl::stream<as::ip::tcp::socket>>::value
-    >::type
-    shutdown(T& socket) {
+    void shutdown_from_client(as::ssl::stream<T>& socket) {
         boost::system::error_code ec;
         socket.shutdown(ec);
         socket.lowest_layer().close(ec);
     }
-#endif // defined(MQTT_NO_TLS)
-
     template <typename T>
-    typename std::enable_if<
-        std::is_same<T, as::ip::tcp::socket>::value
-    >::type
-    shutdown(T& socket) {
+    void shutdown_from_server(as::ssl::stream<T>& socket) {
         boost::system::error_code ec;
-        socket.close(ec);
+        socket.shutdown(ec);
+        socket.lowest_layer().close(ec);
     }
+#if defined(MQTT_USE_WS)
+    template <typename T>
+    void shutdown_from_client(ws_endpoint<as::ssl::stream<T>>& socket) {
+        boost::system::error_code ec;
+        socket.next_layer().shutdown(ec);
+        socket.lowest_layer().close(ec);
+    }
+    template <typename T>
+    void shutdown_from_server(ws_endpoint<as::ssl::stream<T>>& socket) {
+    }
+#endif // defined(MQTT_USE_WS)
+#endif // defined(MQTT_NO_TLS)
 
     template <typename... Args>
     typename std::enable_if<
@@ -1868,7 +1899,7 @@ private:
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
         auto self = this->shared_from_this();
-        as::async_read(
+        async_read(
             *socket_,
             as::buffer(&buf_, 1),
             strand_.wrap(
@@ -1895,7 +1926,7 @@ private:
         if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) throw remaining_length_error();
         auto self = this->shared_from_this();
         if (buf_ & 0b10000000) {
-            as::async_read(
+            async_read(
                 *socket_,
                 as::buffer(&buf_, 1),
                 strand_.wrap(
@@ -1921,7 +1952,7 @@ private:
                 handle_payload(func);
                 return;
             }
-            as::async_read(
+            async_read(
                 *socket_,
                 as::buffer(payload_),
                 strand_.wrap(
@@ -2123,9 +2154,9 @@ private:
                                     *e.ptr() |= 0b00001000; // set DUP flag
                                 }
                                 // I choose sync write intentionaly.
-                                // If calling async_write, and then disconnected,
+                                // If calling do_async_write, and then disconnected,
                                 // strand object would be dangling references.
-                                this->write(e.ptr(), e.size());
+                                this->do_sync_write(e.ptr(), e.size());
                             }
                         );
                         ++it;
@@ -2525,7 +2556,7 @@ private:
         }
 
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::connect, 0));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     void send_connack(bool session_present, std::uint8_t return_code) {
@@ -2533,7 +2564,7 @@ private:
         sb.buf()->push_back(static_cast<char>(session_present ? 1 : 0));
         sb.buf()->push_back(static_cast<char>(return_code));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::connack, 0b0000));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     void send_publish(
@@ -2560,7 +2591,7 @@ private:
         if (dup) flags |= 0b00001000;
         flags |= qos << 1;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
         if (qos > 0) {
             flags |= 0b00001000;
             ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
@@ -2580,7 +2611,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::puback, 0b0000));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
         if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
     }
 
@@ -2589,7 +2620,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrec, 0b0000));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     void send_pubrel(std::uint16_t packet_id) {
@@ -2597,7 +2628,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
         LockGuard<Mutex> lck (store_mtx_);
         store_.emplace(
             packet_id,
@@ -2626,7 +2657,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubcomp, 0b0000));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
         if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
     }
 
@@ -2654,7 +2685,7 @@ private:
             sb.buf()->push_back(std::get<1>(e));
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::subscribe, 0b0010));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     template <typename... Args>
@@ -2676,7 +2707,7 @@ private:
             sb.buf()->push_back(e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::suback, 0b0000));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     template <typename... Args>
@@ -2702,7 +2733,7 @@ private:
             sb.buf()->insert(sb.buf()->size(), e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsubscribe, 0b0010));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     void send_unsuback(
@@ -2711,30 +2742,30 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsuback, 0b0010));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     void send_pingreq() {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingreq, 0b0000));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     void send_pingresp() {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingresp, 0b0000));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
     void send_disconnect() {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::disconnect, 0b0000));
-        write(std::get<0>(ptr_size), std::get<1>(ptr_size));
+        do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
     }
 
     // Blocking write
-    void write(char* ptr, std::size_t size) {
+    void do_sync_write(char* ptr, std::size_t size) {
         boost::system::error_code ec;
-        as::write(*socket_, as::buffer(ptr, size), ec);
+        write(*socket_, as::buffer(ptr, size), ec);
         if (ec) handle_error(ec);
     }
 
@@ -2803,7 +2834,7 @@ private:
         }
 
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::connect, 0));
-        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
+        do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename F>
@@ -2812,7 +2843,7 @@ private:
         sb.buf()->push_back(static_cast<char>(session_present ? 1 : 0));
         sb.buf()->push_back(static_cast<char>(return_code));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::connack, 0b0000));
-        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
+        do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename F>
@@ -2841,7 +2872,7 @@ private:
         if (dup) flags |= 0b00001000;
         flags |= qos << 1;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
-        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
+        do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
         if (qos > 0) {
             LockGuard<Mutex> lck (store_mtx_);
             store_.emplace(
@@ -2861,7 +2892,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::puback, 0b0000));
         auto self = this->shared_from_this();
-        async_write(
+        do_async_write(
             sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size),
             [this, self, packet_id, func](boost::system::error_code const& ec){
                 if (func) func(ec);
@@ -2875,7 +2906,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrec, 0b0000));
-        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
+        do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename F>
@@ -2884,7 +2915,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubrel, 0b0010));
-        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
+        do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
         LockGuard<Mutex> lck (store_mtx_);
         store_.emplace(
             packet_id,
@@ -2901,7 +2932,7 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pubcomp, 0b0000));
         auto self = this->shared_from_this();
-        async_write(
+        do_async_write(
             sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size),
             [this, self, packet_id, func](boost::system::error_code const& ec){
                 if (func) func(ec);
@@ -2935,7 +2966,7 @@ private:
             sb.buf()->push_back(std::get<1>(e));
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::subscribe, 0b0010));
-        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
+        do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename... Args>
@@ -2959,7 +2990,7 @@ private:
             sb.buf()->push_back(e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::suback, 0b0000));
-        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
+        do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename... Args>
@@ -2987,7 +3018,7 @@ private:
             sb.buf()->insert(sb.buf()->size(), e);
         }
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsubscribe, 0b0010));
-        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
+        do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename F>
@@ -2997,27 +3028,27 @@ private:
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::unsuback, 0b0010));
-        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
+        do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename F>
     void async_send_pingreq(F const& func) {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingreq, 0b0000));
-        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
+        do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     template <typename F>
     void async_send_pingresp(F const& func) {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingresp, 0b0000));
-        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
+        do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
     template <typename F>
     void async_send_disconnect(F const& func) {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::disconnect, 0b0000));
-        async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
+        do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
     // Non blocking (async) write
@@ -3043,44 +3074,32 @@ private:
     };
 
     template <typename F>
-    void async_write(std::shared_ptr<std::string> const& buf, char* ptr, std::size_t size, F const& func) {
+    void do_async_write(std::shared_ptr<std::string> const& buf, char* ptr, std::size_t size, F const& func) {
         auto self = this->shared_from_this();
         strand_.post(
             [this, self, buf, ptr, size, func]
             () {
                 queue_.emplace_back(buf, ptr, size, func);
                 if (queue_.size() > 1) return;
-                async_write();
+                do_async_write();
             }
         );
     }
 
-    void async_write() {
+    void do_async_write() {
         auto& elem = queue_.front();
         auto size = elem.size();
         auto const& func = elem.handler();
         auto self = this->shared_from_this();
-        as::async_write(
+        async_write(
             *socket_,
             as::buffer(elem.ptr(), size),
             strand_.wrap(
-                [this, self, size, func]
-                (boost::system::error_code const& ec,
-                 std::size_t bytes_transferred) {
-                    if (func) func(ec);
-                    if (ec) { // Error is handled by async_read.
-                        queue_.clear();
-                        return;
-                    }
-                    if (size != bytes_transferred) {
-                        queue_.clear();
-                        throw write_bytes_transferred_error(size, bytes_transferred);
-                    }
-                    queue_.pop_front();
-                    if (!queue_.empty()) {
-                        async_write();
-                    }
-                }
+                write_completion_handler(
+                    this->shared_from_this(),
+                    func,
+                    size
+                )
             )
         );
     }
@@ -3106,6 +3125,47 @@ private:
             (static_cast<std::uint16_t>(b2) & 0xff);
     }
 
+    struct write_completion_handler {
+        write_completion_handler(
+            std::shared_ptr<this_type> const& self,
+            async_handler_t const& func,
+            std::size_t expected)
+            :self_(self),
+             func_(func),
+             expected_(expected)
+        {}
+        void operator()(boost::system::error_code const& ec) const {
+            if (func_) func_(ec);
+            if (ec) { // Error is handled by async_read.
+                self_->queue_.clear();
+                return;
+            }
+            self_->queue_.pop_front();
+            if (!self_->queue_.empty()) {
+                self_->do_async_write();
+            }
+        }
+        void operator()(
+            boost::system::error_code const& ec,
+            std::size_t bytes_transferred) const {
+            if (func_) func_(ec);
+            if (ec) { // Error is handled by async_read.
+                self_->queue_.clear();
+                return;
+            }
+            if (expected_ != bytes_transferred) {
+                self_->queue_.clear();
+                throw write_bytes_transferred_error(expected_, bytes_transferred);
+            }
+            self_->queue_.pop_front();
+            if (!self_->queue_.empty()) {
+                self_->do_async_write();
+            }
+        }
+        std::shared_ptr<this_type> self_;
+        async_handler_t func_;
+        std::size_t expected_;
+    };
 private:
     Strand strand_;
     std::unique_ptr<Socket> socket_;
