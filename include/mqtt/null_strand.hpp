@@ -17,7 +17,8 @@ struct null_strand {
     null_strand(as::io_service& ios) : ios_(ios) {}
     template <typename Func>
     void post(Func&& f) {
-        ios_.post([f = std::forward<Func>(f)]{ f(); });
+        auto ff = wrap(f);
+        ios_.post([ff]{ ff(); });
     }
     template <typename Func>
     void dispatch(Func&& f) {
