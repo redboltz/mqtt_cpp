@@ -9,6 +9,8 @@
 
 #include <boost/asio.hpp>
 
+#include <mqtt/utility.hpp>
+
 namespace mqtt {
 
 namespace as = boost::asio;
@@ -17,7 +19,7 @@ struct null_strand {
     null_strand(as::io_service& ios) : ios_(ios) {}
     template <typename Func>
     void post(Func&& f) {
-        ios_.post([f = std::forward<Func>(f)]{ f(); });
+        ios_.post([MQTT_CAPTURE_FORWARD(Func, f)]{ f(); });
     }
     template <typename Func>
     void dispatch(Func&& f) {

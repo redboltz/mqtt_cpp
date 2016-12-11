@@ -13,6 +13,8 @@
 
 #include <beast/websocket.hpp>
 
+#include <mqtt/utility.hpp>
+
 namespace mqtt {
 
 namespace as = boost::asio;
@@ -83,7 +85,7 @@ public:
 
         beast_read_handler.reset(
             new std::function<void(boost::system::error_code const& ec)>(
-                [this, req_size, buffers, beast_read_handler, handler = std::forward<ReadHandler>(handler)]
+                [this, req_size, buffers, beast_read_handler, MQTT_CAPTURE_FORWARD(ReadHandler, handler)]
                 (boost::system::error_code const& ec) mutable {
                     if (ec) {
                         handler(ec, 0);

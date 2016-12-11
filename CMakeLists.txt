@@ -18,8 +18,13 @@ SET (Boost_USE_MULTITHREADED      ON)
 FIND_PACKAGE (Boost 1.59.0 COMPONENTS chrono timer test_exec_monitor system)
 FIND_PACKAGE (Threads)
 
+IF (NOT MQTT_BEAST_INCLUDE_DIR)
+    SET (MQTT_BEAST_INCLUDE_DIR "external/Beast/include")
+ENDIF ()
+
 INCLUDE_DIRECTORIES (
     ${Boost_INCLUDE_DIR}
+    ${MQTT_BEAST_INCLUDE_DIR}
     include
     ${OpenSSL_INCLUDE_DIR}
     ${MQTT_OPENSSL_INCLUDE_DIR}
