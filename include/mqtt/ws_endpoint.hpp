@@ -53,6 +53,11 @@ public:
         return ws_.next_layer();
     }
 
+    template <typename T>
+    void set_option(T&& t) {
+        ws_.set_option(std::forward<T>(t));
+    }
+
     template <typename ConstBufferSequence, typename AcceptHandler>
     void async_accept(
         ConstBufferSequence const& buffers,
@@ -74,8 +79,10 @@ public:
         ReadHandler&& handler) {
         auto req_size = as::buffer_size(buffers);
 
-        std::shared_ptr<std::function<void(boost::system::error_code const& ec)>> beast_read_handler;
+        using beast_read_handler_t =
+            std::function<void(boost::system::error_code const& ec, std::shared_ptr<void>)>;
 
+        std::shared_ptr<beast_read_handler_t> beast_read_handler;
         if (req_size <= sb_.size()) {
             as::buffer_copy(buffers, sb_.data(), req_size);
             sb_.consume(req_size);
@@ -84,23 +91,28 @@ public:
         }
 
         beast_read_handler.reset(
-            new std::function<void(boost::system::error_code const& ec)>(
-                [this, req_size, buffers, beast_read_handler, MQTT_CAPTURE_FORWARD(ReadHandler, handler)]
-                (boost::system::error_code const& ec) mutable {
+            new beast_read_handler_t(
+                [this, req_size, buffers, MQTT_CAPTURE_FORWARD(ReadHandler, handler)]
+                (boost::system::error_code const& ec, std::shared_ptr<void> const& v) mutable {
                     if (ec) {
                         handler(ec, 0);
                         return;
                     }
                     if (op_ != beast::websocket::opcode::binary) {
                         sb_.consume(sb_.size());
-                        std::forward<ReadHandler>(handler)(boost::system::errc::make_error_code(boost::system::errc::bad_message), 0);
+                        std::forward<ReadHandler>(handler)
+                            (boost::system::errc::make_error_code(boost::system::errc::bad_message), 0);
                         return;
                     }
                     if (req_size > sb_.size()) {
+                        auto beast_read_handler = std::static_pointer_cast<beast_read_handler_t>(v);
                         ws_.async_read(
                             op_,
                             sb_,
-                            *beast_read_handler
+                            [beast_read_handler]
+                            (boost::system::error_code const& ec) {
+                                (*beast_read_handler)(ec, beast_read_handler);
+                            }
                         );
                         return;
                     }
@@ -113,7 +125,10 @@ public:
         ws_.async_read(
             op_,
             sb_,
-            *beast_read_handler
+            [beast_read_handler]
+            (boost::system::error_code const& ec) {
+                (*beast_read_handler)(ec, beast_read_handler);
+            }
         );
     }
 
