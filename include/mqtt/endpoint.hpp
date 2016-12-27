@@ -375,7 +375,7 @@ public:
      * @brief Set close handler
      * @param h handler
      */
-    void set_close_handler(close_handler h) {
+    void set_close_handler(close_handler h = close_handler()) {
         h_close_ = std::move(h);
     }
 
@@ -383,7 +383,7 @@ public:
      * @brief Set error handler
      * @param h handler
      */
-    void set_error_handler(error_handler h) {
+    void set_error_handler(error_handler h = error_handler()) {
         h_error_ = std::move(h);
     }
 
@@ -391,7 +391,7 @@ public:
      * @brief Set connect handler
      * @param h handler
      */
-    void set_connect_handler(connect_handler h) {
+    void set_connect_handler(connect_handler h = connect_handler()) {
         h_connect_ = std::move(h);
     }
 
@@ -399,7 +399,7 @@ public:
      * @brief Set connack handler
      * @param h handler
      */
-    void set_connack_handler(connack_handler h) {
+    void set_connack_handler(connack_handler h = connack_handler()) {
         h_connack_ = std::move(h);
     }
 
@@ -407,7 +407,7 @@ public:
      * @brief Set puback handler
      * @param h handler
      */
-    void set_publish_handler(publish_handler h) {
+    void set_publish_handler(publish_handler h = publish_handler()) {
         h_publish_ = std::move(h);
     }
 
@@ -415,7 +415,7 @@ public:
      * @brief Set puback handler
      * @param h handler
      */
-    void set_puback_handler(puback_handler h) {
+    void set_puback_handler(puback_handler h = puback_handler()) {
         h_puback_ = std::move(h);
     }
 
@@ -423,7 +423,7 @@ public:
      * @brief Set pubrec handler
      * @param h handler
      */
-    void set_pubrec_handler(pubrec_handler h) {
+    void set_pubrec_handler(pubrec_handler h = pubrec_handler()) {
         h_pubrec_ = std::move(h);
     }
 
@@ -431,7 +431,7 @@ public:
      * @brief Set pubrel handler
      * @param h handler
      */
-    void set_pubrel_handler(pubrel_handler h) {
+    void set_pubrel_handler(pubrel_handler h = pubrel_handler()) {
         h_pubrel_ = std::move(h);
     }
 
@@ -439,7 +439,7 @@ public:
      * @brief Set pubcomp handler
      * @param h handler
      */
-    void set_pubcomp_handler(pubcomp_handler h) {
+    void set_pubcomp_handler(pubcomp_handler h = pubcomp_handler()) {
         h_pubcomp_ = std::move(h);
     }
 
@@ -447,7 +447,7 @@ public:
      * @brief Set pubcomp handler
      * @param h handler
      */
-    void set_pub_res_sent_handler(pub_res_sent_handler h) {
+    void set_pub_res_sent_handler(pub_res_sent_handler h = pub_res_sent_handler()) {
         h_pub_res_sent_ = std::move(h);
     }
 
@@ -455,7 +455,7 @@ public:
      * @brief Set subscribe handler
      * @param h handler
      */
-    void set_subscribe_handler(subscribe_handler h) {
+    void set_subscribe_handler(subscribe_handler h = subscribe_handler()) {
         h_subscribe_ = std::move(h);
     }
 
@@ -463,7 +463,7 @@ public:
      * @brief Set suback handler
      * @param h handler
      */
-    void set_suback_handler(suback_handler h) {
+    void set_suback_handler(suback_handler h = suback_handler()) {
         h_suback_ = std::move(h);
     }
 
@@ -471,7 +471,7 @@ public:
      * @brief Set unsubscribe handler
      * @param h handler
      */
-    void set_unsubscribe_handler(unsubscribe_handler h) {
+    void set_unsubscribe_handler(unsubscribe_handler h = unsubscribe_handler()) {
         h_unsubscribe_ = std::move(h);
     }
 
@@ -479,7 +479,7 @@ public:
      * @brief Set unsuback handler
      * @param h handler
      */
-    void set_unsuback_handler(unsuback_handler h) {
+    void set_unsuback_handler(unsuback_handler h = unsuback_handler()) {
         h_unsuback_ = std::move(h);
     }
 
@@ -487,7 +487,7 @@ public:
      * @brief Set pingreq handler
      * @param h handler
      */
-    void set_pingreq_handler(pingreq_handler h) {
+    void set_pingreq_handler(pingreq_handler h = pingreq_handler()) {
         h_pingreq_ = std::move(h);
     }
 
@@ -495,7 +495,7 @@ public:
      * @brief Set pingresp handler
      * @param h handler
      */
-    void set_pingresp_handler(pingresp_handler h) {
+    void set_pingresp_handler(pingresp_handler h = pingresp_handler()) {
         h_pingresp_ = std::move(h);
     }
 
@@ -503,7 +503,7 @@ public:
      * @brief Set disconnect handler
      * @param h handler
      */
-    void set_disconnect_handler(disconnect_handler h) {
+    void set_disconnect_handler(disconnect_handler h = disconnect_handler()) {
         h_disconnect_ = std::move(h);
     }
 

@@ -285,7 +285,7 @@ public:
      * @brief Set close handler
      * @param h handler
      */
-    void set_close_handler(close_handler h) {
+    void set_close_handler(close_handler h = close_handler()) {
         h_close_ = std::move(h);
     }
 
@@ -293,7 +293,7 @@ public:
      * @brief Set error handler
      * @param h handler
      */
-    void set_error_handler(error_handler h) {
+    void set_error_handler(error_handler h = error_handler()) {
         h_error_ = std::move(h);
     }
 
