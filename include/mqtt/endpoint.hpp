@@ -28,6 +28,7 @@
 #include <boost/multi_index/mem_fun.hpp>
 #include <boost/multi_index/composite_key.hpp>
 #include <boost/system/error_code.hpp>
+#include <boost/assert.hpp>
 
 #include <mqtt/fixed_header.hpp>
 #include <mqtt/remaining_length.hpp>
@@ -533,7 +534,7 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false) {
-        send_publish(topic_name, qos::at_most_once, retain, false, 0, contents);
+        acquired_publish(0, topic_name, contents, qos::at_most_once, retain);
     }
 
     /**
@@ -554,7 +555,7 @@ public:
         std::string const& contents,
         bool retain = false) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        send_publish(topic_name, qos::at_least_once, retain, false, packet_id, contents);
+        acquired_publish_at_least_once(packet_id, topic_name, contents, retain);
         return packet_id;
     }
 
@@ -576,7 +577,7 @@ public:
         std::string const& contents,
         bool retain = false) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        send_publish(topic_name, qos::exactly_once, retain, false, packet_id, contents);
+        acquired_publish_exactly_once(packet_id, topic_name, contents, retain);
         return packet_id;
     }
 
@@ -600,8 +601,8 @@ public:
         std::string const& contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
-        std::uint16_t packet_id = qos == 0 ? 0 : acquire_unique_packet_id();
-        send_publish(topic_name, qos, retain, false, packet_id, contents);
+        std::uint16_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
+        acquired_publish(packet_id, topic_name, contents, qos, retain);
         return packet_id;
     }
 
@@ -612,8 +613,8 @@ public:
      * @param qos
      *        mqtt::qos
      * @param args
-     *        args should be zero of more pairs of topic_name and qos.
-     * @return packet_id. If qos is set to at_most_once, return 0.
+     *        args should be zero or more pairs of topic_name and qos.
+     * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
@@ -623,16 +624,14 @@ public:
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
-        params.reserve((sizeof...(args) + 2) / 2);
-        send_subscribe(params, packet_id, topic_name, qos, args...);
+        acquired_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
         return packet_id;
     }
 
     /**
      * @brief Subscribe
      * @param params a vector of the topic_filter and qos pair.
-     * @return packet_id. If qos is set to at_most_once, return 0.
+     * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
@@ -641,12 +640,7 @@ public:
         std::vector<std::tuple<std::string, std::uint8_t>> const& params
     ) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
-        rparams.reserve(params.size());
-        for (auto const& e : params) {
-            rparams.emplace_back(std::get<0>(e), std::get<1>(e));
-        }
-        send_subscribe(rparams, packet_id);
+        acquired_subscribe(packet_id, params);
         return packet_id;
     }
 
@@ -656,7 +650,7 @@ public:
      *        A topic name to subscribe
      * @param args
      *        args should be zero or more topics
-     * @return packet_id. If qos is set to at_most_once, return 0.
+     * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
@@ -666,16 +660,14 @@ public:
         std::string const& topic_name,
         Args... args) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::reference_wrapper<std::string const>> params;
-        params.reserve(sizeof...(args) + 1);
-        send_unsubscribe(params, packet_id, topic_name, args...);
+        acquired_unsubscribe(packet_id, topic_name, std::forward<Args>(args)...);
         return packet_id;
     }
 
     /**
      * @brief Unsubscribe
      * @param params a collection of topic_filter.
-     * @return packet_id. If qos is set to at_most_once, return 0.
+     * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
@@ -684,12 +676,7 @@ public:
         std::vector<std::string> const& params
     ) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::reference_wrapper<std::string const>> rparams;
-        rparams.reserve(params.size());
-        for (auto const& e : params) {
-            rparams.emplace_back(e);
-        }
-        send_unsubscribe(rparams, packet_id);
+        acquired_unsubscribe(packet_id, params);
         return packet_id;
     }
 
@@ -742,7 +729,7 @@ public:
         std::string const& contents,
         bool retain = false) {
         if (register_packet_id(packet_id)) {
-            send_publish(topic_name, qos::at_least_once, retain, false, packet_id, contents);
+            acquired_publish_at_least_once(packet_id, topic_name, contents, retain);
             return true;
         }
         return false;
@@ -769,7 +756,7 @@ public:
         std::string const& contents,
         bool retain = false) {
         if (register_packet_id(packet_id)) {
-            send_publish(topic_name, qos::exactly_once, retain, false, packet_id, contents);
+            acquired_publish_exactly_once(packet_id, topic_name, contents, retain);
             return true;
         }
         return false;
@@ -799,7 +786,7 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
         if (register_packet_id(packet_id)) {
-            send_publish(topic_name, qos, retain, false, packet_id, contents);
+            acquired_publish(packet_id, topic_name, contents, qos, retain);
             return true;
         }
         return false;
@@ -829,7 +816,7 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
         if (register_packet_id(packet_id)) {
-            send_publish(topic_name, qos, retain, true, packet_id, contents);
+            acquired_publish_dup(packet_id, topic_name, contents, qos, retain);
             return true;
         }
         return false;
@@ -844,7 +831,7 @@ public:
      * @param qos
      *        mqtt::qos
      * @param args
-     *        args should be zero of more pairs of topic_name and qos.
+     *        args should be zero or more pairs of topic_name and qos.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -856,9 +843,7 @@ public:
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
-            params.reserve((sizeof...(args) + 2) / 2);
-            send_subscribe(params, packet_id, topic_name, qos, args...);
+            acquired_subscribe(packet_id, topic_name,  qos, std::forward<Args>(args)...);
             return true;
         }
         return false;
@@ -879,12 +864,7 @@ public:
         std::vector<std::tuple<std::string, std::uint8_t>> const& params
     ) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
-            rparams.reserve(params.size());
-            for (auto const& e : params) {
-                rparams.emplace_back(std::get<0>(e), std::get<1>(e));
-            }
-            send_subscribe(rparams, packet_id);
+            acquired_subscribe(packet_id, params);
             return true;
         }
         return false;
@@ -909,9 +889,7 @@ public:
         std::string const& topic_name,
         Args... args) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::reference_wrapper<std::string const>> params;
-            params.reserve(sizeof...(args) + 1);
-            send_unsubscribe(params, packet_id, topic_name, args...);
+            acquired_unsubscribe(packet_id, topic_name, std::forward<Args>(args)...);
             return true;
         }
         return false;
@@ -932,46 +910,278 @@ public:
         std::vector<std::string> const& params
     ) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::reference_wrapper<std::string const>> rparams;
-            rparams.reserve(params.size());
-            for (auto const& e : params) {
-                rparams.emplace_back(e);
-            }
-            send_unsubscribe(rparams, packet_id);
+            acquired_unsubscribe(packet_id, params);
             return true;
         }
         return false;
     }
 
+    // packet_id has already been acquired version
+
+    /**
+     * @brief Publish QoS1 with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
+     *        3.3.1.3 RETAIN
+     */
+    void acquired_publish_at_least_once(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::string const& contents,
+        bool retain = false) {
+        send_publish(topic_name, qos::at_least_once, retain, false, packet_id, contents);
+    }
+
+    /**
+     * @brief Publish QoS2 with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
+     *        3.3.1.3 RETAIN
+     */
+    void acquired_publish_exactly_once(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::string const& contents,
+        bool retain = false) {
+        send_publish(topic_name, qos::exactly_once, retain, false, packet_id, contents);
+    }
+
+    /**
+     * @brief Publish with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        mqtt::qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
+     *        3.3.1.3 RETAIN
+     */
+    void acquired_publish(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::string const& contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false) {
+        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        send_publish(topic_name, qos, retain, false, packet_id, contents);
+    }
+
+    /**
+     * @brief Publish as dup with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        mqtt::qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
+     *        3.3.1.3 RETAIN
+     */
+    void acquired_publish_dup(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::string const& contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false) {
+        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        send_publish(topic_name, qos, retain, true, packet_id, contents);
+    }
+
+    /**
+     * @brief Subscribe with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param qos
+     *        mqtt::qos
+     * @param args
+     *        args should be zero or more pairs of topic_name and qos.
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066<BR>
+     */
+    template <typename... Args>
+    void acquired_subscribe(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::uint8_t qos, Args... args) {
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+        params.reserve((sizeof...(args) + 2) / 2);
+        send_subscribe(params, packet_id, topic_name, qos, args...);
+    }
+
+    /**
+     * @brief Subscribe with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param params a vector of the topic_filter and qos pair.
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066<BR>
+     */
+    void acquired_subscribe(
+        std::uint16_t packet_id,
+        std::vector<std::tuple<std::string, std::uint8_t>> const& params
+    ) {
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
+        rparams.reserve(params.size());
+        for (auto const& e : params) {
+            rparams.emplace_back(std::get<0>(e), std::get<1>(e));
+        }
+        send_subscribe(rparams, packet_id);
+    }
+
+    /**
+     * @brief Unsubscribe with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param args
+     *        args should be zero or more topics
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
+    template <typename... Args>
+    void acquired_unsubscribe(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        Args... args) {
+        std::vector<std::reference_wrapper<std::string const>> params;
+        params.reserve(sizeof...(args) + 1);
+        send_unsubscribe(params, packet_id, topic_name, args...);
+    }
+
+    /**
+     * @brief Unsubscribe with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param params a collection of topic_filter
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
+    void acquired_unsubscribe(
+        std::uint16_t packet_id,
+        std::vector<std::string> const& params
+    ) {
+        std::vector<std::reference_wrapper<std::string const>> rparams;
+        rparams.reserve(params.size());
+        for (auto const& e : params) {
+            rparams.emplace_back(e);
+        }
+        send_unsubscribe(rparams, packet_id);
+    }
+
+    /**
+     * @brief Send pingreq packet.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
     void pingreq() {
         send_pingreq();
     }
 
+    /**
+     * @brief Send pingresp packet. This function is for broker.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718086
+     */
+    void pingresp() {
+        send_pingresp();
+    }
+
+    /**
+     * @brief Send connect packet.
+     * @param keep_alive_sec See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349238
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028
+     */
     void connect(std::uint16_t keep_alive_sec) {
         send_connect(keep_alive_sec);
     }
 
-    // For broker side
+    /**
+     * @brief Send connack packet. This function is for broker.
+     * @param session_present See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349255
+     * @param return_code See connect_return_code.hpp and http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349256
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033
+     */
     void connack(bool session_present, std::uint8_t return_code) {
         send_connack(session_present, return_code);
     }
 
+    /**
+     * @brief Send puback packet.
+     * @packet_id packet id corresponding to publish
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718043
+     */
     void puback(std::uint16_t packet_id) {
         send_puback(packet_id);
     }
 
+    /**
+     * @brief Send pubrec packet.
+     * @packet_id packet id corresponding to publish
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718048
+     */
     void pubrec(std::uint16_t packet_id) {
         send_pubrec(packet_id);
     }
 
+    /**
+     * @brief Send pubrel packet.
+     * @packet_id packet id corresponding to publish
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718053
+     */
     void pubrel(std::uint16_t packet_id) {
         send_pubrel(packet_id);
     }
 
+    /**
+     * @brief Send pubcomp packet.
+     * @packet_id packet id corresponding to publish
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718058
+     */
     void pubcomp(std::uint16_t packet_id) {
         send_pubcomp(packet_id);
     }
 
+    /**
+     * @brief Send suback packet. This function is for broker.
+     * @params packet_id packet id corresponding to subscribe
+     * @params qos adjusted qos
+     * @params args additional qos
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718068
+     */
     template <typename... Args>
     void suback(
         std::uint16_t packet_id,
@@ -980,19 +1190,26 @@ public:
         send_suback(params, packet_id, qos, std::forward<Args>(args)...);
     }
 
+    /**
+     * @brief Send suback packet. This function is for broker.
+     * @params packet_id packet id corresponding to subscribe
+     * @params qoss a collection of adjusted qos
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718068
+     */
     void suback(
         std::uint16_t packet_id,
         std::vector<std::uint8_t> const& qoss) {
         send_suback(qoss, packet_id);
     }
 
+    /**
+     * @brief Send unsuback packet. This function is for broker.
+     * @params packet_id packet id corresponding to unsubscribe
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718077
+     */
     void unsuback(
         std::uint16_t packet_id) {
         send_unsuback(packet_id);
-    }
-
-    void pingresp() {
-        send_pingresp();
     }
 
 
@@ -1006,13 +1223,14 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
+     * @param func A callback function that is called when async operation will finish.
      */
     void async_publish_at_most_once(
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
-        async_send_publish(topic_name, qos::at_most_once, retain, false, 0, contents, func);
+        acquired_async_publish(0, topic_name, contents, qos::at_most_once, retain, func);
     }
 
     /**
@@ -1025,6 +1243,7 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
+     * @param func A callback function that is called when async operation will finish.
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -1034,7 +1253,7 @@ public:
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        async_send_publish(topic_name, qos::at_least_once, retain, false, packet_id, contents, func);
+        acquired_async_publish_at_least_once(packet_id, topic_name, contents, retain, func);
         return packet_id;
     }
 
@@ -1048,6 +1267,7 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
+     * @param func A callback function that is called when async operation will finish.
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -1057,7 +1277,7 @@ public:
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        async_send_publish(topic_name, qos::exactly_once, retain, false, packet_id, contents, func);
+        acquired_async_publish_exactly_once(packet_id, topic_name, contents, retain, func);
         return packet_id;
     }
 
@@ -1073,6 +1293,7 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
+     * @param func A callback function that is called when async operation will finish.
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
@@ -1082,8 +1303,8 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
-        std::uint16_t packet_id = qos == 0 ? 0 : acquire_unique_packet_id();
-        async_send_publish(topic_name, qos, retain, false, packet_id, contents, func);
+        std::uint16_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
+        acquired_async_publish(packet_id, topic_name, contents, qos, retain, func);
         return packet_id;
     }
 
@@ -1094,8 +1315,9 @@ public:
      * @param qos
      *        mqtt::qos
      * @param args
-     *        args should be zero of more pairs of topic_name and qos.
-     * @return packet_id. If qos is set to at_most_once, return 0.
+     *        args should be some pairs of topic_name and qos to subscribe, <BR>
+     *        and the last one is a callback function that is called when async operation will finish.
+     * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
@@ -1108,40 +1330,57 @@ public:
     async_subscribe(
         std::string const& topic_name,
         std::uint8_t qos, Args&&... args) {
-        return async_subscribe_imp(topic_name, qos, std::forward<Args>(args)...);
+        std::uint16_t packet_id = acquire_unique_packet_id();
+        acquired_async_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
+        return packet_id;
     }
 
+    /**
+     * @brief Subscribe
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param qos
+     *        mqtt::qos
+     * @param func A callback function that is called when async operation will finish.
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
     std::uint16_t async_subscribe(
         std::string const& topic_name,
         std::uint8_t qos,
         async_handler_t const& func = async_handler_t()) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
-        params.reserve(1);
-        async_send_subscribe(params, packet_id, topic_name, qos, func);
+        acquired_async_subscribe(packet_id, topic_name, qos, func);
         return packet_id;
     }
 
+    /**
+     * @brief Subscribe
+     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param func A callback function that is called when async operation will finish.
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
     std::uint16_t async_subscribe(
         std::vector<std::tuple<std::string, std::uint8_t>> const& params,
         async_handler_t const& func = async_handler_t()) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
-        rparams.reserve(params.size());
-        for (auto const& e : params) {
-            rparams.emplace_back(std::get<0>(e), std::get<1>(e));
-        }
-        async_send_subscribe(rparams, packet_id, func);
+        acquired_async_subscribe(packet_id, params, func);
         return packet_id;
     }
 
     /**
      * @brief Unsubscribe
      * @param topic_name
-     *        A topic name to subscribe
+     *        A topic name to unsubscribe
      * @param args
-     *        args should be zero or more topics
-     * @return packet_id. If qos is set to at_most_once, return 0.
+     *        args should be some topic_names to unsubscribe, <BR>
+     *        and the last one is a callback function that is called when async operation will finish.
+     * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
@@ -1154,34 +1393,55 @@ public:
     async_unsubscribe(
         std::string const& topic_name,
         Args&&... args) {
-        return async_unsubscribe_imp(topic_name, std::forward<Args>(args)...);
+        std::uint16_t packet_id = acquire_unique_packet_id();
+        acquired_async_unsubscribe(packet_id, topic_name, std::forward<Args>(args)...);
+        return packet_id;
     }
 
+    /**
+     * @brief Unsubscribe
+     * @param topic_name
+     *        A topic name to unsubscribe
+     * @param args
+     *        args should be some topic_names, <BR>
+     *        and the last one is a callback function that is called when async operation will finish.
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
     std::uint16_t async_unsubscribe(
         std::string const& topic_name,
         async_handler_t const& func = async_handler_t()) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::reference_wrapper<std::string const>> params;
-        params.reserve(1);
-        async_send_unsubscribe(params, packet_id, topic_name, func);
+        acquired_async_unsubscribe(packet_id, topic_name, func);
         return packet_id;
     }
 
+    /**
+     * @brief Unsubscribe
+     * @param params
+     *        A collection of the topic name to unsubscribe
+     * @param args
+     *        args should be some topic_names, <BR>
+     *        and the last one is a callback function that is called when async operation will finish.
+     * @param func A callback function that is called when async operation will finish.
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
     std::uint16_t async_unsubscribe(
         std::vector<std::string> const& params,
         async_handler_t const& func = async_handler_t()) {
         std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::reference_wrapper<std::string const>> rparams;
-        rparams.reserve(params.size());
-        for (auto const& e : params) {
-            rparams.emplace_back(e);
-        }
-        async_send_unsubscribe(rparams, packet_id, func);
+        acquired_async_unsubscribe(packet_id, params, func);
         return packet_id;
     }
 
     /**
      * @brief Disconnect
+     * @param func A callback function that is called when async operation will finish.
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
@@ -1207,6 +1467,7 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
+     * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -1217,7 +1478,7 @@ public:
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            async_send_publish(topic_name, qos::at_least_once, retain, false, packet_id, contents, func);
+            acquired_async_publish_at_least_once(packet_id, topic_name, contents, retain, func);
             return true;
         }
         return false;
@@ -1235,6 +1496,7 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
+     * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -1245,7 +1507,7 @@ public:
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            async_send_publish(topic_name, qos::exactly_once, retain, false, packet_id, contents, func);
+            acquired_async_publish_exactly_once(packet_id, topic_name, contents, retain, func);
             return true;
         }
         return false;
@@ -1265,6 +1527,7 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
+     * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -1276,7 +1539,7 @@ public:
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            async_send_publish(topic_name, qos, retain, false, packet_id, contents, func);
+            acquired_async_publish(packet_id, topic_name, contents, qos, retain, func);
             return true;
         }
         return false;
@@ -1296,6 +1559,7 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
+     * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -1307,7 +1571,7 @@ public:
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            async_send_publish(topic_name, qos, retain, true, packet_id, contents, func);
+            acquired_async_publish_dup(packet_id, topic_name, contents, qos, retain, func);
             return true;
         }
         return false;
@@ -1322,7 +1586,7 @@ public:
      * @param qos
      *        mqtt::qos
      * @param args
-     *        args should be zero of more pairs of topic_name and qos.
+     *        args should be zero or more pairs of topic_name and qos.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -1337,34 +1601,56 @@ public:
         std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args&&... args) {
-        return async_subscribe_imp(packet_id, topic_name, qos, std::forward<Args>(args)...);
+        if (register_packet_id(packet_id)) {
+            acquired_async_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
+            return true;
+        }
+        return false;
     }
 
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param qos
+     *        mqtt::qos
+     * @param func A callback function that is called when async operation will finish.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't subscribe, otherwise return true and subscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
     bool async_subscribe(
         std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
-            params.reserve(1);
-            async_send_subscribe(params, packet_id, topic_name, qos, func);
+            acquired_async_subscribe(packet_id, topic_name, qos, func);
             return true;
         }
         return false;
     }
 
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier
+     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param func A callback function that is called when async operation will finish.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't subscribe, otherwise return true and subscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
     bool async_subscribe(
         std::uint16_t packet_id,
         std::vector<std::tuple<std::string, std::uint8_t>> const& params,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
-            rparams.reserve(params.size());
-            for (auto const& e : params) {
-                rparams.emplace_back(std::get<0>(e), std::get<1>(e));
-            }
-            async_send_subscribe(rparams, packet_id, func);
+            acquired_async_subscribe(packet_id, params, func);
             return true;
         }
         return false;
@@ -1377,7 +1663,8 @@ public:
      * @param topic_name
      *        A topic name to subscribe
      * @param args
-     *        args should be zero or more topics
+     *        args should be some topic_names to unsubscribe, <BR>
+     *        and the last one is a callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -1392,36 +1679,302 @@ public:
         std::uint16_t packet_id,
         std::string const& topic_name,
         Args&&... args) {
-        return async_unsubscribe_imp(packet_id, topic_name, std::forward<Args>(args)...);
-    }
-
-    bool async_unsubscribe(
-        std::uint16_t packet_id,
-        std::vector<std::string> const& params,
-        async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::reference_wrapper<std::string const>> rparams;
-            rparams.reserve(params.size());
-            for (auto const& e : params) {
-                rparams.emplace_back(e);
-            }
-            async_send_unsubscribe(rparams, packet_id, func);
+            acquired_async_unsubscribe(packet_id, topic_name, std::forward<Args>(args)...);
             return true;
         }
         return false;
     }
 
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier
+     * @param params
+     *        A collection of the topic name to unsubscribe
+     * @param args
+     *        args should be some topic_names, <BR>
+     *        and the last one is a callback function that is called when async operation will finish.
+     * @param func A callback function that is called when async operation will finish.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't unsubscribe, otherwise return true and unsubscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
+    bool async_unsubscribe(
+        std::uint16_t packet_id,
+        std::vector<std::string> const& params,
+        async_handler_t const& func = async_handler_t()) {
+        if (register_packet_id(packet_id)) {
+            acquired_async_unsubscribe(packet_id, params, func);
+            return true;
+        }
+        return false;
+    }
+
+    // packet_id has already been acquired version
+
+    /**
+     * @brief Publish QoS1 with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
+     *        3.3.1.3 RETAIN
+     * @param func A callback function that is called when async operation will finish.
+     */
+    void acquired_async_publish_at_least_once(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::string const& contents,
+        bool retain = false,
+        async_handler_t const& func = async_handler_t()) {
+        async_send_publish(topic_name, qos::at_least_once, retain, false, packet_id, contents, func);
+    }
+
+    /**
+     * @brief Publish QoS2 with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
+     *        3.3.1.3 RETAIN
+     * @param func A callback function that is called when async operation will finish.
+     */
+    void acquired_async_publish_exactly_once(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::string const& contents,
+        bool retain = false,
+        async_handler_t const& func = async_handler_t()) {
+        async_send_publish(topic_name, qos::exactly_once, retain, false, packet_id, contents, func);
+    }
+
+    /**
+     * @brief Publish with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        mqtt::qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
+     *        3.3.1.3 RETAIN
+     * @param func A callback function that is called when async operation will finish.
+     */
+    void acquired_async_publish(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::string const& contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        async_handler_t const& func = async_handler_t()) {
+        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        async_send_publish(topic_name, qos, retain, false, packet_id, contents, func);
+    }
+
+    /**
+     * @brief Publish as dup with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        mqtt::qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
+     *        3.3.1.3 RETAIN
+     * @param func A callback function that is called when async operation will finish.
+     */
+    void acquired_async_publish_dup(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::string const& contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        async_handler_t const& func = async_handler_t()) {
+        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        async_send_publish(topic_name, qos, retain, true, packet_id, contents, func);
+    }
+
+    /**
+     * @brief Subscribe with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param qos
+     *        mqtt::qos
+     * @param args
+     *        args should be some pairs of topic_name and qos to subscribe, <BR>
+     *        and the last one is a callback function that is called when async operation will finish.
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066<BR>
+     */
+    template <typename... Args>
+    typename std::enable_if<
+        sizeof...(Args) != 0,
+        void
+    >::type
+    acquired_async_subscribe(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::uint8_t qos, Args&&... args) {
+        return acquired_async_subscribe_imp(packet_id, topic_name, qos, std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param qos
+     *        mqtt::qos
+     * @param func A callback function that is called when async operation will finish.
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
+    void acquired_async_subscribe(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        std::uint8_t qos,
+        async_handler_t const& func = async_handler_t()) {
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
+        params.reserve(1);
+        async_send_subscribe(params, packet_id, topic_name, qos, func);
+    }
+
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param func A callback function that is called when async operation will finish.
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
+    void acquired_async_subscribe(
+        std::uint16_t packet_id,
+        std::vector<std::tuple<std::string, std::uint8_t>> const& params,
+        async_handler_t const& func = async_handler_t()) {
+        std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> rparams;
+        rparams.reserve(params.size());
+        for (auto const& e : params) {
+            rparams.emplace_back(std::get<0>(e), std::get<1>(e));
+        }
+        async_send_subscribe(rparams, packet_id, func);
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param args
+     *        args should be some topic_names, <BR>
+     *        and the last one is a callback function that is called when async operation will finish.
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
+    template <typename... Args>
+    typename std::enable_if<
+        sizeof...(Args) != 0
+    >::type
+    acquired_async_unsubscribe(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        Args&&... args) {
+        acquired_async_unsubscribe_imp(packet_id, topic_name, std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param params
+     *        A collection of the topic name to unsubscribe
+     * @param func A callback function that is called when async operation will finish.
+     * You can subscribe multiple topics all at once.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
+    void acquired_async_unsubscribe(
+        std::uint16_t packet_id,
+        std::vector<std::string> const& params,
+        async_handler_t const& func = async_handler_t()) {
+        std::vector<std::reference_wrapper<std::string const>> rparams;
+        rparams.reserve(params.size());
+        for (auto const& e : params) {
+            rparams.emplace_back(e);
+        }
+        async_send_unsubscribe(rparams, packet_id, func);
+    }
+
+    /**
+     * @brief Send pingreq packet.
+     * @param func A callback function that is called when async operation will finish.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
+     */
     void async_pingreq(async_handler_t const& func = async_handler_t()) {
         async_send_pingreq(func);
     }
 
+    /**
+     * @brief Send pingresp packet. This function is for broker.
+     * @param func A callback function that is called when async operation will finish.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718086
+     */
+    void async_pingresp(async_handler_t const& func = async_handler_t()) {
+        async_send_pingresp(func);
+    }
+
+
+    /**
+     * @brief Send connect packet.
+     * @param keep_alive_sec See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349238
+     * @param func A callback function that is called when async operation will finish.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028
+     */
     void async_connect(
         std::uint16_t keep_alive_sec,
         async_handler_t const& func = async_handler_t()) {
         async_send_connect(keep_alive_sec, func);
     }
 
-    // For broker side
+    /**
+     * @brief Send connack packet. This function is for broker.
+     * @param session_present See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349255
+     * @param return_code See connect_return_code.hpp and http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349256
+     * @param func A callback function that is called when async operation will finish.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033
+     */
     void async_connack(
         bool session_present,
         std::uint8_t return_code,
@@ -1429,22 +1982,54 @@ public:
         async_send_connack(session_present, return_code, func);
     }
 
+    /**
+     * @brief Send puback packet.
+     * @packet_id packet id corresponding to publish
+     * @param func A callback function that is called when async operation will finish.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718043
+     */
     void async_puback(std::uint16_t packet_id, async_handler_t const& func = async_handler_t()) {
         async_send_puback(packet_id, func);
     }
 
+    /**
+     * @brief Send pubrec packet.
+     * @packet_id packet id corresponding to publish
+     * @param func A callback function that is called when async operation will finish.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718048
+     */
     void async_pubrec(std::uint16_t packet_id, async_handler_t const& func = async_handler_t()) {
         async_send_pubrec(packet_id, func);
     }
 
+    /**
+     * @brief Send pubrel packet.
+     * @packet_id packet id corresponding to publish
+     * @param func A callback function that is called when async operation will finish.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718053
+     */
     void async_pubrel(std::uint16_t packet_id, async_handler_t const& func = async_handler_t()) {
         async_send_pubrel(packet_id, func);
     }
 
+    /**
+     * @brief Send pubcomp packet.
+     * @packet_id packet id corresponding to publish
+     * @param func A callback function that is called when async operation will finish.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718058
+     */
     void async_pubcomp(std::uint16_t packet_id, async_handler_t const& func = async_handler_t()) {
         async_send_pubcomp(packet_id, func);
     }
 
+    /**
+     * @brief Send suback packet. This function is for broker.
+     * @params packet_id packet id corresponding to subscribe
+     * @param args
+     *        args should be some qos corresponding to subscribe, <BR>
+     *        and the last one is a callback function that is called when async operation will finish.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718068
+     */
     template <typename... Args>
     typename std::enable_if<
         sizeof...(Args) != 0
@@ -1455,6 +2040,13 @@ public:
         async_suback_imp(packet_id, qos, std::forward<Args>(args)...);
     }
 
+    /**
+     * @brief Send suback packet. This function is for broker.
+     * @params packet_id packet id corresponding to subscribe
+     * @params qos adjusted qos
+     * @param func A callback function that is called when async operation will finish.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718068
+     */
     void async_suback(
         std::uint16_t packet_id,
         std::uint8_t qos,
@@ -1463,6 +2055,13 @@ public:
         async_send_suback(params, packet_id, qos, func);
     }
 
+    /**
+     * @brief Send suback packet. This function is for broker.
+     * @params packet_id packet id corresponding to subscribe
+     * @params qoss a collection of adjusted qos
+     * @param func A callback function that is called when async operation will finish.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718068
+     */
     void async_suback(
         std::uint16_t packet_id,
         std::vector<std::uint8_t> const& qoss,
@@ -1470,14 +2069,16 @@ public:
         async_send_suback(qoss, packet_id, func);
     }
 
+    /**
+     * @brief Send unsuback packet. This function is for broker.
+     * @params packet_id packet id corresponding to unsubscribe
+     * @param func A callback function that is called when async operation will finish.
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718077
+     */
     void async_unsuback(
         std::uint16_t packet_id,
         async_handler_t const& func = async_handler_t()) {
         async_send_unsuback(packet_id, func);
-    }
-
-    void async_pingresp(async_handler_t const& func = async_handler_t()) {
-        async_send_pingresp(func);
     }
 
     bool handle_close_or_error(boost::system::error_code const& ec) {
@@ -1537,6 +2138,30 @@ public:
         for (auto const & e : idx) {
             f(e.ptr(), e.size());
         }
+    }
+
+    // manual packet_id management for advanced users
+
+    std::uint16_t acquire_unique_packet_id() {
+        LockGuard<Mutex> lck (store_mtx_);
+        if (packet_id_.size() == 0xffff - 1) throw packet_id_exhausted_error();
+        do {
+            if (++packet_id_master_ == 0) ++packet_id_master_;
+        } while (!packet_id_.insert(packet_id_master_).second);
+        return packet_id_master_;
+    }
+
+    bool register_packet_id(std::uint16_t packet_id) {
+        if (packet_id == 0) return false;
+        LockGuard<Mutex> lck (store_mtx_);
+        return packet_id_.insert(packet_id).second;
+    }
+
+    // Only the packet_id gotten by acquire_unique_packet_id, or
+    // register_packet_id is permitted.
+    bool release_packet_id(std::uint16_t packet_id) {
+        LockGuard<Mutex> lck (store_mtx_);
+        return packet_id_.erase(packet_id);
     }
 
 protected:
@@ -1608,22 +2233,21 @@ private:
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_NO_TLS)
 
+
     template <typename... Args>
     typename std::enable_if<
         std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
             async_handler_t
-        >::value,
-        std::uint16_t
+        >::value
     >::type
-    async_subscribe_imp(
+    acquired_async_subscribe_imp(
+        std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args&&... args) {
-        std::uint16_t packet_id = acquire_unique_packet_id();
         std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
         async_send_subscribe(params, packet_id, topic_name, qos, std::forward<Args>(args)...);
-        return packet_id;
     }
 
     template <typename... Args>
@@ -1631,137 +2255,15 @@ private:
         !std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
             async_handler_t
-        >::value,
-        std::uint16_t
+        >::value
     >::type
-    async_subscribe_imp(
+    acquired_async_subscribe_imp(
+        std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args&&... args) {
-        std::uint16_t packet_id = acquire_unique_packet_id();
         std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
         async_send_subscribe(params, packet_id, topic_name, qos, std::forward<Args>(args)..., async_handler_t());
-        return packet_id;
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
-        std::uint16_t
-    >::type
-    async_unsubscribe_imp(
-        std::string const& topic_name,
-        Args&&... args) {
-        std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::reference_wrapper<std::string const>> params;
-        params.reserve(sizeof...(args));
-        async_send_unsubscribe(params, packet_id, topic_name, std::forward<Args>(args)...);
-        return packet_id;
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
-        std::uint16_t
-    >::type
-    async_unsubscribe_imp(
-        std::string const& topic_name,
-        Args&&... args) {
-        std::uint16_t packet_id = acquire_unique_packet_id();
-        std::vector<std::reference_wrapper<std::string const>> params;
-        params.reserve(sizeof...(args) + 1);
-        async_send_unsubscribe(params, packet_id, topic_name, std::forward<Args>(args)..., async_handler_t());
-        return packet_id;
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
-        bool
-    >::type
-    async_subscribe_imp(
-        std::uint16_t packet_id,
-        std::string const& topic_name,
-        std::uint8_t qos, Args&&... args) {
-        if (register_packet_id(packet_id)) {
-            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
-            params.reserve((sizeof...(args) + 2) / 2);
-            async_send_subscribe(params, packet_id, topic_name, qos, std::forward<Args>(args)...);
-            return true;
-        }
-        return false;
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
-        bool
-    >::type
-    async_subscribe_imp(
-        std::uint16_t packet_id,
-        std::string const& topic_name,
-        std::uint8_t qos, Args&&... args) {
-        if (register_packet_id(packet_id)) {
-            std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
-            params.reserve((sizeof...(args) + 2) / 2);
-            async_send_subscribe(params, packet_id, topic_name, qos, std::forward<Args>(args)..., async_handler_t());
-            return true;
-        }
-        return false;
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
-        bool
-    >::type
-    async_unsubscribe_imp(
-        std::uint16_t packet_id,
-        std::string const& topic_name,
-        Args&&... args) {
-        if (register_packet_id(packet_id)) {
-            std::vector<std::reference_wrapper<std::string const>> params;
-            params.reserve(sizeof...(args));
-            async_send_unsubscribe(params, packet_id, topic_name, std::forward<Args>(args)...);
-            return true;
-        }
-        return false;
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
-        >::value,
-        bool
-    >::type
-    async_unsubscribe_imp(
-        std::uint16_t packet_id,
-        std::string const& topic_name,
-        Args&&... args) {
-        if (register_packet_id(packet_id)) {
-            std::vector<std::reference_wrapper<std::string const>> params;
-            params.reserve(sizeof...(args) + 1);
-            async_send_unsubscribe(params, packet_id, topic_name, std::forward<Args>(args)..., async_handler_t());
-            return true;
-        }
-        return false;
     }
 
     template <typename... Args>
@@ -1771,7 +2273,39 @@ private:
             async_handler_t
         >::value
     >::type
-    async_suback_imp(
+    acquired_async_unsubscribe_imp(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        Args&&... args) {
+        std::vector<std::reference_wrapper<std::string const>> params;
+        params.reserve(sizeof...(args));
+        async_send_unsubscribe(params, packet_id, topic_name, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    typename std::enable_if<
+        !std::is_convertible<
+            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
+            async_handler_t
+        >::value
+    >::type
+    acquired_async_unsubscribe_imp(
+        std::uint16_t packet_id,
+        std::string const& topic_name,
+        Args&&... args) {
+        std::vector<std::reference_wrapper<std::string const>> params;
+        params.reserve(sizeof...(args) + 1);
+        async_send_unsubscribe(params, packet_id, topic_name, std::forward<Args>(args)..., async_handler_t());
+    }
+
+    template <typename... Args>
+    typename std::enable_if<
+        std::is_convertible<
+            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
+            async_handler_t
+        >::value
+    >::type
+    acquired_async_suback_imp(
         std::uint16_t packet_id,
         std::uint8_t qos, Args&&... args) {
         std::vector<std::uint8_t> params;
@@ -1785,7 +2319,7 @@ private:
             async_handler_t
         >::value
     >::type
-    async_suback_imp(
+    acquired_async_suback_imp(
         std::uint16_t packet_id,
         std::uint8_t qos, Args&&... args) {
         std::vector<std::uint8_t> params;
@@ -2592,7 +3126,7 @@ private:
         flags |= qos << 1;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
         do_sync_write(std::get<0>(ptr_size), std::get<1>(ptr_size));
-        if (qos > 0) {
+        if (qos == qos::at_least_once || qos == qos::exactly_once) {
             flags |= 0b00001000;
             ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
             LockGuard<Mutex> lck (store_mtx_);
@@ -2873,7 +3407,7 @@ private:
         flags |= qos << 1;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::publish, flags));
         do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
-        if (qos > 0) {
+        if (qos == qos::at_least_once || qos == qos::exactly_once) {
             LockGuard<Mutex> lck (store_mtx_);
             store_.emplace(
                 packet_id,
@@ -3102,21 +3636,6 @@ private:
                 )
             )
         );
-    }
-
-    std::uint16_t acquire_unique_packet_id() {
-        LockGuard<Mutex> lck (store_mtx_);
-        if (packet_id_.size() == 0xffff - 1) throw packet_id_exhausted_error();
-        do {
-            if (++packet_id_master_ == 0) ++packet_id_master_;
-        } while (!packet_id_.insert(packet_id_master_).second);
-        return packet_id_master_;
-    }
-
-    bool register_packet_id(std::uint16_t packet_id) {
-        if (packet_id == 0) return false;
-        LockGuard<Mutex> lck (store_mtx_);
-        return packet_id_.insert(packet_id).second;
     }
 
     static std::uint16_t make_uint16_t(char b1, char b2) {
