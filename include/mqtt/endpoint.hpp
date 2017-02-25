@@ -2136,7 +2136,7 @@ public:
     }
 
     template <typename F>
-    void for_each_store(F f) {
+    void for_each_store(F&& f) {
         LockGuard<Mutex> lck (store_mtx_);
         auto& idx = store_.template get<tag_seq>();
         for (auto const & e : idx) {
@@ -3303,13 +3303,13 @@ private:
     // Blocking write
     void do_sync_write(char* ptr, std::size_t size) {
         boost::system::error_code ec;
+        if (!connected_) return;
         write(*socket_, as::buffer(ptr, size), ec);
         if (ec) handle_error(ec);
     }
 
     // Non blocking (async) senders
-    template <typename F>
-    void async_send_connect(std::uint16_t keep_alive_sec, F const& func) {
+    void async_send_connect(std::uint16_t keep_alive_sec, async_handler_t const& func) {
 
         send_buffer sb;
         std::size_t payload_position = 5; // Fixed Header + max size of Remaining bytes
@@ -3375,8 +3375,7 @@ private:
         do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
-    template <typename F>
-    void async_send_connack(bool session_present, std::uint8_t return_code, F const& func) {
+    void async_send_connack(bool session_present, std::uint8_t return_code, async_handler_t const& func) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(session_present ? 1 : 0));
         sb.buf()->push_back(static_cast<char>(return_code));
@@ -3384,7 +3383,6 @@ private:
         do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
-    template <typename F>
     void async_send_publish(
         std::string const& topic_name,
         std::uint8_t qos,
@@ -3392,7 +3390,7 @@ private:
         bool dup,
         std::uint16_t packet_id,
         std::string const& payload,
-        F const& func) {
+        async_handler_t const& func) {
 
         send_buffer sb;
         if (!utf8string::is_valid_length(topic_name)) throw utf8string_length_error();
@@ -3423,8 +3421,7 @@ private:
         }
     }
 
-    template <typename F>
-    void async_send_puback(std::uint16_t packet_id, F const& func) {
+    void async_send_puback(std::uint16_t packet_id, async_handler_t const& func) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
@@ -3438,8 +3435,7 @@ private:
             });
     }
 
-    template <typename F>
-    void async_send_pubrec(std::uint16_t packet_id, F const& func) {
+    void async_send_pubrec(std::uint16_t packet_id, async_handler_t const& func) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
@@ -3447,8 +3443,7 @@ private:
         do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
-    template <typename F>
-    void async_send_pubrel(std::uint16_t packet_id, F const& func) {
+    void async_send_pubrel(std::uint16_t packet_id, async_handler_t const& func) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
@@ -3463,8 +3458,7 @@ private:
             std::get<1>(ptr_size));
     }
 
-    template <typename F>
-    void async_send_pubcomp(std::uint16_t packet_id, F const& func) {
+    void async_send_pubcomp(std::uint16_t packet_id, async_handler_t const& func) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
@@ -3488,11 +3482,10 @@ private:
         async_send_subscribe(params, packet_id, args...);
     }
 
-    template <typename F>
     void async_send_subscribe(
         std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>>& params,
         std::uint16_t packet_id,
-        F const& func) {
+        async_handler_t const& func) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
@@ -3516,11 +3509,10 @@ private:
         async_send_suback(params, packet_id, args...);
     }
 
-    template <typename F>
     void async_send_suback(
         std::vector<std::uint8_t> const& params,
         std::uint16_t packet_id,
-        F const& func) {
+        async_handler_t const& func) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
@@ -3541,11 +3533,10 @@ private:
         async_send_unsubscribe(params, packet_id, args...);
     }
 
-    template <typename F>
     void async_send_unsubscribe(
         std::vector<std::reference_wrapper<std::string const>>& params,
         std::uint16_t packet_id,
-        F const& func) {
+        async_handler_t const& func) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
@@ -3559,9 +3550,8 @@ private:
         do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
-    template <typename F>
     void async_send_unsuback(
-        std::uint16_t packet_id, F const& func) {
+        std::uint16_t packet_id, async_handler_t const& func) {
         send_buffer sb;
         sb.buf()->push_back(static_cast<char>(packet_id >> 8));
         sb.buf()->push_back(static_cast<char>(packet_id & 0xff));
@@ -3569,21 +3559,19 @@ private:
         do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
-    template <typename F>
-    void async_send_pingreq(F const& func) {
+    void async_send_pingreq(async_handler_t const& func) {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingreq, 0b0000));
         do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
 
-    template <typename F>
-    void async_send_pingresp(F const& func) {
+    void async_send_pingresp(async_handler_t const& func) {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::pingresp, 0b0000));
         do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
     }
-    template <typename F>
-    void async_send_disconnect(F const& func) {
+
+    void async_send_disconnect(async_handler_t const& func) {
         send_buffer sb;
         auto ptr_size = sb.finalize(make_fixed_header(control_packet_type::disconnect, 0b0000));
         do_async_write(sb.buf(), std::get<0>(ptr_size), std::get<1>(ptr_size), func);
@@ -3611,8 +3599,11 @@ private:
         async_handler_t handler_;
     };
 
-    template <typename F>
-    void do_async_write(std::shared_ptr<std::string> const& buf, char* ptr, std::size_t size, F const& func) {
+    void do_async_write(std::shared_ptr<std::string> const& buf, char* ptr, std::size_t size, async_handler_t const& func) {
+        if (!connected_) {
+            if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+            return;
+        }
         auto self = this->shared_from_this();
         strand_.post(
             [this, self, buf, ptr, size, func]
