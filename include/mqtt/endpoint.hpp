@@ -2093,7 +2093,11 @@ public:
 #endif // defined(MQTT_USE_WS)
 #if !defined(MQTT_NO_TLS)
             ||
-            ec.value() == ERR_PACK(ERR_LIB_SSL, 0, SSL_R_SHORT_READ)
+#if defined(SSL_R_SHORT_READ)
+            ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ
+#else  // defined(SSL_R_SHORT_READ)
+            ERR_GET_REASON(ec.value()) == boost::asio::ssl::error::stream_truncated
+#endif // defined(SSL_R_SHORT_READ)
 #endif // defined(MQTT_NO_TLS)
         ) {
             handle_close();
