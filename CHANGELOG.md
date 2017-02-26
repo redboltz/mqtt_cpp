@@ -1,3 +1,19 @@
+## 1.0.4
+* Added offline publish (Clean Session: false, qos: at_least_once, exactly_once). (#69)
+* Prepared for OpenSSL 1.1.0 support. (#68)
+* Added explicit packet_id acquieing operation. (#67)
+* Used C++14 depended code conditionally. (#62, #63)
+* Added WebSocket support. (#61, #66)
+* Fixed strand. (#60)
+* Added strand to shutdown. (#59)
+* Fixed the type of qos on async_send_publish. (#58)
+* Added async_disconnect function. (#57)
+* Fixed async subscribe/unsubscribe. (#56)
+* Improved async operations. (#55)
+* Fixed SSL_R_SHORT_READ as normal close, not error. (#54)
+* Replaced pair with tuple. (#53)
+* Fixed endpoint memory management. (#52)
+
 ## 1.0.3
 * Fixed force disconnect logic. (#50)
 * Added remaining length getting function. (#48)
@@ -20,6 +36,7 @@
 * Fixed storing QoS1 and 2 packet mechanism. (#23)
 * Supported async_write operation. (#21)
 * Separated MQTT core from client. Core can be used as server connection. (#20)
+
 ## 1.0.2
 * Fixed queued message clearing problem. (#18)
 * Fixed implicit char conversion problem. (#17)
