@@ -63,6 +63,7 @@ public:
     endpoint(as::io_service& ios)
         :strand_(ios),
          connected_(false),
+         mqtt_connected_(false),
          clean_session_(false),
          packet_id_master_(0),
          auto_pub_response_(true),
@@ -77,6 +78,7 @@ public:
         :strand_(socket->get_io_service()),
          socket_(std::move(socket)),
          connected_(true),
+         mqtt_connected_(false),
          clean_session_(false),
          packet_id_master_(0),
          auto_pub_response_(true),
@@ -702,6 +704,7 @@ public:
         if (connected_) {
             shutdown_from_client(*socket_);
             connected_ = false;
+            mqtt_connected_ = false;
         }
     }
 
@@ -2084,6 +2087,7 @@ public:
     bool handle_close_or_error(boost::system::error_code const& ec) {
         if (!ec) return false;
         connected_ = false;
+        mqtt_connected_ = false;
         shutdown_from_server(*socket_);
         if (ec == as::error::eof ||
             ec == as::error::connection_reset
@@ -2523,37 +2527,59 @@ private:
             ret = handle_connack(func);
             break;
         case control_packet_type::publish:
-            ret = handle_publish(func);
+            if (mqtt_connected_) {
+                ret = handle_publish(func);
+            }
             break;
         case control_packet_type::puback:
-            ret = handle_puback(func);
+            if (mqtt_connected_) {
+                ret = handle_puback(func);
+            }
             break;
         case control_packet_type::pubrec:
-            ret = handle_pubrec(func);
+            if (mqtt_connected_) {
+                ret = handle_pubrec(func);
+            }
             break;
         case control_packet_type::pubrel:
-            ret = handle_pubrel(func);
+            if (mqtt_connected_) {
+                ret = handle_pubrel(func);
+            }
             break;
         case control_packet_type::pubcomp:
-            ret = handle_pubcomp(func);
+            if (mqtt_connected_) {
+                ret = handle_pubcomp(func);
+            }
             break;
         case control_packet_type::subscribe:
-            ret = handle_subscribe(func);
+            if (mqtt_connected_) {
+                ret = handle_subscribe(func);
+            }
             break;
         case control_packet_type::suback:
-            ret = handle_suback(func);
+            if (mqtt_connected_) {
+                ret = handle_suback(func);
+            }
             break;
         case control_packet_type::unsubscribe:
-            ret = handle_unsubscribe(func);
+            if (mqtt_connected_) {
+                ret = handle_unsubscribe(func);
+            }
             break;
         case control_packet_type::unsuback:
-            ret = handle_unsuback(func);
+            if (mqtt_connected_) {
+                ret = handle_unsuback(func);
+            }
             break;
         case control_packet_type::pingreq:
-            ret = handle_pingreq(func);
+            if (mqtt_connected_) {
+                ret = handle_pingreq(func);
+            }
             break;
         case control_packet_type::pingresp:
-            ret = handle_pingresp(func);
+            if (mqtt_connected_) {
+                ret = handle_pingresp(func);
+            }
             break;
         case control_packet_type::disconnect:
             handle_disconnect(func);
@@ -2658,6 +2684,7 @@ private:
             password = std::string(payload_.data() + i, password_length);
             i += password_length;
         }
+        mqtt_connected_ = true;
         if (h_connect_) {
             if (h_connect_(client_id, user_name, password, std::move(w), clean_session, keep_alive)) {
                 return true;
@@ -2706,6 +2733,7 @@ private:
             }
         }
         bool session_present = is_session_present(payload_[0]);
+        mqtt_connected_ = true;
         if (h_connack_) return h_connack_(session_present, static_cast<std::uint8_t>(payload_[1]));
         return true;
     }
@@ -3686,6 +3714,7 @@ private:
     std::string host_;
     std::string port_;
     std::atomic<bool> connected_;
+    std::atomic<bool> mqtt_connected_;
     std::string client_id_;
     bool clean_session_;
     boost::optional<will> will_;
