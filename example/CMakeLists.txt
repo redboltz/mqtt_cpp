@@ -21,6 +21,7 @@ FOREACH (source_file ${exec_PROGRAMS})
     IF (NOT MQTT_NO_TLS)
         LIST (APPEND MQTT_LINK_LIBRARIES
             ${OPENSSL_LIBRARIES}
+            ${CMAKE_DL_LIBS}
         )
     ENDIF ()
     LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
