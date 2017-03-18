@@ -1,30 +1,61 @@
 sudo: false
 language: cpp
-compiler:
-# - clang++
-  - g++
 
 install:
-  - if [ "$CXX" = "g++" ]; then export CXXFLAGS="-std=c++14"; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
-  - if [ "$CXX" = "clang++" ]; then export CXXFLAGS="-std=c++14"; fi
-  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
-  - wget -O boost_1_60_0.tar.bz2 http://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.bz2/download && tar xf boost_1_60_0.tar.bz2 && cd boost_1_60_0 && cp ../user-config.jam . && cat user-config.jam && ./bootstrap.sh && ./b2 install --address-model=64 --with-system --with-test --prefix=../boost > /dev/null  && cd ..
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-#      - llvm-toolchain-precise-3.7
-#      - llvm-toolchain-precise
-    packages:
-#      - clang-3.7
-      - g++-5
-      - gcc-5
-      - cmake
+ - export BASE=`pwd`
+ - mkdir ${BASE}/usr
+ - if [ "$TRAVIS_OS_NAME" == "linux" ]; then wget --no-check-certificate https://cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.sh -O cmake-3.7.1-Linux-x86_64.sh; fi
+ - if [ "$TRAVIS_OS_NAME" == "linux" ]; then chmod a+x cmake-3.7.1-Linux-x86_64.sh; fi
+ - if [ "$TRAVIS_OS_NAME" == "linux" ]; then ./cmake-3.7.1-Linux-x86_64.sh --prefix=${BASE}/usr --skip-license; fi
+ - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export PATH="${BASE}/usr/bin:$PATH"; fi
+ - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export LD_LIBRARY_PATH="${BASE}/usr/lib:$LD_LIBRARY_PATH"; fi
+ - if [ "$CXX" = "g++" ]; then export CXX="g++-6" CC="gcc-6"; fi
+ - if [ "$CXX" = "clang++" ] && [ "$TRAVIS_OS_NAME" == "linux" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
+ - if [ "$TRAVIS_OS_NAME" == "linux" ]; then wget http://valgrind.org/downloads/valgrind-3.12.0.tar.bz2 && tar xjf valgrind-3.12.0.tar.bz2 && cd valgrind-3.12.0 && ./configure --prefix=${BASE}/usr > /dev/null && make -j3 > /dev/null && make install > /dev/null && cd ..; fi
+# boost
+ - wget http://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.zip && unzip -q boost_1_63_0.zip && cd boost_1_63_0 && ./bootstrap.sh && ./b2 -j3 --prefix=${BASE}/usr --with-timer --with-chrono --with-test address-model=64 install > /dev/null && cd ..
+ - if [ "$TRAVIS_OS_NAME" == "linux" ]; then wget https://www.openssl.org/source/openssl-1.0.2k.tar.gz && tar xf openssl-1.0.2k.tar.gz && cd openssl-1.0.2k && ./config --prefix=${BASE}/usr && make && make install > /dev/null && cd ..; fi
+ - if [ "$TRAVIS_OS_NAME" == "osx" ]; then wget https://www.openssl.org/source/openssl-1.0.2k.tar.gz && tar xf openssl-1.0.2k.tar.gz && cd openssl-1.0.2k && ./Configure darwin64-x86_64-cc --prefix=${BASE}/usr && make && make install > /dev/null && cd ..; fi
 
-env:
-  - FLAGS="-DMQTT_NO_TLS=ON"
-  - FLAGS="-DMQTT_NO_TLS=OFF"
+matrix:
+  include:
+    - os: osx
+      compiler: clang
+      env: FLAGS="-DMQTT_NO_TLS=ON"
+    - os: osx
+      compiler: clang
+      env: FLAGS="-DMQTT_NO_TLS=OFF"
+    - os: linux
+      compiler: clang
+      env: FLAGS="-DMQTT_NO_TLS=ON"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.7
+            - llvm-toolchain-precise
+          packages:
+            - g++-multilib
+            - gcc-multilib
+            - gcc-5-multilib
+            - g++-5-multilib
+            - bzip2
+            - clang-3.7
+            - libc6-dbg
+    - os: linux
+      compiler: gcc
+      env: FLAGS="-DMQTT_NO_TLS=OFF"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-multilib
+            - gcc-multilib
+            - gcc-6-multilib
+            - g++-6-multilib
+            - bzip2
+            - libc6-dbg
 
 script:
-  - mkdir build && cd build && cmake $FLAGS -DBoost_NO_SYSTEM_PATHS=ON -DBOOST_ROOT=`pwd`/../boost -DBOOST_INCLUDEDIR=`pwd`/../boost/include -DBOOST_LIBRARYDIR=`pwd`/../boost/lib .. && make VERBOSE=1 && ctest -VV
+  - mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_C_COMPILER="${CC}" -DCMAKE_LIBRARY_PATH="${BASE}/usr/lib" -DBOOST_ROOT="${BASE}/usr" -DOPENSSL_ROOT_DIR="${BASE}/usr" $FLAGS .. && make VERBOSE=1 && ctest -VV
