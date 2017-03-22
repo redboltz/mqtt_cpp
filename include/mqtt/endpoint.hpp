@@ -2313,7 +2313,7 @@ private:
             async_handler_t
         >::value
     >::type
-    acquired_async_suback_imp(
+    async_suback_imp(
         std::uint16_t packet_id,
         std::uint8_t qos, Args&&... args) {
         std::vector<std::uint8_t> params;
@@ -2327,7 +2327,7 @@ private:
             async_handler_t
         >::value
     >::type
-    acquired_async_suback_imp(
+    async_suback_imp(
         std::uint16_t packet_id,
         std::uint8_t qos, Args&&... args) {
         std::vector<std::uint8_t> params;
