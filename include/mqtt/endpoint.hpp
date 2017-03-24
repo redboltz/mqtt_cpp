@@ -2087,9 +2087,9 @@ public:
     bool handle_close_or_error(boost::system::error_code const& ec) {
         if (!ec) return false;
         if (connected_) {
-            shutdown_from_server(*socket_);
             connected_ = false;
             mqtt_connected_ = false;
+            shutdown_from_server(*socket_);
         }
         if (ec == as::error::eof ||
             ec == as::error::connection_reset
