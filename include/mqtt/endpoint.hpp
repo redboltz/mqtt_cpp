@@ -702,9 +702,9 @@ public:
      */
     void force_disconnect() {
         if (connected_) {
-            shutdown_from_client(*socket_);
             connected_ = false;
             mqtt_connected_ = false;
+            shutdown_from_client(*socket_);
         }
     }
 
@@ -2086,9 +2086,11 @@ public:
 
     bool handle_close_or_error(boost::system::error_code const& ec) {
         if (!ec) return false;
-        connected_ = false;
-        mqtt_connected_ = false;
-        shutdown_from_server(*socket_);
+        if (connected_) {
+            shutdown_from_server(*socket_);
+            connected_ = false;
+            mqtt_connected_ = false;
+        }
         if (ec == as::error::eof ||
             ec == as::error::connection_reset
 #if defined(MQTT_USE_WS)
@@ -3677,6 +3679,7 @@ private:
              expected_(expected)
         {}
         void operator()(boost::system::error_code const& ec) const {
+            if (!self_->connected_) return;
             if (func_) func_(ec);
             if (ec) { // Error is handled by async_read.
                 self_->queue_.clear();
@@ -3690,6 +3693,7 @@ private:
         void operator()(
             boost::system::error_code const& ec,
             std::size_t bytes_transferred) const {
+            if (!self_->connected_) return;
             if (func_) func_(ec);
             if (ec) { // Error is handled by async_read.
                 self_->queue_.clear();
