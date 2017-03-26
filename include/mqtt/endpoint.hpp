@@ -2184,6 +2184,7 @@ protected:
                 [this, self, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
+                    auto lifetime_keeper = self;
                     if (handle_close_or_error(ec)) {
                         if (func) func(ec);
                         return;
@@ -2450,6 +2451,7 @@ private:
                 [this, self, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
+                    auto lifetime_keeper = self;
                     if (handle_close_or_error(ec)) {
                         if (func) func(ec);
                         return;
@@ -2477,6 +2479,7 @@ private:
                     [this, self, func](
                         boost::system::error_code const& ec,
                         std::size_t bytes_transferred){
+                        auto lifetime_keeper = self;
                         if (handle_close_or_error(ec)) {
                             if (func) func(ec);
                             return;
@@ -2503,6 +2506,7 @@ private:
                     [this, self, func](
                         boost::system::error_code const& ec,
                         std::size_t bytes_transferred){
+                        auto lifetime_keeper = self;
                         if (handle_close_or_error(ec)) {
                             if (func) func(ec);
                             return;
