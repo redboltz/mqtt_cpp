@@ -690,7 +690,7 @@ public:
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
      */
     void disconnect() {
-        if (connected_) {
+        if (connected_ && mqtt_connected_) {
             send_disconnect();
         }
     }
@@ -1112,7 +1112,7 @@ public:
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
      */
     void pingreq() {
-        send_pingreq();
+        if (connected_ && mqtt_connected_) send_pingreq();
     }
 
     /**
@@ -1451,7 +1451,7 @@ public:
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
      */
     void async_disconnect(async_handler_t const& func = async_handler_t()) {
-        if (connected_) {
+        if (connected_ && mqtt_connected_) {
             async_send_disconnect(func);
         }
     }
@@ -1946,7 +1946,7 @@ public:
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
      */
     void async_pingreq(async_handler_t const& func = async_handler_t()) {
-        async_send_pingreq(func);
+        if (connected_ && mqtt_connected_) async_send_pingreq(func);
     }
 
     /**
