@@ -207,14 +207,23 @@ public:
             base::socket()->lowest_layer(), it,
             [this, self, func]
             (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
-                base::set_close_handler([this](){ handle_close(); });
-                base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
+                base::set_close_handler([this, self](){
+                        auto lifetime_keeper = self;
+                        handle_close();
+                    }
+                );
+                base::set_error_handler([this, self](boost::system::error_code const& ec){
+                        auto lifetime_keeper = self;
+                        handle_error(ec);
+                    }
+                );
                 if (!ec) {
                     base::set_connect();
                     if (ping_duration_ms_ != 0) {
                         tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
                         tim_->async_wait(
                             [this, self](boost::system::error_code const& ec) {
+                                auto lifetime_keeper = self;
                                 handle_timer(ec);
                             }
                         );
@@ -242,14 +251,23 @@ public:
             base::socket()->lowest_layer(), it,
             [this, self, func]
             (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
-                base::set_close_handler([this](){ handle_close(); });
-                base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
+                base::set_close_handler([this, self](){
+                        auto lifetime_keeper = self;
+                        handle_close();
+                    }
+                );
+                base::set_error_handler([this, self](boost::system::error_code const& ec){
+                        auto lifetime_keeper = self;
+                        handle_error(ec);
+                    }
+                );
                 if (!ec) {
                     base::set_connect();
                     if (ping_duration_ms_ != 0) {
                         tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
                         tim_->async_wait(
                             [this, self](boost::system::error_code const& ec) {
+                                auto lifetime_keeper = self;
                                 handle_timer(ec);
                             }
                         );
@@ -449,6 +467,7 @@ private:
             auto self = this->shared_from_this();
             tim_->async_wait(
                 [this, self](boost::system::error_code const& ec) {
+                    auto lifetime_keeper = self;
                     handle_timer(ec);
                 }
             );
