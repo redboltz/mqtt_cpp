@@ -207,8 +207,8 @@ public:
             base::socket()->lowest_layer(), it,
             [this, self, func]
             (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
-                base::set_close_handler([this](){ handle_close(); });
-                base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
+                base::set_close_handler([this, self](){ handle_close(); });
+                base::set_error_handler([this, self](boost::system::error_code const& ec){ handle_error(ec); });
                 if (!ec) {
                     base::set_connect();
                     if (ping_duration_ms_ != 0) {
@@ -242,8 +242,8 @@ public:
             base::socket()->lowest_layer(), it,
             [this, self, func]
             (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
-                base::set_close_handler([this](){ handle_close(); });
-                base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
+                base::set_close_handler([this, self](){ handle_close(); });
+                base::set_error_handler([this, self](boost::system::error_code const& ec){ handle_error(ec); });
                 if (!ec) {
                     base::set_connect();
                     if (ping_duration_ms_ != 0) {
