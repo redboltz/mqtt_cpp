@@ -213,9 +213,12 @@ public:
                     base::set_connect();
                     if (ping_duration_ms_ != 0) {
                         tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
+                        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(self));
                         tim_->async_wait(
-                            [this, self](boost::system::error_code const& ec) {
-                                handle_timer(ec);
+                            [wp](boost::system::error_code const& ec) {
+                                if (auto sp = wp.lock()) {
+                                    sp->handle_timer(ec);
+                                }
                             }
                         );
                     }
@@ -248,9 +251,12 @@ public:
                     base::set_connect();
                     if (ping_duration_ms_ != 0) {
                         tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
+                        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(self));
                         tim_->async_wait(
-                            [this, self](boost::system::error_code const& ec) {
-                                handle_timer(ec);
+                            [wp](boost::system::error_code const& ec) {
+                                if (auto sp = wp.lock()) {
+                                    sp->handle_timer(ec);
+                                }
                             }
                         );
                     }
@@ -268,17 +274,22 @@ public:
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
      */
     void disconnect() {
+        if (ping_duration_ms_ != 0) tim_->cancel();
         if (base::connected()) {
-            if (ping_duration_ms_ != 0) tim_->cancel();
             base::disconnect();
         }
     }
 
     void async_disconnect() {
+        if (ping_duration_ms_ != 0) tim_->cancel();
         if (base::connected()) {
-            if (ping_duration_ms_ != 0) tim_->cancel();
             base::async_disconnect();
         }
+    }
+
+    void force_disconnect() {
+        if (ping_duration_ms_ != 0) tim_->cancel();
+        base::force_disconnect();
     }
 
     /**
@@ -446,10 +457,12 @@ private:
         if (!ec) {
             base::pingreq();
             tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
-            auto self = this->shared_from_this();
+            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
             tim_->async_wait(
-                [this, self](boost::system::error_code const& ec) {
-                    handle_timer(ec);
+                [wp](boost::system::error_code const& ec) {
+                    if (auto sp = wp.lock()) {
+                        sp->handle_timer(ec);
+                    }
                 }
             );
         }
