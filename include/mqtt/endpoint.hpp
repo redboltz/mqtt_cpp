@@ -2221,20 +2221,17 @@ private:
     template <typename T>
     void shutdown_from_client(as::ssl::stream<T>& socket) {
         boost::system::error_code ec;
-        socket.shutdown(ec);
         socket.lowest_layer().close(ec);
     }
     template <typename T>
     void shutdown_from_server(as::ssl::stream<T>& socket) {
         boost::system::error_code ec;
-        socket.shutdown(ec);
         socket.lowest_layer().close(ec);
     }
 #if defined(MQTT_USE_WS)
     template <typename T>
     void shutdown_from_client(ws_endpoint<as::ssl::stream<T>>& socket) {
         boost::system::error_code ec;
-        socket.next_layer().shutdown(ec);
         socket.lowest_layer().close(ec);
     }
     template <typename T>
