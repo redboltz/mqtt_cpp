@@ -701,11 +701,9 @@ public:
      * When the endpoint disconnects using force_disconnect(), a will will send.<BR>
      */
     void force_disconnect() {
-        if (connected_) {
-            connected_ = false;
-            mqtt_connected_ = false;
-            shutdown_from_client(*socket_);
-        }
+        connected_ = false;
+        mqtt_connected_ = false;
+        shutdown_from_client(*socket_);
     }
 
 
