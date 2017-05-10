@@ -148,6 +148,12 @@ public:
     void set_ca_cert_file(std::string file) {
         ctx_.load_verify_file(std::move(file));
     }
+    void add_verify_path(std::string path) {
+        ctx_.add_verify_path(path);
+    }
+    void set_verify_depth(int depth) {
+        ctx_.set_verify_depth(depth);
+    }
     void set_client_cert_file(std::string file) {
         ctx_.use_certificate_file(std::move(file), as::ssl::context::pem);
     }
