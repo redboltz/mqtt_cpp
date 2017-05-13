@@ -2200,7 +2200,7 @@ private:
     template <typename T>
     void shutdown_from_client(T& socket) {
         boost::system::error_code ec;
-        socket.close(ec);
+        socket.lowest_layer().close(ec);
     }
 
     template <typename T>

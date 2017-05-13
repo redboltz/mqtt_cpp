@@ -29,7 +29,7 @@ public:
         ws_.set_option(beast::websocket::message_type{beast::websocket::opcode::binary});
     }
 
-    void close(boost::system::error_code ec) {
+    void close(boost::system::error_code& ec) {
         ws_.close(beast::websocket::close_code::normal, ec);
         if (ec) return;
         do {
