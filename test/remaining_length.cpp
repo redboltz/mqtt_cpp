@@ -14,7 +14,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
     fixture_clear_retain();
     std::string test_contents;
     for (std::size_t i = 0; i < 128; ++i) {
-        test_contents.push_back(i);
+        test_contents.push_back(static_cast<char>(i));
     }
 
     boost::asio::io_service ios;
@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
     fixture_clear_retain();
     std::string test_contents;
     for (std::size_t i = 0; i < 16384; ++i) {
-        test_contents.push_back(i);
+        test_contents.push_back(static_cast<char>(i & 0xff));
     }
 
     boost::asio::io_service ios;
