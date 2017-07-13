@@ -15,7 +15,7 @@ namespace publish {
 
 inline
 constexpr bool is_dup(std::uint8_t v) {
-    return v & 0b00001000;
+    return (v & 0b00001000) != 0;
 }
 
 inline
@@ -24,7 +24,7 @@ constexpr std::uint8_t get_qos(std::uint8_t v) {
 }
 
 constexpr bool is_retain(std::uint8_t v) {
-    return v & 0b00000001;
+    return (v & 0b00000001) != 0;
 }
 
 } // namespace publish
