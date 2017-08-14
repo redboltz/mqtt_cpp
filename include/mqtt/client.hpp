@@ -145,6 +145,10 @@ public:
     make_tls_client_no_strand_ws(as::io_service& ios, std::string host, std::string port, std::string path);
 #endif // defined(MQTT_USE_WS)
 
+    void set_default_verify_paths() {
+        ctx_.set_default_verify_paths();
+    }
+
     void set_ca_cert_file(std::string file) {
         ctx_.load_verify_file(std::move(file));
     }
