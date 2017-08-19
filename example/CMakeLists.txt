@@ -1,12 +1,32 @@
 LIST (APPEND exec_PROGRAMS
-    no_tls.cpp
+    no_tls_client.cpp
+    no_tls_server.cpp
+    no_tls_both.cpp
 )
 
 IF (NOT MQTT_NO_TLS)
-   LIST (APPEND exec_PROGRAMS
-        tls.cpp
-   )
+    LIST (APPEND exec_PROGRAMS
+        tls_client.cpp
+        tls_server.cpp
+        tls_both.cpp
+    )
 ENDIF ()
+
+IF (MQTT_USE_WS)
+    LIST (APPEND exec_PROGRAMS
+        no_tls_ws_client.cpp
+        no_tls_ws_server.cpp
+        no_tls_ws_both.cpp
+    )
+    IF (NOT MQTT_NO_TLS)
+        LIST (APPEND exec_PROGRAMS
+            tls_ws_client.cpp
+            tls_ws_server.cpp
+            tls_ws_both.cpp
+        )
+    ENDIF ()
+ENDIF ()
+
 
 FOREACH (source_file ${exec_PROGRAMS})
     GET_FILENAME_COMPONENT (source_file_we ${source_file} NAME_WE)
@@ -33,4 +53,7 @@ FOREACH (source_file ${exec_PROGRAMS})
                       APPEND_STRING PROPERTY COMPILE_FLAGS "-std=c++14 -Wall -Wextra -pthread -g -O0")
     ENDIF ()
 ENDFOREACH ()
-FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../mosquitto.org.crt DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../test/certs/mosquitto.org.crt DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../test/certs/server.crt.pem DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../test/certs/server.key.pem DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../test/certs/cacert.pem DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

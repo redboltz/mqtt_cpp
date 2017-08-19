@@ -2211,7 +2211,7 @@ private:
 
 #if defined(MQTT_USE_WS)
     template <typename T>
-    void shutdown_from_server(ws_endpoint<T>& socket) {
+    void shutdown_from_server(ws_endpoint<T>& /*socket*/) {
     }
 #endif // defined(MQTT_USE_WS)
 
@@ -2233,7 +2233,7 @@ private:
         socket.lowest_layer().close(ec);
     }
     template <typename T>
-    void shutdown_from_server(ws_endpoint<as::ssl::stream<T>>& socket) {
+    void shutdown_from_server(ws_endpoint<as::ssl::stream<T>>& /*socket*/) {
     }
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_NO_TLS)

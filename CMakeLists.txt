@@ -12,6 +12,10 @@ ELSE ()
     FIND_PACKAGE (OpenSSL)
 ENDIF ()
 
+IF (MQTT_USE_WS)
+    SET (CMAKE_CXX_FLAGS "-DMQTT_USE_WS ${CMAKE_CXX_FLAGS}")
+ENDIF ()
+
 SET (Boost_USE_STATIC_LIBS        ON) # only find static libs
 SET (Boost_USE_MULTITHREADED      ON)
 # SET (Boost_USE_STATIC_RUNTIME    OFF)
