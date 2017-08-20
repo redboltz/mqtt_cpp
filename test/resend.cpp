@@ -3,7 +3,10 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
+
 #include "test_settings.hpp"
+#include "test_broker.hpp"
+#include "test_server_no_tls.hpp"
 
 #include <mqtt/client.hpp>
 
@@ -11,8 +14,10 @@ BOOST_AUTO_TEST_SUITE(test_resend)
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     boost::asio::io_service ios;
+    test_broker b;
+    test_server_no_tls s(ios, b);
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c->set_client_id(cid1());
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -29,7 +34,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 break;
             case 2:
                 BOOST_TEST(sp == false);
-                pid_pub = c->publish_at_least_once(topic_base() + "/topic1", "topic1_contents");
+                pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
                 c->force_disconnect();
                 break;
             case 4:
@@ -42,7 +47,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             return true;
         });
     c->set_close_handler(
-        [&order, &c]
+        [&order, &c, &s]
         () {
             switch (order++) {
             case 1:
@@ -50,6 +55,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 c->connect();
                 break;
             case 6:
+                s.close();
                 break;
             default:
                 BOOST_CHECK(false);
@@ -77,8 +83,10 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
     boost::asio::io_service ios;
+    test_broker b;
+    test_server_no_tls s(ios, b);
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c->set_client_id(cid1());
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -95,7 +103,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 break;
             case 2:
                 BOOST_TEST(sp == false);
-                pid_pub = c->publish_exactly_once(topic_base() + "/topic1", "topic1_contents");
+                pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
                 c->force_disconnect();
                 break;
             case 4:
@@ -108,7 +116,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             return true;
         });
     c->set_close_handler(
-        [&order, &c]
+        [&order, &c, &s]
         () {
             switch (order++) {
             case 1:
@@ -116,6 +124,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 c->connect();
                 break;
             case 7:
+                s.close();
                 break;
             default:
                 BOOST_CHECK(false);
@@ -150,8 +159,10 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
     boost::asio::io_service ios;
+    test_broker b;
+    test_server_no_tls s(ios, b);
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c->set_client_id(cid1());
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -168,7 +179,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 break;
             case 2:
                 BOOST_TEST(sp == false);
-                pid_pub = c->publish_exactly_once(topic_base() + "/topic1", "topic1_contents");
+                pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
                 break;
             case 5:
                 BOOST_TEST(sp == true);
@@ -180,7 +191,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             return true;
         });
     c->set_close_handler(
-        [&order, &c]
+        [&order, &c, &s]
         () {
             switch (order++) {
             case 1:
@@ -188,6 +199,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 c->connect();
                 break;
             case 7:
+                s.close();
                 break;
             default:
                 BOOST_CHECK(false);
@@ -229,8 +241,10 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
     boost::asio::io_service ios;
+    test_broker b;
+    test_server_no_tls s(ios, b);
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c->set_client_id(cid1());
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -247,7 +261,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                 break;
             case 2:
                 BOOST_TEST(sp == false);
-                pid_pub = c->publish_exactly_once(topic_base() + "/topic1", "topic1_contents");
+                pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
                 c->force_disconnect();
                 break;
             case 4:
@@ -263,7 +277,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
             return true;
         });
     c->set_close_handler(
-        [&order, &c]
+        [&order, &c, &s]
         () {
             switch (order++) {
             case 1:
@@ -271,6 +285,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                 c->connect();
                 break;
             case 9:
+                s.close();
                 break;
             default:
                 BOOST_CHECK(false);
@@ -321,8 +336,10 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     boost::asio::io_service ios;
+    test_broker b;
+    test_server_no_tls s(ios, b);
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c->set_client_id(cid1());
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_pub1;
@@ -340,8 +357,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 break;
             case 2:
                 BOOST_TEST(sp == false);
-                pid_pub1 = c->publish_at_least_once(topic_base() + "/topic1", "topic1_contents1");
-                pid_pub2 = c->publish_at_least_once(topic_base() + "/topic1", "topic1_contents2");
+                pid_pub1 = c->publish_at_least_once("topic1", "topic1_contents1");
+                pid_pub2 = c->publish_at_least_once("topic1", "topic1_contents2");
                 c->force_disconnect();
                 break;
             case 4:
@@ -354,7 +371,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             return true;
         });
     c->set_close_handler(
-        [&order, &c]
+        [&order, &c, &s]
         () {
             switch (order++) {
             case 1:
@@ -362,6 +379,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 c->connect();
                 break;
             case 7:
+                s.close();
                 break;
             default:
                 BOOST_CHECK(false);
@@ -369,10 +387,19 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             }
         });
     c->set_error_handler(
-        [&order, &c]
+        [&order, &c, &s]
         (boost::system::error_code const&) {
-            BOOST_TEST(order++ == 3);
-            c->connect();
+            switch (order++) {
+            case 3:
+                c->connect();
+                break;
+            case 7:
+                s.close();
+                break;
+            default:
+                BOOST_CHECK(false);
+                break;
+            }
         });
     c->set_puback_handler(
         [&order, &c, &pid_pub1, &pid_pub2]
