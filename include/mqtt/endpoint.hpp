@@ -2650,7 +2650,7 @@ private:
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
-            std::string will_message(payload_.data() + i, topic_name_length);
+            std::string will_message(payload_.data() + i, will_message_length);
             i += will_message_length;
             w = will(topic_name,
                      will_message,
