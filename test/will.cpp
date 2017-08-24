@@ -22,6 +22,10 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
     c1->set_clean_session(true);
     c1->set_will(
         mqtt::will("topic1", "will_contents"));
+    int c1fd_count = 0;
+    auto c1_force_disconnect = [&c1, &c1fd_count] {
+        if (++c1fd_count == 2) c1->force_disconnect();
+    };
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
     c2->set_client_id("cid2");
@@ -29,11 +33,12 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
 
     int order1 = 0;
     c1->set_connack_handler(
-        [&order1, &c1]
+        [&order1, &c1_force_disconnect]
         (bool sp, std::uint8_t connack_return_code) {
             BOOST_TEST(order1++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+            c1_force_disconnect();
             return true;
         });
     c1->set_close_handler(
@@ -73,13 +78,13 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             s.close();
         });
     c2->set_suback_handler(
-        [&order2, &c2, &c1, &pid_sub2]
+        [&order2, &c2, &c1_force_disconnect, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
-            c1->force_disconnect();
+            c1_force_disconnect();
             return true;
         });
     c2->set_unsuback_handler(
@@ -125,6 +130,10 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
     c1->set_clean_session(true);
     c1->set_will(
         mqtt::will("topic1", "will_contents", mqtt::qos::at_least_once));
+    int c1fd_count = 0;
+    auto c1_force_disconnect = [&c1, &c1fd_count] {
+        if (++c1fd_count == 2) c1->force_disconnect();
+    };
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
     c2->set_client_id("cid2");
@@ -132,11 +141,12 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
 
     int order1 = 0;
     c1->set_connack_handler(
-        [&order1, &c1]
+        [&order1, &c1_force_disconnect]
         (bool sp, std::uint8_t connack_return_code) {
             BOOST_TEST(order1++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+            c1_force_disconnect();
             return true;
         });
     c1->set_close_handler(
@@ -175,13 +185,13 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             BOOST_CHECK(false);
         });
     c2->set_suback_handler(
-        [&order2, &c2, &c1, &pid_sub2]
+        [&order2, &c2, &c1_force_disconnect, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
-            c1->force_disconnect();
+            c1_force_disconnect();
             return true;
         });
     c2->set_unsuback_handler(
@@ -227,6 +237,10 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
     c1->set_clean_session(true);
     c1->set_will(
         mqtt::will("topic1", "will_contents", mqtt::qos::exactly_once));
+    int c1fd_count = 0;
+    auto c1_force_disconnect = [&c1, &c1fd_count] {
+        if (++c1fd_count == 2) c1->force_disconnect();
+    };
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
     c2->set_client_id("cid2");
@@ -234,11 +248,12 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
 
     int order1 = 0;
     c1->set_connack_handler(
-        [&order1, &c1]
+        [&order1, &c1_force_disconnect]
         (bool sp, std::uint8_t connack_return_code) {
             BOOST_TEST(order1++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+            c1_force_disconnect();
             return true;
         });
     c1->set_close_handler(
@@ -278,13 +293,13 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             s.close();
         });
     c2->set_suback_handler(
-        [&order2, &c2, &c1, &pid_sub2]
+        [&order2, &c2, &c1_force_disconnect, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::exactly_once);
-            c1->force_disconnect();
+            c1_force_disconnect();
             return true;
         });
     c2->set_unsuback_handler(
@@ -330,6 +345,10 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
     c1->set_clean_session(true);
     c1->set_will(
         mqtt::will("topic1", "will_contents", true));
+    int c1fd_count = 0;
+    auto c1_force_disconnect = [&c1, &c1fd_count] {
+        if (++c1fd_count == 2) c1->force_disconnect();
+    };
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
     c2->set_client_id("cid2");
@@ -337,11 +356,12 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
 
     int order1 = 0;
     c1->set_connack_handler(
-        [&order1, &c1]
+        [&order1, &c1_force_disconnect]
         (bool sp, std::uint8_t connack_return_code) {
             BOOST_TEST(order1++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+            c1_force_disconnect();
             return true;
         });
     c1->set_close_handler(
@@ -381,14 +401,14 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
             s.close();
         });
     c2->set_suback_handler(
-        [&order2, &c2, &c1, &pid_sub2]
+        [&order2, &c2, &c1_force_disconnect, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             switch (order2++) {
             case 1:
-                c1->force_disconnect();
+                c1_force_disconnect();
                 break;
             case 4:
                 break;
