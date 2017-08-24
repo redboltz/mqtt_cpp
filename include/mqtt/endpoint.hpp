@@ -304,8 +304,8 @@ public:
     endpoint& operator=(endpoint&&) = delete;
 
     /**
-     * @breif Set endpoint id.
-     * @param id endpoint id
+     * @breif Set client id.
+     * @param id client id
      *
      * This function should be called before calling connect().<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718031<BR>
@@ -313,6 +313,17 @@ public:
      */
     void set_client_id(std::string id) {
         client_id_ = std::move(id);
+    }
+
+    /**
+     * @breif Get client id.
+     *
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718031<BR>
+     * 3.1.3.1 Client Identifier
+     * @return client id
+     */
+    std::string const& client_id() const {
+        return client_id_;
     }
 
     /**
@@ -326,6 +337,18 @@ public:
      */
     void set_clean_session(bool cs) {
         clean_session_ = cs;
+    }
+
+    /**
+     * @breif Get clean session.
+     *
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718029<BR>
+     * 3.1.2.4 Clean Session<BR>
+     * After constructing a endpoint, the clean session is set to false.
+     * @return clean session
+     */
+    bool clean_session() const {
+        return clean_session_;
     }
 
     /**
@@ -2211,7 +2234,7 @@ private:
 
 #if defined(MQTT_USE_WS)
     template <typename T>
-    void shutdown_from_server(ws_endpoint<T>& socket) {
+    void shutdown_from_server(ws_endpoint<T>& /*socket*/) {
     }
 #endif // defined(MQTT_USE_WS)
 
@@ -2233,7 +2256,7 @@ private:
         socket.lowest_layer().close(ec);
     }
     template <typename T>
-    void shutdown_from_server(ws_endpoint<as::ssl::stream<T>>& socket) {
+    void shutdown_from_server(ws_endpoint<as::ssl::stream<T>>& /*socket*/) {
     }
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_NO_TLS)
@@ -2628,10 +2651,10 @@ private:
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return false;
         }
-        std::string client_id(payload_.data() + i, client_id_length);
+        client_id_.assign(payload_.data() + i, client_id_length);
         i += client_id_length;
 
-        bool clean_session = connect_flags::has_clean_session(byte8);
+        clean_session_ = connect_flags::has_clean_session(byte8);
         boost::optional<will> w;
         if (connect_flags::has_will_flag(byte8)) {
             std::uint16_t topic_name_length;
@@ -2650,7 +2673,7 @@ private:
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
-            std::string will_message(payload_.data() + i, topic_name_length);
+            std::string will_message(payload_.data() + i, will_message_length);
             i += will_message_length;
             w = will(topic_name,
                      will_message,
@@ -2683,7 +2706,7 @@ private:
         }
         mqtt_connected_ = true;
         if (h_connect_) {
-            if (h_connect_(client_id, user_name, password, std::move(w), clean_session, keep_alive)) {
+            if (h_connect_(client_id_, user_name, password, std::move(w), clean_session_, keep_alive)) {
                 return true;
             }
             return false;

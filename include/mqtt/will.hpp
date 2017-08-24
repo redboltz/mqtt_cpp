@@ -31,7 +31,7 @@ public:
     will(std::string topic,
          std::string message,
          bool retain,
-         std::size_t qos)
+         std::uint8_t qos)
         :topic_(std::move(topic)),
          message_(std::move(message)),
          retain_(retain),
@@ -84,14 +84,14 @@ public:
     bool retain() const {
         return retain_;
     }
-    std::size_t qos() const {
+    std::uint8_t qos() const {
         return qos_;
     }
 private:
     std::string topic_;
     std::string message_;
     bool retain_ = false;
-    std::size_t qos_ = 0;
+    std::uint8_t qos_ = 0;
 };
 
 } // namespace mqtt
