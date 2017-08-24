@@ -1,3 +1,16 @@
+## 1.0.5
+* Renamed to `mqtt_cpp` from `mqtt_client_cpp`. (#88)
+* Improved tests. (#87)
+* Added MQTT server functionality (#84)
+* Supressed warnings. (#82)
+* Fixed WebSocket close. (#81)
+* Added tls context settings. (#80, #83)
+* Fixed force_disconnect. (#79)
+* Removed TLS manual shutdown call. (#78)
+* Fixed timer management algorithm. (#76)
+* Fixed pingreq sending timing. (#75)
+* Added bad timming mqtt command receiving guard. (#70)
+
 ## 1.0.4
 * Added offline publish (Clean Session: false, qos: at_least_once, exactly_once). (#69)
 * Prepared for OpenSSL 1.1.0 support. (#68)
