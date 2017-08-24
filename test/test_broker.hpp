@@ -305,7 +305,6 @@ private:
             }
         }
 
-        con.force_disconnect();
         auto& idx = cons_.get<tag_con>();
         idx.erase(con.shared_from_this());
         {
@@ -361,7 +360,7 @@ private:
             >
         >
     >;
-    
+
     struct sub_con {
         sub_con(std::string const& topic, con_sp_t const& con, std::uint8_t qos)
             :topic(topic), con(con), qos(qos) {}
