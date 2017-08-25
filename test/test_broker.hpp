@@ -32,6 +32,14 @@ using con_sp_t = boost::variant<
     ,
     std::shared_ptr<mqtt::server_tls<>::endpoint_t>
 #endif // !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_WS)
+    ,
+    std::shared_ptr<mqtt::server_ws<>::endpoint_t>
+#if !defined(MQTT_NO_TLS)
+    ,
+    std::shared_ptr<mqtt::server_tls_ws<>::endpoint_t>
+#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_WS)
 >;
 
 class test_broker {

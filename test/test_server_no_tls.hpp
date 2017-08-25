@@ -7,15 +7,6 @@
 #if !defined(MQTT_TEST_SERVER_NO_TLS_HPP)
 #define MQTT_TEST_SERVER_NO_TLS_HPP
 
-#include <iostream>
-#include <set>
-
-#include <boost/lexical_cast.hpp>
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/multi_index/member.hpp>
-#include <boost/multi_index/identity.hpp>
-
 #include <mqtt_server_cpp.hpp>
 #include "test_settings.hpp"
 #include "test_broker.hpp"

@@ -256,7 +256,7 @@ public:
         : s_(std::forward<T>(s)) {
     }
     template<bool isRequest, class Headers>
-    void operator()(beast::http::header<isRequest, Headers>& m) const {
+    void operator()(boost::beast::http::header<isRequest, Headers>& m) const {
         m.fields.replace("Sec-WebSocket-Protocol", s_);
     }
 private:
@@ -347,8 +347,8 @@ private:
                     return;
                 }
                 auto sb = std::make_shared<boost::asio::streambuf>();
-                auto request = std::make_shared<beast::http::request<beast::http::string_body>>();
-                beast::http::async_read(
+                auto request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
+                boost::beast::http::async_read(
                     socket_->next_layer(),
                     *sb,
                     *request,
@@ -358,20 +358,19 @@ private:
                             if (h_error_) h_error_(ec);
                             return;
                         }
-                        if (!beast::http::is_upgrade(*request)) {
+                        if (!boost::beast::websocket::is_upgrade(*request)) {
                             if (h_error_) h_error_(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                             return;
                         }
-                        auto it = request->fields.find("Sec-WebSocket-Protocol");
-                        if (it != request->fields.end()) {
-                            socket_->set_option(
-                                beast::websocket::decorate(
-                                    set_subprotocols{it->second}
-                                )
-                            );
-                        }
-                        socket_->async_accept(
+                        socket_->async_accept_ex(
                             *request,
+                            [request]
+                            (boost::beast::websocket::response_type& m) {
+                                auto it = request->find("Sec-WebSocket-Protocol");
+                                if (it != request->end()) {
+                                    m.insert(it->name(), it->value());
+                                }
+                            },
                             [this]
                             (boost::system::error_code const& ec) {
                                 if (ec) {
@@ -500,8 +499,8 @@ private:
                             return;
                         }
                         auto sb = std::make_shared<boost::asio::streambuf>();
-                        auto request = std::make_shared<beast::http::request<beast::http::string_body>>();
-                        beast::http::async_read(
+                        auto request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
+                        boost::beast::http::async_read(
                             socket_->next_layer(),
                             *sb,
                             *request,
@@ -511,20 +510,19 @@ private:
                                     if (h_error_) h_error_(ec);
                                     return;
                                 }
-                                if (!beast::http::is_upgrade(*request)) {
+                                if (!boost::beast::websocket::is_upgrade(*request)) {
                                     if (h_error_) h_error_(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                                     return;
                                 }
-                                auto it = request->fields.find("Sec-WebSocket-Protocol");
-                                if (it != request->fields.end()) {
-                                    socket_->set_option(
-                                        beast::websocket::decorate(
-                                            set_subprotocols{it->second}
-                                        )
-                                    );
-                                }
-                                socket_->async_accept(
+                                socket_->async_accept_ex(
                                     *request,
+                                    [request]
+                                    (boost::beast::websocket::response_type& m) {
+                                        auto it = request->find("Sec-WebSocket-Protocol");
+                                        if (it != request->end()) {
+                                            m.insert(it->name(), it->value());
+                                        }
+                                    },
                                     [this]
                                     (boost::system::error_code const& ec) {
                                         if (ec) {

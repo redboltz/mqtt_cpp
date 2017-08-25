@@ -21,13 +21,36 @@ matrix:
   include:
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_NO_TLS=ON"
+      env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON"
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_NO_TLS=OFF"
+      env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=OFF"
+    - os: osx
+      compiler: clang
+      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=ON"
+    - os: osx
+      compiler: clang
+      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF"
     - os: linux
       compiler: clang
-      env: FLAGS="-DMQTT_NO_TLS=ON"
+      env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.7
+            - llvm-toolchain-precise
+          packages:
+            - g++-multilib
+            - gcc-multilib
+            - gcc-5-multilib
+            - g++-5-multilib
+            - bzip2
+            - clang-3.7
+            - libc6-dbg
+    - os: linux
+      compiler: clang
+      env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=OFF"
       addons:
         apt:
           sources:
@@ -44,7 +67,21 @@ matrix:
             - libc6-dbg
     - os: linux
       compiler: gcc
-      env: FLAGS="-DMQTT_NO_TLS=OFF"
+      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=ON"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-multilib
+            - gcc-multilib
+            - gcc-6-multilib
+            - g++-6-multilib
+            - bzip2
+            - libc6-dbg
+    - os: linux
+      compiler: gcc
+      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF"
       addons:
         apt:
           sources:
