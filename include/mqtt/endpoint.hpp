@@ -2833,12 +2833,12 @@ private:
                     }
                 );
             };
-            auto it = qos2_publish_handled_.find(*packet_id);
-            if (it == qos2_publish_handled_.end()) {
-                std::string contents(payload_.data() + i, payload_.size() - i);
-                if (h_publish_) {
+            if (h_publish_) {
+                auto it = qos2_publish_handled_.find(*packet_id);
+                if (it == qos2_publish_handled_.end()) {
                     std::string contents(payload_.data() + i, payload_.size() - i);
                     if (h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents))) {
+                        qos2_publish_handled_.emplace(*packet_id);
                         res();
                         return true;
                     }
