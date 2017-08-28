@@ -7,13 +7,18 @@ IF ((CMAKE_VERSION VERSION_GREATER 3.1) OR
 ENDIF ()
 
 IF (MQTT_NO_TLS)
+    MESSAGE (STATUS "TLS disabled")
     SET (CMAKE_CXX_FLAGS "-DMQTT_NO_TLS ${CMAKE_CXX_FLAGS}")
 ELSE ()
+    MESSAGE (STATUS "TLS enabled")
     FIND_PACKAGE (OpenSSL)
 ENDIF ()
 
 IF (MQTT_USE_WS)
+    MESSAGE (STATUS "WebSocket enabled")
     SET (CMAKE_CXX_FLAGS "-DMQTT_USE_WS ${CMAKE_CXX_FLAGS}")
+ELSE ()
+    MESSAGE (STATUS "WebSocket disabled")
 ENDIF ()
 
 SET (Boost_USE_STATIC_LIBS        ON) # only find static libs
@@ -23,7 +28,7 @@ FIND_PACKAGE (Boost 1.59.0 COMPONENTS chrono timer test_exec_monitor system)
 FIND_PACKAGE (Threads)
 
 IF (NOT MQTT_BEAST_INCLUDE_DIR)
-    SET (MQTT_BEAST_INCLUDE_DIR "external/Beast/include")
+    SET (MQTT_BEAST_INCLUDE_DIR "external/beast/include")
 ENDIF ()
 
 INCLUDE_DIRECTORIES (

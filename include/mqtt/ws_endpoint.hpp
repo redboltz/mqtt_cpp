@@ -8,10 +8,10 @@
 #define MQTT_WS_ENDPOINT_HPP
 
 #if !defined(MQTT_NO_TLS)
-#include <beast/websocket/ssl.hpp>
+#include <boost/beast/websocket/ssl.hpp>
 #endif // !defined(MQTT_NO_TLS)
 
-#include <beast/websocket.hpp>
+#include <boost/beast/websocket.hpp>
 
 #include <mqtt/utility.hpp>
 
@@ -26,18 +26,17 @@ public:
     ws_endpoint(as::io_service& ios, Args&&... args)
         :ws_(ios, std::forward<Args>(args)...),
          strand_(ios) {
-        ws_.set_option(beast::websocket::message_type{beast::websocket::opcode::binary});
+        ws_.binary(true);
     }
 
     void close(boost::system::error_code& ec) {
-        ws_.close(beast::websocket::close_code::normal, ec);
+        ws_.close(boost::beast::websocket::close_code::normal, ec);
         if (ec) return;
         do {
-            beast::streambuf sb;
-            beast::websocket::opcode op;
-            ws_.read(op, sb, ec);
+            boost::beast::multi_buffer buffer;
+            ws_.read(buffer, ec);
         } while (!ec);
-        if (ec != beast::websocket::error::closed) return;
+        if (ec != boost::beast::websocket::error::closed) return;
         ec = boost::system::errc::make_error_code(boost::system::errc::success);
     }
 
@@ -65,10 +64,18 @@ public:
         ws_.async_accept(buffers, std::forward<AcceptHandler>(handler));
     }
 
+    template<typename ConstBufferSequence, typename ResponseDecorator, typename AcceptHandler>
+    void async_accept_ex(
+        ConstBufferSequence const& buffers,
+        ResponseDecorator const& decorator,
+        AcceptHandler&& handler) {
+        ws_.async_accept_ex(buffers, decorator, std::forward<AcceptHandler>(handler));
+    }
+
     template<typename HandshakeHandler>
     void async_handshake(
-        boost::string_ref const& host,
-        boost::string_ref const& resource,
+        boost::string_view const& host,
+        boost::string_view const& resource,
         HandshakeHandler&& h) {
         ws_.async_handshake(host, resource, std::forward<HandshakeHandler>(h));
     }
@@ -83,9 +90,9 @@ public:
             std::function<void(boost::system::error_code const& ec, std::shared_ptr<void>)>;
 
         std::shared_ptr<beast_read_handler_t> beast_read_handler;
-        if (req_size <= sb_.size()) {
-            as::buffer_copy(buffers, sb_.data(), req_size);
-            sb_.consume(req_size);
+        if (req_size <= buffer_.size()) {
+            as::buffer_copy(buffers, buffer_.data(), req_size);
+            buffer_.consume(req_size);
             handler(boost::system::errc::make_error_code(boost::system::errc::success), req_size);
             return;
         }
@@ -98,35 +105,33 @@ public:
                         handler(ec, 0);
                         return;
                     }
-                    if (op_ != beast::websocket::opcode::binary) {
-                        sb_.consume(sb_.size());
+                    if (!ws_.got_binary()) {
+                        buffer_.consume(buffer_.size());
                         std::forward<ReadHandler>(handler)
                             (boost::system::errc::make_error_code(boost::system::errc::bad_message), 0);
                         return;
                     }
-                    if (req_size > sb_.size()) {
+                    if (req_size > buffer_.size()) {
                         auto beast_read_handler = std::static_pointer_cast<beast_read_handler_t>(v);
                         ws_.async_read(
-                            op_,
-                            sb_,
+                            buffer_,
                             [beast_read_handler]
-                            (boost::system::error_code const& ec) {
+                            (boost::system::error_code const& ec, std::size_t) {
                                 (*beast_read_handler)(ec, beast_read_handler);
                             }
                         );
                         return;
                     }
-                    as::buffer_copy(buffers, sb_.data(), req_size);
-                    sb_.consume(req_size);
+                    as::buffer_copy(buffers, buffer_.data(), req_size);
+                    buffer_.consume(req_size);
                     handler(boost::system::errc::make_error_code(boost::system::errc::success), req_size);
                 }
             )
         );
         ws_.async_read(
-            op_,
-            sb_,
+            buffer_,
             [beast_read_handler]
-            (boost::system::error_code const& ec) {
+            (boost::system::error_code const& ec, std::size_t) {
                 (*beast_read_handler)(ec, beast_read_handler);
             }
         );
@@ -154,9 +159,8 @@ public:
         ws_.async_write(buffers, std::forward<WriteHandler>(handler));
     }
 private:
-    beast::websocket::stream<Socket> ws_;
-    beast::websocket::opcode op_;
-    beast::streambuf sb_;
+    boost::beast::websocket::stream<Socket> ws_;
+    boost::beast::multi_buffer buffer_;
     as::io_service::strand strand_;
 };
 

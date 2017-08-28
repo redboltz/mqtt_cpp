@@ -17,5 +17,7 @@
 constexpr char const* broker_url = "localhost";
 constexpr uint16_t const broker_notls_port = 1883;
 constexpr uint16_t const broker_tls_port = 8883;
+constexpr uint16_t const broker_notls_ws_port = 10080;
+constexpr uint16_t const broker_tls_ws_port = 10443;
 
 #endif // MQTT_TEST_SETTINGS_HPP
