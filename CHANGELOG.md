@@ -1,3 +1,7 @@
+## 1.0.6
+* Update beast. (#90)
+* Fixed qos2 publish handler multiple call guard.(#89)
+
 ## 1.0.5
 * Renamed to `mqtt_cpp` from `mqtt_client_cpp`. (#88)
 * Improved tests. (#87)
