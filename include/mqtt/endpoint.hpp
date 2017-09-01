@@ -53,7 +53,7 @@ namespace mi = boost::multi_index;
 
 template <typename Socket, typename Strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
 class endpoint : public std::enable_shared_from_this<endpoint<Socket, Strand, Mutex, LockGuard>> {
-    using this_type = endpoint<Socket, Strand>;
+    using this_type = endpoint<Socket, Strand, Mutex, LockGuard>;
 public:
     using async_handler_t = std::function<void(boost::system::error_code const& ec)>;
 
@@ -299,9 +299,10 @@ public:
      */
     using disconnect_handler = std::function<void()>;
 
-    endpoint(endpoint&&) = delete;
-
-    endpoint& operator=(endpoint&&) = delete;
+    endpoint(this_type const&) = delete;
+    endpoint(this_type&&) = delete;
+    endpoint& operator=(this_type const&) = delete;
+    endpoint& operator=(this_type&&) = delete;
 
     /**
      * @breif Set client id.
