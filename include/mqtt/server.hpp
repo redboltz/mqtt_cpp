@@ -14,6 +14,8 @@
 #include <boost/asio/ssl.hpp>
 #endif // !defined(MQTT_NO_TLS)
 
+#include <mqtt/tcp_endpoint.hpp>
+
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
 #endif // defined(MQTT_USE_WS)
@@ -28,8 +30,8 @@ namespace as = boost::asio;
 template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
 class server {
 public:
-    using socket_t = as::ip::tcp::socket;
-    using endpoint_t = endpoint<socket_t, Strand, Mutex, LockGuard>;
+    using socket_t = tcp_endpoint<as::ip::tcp::socket, Strand>;
+    using endpoint_t = endpoint<socket_t, Mutex, LockGuard>;
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -101,7 +103,7 @@ private:
     void do_accept() {
         if (close_request_) return;
         acceptor_.async_accept(
-            *socket_,
+            socket_->lowest_layer(),
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
@@ -131,8 +133,8 @@ private:
 template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
 class server_tls {
 public:
-    using socket_t = as::ssl::stream<as::ip::tcp::socket>;
-    using endpoint_t = endpoint<socket_t, Strand, Mutex, LockGuard>;
+    using socket_t = tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
+    using endpoint_t = endpoint<socket_t, Mutex, LockGuard>;
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -209,7 +211,7 @@ private:
     void do_accept() {
         if (close_request_) return;
         acceptor_.async_accept(
-            socket_->next_layer(),
+            socket_->lowest_layer(),
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
@@ -267,9 +269,8 @@ private:
 template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
 class server_ws {
 public:
-    // strand is controlled by ws_endpoint, not endpoint, so endpoint has null_strand template argument.
     using socket_t = ws_endpoint<as::ip::tcp::socket, Strand>;
-    using endpoint_t = endpoint<socket_t, null_strand, Mutex, LockGuard>;
+    using endpoint_t = endpoint<socket_t, Mutex, LockGuard>;
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -407,9 +408,8 @@ private:
 template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
 class server_tls_ws {
 public:
-    // strand is controlled by ws_endpoint, not endpoint, so endpoint has null_strand template argument.
     using socket_t = mqtt::ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
-    using endpoint_t = endpoint<socket_t, null_strand, Mutex, LockGuard>;
+    using endpoint_t = endpoint<socket_t, Mutex, LockGuard>;
 
     using accept_handler = std::function<void(endpoint_t& ep)>;
 

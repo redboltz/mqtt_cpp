@@ -41,6 +41,7 @@
 #include <mqtt/publish.hpp>
 #include <mqtt/connect_return_code.hpp>
 #include <mqtt/exception.hpp>
+#include <mqtt/tcp_endpoint.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -51,18 +52,17 @@ namespace mqtt {
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
-template <typename Socket, typename Strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
-class endpoint : public std::enable_shared_from_this<endpoint<Socket, Strand, Mutex, LockGuard>> {
-    using this_type = endpoint<Socket, Strand, Mutex, LockGuard>;
+template <typename Socket, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
+class endpoint : public std::enable_shared_from_this<endpoint<Socket, Mutex, LockGuard>> {
+    using this_type = endpoint<Socket, Mutex, LockGuard>;
 public:
     using async_handler_t = std::function<void(boost::system::error_code const& ec)>;
 
     /**
      * @brief Constructor for client
      */
-    endpoint(as::io_service& ios)
-        :strand_(ios),
-         connected_(false),
+    endpoint()
+        :connected_(false),
          mqtt_connected_(false),
          clean_session_(false),
          packet_id_master_(0),
@@ -75,8 +75,7 @@ public:
      *        socket should have already been connected with another endpoint.
      */
     endpoint(std::unique_ptr<Socket>&& socket)
-        :strand_(socket->get_io_service()),
-         socket_(std::move(socket)),
+        :socket_(std::move(socket)),
          connected_(true),
          mqtt_connected_(false),
          clean_session_(false),
@@ -2196,45 +2195,25 @@ public:
         return packet_id_.erase(packet_id);
     }
 
-    template <typename PostHandler>
-    void post(PostHandler&& handler) {
-        strand_.post(std::forward<PostHandler>(handler));
-    }
-
-    template <typename T, typename PostHandler>
-    void post(T& /*ep*/, PostHandler&& handler) {
-        post(std::forward<PostHandler>(handler));
-    }
-
-#if defined(MQTT_USE_WS)
-    template <typename T, typename S, typename PostHandler>
-    void post(ws_endpoint<T, S>& ep, PostHandler&& handler) {
-        ep.post(std::forward<PostHandler>(handler));
-    }
-#endif // defined(MQTT_USE_WS)
-
-
 protected:
     void async_read_control_packet_type(async_handler_t const& func) {
         auto self = this->shared_from_this();
         async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            strand_.wrap(
-                [this, self, func](
-                    boost::system::error_code const& ec,
-                    std::size_t bytes_transferred){
-                    if (handle_close_or_error(ec)) {
-                        if (func) func(ec);
-                        return;
-                    }
-                    if (bytes_transferred != 1) {
-                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                        return;
-                    }
-                    handle_control_packet_type(func);
+            [this, self, func](
+                boost::system::error_code const& ec,
+                std::size_t bytes_transferred){
+                if (handle_close_or_error(ec)) {
+                    if (func) func(ec);
+                    return;
                 }
-            )
+                if (bytes_transferred != 1) {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                    return;
+                }
+                handle_control_packet_type(func);
+            }
         );
     }
 
@@ -2483,7 +2462,31 @@ private:
         async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            strand_.wrap(
+            [this, self, func](
+                boost::system::error_code const& ec,
+                std::size_t bytes_transferred){
+                if (handle_close_or_error(ec)) {
+                    if (func) func(ec);
+                    return;
+                }
+                if (bytes_transferred != 1) {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                    return;
+                }
+                handle_remaining_length(func);
+            }
+        );
+    }
+
+    void handle_remaining_length(async_handler_t const& func) {
+        remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
+        remaining_length_multiplier_ *= 128;
+        if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) throw remaining_length_error();
+        auto self = this->shared_from_this();
+        if (buf_ & 0b10000000) {
+            async_read(
+                *socket_,
+                as::buffer(&buf_, 1),
                 [this, self, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
@@ -2497,34 +2500,6 @@ private:
                     }
                     handle_remaining_length(func);
                 }
-            )
-        );
-    }
-
-    void handle_remaining_length(async_handler_t const& func) {
-        remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
-        remaining_length_multiplier_ *= 128;
-        if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) throw remaining_length_error();
-        auto self = this->shared_from_this();
-        if (buf_ & 0b10000000) {
-            async_read(
-                *socket_,
-                as::buffer(&buf_, 1),
-                strand_.wrap(
-                    [this, self, func](
-                        boost::system::error_code const& ec,
-                        std::size_t bytes_transferred){
-                        if (handle_close_or_error(ec)) {
-                            if (func) func(ec);
-                            return;
-                        }
-                        if (bytes_transferred != 1) {
-                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                            return;
-                        }
-                        handle_remaining_length(func);
-                    }
-                )
             );
         }
         else {
@@ -2536,21 +2511,19 @@ private:
             async_read(
                 *socket_,
                 as::buffer(payload_),
-                strand_.wrap(
-                    [this, self, func](
-                        boost::system::error_code const& ec,
-                        std::size_t bytes_transferred){
-                        if (handle_close_or_error(ec)) {
-                            if (func) func(ec);
-                            return;
-                        }
-                        if (bytes_transferred != remaining_length_) {
-                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                            return;
-                        }
-                        handle_payload(func);
+                [this, self, func](
+                    boost::system::error_code const& ec,
+                    std::size_t bytes_transferred){
+                    if (handle_close_or_error(ec)) {
+                        if (func) func(ec);
+                        return;
                     }
-                )
+                    if (bytes_transferred != remaining_length_) {
+                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                        return;
+                    }
+                    handle_payload(func);
+                }
             );
         }
     }
@@ -3672,8 +3645,7 @@ private:
             return;
         }
         auto self = this->shared_from_this();
-        post(
-            *socket_,
+        socket_->post(
             [this, self, buf, ptr, size, func]
             () {
                 queue_.emplace_back(buf, ptr, size, func);
@@ -3691,12 +3663,10 @@ private:
         async_write(
             *socket_,
             as::buffer(elem.ptr(), size),
-            strand_.wrap(
-                write_completion_handler(
-                    this->shared_from_this(),
-                    func,
-                    size
-                )
+            write_completion_handler(
+                this->shared_from_this(),
+                func,
+                size
             )
         );
     }
@@ -3751,7 +3721,6 @@ private:
         std::size_t expected_;
     };
 private:
-    Strand strand_;
     std::unique_ptr<Socket> socket_;
     std::string host_;
     std::string port_;
