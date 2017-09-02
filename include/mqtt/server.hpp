@@ -19,6 +19,7 @@
 #endif // defined(MQTT_USE_WS)
 
 #include <mqtt/endpoint.hpp>
+#include <mqtt/null_strand.hpp>
 
 namespace mqtt {
 
@@ -266,8 +267,9 @@ private:
 template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
 class server_ws {
 public:
-    using socket_t = ws_endpoint<as::ip::tcp::socket>;
-    using endpoint_t = endpoint<socket_t, Strand, Mutex, LockGuard>;
+    // strand is controlled by ws_endpoint, not endpoint, so endpoint has null_strand template argument.
+    using socket_t = ws_endpoint<as::ip::tcp::socket, Strand>;
+    using endpoint_t = endpoint<socket_t, null_strand, Mutex, LockGuard>;
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -405,8 +407,10 @@ private:
 template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
 class server_tls_ws {
 public:
-    using socket_t = mqtt::ws_endpoint<as::ssl::stream<as::ip::tcp::socket>>;
-    using endpoint_t = endpoint<socket_t, Strand, Mutex, LockGuard>;
+    // strand is controlled by ws_endpoint, not endpoint, so endpoint has null_strand template argument.
+    using socket_t = mqtt::ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
+    using endpoint_t = endpoint<socket_t, null_strand, Mutex, LockGuard>;
+
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
