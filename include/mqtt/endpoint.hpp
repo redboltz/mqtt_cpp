@@ -2196,6 +2196,24 @@ public:
         return packet_id_.erase(packet_id);
     }
 
+    template <typename PostHandler>
+    void post(PostHandler&& handler) {
+        strand_.post(std::forward<PostHandler>(handler));
+    }
+
+    template <typename T, typename PostHandler>
+    void post(T& /*ep*/, PostHandler&& handler) {
+        post(std::forward<PostHandler>(handler));
+    }
+
+#if defined(MQTT_USE_WS)
+    template <typename T, typename S, typename PostHandler>
+    void post(ws_endpoint<T, S>& ep, PostHandler&& handler) {
+        ep.post(std::forward<PostHandler>(handler));
+    }
+#endif // defined(MQTT_USE_WS)
+
+
 protected:
     void async_read_control_packet_type(async_handler_t const& func) {
         auto self = this->shared_from_this();
@@ -2234,8 +2252,8 @@ private:
     }
 
 #if defined(MQTT_USE_WS)
-    template <typename T>
-    void shutdown_from_server(ws_endpoint<T>& /*socket*/) {
+    template <typename T, typename S>
+    void shutdown_from_server(ws_endpoint<T, S>& /*socket*/) {
     }
 #endif // defined(MQTT_USE_WS)
 
@@ -2251,13 +2269,13 @@ private:
         socket.lowest_layer().close(ec);
     }
 #if defined(MQTT_USE_WS)
-    template <typename T>
-    void shutdown_from_client(ws_endpoint<as::ssl::stream<T>>& socket) {
+    template <typename T, typename S>
+    void shutdown_from_client(ws_endpoint<as::ssl::stream<T>, S>& socket) {
         boost::system::error_code ec;
         socket.lowest_layer().close(ec);
     }
-    template <typename T>
-    void shutdown_from_server(ws_endpoint<as::ssl::stream<T>>& /*socket*/) {
+    template <typename T, typename S>
+    void shutdown_from_server(ws_endpoint<as::ssl::stream<T>, S>& /*socket*/) {
     }
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_NO_TLS)
@@ -3654,7 +3672,8 @@ private:
             return;
         }
         auto self = this->shared_from_this();
-        strand_.post(
+        post(
+            *socket_,
             [this, self, buf, ptr, size, func]
             () {
                 queue_.emplace_back(buf, ptr, size, func);

@@ -19,7 +19,7 @@ namespace mqtt {
 
 namespace as = boost::asio;
 
-template <typename Socket>
+template <typename Socket, typename Strand>
 class ws_endpoint {
 public:
     template <typename... Args>
@@ -115,10 +115,12 @@ public:
                         auto beast_read_handler = std::static_pointer_cast<beast_read_handler_t>(v);
                         ws_.async_read(
                             buffer_,
-                            [beast_read_handler]
-                            (boost::system::error_code const& ec, std::size_t) {
-                                (*beast_read_handler)(ec, beast_read_handler);
-                            }
+                            strand_.wrap(
+                                [beast_read_handler]
+                                (boost::system::error_code const& ec, std::size_t) {
+                                    (*beast_read_handler)(ec, beast_read_handler);
+                                }
+                            )
                         );
                         return;
                     }
@@ -130,10 +132,12 @@ public:
         );
         ws_.async_read(
             buffer_,
-            [beast_read_handler]
-            (boost::system::error_code const& ec, std::size_t) {
-                (*beast_read_handler)(ec, beast_read_handler);
-            }
+            strand_.wrap(
+                [beast_read_handler]
+                (boost::system::error_code const& ec, std::size_t) {
+                    (*beast_read_handler)(ec, beast_read_handler);
+                }
+            )
         );
     }
 
@@ -156,40 +160,49 @@ public:
     void async_write(
         ConstBufferSequence const& buffers,
         WriteHandler&& handler) {
-        ws_.async_write(buffers, std::forward<WriteHandler>(handler));
+        ws_.async_write(
+            buffers,
+            strand_.wrap(std::forward<WriteHandler>(handler))
+        );
     }
+
+    template <typename PostHandler>
+    void post(PostHandler&& handler) {
+        strand_.post(std::forward<PostHandler>(handler));
+    }
+
 private:
     boost::beast::websocket::stream<Socket> ws_;
     boost::beast::multi_buffer buffer_;
-    as::io_service::strand strand_;
+    Strand strand_;
 };
 
-template <typename Socket, typename MutableBufferSequence, typename ReadHandler>
+template <typename Socket, typename Strand, typename MutableBufferSequence, typename ReadHandler>
 inline void async_read(
-    ws_endpoint<Socket>& ep,
+    ws_endpoint<Socket, Strand>& ep,
     MutableBufferSequence const& buffers,
     ReadHandler&& handler) {
     ep.async_read(buffers, std::forward<ReadHandler>(handler));
 }
 
-template <typename Socket, typename ConstBufferSequence>
+template <typename Socket, typename Strand, typename ConstBufferSequence>
 inline std::size_t write(
-    ws_endpoint<Socket>& ep,
+    ws_endpoint<Socket, Strand>& ep,
     ConstBufferSequence const& buffers) {
     return ep.write(buffers);
 }
 
-template <typename Socket, typename ConstBufferSequence>
+template <typename Socket, typename Strand, typename ConstBufferSequence>
 inline std::size_t write(
-    ws_endpoint<Socket>& ep,
+    ws_endpoint<Socket, Strand>& ep,
     ConstBufferSequence const& buffers,
     boost::system::error_code& ec) {
     return ep.write(buffers, ec);
 }
 
-template <typename Socket, typename ConstBufferSequence, typename WriteHandler>
+template <typename Socket, typename Strand, typename ConstBufferSequence, typename WriteHandler>
 inline void async_write(
-    ws_endpoint<Socket>& ep,
+    ws_endpoint<Socket, Strand>& ep,
     ConstBufferSequence const& buffers,
     WriteHandler&& handler) {
     ep.async_write(buffers, std::forward<WriteHandler>(handler));

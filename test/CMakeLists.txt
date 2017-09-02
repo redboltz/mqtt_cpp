@@ -6,7 +6,7 @@
 
 CMAKE_MINIMUM_REQUIRED (VERSION 2.8.6)
 
-PROJECT (mqtt_client_cpp_test)
+PROJECT (mqtt_cpp_test)
 
 LIST (APPEND check_PROGRAMS
      test_main.cpp
