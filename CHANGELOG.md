@@ -1,3 +1,8 @@
+## 1.0.7
+* Update beast. (#94)
+* Fixed WebSocket strand management. (#93, #95)
+* Fixed endpoint's move constructor and assingment operator deletion (#92)
+
 ## 1.0.6
 * Update beast. (#90)
 * Fixed qos2 publish handler multiple call guard.(#89)
