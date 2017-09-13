@@ -218,7 +218,7 @@ public:
         setup_socket(base::socket());
         auto self = this->shared_from_this();
         as::async_connect(
-            base::socket()->lowest_layer(), it,
+            base::socket()->socket().lowest_layer(), it,
             [this, self, func]
             (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
                 base::set_close_handler([this](){ handle_close(); });
