@@ -44,11 +44,11 @@ public:
         return ws_.get_io_service();
     }
 
-    auto& lowest_layer() {
+    typename boost::beast::websocket::stream<Socket>::lowest_layer_type& lowest_layer() {
         return ws_.lowest_layer();
     }
 
-    auto& next_layer() {
+    typename boost::beast::websocket::stream<Socket>::next_layer_type& next_layer() {
         return ws_.next_layer();
     }
 
