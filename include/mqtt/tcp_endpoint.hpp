@@ -39,14 +39,6 @@ public:
     Socket& socket() { return tcp_; }
     Socket const& socket() const { return tcp_; }
 
-    auto& lowest_layer() {
-        return tcp_.lowest_layer();
-    }
-
-    auto& next_layer() {
-        return tcp_.next_layer();
-    }
-
     template <typename T>
     void set_option(T&& t) {
         tcp_.set_option(std::forward<T>(t));
