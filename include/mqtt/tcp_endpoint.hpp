@@ -39,12 +39,8 @@ public:
     Socket& socket() { return tcp_; }
     Socket const& socket() const { return tcp_; }
 
-    auto& lowest_layer() {
+    typename Socket::lowest_layer_type& lowest_layer() {
         return tcp_.lowest_layer();
-    }
-
-    auto& next_layer() {
-        return tcp_.next_layer();
     }
 
     template <typename T>
