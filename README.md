@@ -8,7 +8,7 @@ mqtt_cpp is a header only library. It requires C++14 and the Boost Libraries 1.5
 
 You may be able to use mqtt_cpp on C++11 with binary literal extension environment such as g++ and clang++.
 
-Add mqtt_cpp/include to your include path. Then, include `mqtt_cpp.hpp` and/or `mqtt_server_cpp.hpp" as follows:
+Add mqtt_cpp/include to your include path. Then, include `mqtt_cpp.hpp` and/or `mqtt_server_cpp.hpp` as follows:
 
 For clients:
 ```c++
