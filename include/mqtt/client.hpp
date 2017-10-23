@@ -149,28 +149,76 @@ public:
     make_tls_client_no_strand_ws(as::io_service& ios, std::string host, std::string port, std::string path);
 #endif // defined(MQTT_USE_WS)
 
+    /**
+     * @breif Call boost::asio::context::set_default_verify_paths
+     * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_default_verify_paths.html
+     */
     void set_default_verify_paths() {
         ctx_.set_default_verify_paths();
     }
 
+    /**
+     * @breif Call boost::asio::context::load_verify_file
+     * The function name is not the same but easy to understand.
+     * @param file ca cert file path
+     * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/load_verify_file.html
+     */
     void set_ca_cert_file(std::string file) {
         ctx_.load_verify_file(std::move(file));
     }
+
+    /**
+     * @breif Call boost::asio::context::add_verify_path
+     * @param path the path contains ca cert files
+     * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/add_verify_path.html
+     */
     void add_verify_path(std::string path) {
         ctx_.add_verify_path(path);
     }
+
+    /**
+     * @breif Call boost::asio::context::set_verify_depth
+     * @param depth maximum depth for the certificate chain verificatrion that shall be allowed
+     * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_verify_depth.html
+     */
     void set_verify_depth(int depth) {
         ctx_.set_verify_depth(depth);
     }
+
+    /**
+     * @breif Call boost::asio::context::use_certificate_file
+     * The function name is not the same but easy to understand.
+     * @param file client certificate file path
+     * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/load_verify_file.html
+     */
     void set_client_cert_file(std::string file) {
         ctx_.use_certificate_file(std::move(file), as::ssl::context::pem);
     }
+
+    /**
+     * @breif Call boost::asio::context::use_private_key_file
+     * The function name is not the same but easy to understand.
+     * @param file client certificate key file path
+     * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/use_private_key_file.html
+     */
     void set_client_key_file(std::string file) {
         ctx_.use_private_key_file(std::move(file), as::ssl::context::pem);
     }
+
+    /**
+     * @breif Call boost::asio::context::set_verify_mode
+     * @param mode See http://www.boost.org/doc/html/boost_asio/reference/ssl__verify_mode.html
+     * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_verify_mode.html
+     */
     void set_verify_mode(as::ssl::verify_mode mode) {
         ctx_.set_verify_mode(mode);
     }
+
+    /**
+     * @breif Call boost::asio::context::set_verify_callback
+     * @param callback the callback function to be used for verifying a certificate.
+     * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_verify_callback.html
+     */
     template <typename VerifyCallback>
     void set_verify_callback(VerifyCallback&& callback) {
         ctx_.set_verify_callback(std::forward<VerifyCallback>(callback));
