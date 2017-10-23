@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 c->connect();
             });
         c->set_pubrec_handler(
-            [&order, &c, &pid_pub]
+            [&order, &pid_pub]
             (std::uint16_t packet_id) {
                 BOOST_TEST(order++ == 5);
                 BOOST_TEST(packet_id == pid_pub);

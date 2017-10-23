@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             return true;
         });
     c->set_unsuback_handler(
-        [&order, &c, &pub_seq_finished, &pid_unsub]
+        [&order, &c, &pid_unsub]
         (std::uint16_t packet_id) {
             BOOST_TEST(order++ == 4);
             BOOST_TEST(packet_id == pid_unsub);
@@ -269,7 +269,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             return true;
         });
     c->set_unsuback_handler(
-        [&order, &c, &pub_seq_finished, &pid_unsub]
+        [&order, &c, &pid_unsub]
         (std::uint16_t packet_id) {
             BOOST_TEST(order++ == 5);
             BOOST_TEST(packet_id == pid_unsub);
@@ -454,7 +454,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             return true;
         });
     c->set_unsuback_handler(
-        [&order, &c, &pub_seq_finished, &pid_unsub]
+        [&order, &c, &pid_unsub]
         (std::uint16_t packet_id) {
             BOOST_CHECK(order == 3 || order == 4);
             ++order;
@@ -554,7 +554,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             return true;
         });
     c->set_unsuback_handler(
-        [&order, &c, &pub_seq_finished, &pid_unsub]
+        [&order, &c, &pid_unsub]
         (std::uint16_t packet_id) {
             BOOST_CHECK(order == 4 || order == 5);
             ++order;
@@ -740,7 +740,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             return true;
         });
     c->set_unsuback_handler(
-        [&order, &c, &pub_seq_finished, &pid_unsub]
+        [&order, &c, &pid_unsub]
         (std::uint16_t packet_id) {
             BOOST_CHECK(order == 3 || order == 4);
             ++order;
@@ -840,7 +840,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             return true;
         });
     c->set_unsuback_handler(
-        [&order, &c, &pub_seq_finished, &pid_unsub]
+        [&order, &c, &pid_unsub]
         (std::uint16_t packet_id) {
             BOOST_CHECK(order == 4 || order == 5);
             ++order;

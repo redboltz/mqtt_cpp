@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             s.close();
         });
     c2->set_suback_handler(
-        [&order2, &c2, &c1_force_disconnect, &pid_sub2]
+        [&order2, &c1_force_disconnect, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
@@ -185,7 +185,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             BOOST_CHECK(false);
         });
     c2->set_suback_handler(
-        [&order2, &c2, &c1_force_disconnect, &pid_sub2]
+        [&order2, &c1_force_disconnect, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
@@ -293,7 +293,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             s.close();
         });
     c2->set_suback_handler(
-        [&order2, &c2, &c1_force_disconnect, &pid_sub2]
+        [&order2, &c1_force_disconnect, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
@@ -401,7 +401,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
             s.close();
         });
     c2->set_suback_handler(
-        [&order2, &c2, &c1_force_disconnect, &pid_sub2]
+        [&order2, &c1_force_disconnect, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
