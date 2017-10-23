@@ -1,3 +1,6 @@
+## 1.0.8
+* Added TLS verifying setup functions. (#100)
+
 ## 1.0.7
 * Update beast. (#94)
 * Fixed WebSocket strand management. (#93, #95)
