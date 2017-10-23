@@ -300,7 +300,6 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
     test_broker b;
     test_server_no_tls s(ios, b);
     // c3 --publish--> topic1 ----> c1, c2
-    int sub_count = 0;
 
     bool c1ready = false;
     bool c2ready = false;
@@ -349,7 +348,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
             BOOST_CHECK(false);
         });
     c1->set_suback_handler(
-        [&order1, &c1, &sub_count, &c1ready, &c2ready, &c3ready, &c3, &pid_sub1, &pid_pub3]
+        [&order1, &c1ready, &c2ready, &c3ready, &c3, &pid_sub1, &pid_pub3]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order1++ == 1);
             BOOST_TEST(packet_id == pid_sub1);
@@ -411,7 +410,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
             BOOST_CHECK(false);
         });
     c2->set_suback_handler(
-        [&order2, &c2, &sub_count, &c1ready, &c2ready, &c3ready, &c3, &pid_sub2, &pid_pub3]
+        [&order2, &c1ready, &c2ready, &c3ready, &c3, &pid_sub2, &pid_pub3]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);

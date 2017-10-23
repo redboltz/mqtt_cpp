@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
                 return true;
             });
         c->set_suback_handler(
-            [&order, &c, &pid_sub]
+            [&order, &pid_sub]
             (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
                 BOOST_TEST(order++ == 1);
                 BOOST_TEST(packet_id == pid_sub);
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                 return true;
             });
         c->set_suback_handler(
-            [&order, &c, &pid_sub]
+            [&order, &pid_sub]
             (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
                 BOOST_TEST(order++ == 1);
                 BOOST_TEST(packet_id == pid_sub);

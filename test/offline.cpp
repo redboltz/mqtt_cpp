@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 }
             });
         c->set_error_handler(
-            [&order, &c]
+            []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
@@ -117,12 +117,12 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 }
             });
         c->set_error_handler(
-            [&order, &c]
+            []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
         c->set_pubrec_handler(
-            [&order, &c, &pid_pub]
+            [&order, &pid_pub]
             (std::uint16_t packet_id) {
                 BOOST_TEST(order++ == 3);
                 BOOST_TEST(packet_id == pid_pub);
@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 }
             });
         c->set_error_handler(
-            [&order, &c]
+            []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
@@ -270,7 +270,7 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                 }
             });
         c->set_error_handler(
-            [&order, &c]
+            []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });

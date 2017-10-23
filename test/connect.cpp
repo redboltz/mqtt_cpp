@@ -197,7 +197,7 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
         int order = 0;
         c->set_connack_handler(
-            [&order, &c]
+            [&order]
             (bool sp, std::uint8_t connack_return_code) {
                 BOOST_TEST(order++ == 0);
                 BOOST_TEST(sp == false);

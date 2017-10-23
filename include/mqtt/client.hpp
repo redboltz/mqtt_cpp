@@ -168,6 +168,13 @@ public:
     void set_client_key_file(std::string file) {
         ctx_.use_private_key_file(std::move(file), as::ssl::context::pem);
     }
+    void set_verify_mode(as::ssl::verify_mode mode) {
+        ctx_.set_verify_mode(mode);
+    }
+    template <typename VerifyCallback>
+    void set_verify_callback(VerifyCallback&& callback) {
+        ctx_.set_verify_callback(std::forward<VerifyCallback>(callback));
+    }
 #endif // !defined(MQTT_NO_TLS)
 
     /**
@@ -347,7 +354,11 @@ private:
          ,
          path_(std::move(path))
 #endif // defined(MQTT_USE_WS)
-    {}
+    {
+#if !defined(MQTT_NO_TLS)
+        ctx_.set_verify_mode(as::ssl::verify_peer);
+#endif // !defined(MQTT_NO_TLS)
+    }
 
     template <typename Strand>
     void setup_socket(std::unique_ptr<tcp_endpoint<as::ip::tcp::socket, Strand>>& socket) {
@@ -365,26 +376,12 @@ private:
     template <typename Strand>
     void setup_socket(std::unique_ptr<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
         socket.reset(new Socket(ios_, ctx_));
-        socket->socket().set_verify_mode(as::ssl::verify_peer);
-        socket->socket().set_verify_callback([](bool preverified, as::ssl::verify_context& ctx) -> bool {
-                char subject_name[256];
-                X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-                X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-                return preverified;
-            });
     }
 
 #if defined(MQTT_USE_WS)
     template <typename Strand>
     void setup_socket(std::unique_ptr<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
         socket.reset(new Socket(ios_, ctx_));
-        socket->next_layer().set_verify_mode(as::ssl::verify_peer);
-        socket->next_layer().set_verify_callback([](bool preverified, as::ssl::verify_context& ctx) -> bool {
-                char subject_name[256];
-                X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-                X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-                return preverified;
-            });
     }
 #endif // defined(MQTT_USE_WS)
 
