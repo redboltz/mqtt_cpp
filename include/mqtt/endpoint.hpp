@@ -41,6 +41,7 @@
 #include <mqtt/publish.hpp>
 #include <mqtt/connect_return_code.hpp>
 #include <mqtt/exception.hpp>
+#include <mqtt/tcp_endpoint.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -51,18 +52,17 @@ namespace mqtt {
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
-template <typename Socket, typename Strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
-class endpoint : public std::enable_shared_from_this<endpoint<Socket, Strand, Mutex, LockGuard>> {
-    using this_type = endpoint<Socket, Strand>;
+template <typename Socket, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
+class endpoint : public std::enable_shared_from_this<endpoint<Socket, Mutex, LockGuard>> {
+    using this_type = endpoint<Socket, Mutex, LockGuard>;
 public:
     using async_handler_t = std::function<void(boost::system::error_code const& ec)>;
 
     /**
      * @brief Constructor for client
      */
-    endpoint(as::io_service& ios)
-        :strand_(ios),
-         connected_(false),
+    endpoint()
+        :connected_(false),
          mqtt_connected_(false),
          clean_session_(false),
          packet_id_master_(0),
@@ -75,8 +75,7 @@ public:
      *        socket should have already been connected with another endpoint.
      */
     endpoint(std::unique_ptr<Socket>&& socket)
-        :strand_(socket->get_io_service()),
-         socket_(std::move(socket)),
+        :socket_(std::move(socket)),
          connected_(true),
          mqtt_connected_(false),
          clean_session_(false),
@@ -299,13 +298,14 @@ public:
      */
     using disconnect_handler = std::function<void()>;
 
-    endpoint(endpoint&&) = delete;
-
-    endpoint& operator=(endpoint&&) = delete;
+    endpoint(this_type const&) = delete;
+    endpoint(this_type&&) = delete;
+    endpoint& operator=(this_type const&) = delete;
+    endpoint& operator=(this_type&&) = delete;
 
     /**
-     * @breif Set endpoint id.
-     * @param id endpoint id
+     * @breif Set client id.
+     * @param id client id
      *
      * This function should be called before calling connect().<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718031<BR>
@@ -313,6 +313,17 @@ public:
      */
     void set_client_id(std::string id) {
         client_id_ = std::move(id);
+    }
+
+    /**
+     * @breif Get client id.
+     *
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718031<BR>
+     * 3.1.3.1 Client Identifier
+     * @return client id
+     */
+    std::string const& client_id() const {
+        return client_id_;
     }
 
     /**
@@ -326,6 +337,18 @@ public:
      */
     void set_clean_session(bool cs) {
         clean_session_ = cs;
+    }
+
+    /**
+     * @breif Get clean session.
+     *
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718029<BR>
+     * 3.1.2.4 Clean Session<BR>
+     * After constructing a endpoint, the clean session is set to false.
+     * @return clean session
+     */
+    bool clean_session() const {
+        return clean_session_;
     }
 
     /**
@@ -2093,7 +2116,7 @@ public:
             ec == as::error::connection_reset
 #if defined(MQTT_USE_WS)
             ||
-            ec == beast::websocket::error::closed
+            ec == boost::beast::websocket::error::closed
 #endif // defined(MQTT_USE_WS)
 #if !defined(MQTT_NO_TLS)
             ||
@@ -2178,21 +2201,19 @@ protected:
         async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            strand_.wrap(
-                [this, self, func](
-                    boost::system::error_code const& ec,
-                    std::size_t bytes_transferred){
-                    if (handle_close_or_error(ec)) {
-                        if (func) func(ec);
-                        return;
-                    }
-                    if (bytes_transferred != 1) {
-                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                        return;
-                    }
-                    handle_control_packet_type(func);
+            [this, self, func](
+                boost::system::error_code const& ec,
+                std::size_t bytes_transferred){
+                if (handle_close_or_error(ec)) {
+                    if (func) func(ec);
+                    return;
                 }
-            )
+                if (bytes_transferred != 1) {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                    return;
+                }
+                handle_control_packet_type(func);
+            }
         );
     }
 
@@ -2210,8 +2231,8 @@ private:
     }
 
 #if defined(MQTT_USE_WS)
-    template <typename T>
-    void shutdown_from_server(ws_endpoint<T>& socket) {
+    template <typename T, typename S>
+    void shutdown_from_server(ws_endpoint<T, S>& /*socket*/) {
     }
 #endif // defined(MQTT_USE_WS)
 
@@ -2227,13 +2248,13 @@ private:
         socket.lowest_layer().close(ec);
     }
 #if defined(MQTT_USE_WS)
-    template <typename T>
-    void shutdown_from_client(ws_endpoint<as::ssl::stream<T>>& socket) {
+    template <typename T, typename S>
+    void shutdown_from_client(ws_endpoint<as::ssl::stream<T>, S>& socket) {
         boost::system::error_code ec;
         socket.lowest_layer().close(ec);
     }
-    template <typename T>
-    void shutdown_from_server(ws_endpoint<as::ssl::stream<T>>& socket) {
+    template <typename T, typename S>
+    void shutdown_from_server(ws_endpoint<as::ssl::stream<T>, S>& /*socket*/) {
     }
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_NO_TLS)
@@ -2441,7 +2462,31 @@ private:
         async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            strand_.wrap(
+            [this, self, func](
+                boost::system::error_code const& ec,
+                std::size_t bytes_transferred){
+                if (handle_close_or_error(ec)) {
+                    if (func) func(ec);
+                    return;
+                }
+                if (bytes_transferred != 1) {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                    return;
+                }
+                handle_remaining_length(func);
+            }
+        );
+    }
+
+    void handle_remaining_length(async_handler_t const& func) {
+        remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
+        remaining_length_multiplier_ *= 128;
+        if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) throw remaining_length_error();
+        auto self = this->shared_from_this();
+        if (buf_ & 0b10000000) {
+            async_read(
+                *socket_,
+                as::buffer(&buf_, 1),
                 [this, self, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
@@ -2455,34 +2500,6 @@ private:
                     }
                     handle_remaining_length(func);
                 }
-            )
-        );
-    }
-
-    void handle_remaining_length(async_handler_t const& func) {
-        remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
-        remaining_length_multiplier_ *= 128;
-        if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) throw remaining_length_error();
-        auto self = this->shared_from_this();
-        if (buf_ & 0b10000000) {
-            async_read(
-                *socket_,
-                as::buffer(&buf_, 1),
-                strand_.wrap(
-                    [this, self, func](
-                        boost::system::error_code const& ec,
-                        std::size_t bytes_transferred){
-                        if (handle_close_or_error(ec)) {
-                            if (func) func(ec);
-                            return;
-                        }
-                        if (bytes_transferred != 1) {
-                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                            return;
-                        }
-                        handle_remaining_length(func);
-                    }
-                )
             );
         }
         else {
@@ -2494,21 +2511,19 @@ private:
             async_read(
                 *socket_,
                 as::buffer(payload_),
-                strand_.wrap(
-                    [this, self, func](
-                        boost::system::error_code const& ec,
-                        std::size_t bytes_transferred){
-                        if (handle_close_or_error(ec)) {
-                            if (func) func(ec);
-                            return;
-                        }
-                        if (bytes_transferred != remaining_length_) {
-                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                            return;
-                        }
-                        handle_payload(func);
+                [this, self, func](
+                    boost::system::error_code const& ec,
+                    std::size_t bytes_transferred){
+                    if (handle_close_or_error(ec)) {
+                        if (func) func(ec);
+                        return;
                     }
-                )
+                    if (bytes_transferred != remaining_length_) {
+                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                        return;
+                    }
+                    handle_payload(func);
+                }
             );
         }
     }
@@ -2628,10 +2643,10 @@ private:
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return false;
         }
-        std::string client_id(payload_.data() + i, client_id_length);
+        client_id_.assign(payload_.data() + i, client_id_length);
         i += client_id_length;
 
-        bool clean_session = connect_flags::has_clean_session(byte8);
+        clean_session_ = connect_flags::has_clean_session(byte8);
         boost::optional<will> w;
         if (connect_flags::has_will_flag(byte8)) {
             std::uint16_t topic_name_length;
@@ -2650,7 +2665,7 @@ private:
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
-            std::string will_message(payload_.data() + i, topic_name_length);
+            std::string will_message(payload_.data() + i, will_message_length);
             i += will_message_length;
             w = will(topic_name,
                      will_message,
@@ -2683,7 +2698,7 @@ private:
         }
         mqtt_connected_ = true;
         if (h_connect_) {
-            if (h_connect_(client_id, user_name, password, std::move(w), clean_session, keep_alive)) {
+            if (h_connect_(client_id_, user_name, password, std::move(w), clean_session_, keep_alive)) {
                 return true;
             }
             return false;
@@ -2810,12 +2825,12 @@ private:
                     }
                 );
             };
-            auto it = qos2_publish_handled_.find(*packet_id);
-            if (it == qos2_publish_handled_.end()) {
-                std::string contents(payload_.data() + i, payload_.size() - i);
-                if (h_publish_) {
+            if (h_publish_) {
+                auto it = qos2_publish_handled_.find(*packet_id);
+                if (it == qos2_publish_handled_.end()) {
                     std::string contents(payload_.data() + i, payload_.size() - i);
                     if (h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents))) {
+                        qos2_publish_handled_.emplace(*packet_id);
                         res();
                         return true;
                     }
@@ -3630,7 +3645,7 @@ private:
             return;
         }
         auto self = this->shared_from_this();
-        strand_.post(
+        socket_->post(
             [this, self, buf, ptr, size, func]
             () {
                 queue_.emplace_back(buf, ptr, size, func);
@@ -3648,12 +3663,10 @@ private:
         async_write(
             *socket_,
             as::buffer(elem.ptr(), size),
-            strand_.wrap(
-                write_completion_handler(
-                    this->shared_from_this(),
-                    func,
-                    size
-                )
+            write_completion_handler(
+                this->shared_from_this(),
+                func,
+                size
             )
         );
     }
@@ -3708,7 +3721,6 @@ private:
         std::size_t expected_;
     };
 private:
-    Strand strand_;
     std::unique_ptr<Socket> socket_;
     std::string host_;
     std::string port_;

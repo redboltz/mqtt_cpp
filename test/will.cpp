@@ -5,32 +5,40 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 #include "test_settings.hpp"
+#include "test_broker.hpp"
+#include "test_server_no_tls.hpp"
 
 #include <mqtt/client.hpp>
 
 BOOST_AUTO_TEST_SUITE(test_will)
 
 BOOST_AUTO_TEST_CASE( will_qos0 ) {
-    fixture_clear_retain();
     boost::asio::io_service ios;
+    test_broker b;
+    test_server_no_tls s(ios, b);
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c1->set_client_id(cid1());
+    c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
-        mqtt::will(topic_base() + "/topic1", "will_contents"));
+        mqtt::will("topic1", "will_contents"));
+    int c1fd_count = 0;
+    auto c1_force_disconnect = [&c1, &c1fd_count] {
+        if (++c1fd_count == 2) c1->force_disconnect();
+    };
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c2->set_client_id(cid2());
+    c2->set_client_id("cid2");
     c2->set_clean_session(true);
 
     int order1 = 0;
     c1->set_connack_handler(
-        [&order1, &c1]
+        [&order1, &c1_force_disconnect]
         (bool sp, std::uint8_t connack_return_code) {
             BOOST_TEST(order1++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+            c1_force_disconnect();
             return true;
         });
     c1->set_close_handler(
@@ -54,27 +62,29 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             BOOST_TEST(order2++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-            pid_sub2 = c2->subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
+            pid_sub2 = c2->subscribe("topic1", mqtt::qos::at_most_once);
             return true;
         });
     c2->set_close_handler(
-        [&order2]
+        [&order2, &s]
         () {
             BOOST_TEST(order2++ == 4);
+            s.close();
         });
     c2->set_error_handler(
-        []
+        [&order2, &s]
         (boost::system::error_code const&) {
-            BOOST_CHECK(false);
+            BOOST_TEST(order2++ == 4);
+            s.close();
         });
     c2->set_suback_handler(
-        [&order2, &c2, &c1, &pid_sub2]
+        [&order2, &c1_force_disconnect, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
-            c1->force_disconnect();
+            c1_force_disconnect();
             return true;
         });
     c2->set_unsuback_handler(
@@ -96,9 +106,9 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
             BOOST_TEST(mqtt::publish::is_retain(header) == false);
             BOOST_CHECK(!packet_id);
-            BOOST_TEST(topic == topic_base() + "/topic1");
+            BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
-            pid_unsub2 = c2->unsubscribe(topic_base() + "/topic1");
+            pid_unsub2 = c2->unsubscribe("topic1");
             return true;
         });
 
@@ -111,26 +121,32 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
 }
 
 BOOST_AUTO_TEST_CASE( will_qos1 ) {
-    fixture_clear_retain();
     boost::asio::io_service ios;
+    test_broker b;
+    test_server_no_tls s(ios, b);
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c1->set_client_id(cid1());
+    c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
-        mqtt::will(topic_base() + "/topic1", "will_contents", mqtt::qos::at_least_once));
+        mqtt::will("topic1", "will_contents", mqtt::qos::at_least_once));
+    int c1fd_count = 0;
+    auto c1_force_disconnect = [&c1, &c1fd_count] {
+        if (++c1fd_count == 2) c1->force_disconnect();
+    };
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c2->set_client_id(cid2());
+    c2->set_client_id("cid2");
     c2->set_clean_session(true);
 
     int order1 = 0;
     c1->set_connack_handler(
-        [&order1, &c1]
+        [&order1, &c1_force_disconnect]
         (bool sp, std::uint8_t connack_return_code) {
             BOOST_TEST(order1++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+            c1_force_disconnect();
             return true;
         });
     c1->set_close_handler(
@@ -154,13 +170,14 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             BOOST_TEST(order2++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-            pid_sub2 = c2->subscribe(topic_base() + "/topic1", mqtt::qos::at_least_once);
+            pid_sub2 = c2->subscribe("topic1", mqtt::qos::at_least_once);
             return true;
         });
     c2->set_close_handler(
-        [&order2]
+        [&order2, &s]
         () {
             BOOST_TEST(order2++ == 4);
+            s.close();
         });
     c2->set_error_handler(
         []
@@ -168,13 +185,13 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             BOOST_CHECK(false);
         });
     c2->set_suback_handler(
-        [&order2, &c2, &c1, &pid_sub2]
+        [&order2, &c1_force_disconnect, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
-            c1->force_disconnect();
+            c1_force_disconnect();
             return true;
         });
     c2->set_unsuback_handler(
@@ -196,9 +213,9 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_least_once);
             BOOST_TEST(mqtt::publish::is_retain(header) == false);
             BOOST_CHECK(*packet_id != 0);
-            BOOST_TEST(topic == topic_base() + "/topic1");
+            BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
-            pid_unsub2 = c2->unsubscribe(topic_base() + "/topic1");
+            pid_unsub2 = c2->unsubscribe("topic1");
             return true;
         });
 
@@ -211,26 +228,32 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
 }
 
 BOOST_AUTO_TEST_CASE( will_qos2 ) {
-    fixture_clear_retain();
     boost::asio::io_service ios;
+    test_broker b;
+    test_server_no_tls s(ios, b);
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c1->set_client_id(cid1());
+    c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
-        mqtt::will(topic_base() + "/topic1", "will_contents", mqtt::qos::exactly_once));
+        mqtt::will("topic1", "will_contents", mqtt::qos::exactly_once));
+    int c1fd_count = 0;
+    auto c1_force_disconnect = [&c1, &c1fd_count] {
+        if (++c1fd_count == 2) c1->force_disconnect();
+    };
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c2->set_client_id(cid2());
+    c2->set_client_id("cid2");
     c2->set_clean_session(true);
 
     int order1 = 0;
     c1->set_connack_handler(
-        [&order1, &c1]
+        [&order1, &c1_force_disconnect]
         (bool sp, std::uint8_t connack_return_code) {
             BOOST_TEST(order1++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+            c1_force_disconnect();
             return true;
         });
     c1->set_close_handler(
@@ -254,27 +277,29 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             BOOST_TEST(order2++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-            pid_sub2 = c2->subscribe(topic_base() + "/topic1", mqtt::qos::exactly_once);
+            pid_sub2 = c2->subscribe("topic1", mqtt::qos::exactly_once);
             return true;
         });
     c2->set_close_handler(
-        [&order2]
+        [&order2, &s]
         () {
             BOOST_TEST(order2++ == 4);
+            s.close();
         });
     c2->set_error_handler(
-        []
+        [&order2, &s]
         (boost::system::error_code const&) {
-            BOOST_CHECK(false);
+            BOOST_TEST(order2++ == 4);
+            s.close();
         });
     c2->set_suback_handler(
-        [&order2, &c2, &c1, &pid_sub2]
+        [&order2, &c1_force_disconnect, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(order2++ == 1);
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::exactly_once);
-            c1->force_disconnect();
+            c1_force_disconnect();
             return true;
         });
     c2->set_unsuback_handler(
@@ -296,9 +321,9 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::exactly_once);
             BOOST_TEST(mqtt::publish::is_retain(header) == false);
             BOOST_CHECK(*packet_id != 0);
-            BOOST_TEST(topic == topic_base() + "/topic1");
+            BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
-            pid_unsub2 = c2->unsubscribe(topic_base() + "/topic1");
+            pid_unsub2 = c2->unsubscribe("topic1");
             return true;
         });
 
@@ -311,26 +336,32 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( will_retain ) {
-    fixture_clear_retain();
     boost::asio::io_service ios;
+    test_broker b;
+    test_server_no_tls s(ios, b);
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c1->set_client_id(cid1());
+    c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
-        mqtt::will(topic_base() + "/topic1", "will_contents", true));
+        mqtt::will("topic1", "will_contents", true));
+    int c1fd_count = 0;
+    auto c1_force_disconnect = [&c1, &c1fd_count] {
+        if (++c1fd_count == 2) c1->force_disconnect();
+    };
 
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
-    c2->set_client_id(cid2());
+    c2->set_client_id("cid2");
     c2->set_clean_session(true);
 
     int order1 = 0;
     c1->set_connack_handler(
-        [&order1, &c1]
+        [&order1, &c1_force_disconnect]
         (bool sp, std::uint8_t connack_return_code) {
             BOOST_TEST(order1++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+            c1_force_disconnect();
             return true;
         });
     c1->set_close_handler(
@@ -354,28 +385,30 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
             BOOST_TEST(order2++ == 0);
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-            pid_sub2 = c2->subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
+            pid_sub2 = c2->subscribe("topic1", mqtt::qos::at_most_once);
             return true;
         });
     c2->set_close_handler(
-        [&order2]
+        [&order2, &s]
         () {
             BOOST_TEST(order2++ == 7);
+            s.close();
         });
     c2->set_error_handler(
-        []
+        [&order2, &s]
         (boost::system::error_code const&) {
-            BOOST_CHECK(false);
+            BOOST_TEST(order2++ == 7);
+            s.close();
         });
     c2->set_suback_handler(
-        [&order2, &c2, &c1, &pid_sub2]
+        [&order2, &c1_force_disconnect, &pid_sub2]
         (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
             switch (order2++) {
             case 1:
-                c1->force_disconnect();
+                c1_force_disconnect();
                 break;
             case 4:
                 break;
@@ -390,7 +423,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
             BOOST_TEST(packet_id == pid_unsub2);
             switch (order2++) {
             case 3:
-                pid_sub2 = c2->subscribe(topic_base() + "/topic1", mqtt::qos::at_most_once);
+                pid_sub2 = c2->subscribe("topic1", mqtt::qos::at_most_once);
                 break;
             case 6:
                 c2->disconnect();
@@ -410,9 +443,9 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
             BOOST_TEST(mqtt::publish::is_dup(header) == false);
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
             BOOST_CHECK(!packet_id);
-            BOOST_TEST(topic == topic_base() + "/topic1");
+            BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
-            pid_unsub2 = c2->unsubscribe(topic_base() + "/topic1");
+            pid_unsub2 = c2->unsubscribe("topic1");
             switch (order2++) {
             case 2:
                 BOOST_TEST(mqtt::publish::is_retain(header) == false);
