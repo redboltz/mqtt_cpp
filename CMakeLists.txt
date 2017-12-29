@@ -32,7 +32,9 @@ FIND_PACKAGE (Boost 1.59.0 COMPONENTS chrono timer test_exec_monitor system)
 FIND_PACKAGE (Threads)
 
 IF (NOT MQTT_BEAST_INCLUDE_DIR)
-    SET (MQTT_BEAST_INCLUDE_DIR "external/beast/include")
+    IF (${Boost_VERSION} LESS 106600)
+        SET (MQTT_BEAST_INCLUDE_DIR "external/beast/include")
+    ENDIF ()
 ENDIF ()
 
 INCLUDE_DIRECTORIES (
