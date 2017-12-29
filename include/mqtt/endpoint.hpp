@@ -626,6 +626,7 @@ public:
         std::string const& contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         std::uint16_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
         acquired_publish(packet_id, topic_name, contents, qos, retain);
         return packet_id;
@@ -648,6 +649,7 @@ public:
     std::uint16_t subscribe(
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         std::uint16_t packet_id = acquire_unique_packet_id();
         acquired_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
         return packet_id;
@@ -809,6 +811,7 @@ public:
         std::string const& contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
             acquired_publish(packet_id, topic_name, contents, qos, retain);
             return true;
@@ -839,6 +842,7 @@ public:
         std::string const& contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
             acquired_publish_dup(packet_id, topic_name, contents, qos, retain);
             return true;
@@ -866,6 +870,7 @@ public:
         std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
             acquired_subscribe(packet_id, topic_name,  qos, std::forward<Args>(args)...);
             return true;
@@ -1009,6 +1014,7 @@ public:
         std::string const& contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
         send_publish(topic_name, qos, retain, false, packet_id, contents);
     }
@@ -1036,6 +1042,7 @@ public:
         std::string const& contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
         send_publish(topic_name, qos, retain, true, packet_id, contents);
     }
@@ -1059,6 +1066,7 @@ public:
         std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args... args) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
         send_subscribe(params, packet_id, topic_name, qos, args...);
@@ -1210,6 +1218,7 @@ public:
     void suback(
         std::uint16_t packet_id,
         std::uint8_t qos, Args&&... args) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         std::vector<std::uint8_t> params;
         send_suback(params, packet_id, qos, std::forward<Args>(args)...);
     }
@@ -1327,6 +1336,7 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         std::uint16_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
         acquired_async_publish(packet_id, topic_name, contents, qos, retain, func);
         return packet_id;
@@ -1354,6 +1364,7 @@ public:
     async_subscribe(
         std::string const& topic_name,
         std::uint8_t qos, Args&&... args) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         std::uint16_t packet_id = acquire_unique_packet_id();
         acquired_async_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
         return packet_id;
@@ -1375,6 +1386,7 @@ public:
         std::string const& topic_name,
         std::uint8_t qos,
         async_handler_t const& func = async_handler_t()) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         std::uint16_t packet_id = acquire_unique_packet_id();
         acquired_async_subscribe(packet_id, topic_name, qos, func);
         return packet_id;
@@ -1562,6 +1574,7 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
             acquired_async_publish(packet_id, topic_name, contents, qos, retain, func);
             return true;
@@ -1594,6 +1607,7 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
             acquired_async_publish_dup(packet_id, topic_name, contents, qos, retain, func);
             return true;
@@ -1625,6 +1639,7 @@ public:
         std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args&&... args) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
             acquired_async_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
             return true;
@@ -1651,6 +1666,7 @@ public:
         std::string const& topic_name,
         std::uint8_t qos,
         async_handler_t const& func = async_handler_t()) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
             acquired_async_subscribe(packet_id, topic_name, qos, func);
             return true;
@@ -1811,6 +1827,7 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
         async_send_publish(topic_name, qos, retain, false, packet_id, contents, func);
     }
@@ -1840,6 +1857,7 @@ public:
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
         async_send_publish(topic_name, qos, retain, true, packet_id, contents, func);
     }
@@ -1868,6 +1886,7 @@ public:
         std::uint16_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos, Args&&... args) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         return acquired_async_subscribe_imp(packet_id, topic_name, qos, std::forward<Args>(args)...);
     }
 
@@ -1889,6 +1908,7 @@ public:
         std::string const& topic_name,
         std::uint8_t qos,
         async_handler_t const& func = async_handler_t()) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         std::vector<std::tuple<std::reference_wrapper<std::string const>, std::uint8_t>> params;
         params.reserve(1);
         async_send_subscribe(params, packet_id, topic_name, qos, func);
@@ -2061,6 +2081,7 @@ public:
     async_suback(
         std::uint16_t packet_id,
         std::uint8_t qos, Args&&... args) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         async_suback_imp(packet_id, qos, std::forward<Args>(args)...);
     }
 
@@ -2075,6 +2096,7 @@ public:
         std::uint16_t packet_id,
         std::uint8_t qos,
         async_handler_t const& func = async_handler_t()) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         std::vector<std::uint8_t> params;
         async_send_suback(params, packet_id, qos, func);
     }
