@@ -14,11 +14,36 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
         c->set_clean_session(true);
 
         int order = 0;
-        bool pub_seq_finished = false;
+
+        std::vector<std::string> const expected = {
+            // connect
+            "h_connack",
+            // subscribe topic1 QoS0
+            "h_suback",
+            // publish topic1 QoS1
+            "h_publish",
+            "h_puback",
+            "h_unsuback",
+            // disconnect
+            "h_close",
+            "finish",
+        };
+
+        auto current =
+            [&order, &expected]() -> std::string {
+                try {
+                    return expected.at(order);
+                }
+                catch (std::out_of_range const& e) {
+                    return e.what();
+                }
+            };
+
         c->set_connack_handler(
-            [&order, &c]
+            [&order, &current, &c]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(order++ == 0);
+                BOOST_TEST(current() == "h_connack");
+                ++order;
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 BOOST_TEST(
@@ -39,9 +64,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &s]
+            [&order, &current, &s]
             () {
-                BOOST_TEST(order++ == 5);
+                BOOST_TEST(current() == "h_close");
+                ++order;
                 s.close();
             });
         c->set_error_handler(
@@ -50,28 +76,20 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 BOOST_CHECK(false);
             });
         c->set_puback_handler(
-            [&order, &c, &pub_seq_finished]
+            [&order, &current, &c]
             (std::uint16_t packet_id) {
                 BOOST_TEST(packet_id == 1);
-                switch (order++) {
-                case 2:
-                    break;
-                case 3:
-                    pub_seq_finished = true;
-                    {
-                        std::uint16_t packet_id = 0;
-                        BOOST_TEST(
-                            c->unsubscribe(packet_id, "topic1") == false);
-                    }
+                BOOST_TEST(current() == "h_puback");
+                ++order;
+                {
+                    std::uint16_t packet_id = 0;
                     BOOST_TEST(
-                        c->unsubscribe(1, "topic1") == true);
-                    BOOST_TEST(
-                        c->unsubscribe(1, "topic1") == false);
-                    break;
-                default:
-                    BOOST_CHECK(false);
-                    break;
+                        c->unsubscribe(packet_id, "topic1") == false);
                 }
+                BOOST_TEST(
+                    c->unsubscribe(1, "topic1") == true);
+                BOOST_TEST(
+                    c->unsubscribe(1, "topic1") == false);
                 return true;
             });
         c->set_pubrec_handler(
@@ -87,9 +105,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 return true;
             });
         c->set_suback_handler(
-            [&order, &c]
+            [&order, &current, &c]
             (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
-                BOOST_TEST(order++ == 1);
+                BOOST_TEST(current() == "h_suback");
+                ++order;
                 BOOST_TEST(packet_id == 1);
                 BOOST_TEST(results.size() == 1U);
                 BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
@@ -111,16 +130,16 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 return true;
             });
         c->set_unsuback_handler(
-            [&order, &c, &pub_seq_finished]
+            [&order, &current, &c]
             (std::uint16_t packet_id) {
-                BOOST_TEST(order++ == 4);
-                if (pub_seq_finished) BOOST_TEST(packet_id == 1);
-                else BOOST_TEST(packet_id == 1);
+                BOOST_TEST(current() == "h_unsuback");
+                ++order;
+                BOOST_TEST(packet_id == 1);
                 c->disconnect();
                 return true;
             });
         c->set_publish_handler(
-            [&order, &c]
+            [&order, &current]
             (std::uint8_t header,
              boost::optional<std::uint16_t> packet_id,
              std::string topic,
@@ -131,21 +150,13 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 BOOST_CHECK(!packet_id);
                 BOOST_TEST(topic == "topic1");
                 BOOST_TEST(contents == "topic1_contents");
-                switch (order++) {
-                case 2:
-                    break;
-                case 3:
-                    c->unsubscribe("topic1");
-                    break;
-                default:
-                    BOOST_CHECK(false);
-                    break;
-                }
+                BOOST_TEST(current() == "h_publish");
+                ++order;
                 return true;
             });
         c->connect();
         ios.run();
-        BOOST_TEST(order++ == 6);
+        BOOST_TEST(current() == "finish");
     };
     do_combi_test(test);
 }

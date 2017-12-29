@@ -17,16 +17,45 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
         std::uint16_t pid_pub;
 
         int order = 0;
+
+        std::vector<std::string> const expected = {
+            // connect
+            "h_connack1",
+            // disconnect
+            "h_close1",
+            // publish topic1 QoS1
+            // connect
+            "h_connack2",
+            "h_puback",
+            // disconnect
+            "h_close2",
+            "finish",
+        };
+
+        auto current =
+            [&order, &expected]() -> std::string {
+                try {
+                    return expected.at(order);
+                }
+                catch (std::out_of_range const& e) {
+                    return e.what();
+                }
+            };
+
         c->set_connack_handler(
-            [&order, &c]
+            [&order, &current, &c]
             (bool sp, std::uint8_t connack_return_code) {
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                switch (order++) {
+                switch (order) {
                 case 0: // clean session
+                    BOOST_TEST(current() == "h_connack1");
+                    ++order;
                     BOOST_TEST(sp == false);
                     c->disconnect();
                     break;
                 case 2:
+                    BOOST_TEST(current() == "h_connack2");
+                    ++order;
                     BOOST_TEST(sp == false);
                     break;
                 default:
@@ -36,16 +65,20 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &c, &pid_pub, &s]
+            [&order, &current, &c, &pid_pub, &s]
             () {
-                switch (order++) {
+                switch (order) {
                 case 1:
+                    BOOST_TEST(current() == "h_close1");
+                    ++order;
                     // offline publish
                     pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
                     c->set_clean_session(false);
                     c->connect();
                     break;
                 case 4:
+                    BOOST_TEST(current() == "h_close2");
+                    ++order;
                     s.close();
                     break;
                 default:
@@ -59,16 +92,17 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 BOOST_CHECK(false);
             });
         c->set_puback_handler(
-            [&order, &c, &pid_pub]
+            [&order, &current, &c, &pid_pub]
             (std::uint16_t packet_id) {
-                BOOST_TEST(order++ == 3);
+                BOOST_TEST(current() == "h_puback");
+                ++order;
                 BOOST_TEST(packet_id == pid_pub);
                 c->disconnect();
                 return true;
             });
         c->connect();
         ios.run();
-        BOOST_TEST(order++ == 5);
+        BOOST_TEST(current() == "finish");
     };
     do_combi_test(test);
 }
@@ -81,16 +115,46 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         std::uint16_t pid_pub;
 
         int order = 0;
+
+        std::vector<std::string> const expected = {
+            // connect
+            "h_connack1",
+            // disconnect
+            "h_close1",
+            // publish topic1 QoS2
+            // connect
+            "h_connack2",
+            "h_pubrec",
+            "h_pubcomp",
+            // disconnect
+            "h_close2",
+            "finish",
+        };
+
+        auto current =
+            [&order, &expected]() -> std::string {
+                try {
+                    return expected.at(order);
+                }
+                catch (std::out_of_range const& e) {
+                    return e.what();
+                }
+            };
+
         c->set_connack_handler(
-            [&order, &c]
+            [&order, &current, &c]
             (bool sp, std::uint8_t connack_return_code) {
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                switch (order++) {
+                switch (order) {
                 case 0: // clean session
+                    BOOST_TEST(current() == "h_connack1");
+                    ++order;
                     BOOST_TEST(sp == false);
                     c->disconnect();
                     break;
                 case 2:
+                    BOOST_TEST(current() == "h_connack2");
+                    ++order;
                     BOOST_TEST(sp == false);
                     break;
                 default:
@@ -100,16 +164,20 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &c, &pid_pub, &s]
+            [&order, &current, &c, &pid_pub, &s]
             () {
-                switch (order++) {
+                switch (order) {
                 case 1:
+                    BOOST_TEST(current() == "h_close1");
+                    ++order;
                     // offline publish
                     pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
                     c->set_clean_session(false);
                     c->connect();
                     break;
                 case 5:
+                    BOOST_TEST(current() == "h_close2");
+                    ++order;
                     s.close();
                     break;
                 default:
@@ -123,23 +191,25 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 BOOST_CHECK(false);
             });
         c->set_pubrec_handler(
-            [&order, &pid_pub]
+            [&order, &current, &pid_pub]
             (std::uint16_t packet_id) {
-                BOOST_TEST(order++ == 3);
+                BOOST_TEST(current() == "h_pubrec");
+                ++order;
                 BOOST_TEST(packet_id == pid_pub);
                 return true;
             });
         c->set_pubcomp_handler(
-            [&order, &c, &pid_pub]
+            [&order, &current, &c, &pid_pub]
             (std::uint16_t packet_id) {
-                BOOST_TEST(order++ == 4);
+                BOOST_TEST(current() == "h_pubcomp");
+                ++order;
                 BOOST_TEST(packet_id == pid_pub);
                 c->disconnect();
                 return true;
             });
         c->connect();
         ios.run();
-        BOOST_TEST(order++ == 6);
+        BOOST_TEST(current() == "finish");
     };
     do_combi_test(test);
 }
@@ -153,16 +223,47 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
         std::uint16_t pid_pub2;
 
         int order = 0;
+
+        std::vector<std::string> const expected = {
+            // connect
+            "h_connack1",
+            // disconnect
+            "h_close1",
+            // publish topic1 QoS1
+            // publish topic1 QoS1
+            // connect
+            "h_connack2",
+            "h_puback1",
+            "h_puback2",
+            // disconnect
+            "h_close2",
+            "finish",
+        };
+
+        auto current =
+            [&order, &expected]() -> std::string {
+                try {
+                    return expected.at(order);
+                }
+                catch (std::out_of_range const& e) {
+                    return e.what();
+                }
+            };
+
         c->set_connack_handler(
-            [&order, &c]
+            [&order, &current, &c]
             (bool sp, std::uint8_t connack_return_code) {
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                switch (order++) {
+                switch (order) {
                 case 0: // clean session
+                    BOOST_TEST(current() == "h_connack1");
+                    ++order;
                     BOOST_TEST(sp == false);
                     c->disconnect();
                     break;
                 case 2:
+                    BOOST_TEST(current() == "h_connack2");
+                    ++order;
                     BOOST_TEST(sp == false);
                     break;
                 default:
@@ -172,10 +273,12 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &c, &pid_pub1, &pid_pub2, &s]
+            [&order, &current, &c, &pid_pub1, &pid_pub2, &s]
             () {
-                switch (order++) {
+                switch (order) {
                 case 1:
+                    BOOST_TEST(current() == "h_close1");
+                    ++order;
                     // offline publish
                     pid_pub1 = c->publish_at_least_once(/*topic_base()*/ + "987/topic1", "topic1_contents1");
                     pid_pub2 = c->publish_at_least_once(/*topic_base()*/ + "987/topic1", "topic1_contents2");
@@ -183,6 +286,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                     c->connect();
                     break;
                 case 5:
+                    BOOST_TEST(current() == "h_close2");
+                    ++order;
                     s.close();
                     break;
                 default:
@@ -196,13 +301,17 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 BOOST_CHECK(false);
             });
         c->set_puback_handler(
-            [&order, &c, &pid_pub1, &pid_pub2]
+            [&order, &current, &c, &pid_pub1, &pid_pub2]
             (std::uint16_t packet_id) {
-                switch (order++) {
+                switch (order) {
                 case 3:
+                    BOOST_TEST(current() == "h_puback1");
+                    ++order;
                     BOOST_TEST(packet_id == pid_pub1);
                     break;
                 case 4:
+                    BOOST_TEST(current() == "h_puback2");
+                    ++order;
                     BOOST_TEST(packet_id == pid_pub2);
                     c->disconnect();
                     break;
@@ -213,7 +322,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             });
         c->connect();
         ios.run();
-        BOOST_TEST(order++ == 6);
+        BOOST_TEST(current() == "finish");
     };
     do_combi_test(test);
 }
@@ -226,16 +335,46 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
         std::uint16_t pid_pub;
 
         int order = 0;
+
+        std::vector<std::string> const expected = {
+            // connect
+            "h_connack1",
+            // disconnect
+            "h_close1",
+            // publish topic1 QoS1
+            "h_pub_finish",
+            // connect
+            "h_connack2",
+            "h_puback",
+            // disconnect
+            "h_close2",
+            "finish",
+        };
+
+        auto current =
+            [&order, &expected]() -> std::string {
+                try {
+                    return expected.at(order);
+                }
+                catch (std::out_of_range const& e) {
+                    return e.what();
+                }
+            };
+
         c->set_connack_handler(
-            [&order, &c]
+            [&order, &current, &c]
             (bool sp, std::uint8_t connack_return_code) {
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                switch (order++) {
+                switch (order) {
                 case 0: // clean session
+                    BOOST_TEST(current() == "h_connack1");
+                    ++order;
                     BOOST_TEST(sp == false);
                     c->disconnect();
                     break;
                 case 3:
+                    BOOST_TEST(current() == "h_connack2");
+                    ++order;
                     BOOST_TEST(sp == false);
                     break;
                 default:
@@ -245,24 +384,29 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &c, &pid_pub, &s]
+            [&order, &current, &c, &pid_pub, &s]
             () {
-                switch (order++) {
+                switch (order) {
                 case 1:
+                    BOOST_TEST(current() == "h_close1");
+                    ++order;
                     // offline publish
                     pid_pub = c->async_publish_at_least_once(
                         "topic1",
                         "topic1_contents",
                         false, // retain
-                        [&order](boost::system::error_code const& ec){
+                        [&order, &current](boost::system::error_code const& ec){
                             BOOST_TEST(ec == boost::system::errc::success);
-                            BOOST_TEST(order++ == 2);
+                            BOOST_TEST(current() == "h_pub_finish");
+                            ++order;
                         }
                     );
                     c->set_clean_session(false);
                     c->connect();
                     break;
                 case 5:
+                    BOOST_TEST(current() == "h_close2");
+                    ++order;
                     s.close();
                     break;
                 default:
@@ -276,16 +420,17 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                 BOOST_CHECK(false);
             });
         c->set_puback_handler(
-            [&order, &c, &pid_pub]
+            [&order, &current, &c, &pid_pub]
             (std::uint16_t packet_id) {
-                BOOST_TEST(order++ == 4);
+                BOOST_TEST(current() == "h_puback");
+                ++order;
                 BOOST_TEST(packet_id == pid_pub);
                 c->disconnect();
                 return true;
             });
         c->connect();
         ios.run();
-        BOOST_TEST(order++ == 6);
+        BOOST_TEST(current() == "finish");
     };
     do_combi_test(test);
 }
