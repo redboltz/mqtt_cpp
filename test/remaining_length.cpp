@@ -22,19 +22,45 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
         std::uint16_t pid_unsub;
 
         int order = 0;
+
+        std::vector<std::string> const expected = {
+            // connect
+            "h_connack",
+            // subscribe topic1 QoS0
+            "h_suback",
+            // publish topic1 QoS0
+            "h_publish",
+            "h_unsuback",
+            // disconnect
+            "h_close",
+            "finish",
+        };
+
+        auto current =
+            [&order, &expected]() -> std::string {
+                try {
+                    return expected.at(order);
+                }
+                catch (std::out_of_range const& e) {
+                    return e.what();
+                }
+            };
+
         c->set_connack_handler(
-            [&order, &c, &pid_sub]
+            [&order, &current, &c, &pid_sub]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(order++ == 0);
+                BOOST_TEST(current() == "h_connack");
+                ++order;
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 pid_sub = c->subscribe("topic1", mqtt::qos::at_most_once);
                 return true;
             });
         c->set_close_handler(
-            [&order, &s]
+            [&order, &current, &s]
             () {
-                BOOST_TEST(order++ == 4);
+                BOOST_TEST(current() == "h_close");
+                ++order;
                 s.close();
             });
         c->set_error_handler(
@@ -61,9 +87,10 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
                 return true;
             });
         c->set_suback_handler(
-            [&order, &c, &pid_sub, &test_contents]
+            [&order, &current, &c, &pid_sub, &test_contents]
             (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
-                BOOST_TEST(order++ == 1);
+                BOOST_TEST(current() == "h_suback");
+                ++order;
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(results.size() == 1U);
                 BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
@@ -71,20 +98,22 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
                 return true;
             });
         c->set_unsuback_handler(
-            [&order, &c, &pid_unsub]
+            [&order, &current, &c, &pid_unsub]
             (std::uint16_t packet_id) {
-                BOOST_TEST(order++ == 3);
+                BOOST_TEST(current() == "h_unsuback");
+                ++order;
                 BOOST_TEST(packet_id == pid_unsub);
                 c->disconnect();
                 return true;
             });
         c->set_publish_handler(
-            [&order, &c, &pid_unsub, &test_contents]
+            [&order, &current, &c, &pid_unsub, &test_contents]
             (std::uint8_t header,
              boost::optional<std::uint16_t> packet_id,
              std::string topic,
              std::string contents) {
-                BOOST_TEST(order++ == 2);
+                BOOST_TEST(current() == "h_publish");
+                ++order;
                 BOOST_TEST(mqtt::publish::is_dup(header) == false);
                 BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
                 BOOST_TEST(mqtt::publish::is_retain(header) == false);
@@ -96,7 +125,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
             });
         c->connect();
         ios.run();
-        BOOST_TEST(order++ == 5);
+        BOOST_TEST(current() == "finish");
     };
     do_combi_test(test);
 }
@@ -114,19 +143,45 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
         std::uint16_t pid_unsub;
 
         int order = 0;
+
+        std::vector<std::string> const expected = {
+            // connect
+            "h_connack",
+            // subscribe topic1 QoS0
+            "h_suback",
+            // publish topic1 QoS0
+            "h_publish",
+            "h_unsuback",
+            // disconnect
+            "h_close",
+            "finish",
+        };
+
+        auto current =
+            [&order, &expected]() -> std::string {
+                try {
+                    return expected.at(order);
+                }
+                catch (std::out_of_range const& e) {
+                    return e.what();
+                }
+            };
+
         c->set_connack_handler(
-            [&order, &c, &pid_sub]
+            [&order, &current, &c, &pid_sub]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(order++ == 0);
+                BOOST_TEST(current() == "h_connack");
+                ++order;
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 pid_sub = c->subscribe("topic1", mqtt::qos::at_most_once);
                 return true;
             });
         c->set_close_handler(
-            [&order, &s]
+            [&order, &current, &s]
             () {
-                BOOST_TEST(order++ == 4);
+                BOOST_TEST(current() == "h_close");
+                ++order;
                 s.close();
             });
         c->set_error_handler(
@@ -153,9 +208,10 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
                 return true;
             });
         c->set_suback_handler(
-            [&order, &c, &pid_sub, &test_contents]
+            [&order, &current, &c, &pid_sub, &test_contents]
             (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
-                BOOST_TEST(order++ == 1);
+                BOOST_TEST(current() == "h_suback");
+                ++order;
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(results.size() == 1U);
                 BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
@@ -163,20 +219,22 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
                 return true;
             });
         c->set_unsuback_handler(
-            [&order, &c, &pid_unsub]
+            [&order, &current, &c, &pid_unsub]
             (std::uint16_t packet_id) {
-                BOOST_TEST(order++ == 3);
+                BOOST_TEST(current() == "h_unsuback");
+                ++order;
                 BOOST_TEST(packet_id == pid_unsub);
                 c->disconnect();
                 return true;
             });
         c->set_publish_handler(
-            [&order, &c, &pid_unsub, &test_contents]
+            [&order, &current, &c, &pid_unsub, &test_contents]
             (std::uint8_t header,
              boost::optional<std::uint16_t> packet_id,
              std::string topic,
              std::string contents) {
-                BOOST_TEST(order++ == 2);
+                BOOST_TEST(current() == "h_publish");
+                ++order;
                 BOOST_TEST(mqtt::publish::is_dup(header) == false);
                 BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
                 BOOST_TEST(mqtt::publish::is_retain(header) == false);
@@ -188,7 +246,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
             });
         c->connect();
         ios.run();
-        BOOST_TEST(order++ == 5);
+        BOOST_TEST(current() == "finish");
     };
     do_combi_test(test);
 }
@@ -208,19 +266,45 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
         std::uint16_t pid_unsub;
 
         int order = 0;
+
+        std::vector<std::string> const expected = {
+            // connect
+            "h_connack",
+            // subscribe topic1 QoS0
+            "h_suback",
+            // publish topic1 QoS0
+            "h_publish",
+            "h_unsuback",
+            // disconnect
+            "h_close",
+            "finish",
+        };
+
+        auto current =
+            [&order, &expected]() -> std::string {
+                try {
+                    return expected.at(order);
+                }
+                catch (std::out_of_range const& e) {
+                    return e.what();
+                }
+            };
+
         c->set_connack_handler(
-            [&order, &c, &pid_sub]
+            [&order, &current, &c, &pid_sub]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(order++ == 0);
+                BOOST_TEST(current() == "h_connack");
+                ++order;
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 pid_sub = c->subscribe("topic1", mqtt::qos::at_most_once);
                 return true;
             });
         c->set_close_handler(
-            [&order, &s]
+            [&order, &current, &s]
             () {
-                BOOST_TEST(order++ == 4);
+                BOOST_TEST(current() == "h_close");
+                ++order;
                 s.close();
             });
         c->set_error_handler(
@@ -247,9 +331,10 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
                 return true;
             });
         c->set_suback_handler(
-            [&order, &c, &pid_sub, &test_contents]
+            [&order, &current, &c, &pid_sub, &test_contents]
             (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
-                BOOST_TEST(order++ == 1);
+                BOOST_TEST(current() == "h_suback");
+                ++order;
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(results.size() == 1U);
                 BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
@@ -257,20 +342,22 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
                 return true;
             });
         c->set_unsuback_handler(
-            [&order, &c, &pid_unsub]
+            [&order, &current, &c, &pid_unsub]
             (std::uint16_t packet_id) {
-                BOOST_TEST(order++ == 3);
+                BOOST_TEST(current() == "h_unsuback");
+                ++order;
                 BOOST_TEST(packet_id == pid_unsub);
                 c->disconnect();
                 return true;
             });
         c->set_publish_handler(
-            [&order, &c, &pid_unsub, &test_contents]
+            [&order, &current, &c, &pid_unsub, &test_contents]
             (std::uint8_t header,
              boost::optional<std::uint16_t> packet_id,
              std::string topic,
              std::string contents) {
-                BOOST_TEST(order++ == 2);
+                BOOST_TEST(current() == "h_publish");
+                ++order;
                 BOOST_TEST(mqtt::publish::is_dup(header) == false);
                 BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
                 BOOST_TEST(mqtt::publish::is_retain(header) == false);
@@ -282,7 +369,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
             });
         c->connect();
         ios.run();
-        BOOST_TEST(order++ == 5);
+        BOOST_TEST(current() == "finish");
     };
     do_combi_test(test);
 }
