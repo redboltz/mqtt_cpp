@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
             return true;
         });
     c->set_pubrec_handler(
-        [&c]
+        [&]
         (std::uint16_t packet_id){
             std::cout << "pubrec received. packet_id: " << packet_id << std::endl;
             return true;
