@@ -278,30 +278,7 @@ public:
         auto end = eps.end();
 #endif // BOOST_VERSION < 106600
         setup_socket(base::socket());
-        auto self = this->shared_from_this();
-        as::async_connect(
-            base::socket()->lowest_layer(), it, end,
-            [this, self, func]
-            (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
-                base::set_close_handler([this](){ handle_close(); });
-                base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
-                if (!ec) {
-                    base::set_connect();
-                    if (ping_duration_ms_ != 0) {
-                        tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
-                        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(self));
-                        tim_->async_wait(
-                            [wp](boost::system::error_code const& ec) {
-                                if (auto sp = wp.lock()) {
-                                    sp->handle_timer(ec);
-                                }
-                            }
-                        );
-                    }
-                }
-                if (base::handle_close_or_error(ec)) return;
-                handshake_socket(base::socket(), func);
-            });
+        connect_impl(*base::socket(), it, end, func);
     }
 
     /**
@@ -323,30 +300,7 @@ public:
         auto end = eps.end();
 #endif // BOOST_VERSION < 106600
         base::socket() = std::move(socket);
-        auto self = this->shared_from_this();
-        as::async_connect(
-            base::socket()->lowest_layer(), it, end,
-            [this, self, func]
-            (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
-                base::set_close_handler([this](){ handle_close(); });
-                base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
-                if (!ec) {
-                    base::set_connect();
-                    if (ping_duration_ms_ != 0) {
-                        tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
-                        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(self));
-                        tim_->async_wait(
-                            [wp](boost::system::error_code const& ec) {
-                                if (auto sp = wp.lock()) {
-                                    sp->handle_timer(ec);
-                                }
-                            }
-                        );
-                    }
-                }
-                if (base::handle_close_or_error(ec)) return;
-                handshake_socket(base::socket(), func);
-            });
+        connect_impl(*base::socket(), it, end, func);
     }
 
     /**
@@ -451,7 +405,7 @@ private:
 
     template <typename Strand>
     void handshake_socket(
-        std::unique_ptr<tcp_endpoint<as::ip::tcp::socket, Strand>>&,
+        tcp_endpoint<as::ip::tcp::socket, Strand>&,
         async_handler_t const& func) {
         base::async_read_control_packet_type(func);
         base::connect(keep_alive_sec_);
@@ -460,10 +414,10 @@ private:
 #if defined(MQTT_USE_WS)
     template <typename Strand>
     void handshake_socket(
-        std::unique_ptr<ws_endpoint<as::ip::tcp::socket, Strand>>& socket,
+        ws_endpoint<as::ip::tcp::socket, Strand>& socket,
         async_handler_t const& func) {
         auto self = this->shared_from_this();
-        socket->async_handshake(
+        socket.async_handshake(
             host_,
             path_,
             [this, self, func]
@@ -479,10 +433,10 @@ private:
 
     template <typename Strand>
     void handshake_socket(
-        std::unique_ptr<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket,
+        tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         async_handler_t const& func) {
         auto self = this->shared_from_this();
-        socket->async_handshake(
+        socket.async_handshake(
             as::ssl::stream_base::client,
             [this, self, func]
             (boost::system::error_code const& ec) mutable {
@@ -495,15 +449,15 @@ private:
 #if defined(MQTT_USE_WS)
     template <typename Strand>
     void handshake_socket(
-        std::unique_ptr<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket,
+        ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         async_handler_t const& func) {
         auto self = this->shared_from_this();
-        socket->next_layer().async_handshake(
+        socket.next_layer().async_handshake(
             as::ssl::stream_base::client,
             [this, self, func, &socket]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
-                socket->async_handshake(
+                socket.async_handshake(
                     host_,
                     path_,
                     [this, self, func]
@@ -517,6 +471,34 @@ private:
 #endif // defined(MQTT_USE_WS)
 
 #endif // defined(MQTT_NO_TLS)
+
+    template <typename Iterator>
+    void connect_impl(Socket& socket, Iterator it, Iterator end, async_handler_t const& func = async_handler_t()) {
+        auto self = this->shared_from_this();
+        as::async_connect(
+            socket.lowest_layer(), it, end,
+            [this, self, &socket, func]
+            (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
+                base::set_close_handler([this](){ handle_close(); });
+                base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
+                if (!ec) {
+                    base::set_connect();
+                    if (ping_duration_ms_ != 0) {
+                        tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
+                        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(self));
+                        tim_->async_wait(
+                            [wp](boost::system::error_code const& ec) {
+                                if (auto sp = wp.lock()) {
+                                    sp->handle_timer(ec);
+                                }
+                            }
+                        );
+                    }
+                }
+                if (base::handle_close_or_error(ec)) return;
+                handshake_socket(socket, func);
+            });
+    }
 
     void handle_timer(boost::system::error_code const& ec) {
         if (!ec) {
