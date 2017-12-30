@@ -356,7 +356,7 @@ private:
                     *sb,
                     *request,
                     [this, sb, request]
-                    (boost::system::error_code const& ec) {
+                    (boost::system::error_code const& ec, std::size_t) {
                         if (ec) {
                             if (h_error_) h_error_(ec);
                             return;
@@ -509,7 +509,7 @@ private:
                             *sb,
                             *request,
                             [this, sb, request]
-                            (boost::system::error_code const& ec) {
+                            (boost::system::error_code const& ec, std::size_t) {
                                 if (ec) {
                                     if (h_error_) h_error_(ec);
                                     return;
