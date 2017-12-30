@@ -1,3 +1,10 @@
+## 1.0.9
+* Supported Boost 1.66.0 new asio interface. (#106)
+* Updated beast to v124. (#107)
+* If Boost version is 1.66.0 or later, use Boost.Beast. (#107)
+* Improved tests. (#102, #104)
+* Improved assetions. (#105)
+
 ## 1.0.8
 * Added TLS verifying setup functions. (#100)
 
