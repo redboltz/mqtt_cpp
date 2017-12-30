@@ -268,12 +268,19 @@ public:
      */
     void connect(async_handler_t const& func = async_handler_t()) {
         as::ip::tcp::resolver r(ios_);
+#if BOOST_VERSION < 106600
         as::ip::tcp::resolver::query q(host_, port_);
         auto it = r.resolve(q);
+        as::ip::tcp::resolver::iterator end;
+#else  // BOOST_VERSION < 106600
+        auto eps = r.resolve(host_, port_);
+        auto it = eps.begin();
+        auto end = eps.end();
+#endif // BOOST_VERSION < 106600
         setup_socket(base::socket());
         auto self = this->shared_from_this();
         as::async_connect(
-            base::socket()->lowest_layer(), it,
+            base::socket()->lowest_layer(), it, end,
             [this, self, func]
             (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
                 base::set_close_handler([this](){ handle_close(); });
@@ -306,12 +313,19 @@ public:
      */
     void connect(std::unique_ptr<Socket>&& socket, async_handler_t const& func = async_handler_t()) {
         as::ip::tcp::resolver r(ios_);
+#if BOOST_VERSION < 106600
         as::ip::tcp::resolver::query q(host_, port_);
         auto it = r.resolve(q);
+        as::ip::tcp::resolver::iterator end;
+#else  // BOOST_VERSION < 106600
+        auto eps = r.resolve(host_, port_);
+        auto it = eps.begin();
+        auto end = eps.end();
+#endif // BOOST_VERSION < 106600
         base::socket() = std::move(socket);
         auto self = this->shared_from_this();
         as::async_connect(
-            base::socket()->lowest_layer(), it,
+            base::socket()->lowest_layer(), it, end,
             [this, self, func]
             (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
                 base::set_close_handler([this](){ handle_close(); });
