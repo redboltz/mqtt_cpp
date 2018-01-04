@@ -14,6 +14,7 @@ LIST (APPEND check_PROGRAMS
      remaining_length.cpp
      multi_sub.cpp
      resend.cpp
+     resend_serialize.cpp
      offline.cpp
      manual_publish.cpp
      retain.cpp
