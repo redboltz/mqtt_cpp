@@ -2127,6 +2127,120 @@ public:
         async_send_unsuback(packet_id, func);
     }
 
+    /**
+     * @brief Clear storead publish message that has packet_id.
+     * @params packet_id packet id corresponding to stored publish
+     */
+    void clear_stored_publish(std::uint16_t packet_id) {
+        LockGuard<Mutex> lck (store_mtx_);
+        auto& idx = store_.template get<tag_packet_id>();
+        auto r = idx.equal_range(packet_id);
+        idx.erase(std::get<0>(r), std::get<1>(r));
+        packet_id_.erase(packet_id);
+    }
+
+    /**
+     * @brief Get Socket unique_ptr reference.
+     * @return refereence of Socket unique_ptr
+     */
+    std::unique_ptr<Socket>& socket() {
+        return socket_;
+    }
+
+    /**
+     * @brief Get Socket unique_ptr const reference.
+     * @return const refereence of Socket unique_ptr
+     */
+    std::unique_ptr<Socket> const& socket() const {
+        return socket_;
+    }
+
+
+    /**
+     * @brief Apply f to stored messages.
+     * @params f applying function. f should be void(char const*, std::size_t)
+     */
+    template <typename F>
+    void for_each_store(F&& f) {
+        LockGuard<Mutex> lck (store_mtx_);
+        auto& idx = store_.template get<tag_seq>();
+        for (auto const & e : idx) {
+            f(e.ptr(), e.size());
+        }
+    }
+
+    // manual packet_id management for advanced users
+
+    /**
+     * @brief Acquire the new unique packet id.
+     *        If all packet ids are already in use, then throw packet_id_exhausted_error exception.
+     *        After acquiring the packet id, you can call acuired_* functions.
+     *        The ownership of packet id is moved to the library.
+     *        Or you can call release_packet_id to release it.
+     * @return packet id
+     */
+    std::uint16_t acquire_unique_packet_id() {
+        LockGuard<Mutex> lck (store_mtx_);
+        if (packet_id_.size() == 0xffff - 1) throw packet_id_exhausted_error();
+        do {
+            if (++packet_id_master_ == 0) ++packet_id_master_;
+        } while (!packet_id_.insert(packet_id_master_).second);
+        return packet_id_master_;
+    }
+
+    /**
+     * @brief Register packet_id to the library.
+     *        After registering the packet_id, you can call acuired_* functions.
+     *        The ownership of packet id is moved to the library.
+     *        Or you can call release_packet_id to release it.
+     * @return If packet_id is successfully registerd then return true, otherwise return false.
+     */
+    bool register_packet_id(std::uint16_t packet_id) {
+        if (packet_id == 0) return false;
+        LockGuard<Mutex> lck (store_mtx_);
+        return packet_id_.insert(packet_id).second;
+    }
+
+    /**
+     * @brief Release packet_id.
+     * @params packet_id packet id to release.
+     *                   only the packet_id gotten by acquire_unique_packet_id, or
+     *                   register_packet_id is permitted.
+     * @return If packet_id is successfully released then return true, otherwise return false.
+     */
+    // Only the packet_id gotten by acquire_unique_packet_id, or
+    // register_packet_id is permitted.
+    bool release_packet_id(std::uint16_t packet_id) {
+        LockGuard<Mutex> lck (store_mtx_);
+        return packet_id_.erase(packet_id);
+    }
+
+protected:
+    void async_read_control_packet_type(async_handler_t const& func) {
+        auto self = this->shared_from_this();
+        async_read(
+            *socket_,
+            as::buffer(&buf_, 1),
+            [this, self, func](
+                boost::system::error_code const& ec,
+                std::size_t bytes_transferred){
+                if (handle_close_or_error(ec)) {
+                    if (func) func(ec);
+                    return;
+                }
+                if (bytes_transferred != 1) {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                    return;
+                }
+                handle_control_packet_type(func);
+            }
+        );
+    }
+
+    bool connected() const {
+        return connected_;
+    }
+
     bool handle_close_or_error(boost::system::error_code const& ec) {
         if (!ec) return false;
         if (connected_) {
@@ -2161,82 +2275,8 @@ public:
         return true;
     }
 
-    bool connected() const {
-        return connected_;
-    }
-
     void set_connect() {
         connected_ = true;
-    }
-
-    void clear_stored_publish(std::uint16_t packet_id) {
-        LockGuard<Mutex> lck (store_mtx_);
-        auto& idx = store_.template get<tag_packet_id>();
-        auto r = idx.equal_range(packet_id);
-        idx.erase(std::get<0>(r), std::get<1>(r));
-        packet_id_.erase(packet_id);
-    }
-
-    std::unique_ptr<Socket>& socket() {
-        return socket_;
-    }
-    std::unique_ptr<Socket> const& socket() const {
-        return socket_;
-    }
-
-    template <typename F>
-    void for_each_store(F&& f) {
-        LockGuard<Mutex> lck (store_mtx_);
-        auto& idx = store_.template get<tag_seq>();
-        for (auto const & e : idx) {
-            f(e.ptr(), e.size());
-        }
-    }
-
-    // manual packet_id management for advanced users
-
-    std::uint16_t acquire_unique_packet_id() {
-        LockGuard<Mutex> lck (store_mtx_);
-        if (packet_id_.size() == 0xffff - 1) throw packet_id_exhausted_error();
-        do {
-            if (++packet_id_master_ == 0) ++packet_id_master_;
-        } while (!packet_id_.insert(packet_id_master_).second);
-        return packet_id_master_;
-    }
-
-    bool register_packet_id(std::uint16_t packet_id) {
-        if (packet_id == 0) return false;
-        LockGuard<Mutex> lck (store_mtx_);
-        return packet_id_.insert(packet_id).second;
-    }
-
-    // Only the packet_id gotten by acquire_unique_packet_id, or
-    // register_packet_id is permitted.
-    bool release_packet_id(std::uint16_t packet_id) {
-        LockGuard<Mutex> lck (store_mtx_);
-        return packet_id_.erase(packet_id);
-    }
-
-protected:
-    void async_read_control_packet_type(async_handler_t const& func) {
-        auto self = this->shared_from_this();
-        async_read(
-            *socket_,
-            as::buffer(&buf_, 1),
-            [this, self, func](
-                boost::system::error_code const& ec,
-                std::size_t bytes_transferred){
-                if (handle_close_or_error(ec)) {
-                    if (func) func(ec);
-                    return;
-                }
-                if (bytes_transferred != 1) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return;
-                }
-                handle_control_packet_type(func);
-            }
-        );
     }
 
 private:
