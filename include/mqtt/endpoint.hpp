@@ -298,6 +298,34 @@ public:
      */
     using disconnect_handler = std::function<void()>;
 
+    /**
+     * @breif Serialize publish handler
+     *        You can serialize the publish message.
+     *        To restore the message, use restore_serialized_message().
+     * @param packet_id packet identifier of the serializing message
+     * @param data      pointer to the serializing message
+     * @param size      size of the serializing message
+     */
+    using serialize_publish_handler = std::function<void(std::uint16_t, char const*, std::size_t)>;
+
+    /**
+     * @breif Serialize pubrel handler
+     *        You can serialize the pubrel message.
+     *        If your storage has already had the publish message that has the same packet_id,
+     *        then you need to replace the publish message to pubrel message.
+     *        To restore the message, use restore_serialized_message().
+     * @param packet_id packet identifier of the serializing message
+     * @param data      pointer to the serializing message
+     * @param size      size of the serializing message
+     */
+    using serialize_pubrel_handler = std::function<void(std::uint16_t, char const*, std::size_t)>;
+
+    /**
+     * @breif Remove serialized message
+     * @param packet_id packet identifier of the removing message
+     */
+    using serialize_remove_handler = std::function<void(std::uint16_t)>;
+
     endpoint(this_type const&) = delete;
     endpoint(this_type&&) = delete;
     endpoint& operator=(this_type const&) = delete;
@@ -531,6 +559,30 @@ public:
      */
     void set_disconnect_handler(disconnect_handler h = disconnect_handler()) {
         h_disconnect_ = std::move(h);
+    }
+
+    /**
+     * @brief Set serialize handlers
+     * @param h_publish serialize handler for publish message
+     * @param h_pubrel serialize handler for pubrel message
+     * @param h_remove remove handler for serialized message
+     */
+    void set_serialize_handlers(
+        serialize_publish_handler h_publish,
+        serialize_pubrel_handler h_pubrel,
+        serialize_remove_handler h_remove) {
+        h_serialize_publish_ = std::move(h_publish);
+        h_serialize_pubrel_ = std::move(h_pubrel);
+        h_serialize_remove_ = std::move(h_remove);
+    }
+
+    /**
+     * @brief Clear serialize handlers
+     */
+    void set_serialize_handlers() {
+        h_serialize_publish_ = serialize_publish_handler();
+        h_serialize_pubrel_ = serialize_pubrel_handler();
+        h_serialize_remove_ = serialize_remove_handler();
     }
 
     /**
@@ -2208,11 +2260,52 @@ public:
      *                   register_packet_id is permitted.
      * @return If packet_id is successfully released then return true, otherwise return false.
      */
-    // Only the packet_id gotten by acquire_unique_packet_id, or
-    // register_packet_id is permitted.
     bool release_packet_id(std::uint16_t packet_id) {
         LockGuard<Mutex> lck (store_mtx_);
         return packet_id_.erase(packet_id);
+    }
+
+    /**
+     * @brief Restore serialized publish and pubrel messages.
+     *        This function shouold be called before connect.
+     * @params packet_id packet id of the message
+     * @params b         iterator begin of the message
+     * @params e         iterator end of the message
+     */
+    template <typename Iterator>
+    void restore_serialized_message(std::uint16_t packet_id, Iterator b, Iterator e) {
+        if (b == e) return;
+        auto control_packet_type = get_control_packet_type(*b);
+        switch (control_packet_type) {
+        case control_packet_type::publish: {
+            auto qos = publish::get_qos(*b);
+            auto sp = std::make_shared<std::string>(b, e);
+            LockGuard<Mutex> lck (store_mtx_);
+            if (packet_id_.insert(packet_id).second) {
+                store_.emplace(
+                    packet_id,
+                    qos == qos::at_least_once ? control_packet_type::puback
+                                              : control_packet_type::pubrec,
+                    sp,
+                    &(*sp)[0],
+                    sp->size());
+            }
+        } break;
+        case control_packet_type::pubrel: {
+            auto sp = std::make_shared<std::string>(b, e);
+            LockGuard<Mutex> lck (store_mtx_);
+            if (packet_id_.insert(packet_id).second) {
+                store_.emplace(
+                    packet_id,
+                    control_packet_type::pubcomp,
+                    sp,
+                    &(*sp)[0],
+                    sp->size());
+            }
+        } break;
+        default:
+            return;
+        }
     }
 
 protected:
@@ -2920,6 +3013,7 @@ private:
             idx.erase(std::get<0>(r), std::get<1>(r));
             packet_id_.erase(packet_id);
         }
+        if (h_serialize_remove_) h_serialize_remove_(packet_id);
         if (h_puback_) return h_puback_(packet_id);
         return true;
     }
@@ -3002,6 +3096,7 @@ private:
             idx.erase(std::get<0>(r), std::get<1>(r));
             packet_id_.erase(packet_id);
         }
+        if (h_serialize_remove_) h_serialize_remove_(packet_id);
         if (h_pubcomp_) return h_pubcomp_(packet_id);
         return true;
     }
@@ -3243,6 +3338,9 @@ private:
                 sb.buf(),
                 std::get<0>(ptr_size),
                 std::get<1>(ptr_size));
+            if (h_serialize_publish_) {
+                h_serialize_publish_(packet_id, std::get<0>(ptr_size), std::get<1>(ptr_size));
+            }
         }
     }
 
@@ -3276,6 +3374,9 @@ private:
             sb.buf(),
             std::get<0>(ptr_size),
             std::get<1>(ptr_size));
+        if (h_serialize_pubrel_) {
+            h_serialize_pubrel_(packet_id, std::get<0>(ptr_size), std::get<1>(ptr_size));
+        }
     }
 
     void store_pubrel(std::uint16_t packet_id) {
@@ -3290,6 +3391,9 @@ private:
             sb.buf(),
             std::get<0>(ptr_size),
             std::get<1>(ptr_size));
+        if (h_serialize_pubrel_) {
+            h_serialize_pubrel_(packet_id, std::get<0>(ptr_size), std::get<1>(ptr_size));
+        }
     }
 
     void send_pubcomp(std::uint16_t packet_id) {
@@ -3520,6 +3624,9 @@ private:
                 sb.buf(),
                 std::get<0>(ptr_size),
                 std::get<1>(ptr_size));
+            if (h_serialize_publish_) {
+                h_serialize_publish_(packet_id, std::get<0>(ptr_size), std::get<1>(ptr_size));
+            }
         }
     }
 
@@ -3558,6 +3665,9 @@ private:
             sb.buf(),
             std::get<0>(ptr_size),
             std::get<1>(ptr_size));
+        if (h_serialize_pubrel_) {
+            h_serialize_pubrel_(packet_id, std::get<0>(ptr_size), std::get<1>(ptr_size));
+        }
     }
 
     void async_send_pubcomp(std::uint16_t packet_id, async_handler_t const& func) {
@@ -3813,6 +3923,9 @@ private:
     pingreq_handler h_pingreq_;
     pingresp_handler h_pingresp_;
     disconnect_handler h_disconnect_;
+    serialize_publish_handler h_serialize_publish_;
+    serialize_pubrel_handler h_serialize_pubrel_;
+    serialize_remove_handler h_serialize_remove_;
     boost::optional<std::string> user_name_;
     boost::optional<std::string> password_;
     Mutex store_mtx_;
