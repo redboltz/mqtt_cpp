@@ -67,7 +67,8 @@ public:
          clean_session_(false),
          packet_id_master_(0),
          auto_pub_response_(true),
-         auto_pub_response_async_(false)
+         auto_pub_response_async_(false),
+         disconnect_requested_(false)
     {}
 
     /**
@@ -81,7 +82,8 @@ public:
          clean_session_(false),
          packet_id_master_(0),
          auto_pub_response_(true),
-         auto_pub_response_async_(false)
+         auto_pub_response_async_(false),
+         disconnect_requested_(false)
     {}
 
     /**
@@ -768,6 +770,7 @@ public:
      */
     void disconnect() {
         if (connected_ && mqtt_connected_) {
+            disconnect_requested_ = true;
             send_disconnect();
         }
     }
@@ -1537,6 +1540,7 @@ public:
      */
     void async_disconnect(async_handler_t const& func = async_handler_t()) {
         if (connected_ && mqtt_connected_) {
+            disconnect_requested_ = true;
             async_send_disconnect(func);
         }
     }
@@ -2356,14 +2360,13 @@ protected:
 #endif // defined(SSL_R_SHORT_READ)
 #endif // defined(MQTT_NO_TLS)
         ) {
-            handle_close();
-            return true;
+            if (disconnect_requested_) {
+                disconnect_requested_ = false;
+                handle_close();
+                return true;
+            }
         }
-        if (ec == as::error::eof ||
-            ec == as::error::connection_reset) {
-            handle_close();
-            return true;
-        }
+        disconnect_requested_ = false;
         handle_error(ec);
         return true;
     }
@@ -3936,6 +3939,7 @@ private:
     std::set<std::uint16_t> packet_id_;
     bool auto_pub_response_;
     bool auto_pub_response_async_;
+    bool disconnect_requested_;
 };
 
 } // namespace mqtt

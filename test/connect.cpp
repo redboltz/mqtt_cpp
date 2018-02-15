@@ -315,7 +315,7 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
             // connect
             "h_connack",
             // disconnect
-            "h_close",
+            "h_error",
             "finish",
         };
 
@@ -339,16 +339,16 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            []
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
-                s.close();
+                BOOST_CHECK(false);
             });
         c->set_error_handler(
-            []
+            [&order, &current, &s]
             (boost::system::error_code const&) {
-                BOOST_CHECK(false);
+                BOOST_TEST(current() == "h_error");
+                ++order;
+                s.close();
             });
         c->connect();
         ios.run();
