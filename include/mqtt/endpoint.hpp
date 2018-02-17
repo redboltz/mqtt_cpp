@@ -88,11 +88,17 @@ public:
 
     /**
      * @breif Close handler
+     *
+     * This handler is called if the client called `disconnect()` and the server closed the socket cleanly.
+     * If the socket is closed by other reasons, error_handler is called.
      */
     using close_handler = std::function<void()>;
 
     /**
      * @breif Error handler
+     *
+     * This handler is called if the socket is closed without client's `disconnect()` call.
+     *
      * @param ec error code
      */
     using error_handler = std::function<void(boost::system::error_code const& ec)>;
