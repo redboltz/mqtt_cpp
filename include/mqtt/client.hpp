@@ -483,16 +483,16 @@ private:
                 base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
                 if (!ec) {
                     base::set_connect();
-                    if (ping_duration_ms_ != 0) {
-                        tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
-                        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(self));
-                        tim_->async_wait(
-                            [wp](boost::system::error_code const& ec) {
-                                if (auto sp = wp.lock()) {
-                                    sp->handle_timer(ec);
-                                }
+                    if (ping_duration_ms_ == 0) {
+                        base::set_pre_send_handler();
+                    }
+                    else {
+                        base::set_pre_send_handler(
+                            [this] {
+                                reset_timer();
                             }
                         );
+                        set_timer();
                     }
                 }
                 if (base::handle_close_or_error(ec)) return;
@@ -503,16 +503,25 @@ private:
     void handle_timer(boost::system::error_code const& ec) {
         if (!ec) {
             base::pingreq();
-            tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
-            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-            tim_->async_wait(
-                [wp](boost::system::error_code const& ec) {
-                    if (auto sp = wp.lock()) {
-                        sp->handle_timer(ec);
-                    }
-                }
-            );
+            set_timer();
         }
+    }
+
+    void set_timer() {
+        tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
+        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+        tim_->async_wait(
+            [wp](boost::system::error_code const& ec) {
+                if (auto sp = wp.lock()) {
+                    sp->handle_timer(ec);
+                }
+            }
+        );
+    }
+
+    void reset_timer() {
+        tim_->cancel();
+        set_timer();
     }
 
     void handle_close() {

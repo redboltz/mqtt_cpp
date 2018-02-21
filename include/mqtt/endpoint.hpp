@@ -334,6 +334,12 @@ public:
      */
     using serialize_remove_handler = std::function<void(std::uint16_t)>;
 
+    /**
+     * @breif Pre-send handler
+     *        This handler is called when any mqtt control packet is decided to send.
+     */
+    using pre_send_handler = std::function<void()>;
+
     endpoint(this_type const&) = delete;
     endpoint(this_type&&) = delete;
     endpoint& operator=(this_type const&) = delete;
@@ -591,6 +597,14 @@ public:
         h_serialize_publish_ = serialize_publish_handler();
         h_serialize_pubrel_ = serialize_pubrel_handler();
         h_serialize_remove_ = serialize_remove_handler();
+    }
+
+    /**
+     * @brief Set pre-send handler
+     * @param h handler
+     */
+    void set_pre_send_handler(pre_send_handler h = pre_send_handler()) {
+        h_pre_send_ = std::move(h);
     }
 
     /**
@@ -3519,6 +3533,7 @@ private:
     void do_sync_write(char* ptr, std::size_t size) {
         boost::system::error_code ec;
         if (!connected_) return;
+        if (h_pre_send_) h_pre_send_();
         write(*socket_, as::buffer(ptr, size), ec);
         if (ec) handle_error(ec);
     }
@@ -3841,6 +3856,7 @@ private:
         auto size = elem.size();
         auto const& func = elem.handler();
         auto self = this->shared_from_this();
+        if (h_pre_send_) h_pre_send_();
         async_write(
             *socket_,
             as::buffer(elem.ptr(), size),
@@ -3935,6 +3951,7 @@ private:
     serialize_publish_handler h_serialize_publish_;
     serialize_pubrel_handler h_serialize_pubrel_;
     serialize_remove_handler h_serialize_remove_;
+    pre_send_handler h_pre_send_;
     boost::optional<std::string> user_name_;
     boost::optional<std::string> password_;
     Mutex store_mtx_;
