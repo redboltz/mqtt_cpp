@@ -503,7 +503,6 @@ private:
     void handle_timer(boost::system::error_code const& ec) {
         if (!ec) {
             base::pingreq();
-            set_timer();
         }
     }
 
