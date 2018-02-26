@@ -2792,7 +2792,7 @@ private:
 
     bool handle_connect(async_handler_t const& func) {
         std::size_t i = 0;
-        if (remaining_length_ < 10 ||
+        if (remaining_length_ < 10 || // *1
             payload_[i++] != 0x00 ||
             payload_[i++] != 0x04 ||
             payload_[i++] != 'M' ||
@@ -2806,17 +2806,17 @@ private:
         char byte8 = payload_[i++];
 
         std::uint16_t keep_alive;
-        keep_alive = make_uint16_t(payload_[i], payload_[i + 1]);
+        keep_alive = make_uint16_t(payload_[i], payload_[i + 1]); // index is checked at *1
         i += 2;
 
         if (remaining_length_ < i + 2) {
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return false;
         }
-
         std::uint16_t client_id_length;
         client_id_length = make_uint16_t(payload_[i], payload_[i + 1]);
         i += 2;
+
         if (remaining_length_ < i + client_id_length) {
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return false;
@@ -2827,18 +2827,30 @@ private:
         clean_session_ = connect_flags::has_clean_session(byte8);
         boost::optional<will> w;
         if (connect_flags::has_will_flag(byte8)) {
+
+            if (remaining_length_ < i + 2) {
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                return false;
+            }
             std::uint16_t topic_name_length;
             topic_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
+
             if (remaining_length_ < i + topic_name_length) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
             std::string topic_name(payload_.data() + i, topic_name_length);
             i += topic_name_length;
+
+            if (remaining_length_ < i + 2) {
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                return false;
+            }
             std::uint16_t will_message_length;
             will_message_length = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
+
             if (remaining_length_ < i + will_message_length) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
@@ -2850,11 +2862,18 @@ private:
                      connect_flags::has_will_retain(byte8),
                      connect_flags::will_qos(byte8));
         }
+
         boost::optional<std::string> user_name;
         if (connect_flags::has_user_name_flag(byte8)) {
+
+            if (remaining_length_ < i + 2) {
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                return false;
+            }
             std::uint16_t user_name_length;
             user_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
+
             if (remaining_length_ < i + user_name_length) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
@@ -2862,11 +2881,18 @@ private:
             user_name = std::string(payload_.data() + i, user_name_length);
             i += user_name_length;
         }
+
         boost::optional<std::string> password;
         if (connect_flags::has_password_flag(byte8)) {
+
+            if (remaining_length_ < i + 2) {
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                return false;
+            }
             std::uint16_t password_length;
             password_length = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
+
             if (remaining_length_ < i + password_length) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
@@ -2944,12 +2970,14 @@ private:
         std::size_t i = 0;
         std::uint16_t topic_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
         i += 2;
+
         if (remaining_length_ < i + topic_name_length) {
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return false;
         }
         std::string topic_name(payload_.data() + i, topic_name_length);
         i += topic_name_length;
+
         boost::optional<std::uint16_t> packet_id;
         auto qos = publish::get_qos(fixed_header_);
         switch (qos) {
@@ -3140,6 +3168,7 @@ private:
             }
             std::uint16_t topic_length = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
+
             if (remaining_length_ < i + topic_length) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
@@ -3147,8 +3176,13 @@ private:
             std::string topic_filter(payload_.data() + i, topic_length);
             i += topic_length;
 
+            if (remaining_length_ < i + 1) {
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                return false;
+            }
             std::uint8_t qos = payload_[i] & 0b00000011;
             ++i;
+
             entries.emplace_back(std::move(topic_filter), qos);
         }
         if (h_subscribe_) return h_subscribe_(packet_id, std::move(entries));
