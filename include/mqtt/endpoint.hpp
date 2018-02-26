@@ -2970,12 +2970,14 @@ private:
         std::size_t i = 0;
         std::uint16_t topic_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
         i += 2;
+
         if (remaining_length_ < i + topic_name_length) {
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return false;
         }
         std::string topic_name(payload_.data() + i, topic_name_length);
         i += topic_name_length;
+
         boost::optional<std::uint16_t> packet_id;
         auto qos = publish::get_qos(fixed_header_);
         switch (qos) {
@@ -3166,6 +3168,7 @@ private:
             }
             std::uint16_t topic_length = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
+
             if (remaining_length_ < i + topic_length) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
@@ -3173,8 +3176,13 @@ private:
             std::string topic_filter(payload_.data() + i, topic_length);
             i += topic_length;
 
+            if (remaining_length_ < i + 1) {
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                return false;
+            }
             std::uint8_t qos = payload_[i] & 0b00000011;
             ++i;
+
             entries.emplace_back(std::move(topic_filter), qos);
         }
         if (h_subscribe_) return h_subscribe_(packet_id, std::move(entries));
