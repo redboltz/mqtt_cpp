@@ -2383,11 +2383,13 @@ protected:
             if (disconnect_requested_) {
                 disconnect_requested_ = false;
                 handle_close();
+                payload_.clear();
                 return true;
             }
         }
         disconnect_requested_ = false;
         handle_error(ec);
+        payload_.clear();
         return true;
     }
 
@@ -2780,6 +2782,7 @@ private:
         }
         if (ret) async_read_control_packet_type(func);
         else if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+        payload_.clear();
     }
 
     void handle_close() {
