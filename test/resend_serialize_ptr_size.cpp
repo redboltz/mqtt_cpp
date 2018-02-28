@@ -7,7 +7,7 @@
 #include "test_main.hpp"
 #include "combi_test.hpp"
 
-BOOST_AUTO_TEST_SUITE(test_resend_serialize)
+BOOST_AUTO_TEST_SUITE(test_resend_serialize_ptr_size)
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     boost::asio::io_service ios;
@@ -22,14 +22,14 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     c2->set_client_id("cid1");
     c2->set_clean_session(false);
 
-    std::map<std::uint16_t, mqtt::shared_const_buffer_sequence> serialized;
+    std::map<std::uint16_t, std::string> serialized;
 
     c1->set_serialize_handlers(
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized.emplace(packet_id, scbs);
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized.emplace(packet_id, std::string(data, size));
         },
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized[packet_id] = scbs;
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
             serialized.erase(packet_id);
@@ -37,11 +37,11 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     );
 
     c2->set_serialize_handlers(
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized.emplace(packet_id, scbs);
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized.emplace(packet_id, std::string(data, size));
         },
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized[packet_id] = scbs;
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
             serialized.erase(packet_id);
@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             BOOST_TEST(current() == "h_error");
             ++order;
             for (auto const& e : serialized) {
-                c2->restore_serialized_message(e.first, e.second);
+                c2->restore_serialized_message(e.first, e.second.begin(), e.second.end());
             }
             c2->connect();
         });
@@ -189,14 +189,14 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
     c2->set_client_id("cid1");
     c2->set_clean_session(false);
 
-    std::map<std::uint16_t, mqtt::shared_const_buffer_sequence> serialized;
+    std::map<std::uint16_t, std::string> serialized;
 
     c1->set_serialize_handlers(
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized.emplace(packet_id, scbs);
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized.emplace(packet_id, std::string(data, size));
         },
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized[packet_id] = scbs;
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
             serialized.erase(packet_id);
@@ -204,11 +204,11 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
     );
 
     c2->set_serialize_handlers(
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized.emplace(packet_id, scbs);
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized.emplace(packet_id, std::string(data, size));
         },
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized[packet_id] = scbs;
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
             serialized.erase(packet_id);
@@ -293,7 +293,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             BOOST_TEST(current() == "h_error");
             ++order;
             for (auto const& e : serialized) {
-                c2->restore_serialized_message(e.first, e.second);
+                c2->restore_serialized_message(e.first, e.second.begin(), e.second.end());
             }
             c2->connect();
         });
@@ -364,14 +364,14 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
     c2->set_client_id("cid1");
     c2->set_clean_session(false);
 
-    std::map<std::uint16_t, mqtt::shared_const_buffer_sequence> serialized;
+    std::map<std::uint16_t, std::string> serialized;
 
     c1->set_serialize_handlers(
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized.emplace(packet_id, scbs);
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized.emplace(packet_id, std::string(data, size));
         },
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized[packet_id] = scbs;
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
             serialized.erase(packet_id);
@@ -379,11 +379,11 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
     );
 
     c2->set_serialize_handlers(
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized.emplace(packet_id, scbs);
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized.emplace(packet_id, std::string(data, size));
         },
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized[packet_id] = scbs;
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
             serialized.erase(packet_id);
@@ -467,7 +467,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             BOOST_TEST(current() == "h_error");
             ++order;
             for (auto const& e : serialized) {
-                c2->restore_serialized_message(e.first, e.second);
+                c2->restore_serialized_message(e.first, e.second.begin(), e.second.end());
             }
             c2->connect();
         });
@@ -546,14 +546,14 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     c2->set_client_id("cid1");
     c2->set_clean_session(false);
 
-    std::map<std::uint16_t, mqtt::shared_const_buffer_sequence> serialized;
+    std::map<std::uint16_t, std::string> serialized;
 
     c1->set_serialize_handlers(
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized.emplace(packet_id, scbs);
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized.emplace(packet_id, std::string(data, size));
         },
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized[packet_id] = scbs;
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
             serialized.erase(packet_id);
@@ -561,11 +561,11 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     );
 
     c2->set_serialize_handlers(
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized.emplace(packet_id, scbs);
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized.emplace(packet_id, std::string(data, size));
         },
-        [&serialized](std::uint16_t packet_id, mqtt::shared_const_buffer_sequence const& scbs) {
-            serialized[packet_id] = scbs;
+        [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
             serialized.erase(packet_id);
@@ -655,7 +655,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 BOOST_TEST(current() == "h_error1");
                 ++order;
                 for (auto const& e : serialized) {
-                    c2->restore_serialized_message(e.first, e.second);
+                    c2->restore_serialized_message(e.first, e.second.begin(), e.second.end());
                 }
                 c2->connect();
                 break;
