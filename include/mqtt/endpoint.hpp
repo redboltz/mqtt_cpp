@@ -42,6 +42,7 @@
 #include <mqtt/connect_return_code.hpp>
 #include <mqtt/exception.hpp>
 #include <mqtt/tcp_endpoint.hpp>
+#include <mqtt/unique_scope_guard.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -2383,13 +2384,11 @@ protected:
             if (disconnect_requested_) {
                 disconnect_requested_ = false;
                 handle_close();
-                payload_.clear();
                 return true;
             }
         }
         disconnect_requested_ = false;
         handle_error(ec);
-        payload_.clear();
         return true;
     }
 
@@ -2694,6 +2693,12 @@ private:
                 [this, self, func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
+                    auto g = unique_scope_guard(
+                        [this]
+                        {
+                            payload_.clear();
+                        }
+                    );
                     if (handle_close_or_error(ec)) {
                         if (func) func(ec);
                         return;
@@ -2782,7 +2787,6 @@ private:
         }
         if (ret) async_read_control_packet_type(func);
         else if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
-        payload_.clear();
     }
 
     void handle_close() {
