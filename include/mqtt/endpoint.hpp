@@ -68,7 +68,8 @@ public:
          packet_id_master_(0),
          auto_pub_response_(true),
          auto_pub_response_async_(false),
-         disconnect_requested_(false)
+         disconnect_requested_(false),
+         connect_requested_(false)
     {}
 
     /**
@@ -83,7 +84,8 @@ public:
          packet_id_master_(0),
          auto_pub_response_(true),
          auto_pub_response_async_(false),
-         disconnect_requested_(false)
+         disconnect_requested_(false),
+         connect_requested_(false)
     {}
 
     /**
@@ -1233,6 +1235,7 @@ public:
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028
      */
     void connect(std::uint16_t keep_alive_sec) {
+        connect_requested_ = true;
         send_connect(keep_alive_sec);
     }
 
@@ -2085,6 +2088,7 @@ public:
     void async_connect(
         std::uint16_t keep_alive_sec,
         async_handler_t const& func = async_handler_t()) {
+        connect_requested_ = true;
         async_send_connect(keep_alive_sec, func);
     }
 
@@ -2382,11 +2386,13 @@ protected:
         ) {
             if (disconnect_requested_) {
                 disconnect_requested_ = false;
+                connect_requested_ = false;
                 handle_close();
                 return true;
             }
         }
         disconnect_requested_ = false;
+        connect_requested_ = false;
         handle_error(ec);
         return true;
     }
@@ -2911,6 +2917,11 @@ private:
     }
 
     bool handle_connack(async_handler_t const& func) {
+        if (!connect_requested_) {
+            if (func) func(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
+            return false;
+        }
+        connect_requested_ = false;
         if (remaining_length_ != 2) {
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return false;
@@ -3997,6 +4008,7 @@ private:
     bool auto_pub_response_;
     bool auto_pub_response_async_;
     bool disconnect_requested_;
+    bool connect_requested_;
 };
 
 } // namespace mqtt
