@@ -35,7 +35,7 @@ public:
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
-     * @breif Error handler
+     * @brief Error handler
      * @param ec error code
      */
     using error_handler = std::function<void(boost::system::error_code const& ec)>;
@@ -138,7 +138,7 @@ public:
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
-     * @breif Error handler
+     * @brief Error handler
      * @param ec error code
      */
     using error_handler = std::function<void(boost::system::error_code const& ec)>;
@@ -274,7 +274,7 @@ public:
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
-     * @breif Error handler
+     * @brief Error handler
      * @param ec error code
      */
     using error_handler = std::function<void(boost::system::error_code const& ec)>;
@@ -414,7 +414,7 @@ public:
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
-     * @breif Error handler
+     * @brief Error handler
      * @param ec error code
      */
     using error_handler = std::function<void(boost::system::error_code const& ec)>;

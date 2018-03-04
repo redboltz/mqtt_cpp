@@ -90,7 +90,7 @@ public:
     {}
 
     /**
-     * @breif Close handler
+     * @brief Close handler
      *
      * This handler is called if the client called `disconnect()` and the server closed the socket cleanly.
      * If the socket is closed by other reasons, error_handler is called.
@@ -98,7 +98,7 @@ public:
     using close_handler = std::function<void()>;
 
     /**
-     * @breif Error handler
+     * @brief Error handler
      *
      * This handler is called if the socket is closed without client's `disconnect()` call.
      *
@@ -107,7 +107,7 @@ public:
     using error_handler = std::function<void(boost::system::error_code const& ec)>;
 
     /**
-     * @breif Connect handler
+     * @brief Connect handler
      * @param client_id
      *        User Name.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349245<BR>
@@ -152,7 +152,7 @@ public:
              std::uint16_t keep_alive)>;
 
     /**
-     * @breif Connack handler
+     * @brief Connack handler
      * @param session_present
      *        Session present flag.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718035<BR>
@@ -166,7 +166,7 @@ public:
     using connack_handler = std::function<bool(bool session_present, std::uint8_t return_code)>;
 
     /**
-     * @breif Publish handler
+     * @brief Publish handler
      * @param fixed_header
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1 Fixed header<BR>
@@ -188,7 +188,7 @@ public:
                                                std::string contents)>;
 
     /**
-     * @breif Puback handler
+     * @brief Puback handler
      * @param packet_id
      *        packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718045<BR>
@@ -198,7 +198,7 @@ public:
     using puback_handler = std::function<bool(std::uint16_t packet_id)>;
 
     /**
-     * @breif Pubrec handler
+     * @brief Pubrec handler
      * @param packet_id
      *        packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718050<BR>
@@ -208,7 +208,7 @@ public:
     using pubrec_handler = std::function<bool(std::uint16_t packet_id)>;
 
     /**
-     * @breif Pubrel handler
+     * @brief Pubrel handler
      * @param packet_id
      *        packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349791<BR>
@@ -218,7 +218,7 @@ public:
     using pubrel_handler = std::function<bool(std::uint16_t packet_id)>;
 
     /**
-     * @breif Pubcomp handler
+     * @brief Pubcomp handler
      * @param packet_id
      *        packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718060<BR>
@@ -228,7 +228,7 @@ public:
     using pubcomp_handler = std::function<bool(std::uint16_t packet_id)>;
 
     /**
-     * @breif Publish response sent handler
+     * @brief Publish response sent handler
      *        This function is called just after puback sent on QoS1, or pubcomp sent on QoS2.
      * @param packet_id
      *        packet identifier<BR>
@@ -238,7 +238,7 @@ public:
     using pub_res_sent_handler = std::function<void(std::uint16_t packet_id)>;
 
     /**
-     * @breif Subscribe handler
+     * @brief Subscribe handler
      * @param packet_id packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349801<BR>
      *        3.8.2 Variable header
@@ -251,7 +251,7 @@ public:
                                                  std::vector<std::tuple<std::string, std::uint8_t>> entries)>;
 
     /**
-     * @breif Suback handler
+     * @brief Suback handler
      * @param packet_id packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718070<BR>
      *        3.9.2 Variable header
@@ -265,7 +265,7 @@ public:
                                               std::vector<boost::optional<std::uint8_t>> qoss)>;
 
     /**
-     * @breif Unsubscribe handler
+     * @brief Unsubscribe handler
      * @param packet_id packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349810<BR>
      *        3.10.2 Variable header
@@ -278,7 +278,7 @@ public:
                                                    std::vector<std::string> topics)>;
 
     /**
-     * @breif Unsuback handler
+     * @brief Unsuback handler
      * @param packet_id packet identifier<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718045<BR>
      *        3.11.2 Variable header
@@ -287,7 +287,7 @@ public:
     using unsuback_handler = std::function<bool(std::uint16_t)>;
 
     /**
-     * @breif Pingreq handler
+     * @brief Pingreq handler
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718081<BR>
      *        3.13 PINGREQ – PING request
      * @return if the handler returns true, then continue receiving, otherwise quit.
@@ -295,7 +295,7 @@ public:
     using pingreq_handler = std::function<bool()>;
 
     /**
-     * @breif Pingresp handler
+     * @brief Pingresp handler
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718086<BR>
      *        3.13 PINGRESP – PING response
      * @return if the handler returns true, then continue receiving, otherwise quit.
@@ -303,24 +303,24 @@ public:
     using pingresp_handler = std::function<bool()>;
 
     /**
-     * @breif Disconnect handler
+     * @brief Disconnect handler
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800463<BR>
      *        3.14 DISCONNECT – Disconnect notification
      */
     using disconnect_handler = std::function<void()>;
 
     /**
-     * @breif Serialize publish handler
+     * @brief Serialize publish handler
      *        You can serialize the publish message.
      *        To restore the message, use restore_serialized_message().
      * @param packet_id packet identifier of the serializing message
      * @param data      pointer to the serializing message
      * @param size      size of the serializing message
      */
-    using serialize_publish_handler = std::function<void(std::uint16_t, char const*, std::size_t)>;
+    using serialize_publish_handler = std::function<void(std::uint16_t packet_id, char const* data, std::size_t size)>;
 
     /**
-     * @breif Serialize pubrel handler
+     * @brief Serialize pubrel handler
      *        You can serialize the pubrel message.
      *        If your storage has already had the publish message that has the same packet_id,
      *        then you need to replace the publish message to pubrel message.
@@ -329,16 +329,16 @@ public:
      * @param data      pointer to the serializing message
      * @param size      size of the serializing message
      */
-    using serialize_pubrel_handler = std::function<void(std::uint16_t, char const*, std::size_t)>;
+    using serialize_pubrel_handler = std::function<void(std::uint16_t packet_id, char const* data, std::size_t size)>;
 
     /**
-     * @breif Remove serialized message
+     * @brief Remove serialized message
      * @param packet_id packet identifier of the removing message
      */
-    using serialize_remove_handler = std::function<void(std::uint16_t)>;
+    using serialize_remove_handler = std::function<void(std::uint16_t packet_id)>;
 
     /**
-     * @breif Pre-send handler
+     * @brief Pre-send handler
      *        This handler is called when any mqtt control packet is decided to send.
      */
     using pre_send_handler = std::function<void()>;
@@ -349,7 +349,7 @@ public:
     endpoint& operator=(this_type&&) = delete;
 
     /**
-     * @breif Set client id.
+     * @brief Set client id.
      * @param id client id
      *
      * This function should be called before calling connect().<BR>
@@ -361,7 +361,7 @@ public:
     }
 
     /**
-     * @breif Get client id.
+     * @brief Get client id.
      *
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718031<BR>
      * 3.1.3.1 Client Identifier
@@ -372,7 +372,7 @@ public:
     }
 
     /**
-     * @breif Set clean session.
+     * @brief Set clean session.
      * @param cs clean session
      *
      * This function should be called before calling connect().<BR>
@@ -385,7 +385,7 @@ public:
     }
 
     /**
-     * @breif Get clean session.
+     * @brief Get clean session.
      *
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718029<BR>
      * 3.1.2.4 Clean Session<BR>
@@ -397,7 +397,7 @@ public:
     }
 
     /**
-     * @breif Set username.
+     * @brief Set username.
      * @param name username
      *
      * This function should be called before calling connect().<BR>
@@ -409,7 +409,7 @@ public:
     }
 
     /**
-     * @breif Set password.
+     * @brief Set password.
      * @param password password
      *
      * This function should be called before calling connect().<BR>
@@ -421,7 +421,7 @@ public:
     }
 
     /**
-     * @breif Set will.
+     * @brief Set will.
      * @param w will
      *
      * This function should be called before calling connect().<BR>
@@ -432,8 +432,9 @@ public:
     }
 
     /**
-     * @breif Set auto publish response mode.
+     * @brief Set auto publish response mode.
      * @param b set value
+     * @param async auto publish ressponse send asynchronous
      *
      * When set auto publish response mode to true, puback, pubrec, pubrel,and pub comp automatically send.<BR>
      */
@@ -1252,7 +1253,7 @@ public:
 
     /**
      * @brief Send puback packet.
-     * @packet_id packet id corresponding to publish
+     * @param packet_id packet id corresponding to publish
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718043
      */
     void puback(std::uint16_t packet_id) {
@@ -1261,7 +1262,7 @@ public:
 
     /**
      * @brief Send pubrec packet.
-     * @packet_id packet id corresponding to publish
+     * @param packet_id packet id corresponding to publish
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718048
      */
     void pubrec(std::uint16_t packet_id) {
@@ -1270,7 +1271,7 @@ public:
 
     /**
      * @brief Send pubrel packet.
-     * @packet_id packet id corresponding to publish
+     * @param packet_id packet id corresponding to publish
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718053
      */
     void pubrel(std::uint16_t packet_id) {
@@ -1279,7 +1280,7 @@ public:
 
     /**
      * @brief Send pubcomp packet.
-     * @packet_id packet id corresponding to publish
+     * @param packet_id packet id corresponding to publish
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718058
      */
     void pubcomp(std::uint16_t packet_id) {
@@ -1288,9 +1289,9 @@ public:
 
     /**
      * @brief Send suback packet. This function is for broker.
-     * @params packet_id packet id corresponding to subscribe
-     * @params qos adjusted qos
-     * @params args additional qos
+     * @param packet_id packet id corresponding to subscribe
+     * @param qos adjusted qos
+     * @param args additional qos
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718068
      */
     template <typename... Args>
@@ -1304,8 +1305,8 @@ public:
 
     /**
      * @brief Send suback packet. This function is for broker.
-     * @params packet_id packet id corresponding to subscribe
-     * @params qoss a collection of adjusted qos
+     * @param packet_id packet id corresponding to subscribe
+     * @param qoss a collection of adjusted qos
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718068
      */
     void suback(
@@ -1316,7 +1317,7 @@ public:
 
     /**
      * @brief Send unsuback packet. This function is for broker.
-     * @params packet_id packet id corresponding to unsubscribe
+     * @param packet_id packet id corresponding to unsubscribe
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718077
      */
     void unsuback(
@@ -1517,9 +1518,7 @@ public:
      * @brief Unsubscribe
      * @param topic_name
      *        A topic name to unsubscribe
-     * @param args
-     *        args should be some topic_names, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -1537,9 +1536,6 @@ public:
      * @brief Unsubscribe
      * @param params
      *        A collection of the topic name to unsubscribe
-     * @param args
-     *        args should be some topic_names, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
@@ -1812,9 +1808,6 @@ public:
      *        packet identifier
      * @param params
      *        A collection of the topic name to unsubscribe
-     * @param args
-     *        args should be some topic_names, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
@@ -2021,6 +2014,7 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
+     * @param topic_name topic_name
      * @param args
      *        args should be some topic_names, <BR>
      *        and the last one is a callback function that is called when async operation will finish.
@@ -2109,7 +2103,7 @@ public:
 
     /**
      * @brief Send puback packet.
-     * @packet_id packet id corresponding to publish
+     * @param packet_id packet id corresponding to publish
      * @param func A callback function that is called when async operation will finish.
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718043
      */
@@ -2119,7 +2113,7 @@ public:
 
     /**
      * @brief Send pubrec packet.
-     * @packet_id packet id corresponding to publish
+     * @param packet_id packet id corresponding to publish
      * @param func A callback function that is called when async operation will finish.
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718048
      */
@@ -2129,7 +2123,7 @@ public:
 
     /**
      * @brief Send pubrel packet.
-     * @packet_id packet id corresponding to publish
+     * @param packet_id packet id corresponding to publish
      * @param func A callback function that is called when async operation will finish.
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718053
      */
@@ -2139,7 +2133,7 @@ public:
 
     /**
      * @brief Send pubcomp packet.
-     * @packet_id packet id corresponding to publish
+     * @param packet_id packet id corresponding to publish
      * @param func A callback function that is called when async operation will finish.
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718058
      */
@@ -2149,7 +2143,8 @@ public:
 
     /**
      * @brief Send suback packet. This function is for broker.
-     * @params packet_id packet id corresponding to subscribe
+     * @param packet_id packet id corresponding to subscribe
+     * @param qos qos
      * @param args
      *        args should be some qos corresponding to subscribe, <BR>
      *        and the last one is a callback function that is called when async operation will finish.
@@ -2168,8 +2163,8 @@ public:
 
     /**
      * @brief Send suback packet. This function is for broker.
-     * @params packet_id packet id corresponding to subscribe
-     * @params qos adjusted qos
+     * @param packet_id packet id corresponding to subscribe
+     * @param qos adjusted qos
      * @param func A callback function that is called when async operation will finish.
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718068
      */
@@ -2184,8 +2179,8 @@ public:
 
     /**
      * @brief Send suback packet. This function is for broker.
-     * @params packet_id packet id corresponding to subscribe
-     * @params qoss a collection of adjusted qos
+     * @param packet_id packet id corresponding to subscribe
+     * @param qoss a collection of adjusted qos
      * @param func A callback function that is called when async operation will finish.
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718068
      */
@@ -2198,7 +2193,7 @@ public:
 
     /**
      * @brief Send unsuback packet. This function is for broker.
-     * @params packet_id packet id corresponding to unsubscribe
+     * @param packet_id packet id corresponding to unsubscribe
      * @param func A callback function that is called when async operation will finish.
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718077
      */
@@ -2210,7 +2205,7 @@ public:
 
     /**
      * @brief Clear storead publish message that has packet_id.
-     * @params packet_id packet id corresponding to stored publish
+     * @param packet_id packet id corresponding to stored publish
      */
     void clear_stored_publish(std::uint16_t packet_id) {
         LockGuard<Mutex> lck (store_mtx_);
@@ -2239,7 +2234,7 @@ public:
 
     /**
      * @brief Apply f to stored messages.
-     * @params f applying function. f should be void(char const*, std::size_t)
+     * @param f applying function. f should be void(char const*, std::size_t)
      */
     template <typename F>
     void for_each_store(F&& f) {
@@ -2284,7 +2279,7 @@ public:
 
     /**
      * @brief Release packet_id.
-     * @params packet_id packet id to release.
+     * @param packet_id packet id to release.
      *                   only the packet_id gotten by acquire_unique_packet_id, or
      *                   register_packet_id is permitted.
      * @return If packet_id is successfully released then return true, otherwise return false.
@@ -2297,9 +2292,9 @@ public:
     /**
      * @brief Restore serialized publish and pubrel messages.
      *        This function shouold be called before connect.
-     * @params packet_id packet id of the message
-     * @params b         iterator begin of the message
-     * @params e         iterator end of the message
+     * @param packet_id packet id of the message
+     * @param b         iterator begin of the message
+     * @param e         iterator end of the message
      */
     template <typename Iterator>
     void restore_serialized_message(std::uint16_t packet_id, Iterator b, Iterator e) {
