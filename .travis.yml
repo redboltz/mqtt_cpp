@@ -13,7 +13,7 @@ install:
  - if [ "$CXX" = "clang++" ] && [ "$TRAVIS_OS_NAME" == "linux" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then wget http://valgrind.org/downloads/valgrind-3.12.0.tar.bz2 && tar xjf valgrind-3.12.0.tar.bz2 && cd valgrind-3.12.0 && ./configure --prefix=${BASE}/usr > /dev/null && make -j3 > /dev/null && make install > /dev/null && cd ..; fi
 # boost
- - wget http://sourceforge.net/projects/boost/files/boost/1.64.0/boost_1_64_0.zip && unzip -q boost_1_64_0.zip && cd boost_1_64_0 && ./bootstrap.sh && ./b2 -j3 --prefix=${BASE}/usr --with-timer --with-chrono --with-test address-model=64 install > /dev/null && cd ..
+ - wget https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.zip && unzip -q boost_1_64_0.zip && cd boost_1_64_0 && ./bootstrap.sh && ./b2 -j3 --prefix=${BASE}/usr --with-timer --with-chrono --with-test address-model=64 install > /dev/null && cd ..
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then wget https://www.openssl.org/source/openssl-1.0.2k.tar.gz && tar xf openssl-1.0.2k.tar.gz && cd openssl-1.0.2k && ./config --prefix=${BASE}/usr && make && make install > /dev/null && cd ..; fi
  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then wget https://www.openssl.org/source/openssl-1.0.2k.tar.gz && tar xf openssl-1.0.2k.tar.gz && cd openssl-1.0.2k && ./Configure darwin64-x86_64-cc --prefix=${BASE}/usr && make && make install > /dev/null && cd ..; fi
 
