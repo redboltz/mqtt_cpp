@@ -59,7 +59,7 @@ public:
     using pingresp_handler = typename base::pingresp_handler;
 
     /**
-     * @breif Create no tls client with strand.
+     * @brief Create no tls client with strand.
      * @param ios io_service object.
      * @param host hostname
      * @param port port number
@@ -69,7 +69,7 @@ public:
     make_client(as::io_service& ios, std::string host, std::string port);
 
     /**
-     * @breif Create no tls client without strand.
+     * @brief Create no tls client without strand.
      * @param ios io_service object.
      * @param host hostname
      * @param port port number
@@ -80,7 +80,7 @@ public:
 
 #if defined(MQTT_USE_WS)
     /**
-     * @breif Create no tls websocket client with strand.
+     * @brief Create no tls websocket client with strand.
      * @param ios io_service object.
      * @param host hostname
      * @param port port number
@@ -92,7 +92,7 @@ public:
     make_client_ws(as::io_service& ios, std::string host, std::string port, std::string path);
 
     /**
-     * @breif Create no tls websocket client without strand.
+     * @brief Create no tls websocket client without strand.
      * @param ios io_service object.
      * @param host hostname
      * @param port port number
@@ -105,7 +105,7 @@ public:
 
 #if !defined(MQTT_NO_TLS)
     /**
-     * @breif Create tls client with strand.
+     * @brief Create tls client with strand.
      * @param ios io_service object.
      * @param host hostname
      * @param port port number
@@ -115,7 +115,7 @@ public:
     make_tls_client(as::io_service& ios, std::string host, std::string port);
 
     /**
-     * @breif Create tls client without strand.
+     * @brief Create tls client without strand.
      * @param ios io_service object.
      * @param host hostname
      * @param port port number
@@ -126,7 +126,7 @@ public:
 
 #if defined(MQTT_USE_WS)
     /**
-     * @breif Create no tls websocket client with strand.
+     * @brief Create no tls websocket client with strand.
      * @param ios io_service object.
      * @param host hostname
      * @param port port number
@@ -138,7 +138,7 @@ public:
     make_tls_client_ws(as::io_service& ios, std::string host, std::string port, std::string path);
 
     /**
-     * @breif Create no tls websocket client without strand.
+     * @brief Create no tls websocket client without strand.
      * @param ios io_service object.
      * @param host hostname
      * @param port port number
@@ -150,7 +150,7 @@ public:
 #endif // defined(MQTT_USE_WS)
 
     /**
-     * @breif Call boost::asio::context::set_default_verify_paths
+     * @brief Call boost::asio::context::set_default_verify_paths
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_default_verify_paths.html
      */
     void set_default_verify_paths() {
@@ -158,7 +158,7 @@ public:
     }
 
     /**
-     * @breif Call boost::asio::context::load_verify_file
+     * @brief Call boost::asio::context::load_verify_file
      * The function name is not the same but easy to understand.
      * @param file ca cert file path
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/load_verify_file.html
@@ -168,7 +168,7 @@ public:
     }
 
     /**
-     * @breif Call boost::asio::context::add_verify_path
+     * @brief Call boost::asio::context::add_verify_path
      * @param path the path contains ca cert files
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/add_verify_path.html
      */
@@ -177,7 +177,7 @@ public:
     }
 
     /**
-     * @breif Call boost::asio::context::set_verify_depth
+     * @brief Call boost::asio::context::set_verify_depth
      * @param depth maximum depth for the certificate chain verificatrion that shall be allowed
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_verify_depth.html
      */
@@ -186,7 +186,7 @@ public:
     }
 
     /**
-     * @breif Call boost::asio::context::use_certificate_file
+     * @brief Call boost::asio::context::use_certificate_file
      * The function name is not the same but easy to understand.
      * @param file client certificate file path
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/load_verify_file.html
@@ -196,7 +196,7 @@ public:
     }
 
     /**
-     * @breif Call boost::asio::context::use_private_key_file
+     * @brief Call boost::asio::context::use_private_key_file
      * The function name is not the same but easy to understand.
      * @param file client certificate key file path
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/use_private_key_file.html
@@ -206,7 +206,7 @@ public:
     }
 
     /**
-     * @breif Call boost::asio::context::set_verify_mode
+     * @brief Call boost::asio::context::set_verify_mode
      * @param mode See http://www.boost.org/doc/html/boost_asio/reference/ssl__verify_mode.html
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_verify_mode.html
      */
@@ -215,7 +215,7 @@ public:
     }
 
     /**
-     * @breif Call boost::asio::context::set_verify_callback
+     * @brief Call boost::asio::context::set_verify_callback
      * @param callback the callback function to be used for verifying a certificate.
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_verify_callback.html
      */
@@ -226,7 +226,7 @@ public:
 #endif // !defined(MQTT_NO_TLS)
 
     /**
-     * @breif Set a keep alive second and a pimg milli seconds.
+     * @brief Set a keep alive second and a pimg milli seconds.
      * @param keep_alive_sec keep alive seconds
      * @param ping_ms ping sending interval
      *
@@ -249,7 +249,7 @@ public:
     }
 
     /**
-     * @breif Set a keep alive second and a pimg milli seconds.
+     * @brief Set a keep alive second and a pimg milli seconds.
      * @param keep_alive_sec keep alive seconds
      *
      * Call set_keep_alive_sec_ping_ms(keep_alive_sec, keep_alive_sec * 1000 / 2)<BR>
@@ -262,7 +262,7 @@ public:
     }
 
     /**
-     * @breif Connect to a broker
+     * @brief Connect to a broker
      * Before calling connect(), call set_xxx member functions to configure the connection.
      * @param func finish handler that is called when the session is finished
      */
@@ -282,7 +282,7 @@ public:
     }
 
     /**
-     * @breif Connect to a broker
+     * @brief Connect to a broker
      * Before calling connect(), call set_xxx member functions to configure the connection.
      * @param socket The library uses the socket instead of internal generation.
      *               You can configure the socket prior to connect.
