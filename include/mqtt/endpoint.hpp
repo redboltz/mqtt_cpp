@@ -2984,10 +2984,6 @@ private:
             return false;
         }
         connect_requested_ = false;
-        if (remaining_length_ != 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         if (static_cast<std::uint8_t>(payload_[1]) == connect_return_code::accepted) {
             if (clean_session_) {
                 LockGuard<Mutex> lck (store_mtx_);
@@ -3125,10 +3121,6 @@ private:
     }
 
     bool handle_puback(async_handler_t const& func) {
-        if (remaining_length_ != 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
             LockGuard<Mutex> lck (store_mtx_);
@@ -3143,10 +3135,6 @@ private:
     }
 
     bool handle_pubrec(async_handler_t const& func) {
-        if (remaining_length_ != 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
             LockGuard<Mutex> lck (store_mtx_);
@@ -3180,10 +3168,6 @@ private:
     }
 
     bool handle_pubrel(async_handler_t const& func) {
-        if (remaining_length_ != 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         auto res = [this, &packet_id, &func] {
             auto_pub_response(
@@ -3208,10 +3192,6 @@ private:
     }
 
     bool handle_pubcomp(async_handler_t const& func) {
-        if (remaining_length_ != 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
             LockGuard<Mutex> lck (store_mtx_);
@@ -3318,10 +3298,6 @@ private:
     }
 
     bool handle_unsuback(async_handler_t const& func) {
-        if (remaining_length_ != 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
             LockGuard<Mutex> lck (store_mtx_);
@@ -3332,28 +3308,16 @@ private:
     }
 
     bool handle_pingreq(async_handler_t const& func) {
-        if (remaining_length_ != 0) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         if (h_pingreq_) return h_pingreq_();
         return true;
     }
 
     bool handle_pingresp(async_handler_t const& func) {
-        if (remaining_length_ != 0) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         if (h_pingresp_) return h_pingresp_();
         return true;
     }
 
     void handle_disconnect(async_handler_t const& func) {
-        if (remaining_length_ != 0) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return;
-        }
         if (h_disconnect_) h_disconnect_();
     }
 
