@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 BOOST_CHECK(false);
                 return false;
             });
-        c->set_length_check_handler(
+        c->set_is_valid_length_handler(
             [&order, &current, &lc_order]
             (std::uint8_t cpt, std::size_t /*len*/) {
                 switch (lc_order++) {

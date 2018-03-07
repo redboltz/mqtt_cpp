@@ -344,13 +344,13 @@ public:
     using pre_send_handler = std::function<void()>;
 
     /**
-     * @brief length check handler
+     * @brief is valid length handler
      *        This handler is called when remaining length is received.
      * @param control_packet_type control_packet_type that has variable length
      * @param remaining length
      * @return true if check is success, otherwise false
      */
-    using length_check_handler =
+    using is_valid_length_handler =
         std::function<bool(std::uint8_t control_packet_type, std::size_t remaining_length)>;
 
     endpoint(this_type const&) = delete;
@@ -625,8 +625,8 @@ public:
      * @brief Set check length handler
      * @param h handler
      */
-    void set_length_check_handler(length_check_handler h = length_check_handler()) {
-        h_length_check_ = std::move(h);
+    void set_is_valid_length_handler(is_valid_length_handler h = is_valid_length_handler()) {
+        h_is_valid_length_ = std::move(h);
     }
 
     /**
@@ -2716,8 +2716,8 @@ private:
                     case control_packet_type::subscribe:
                     case control_packet_type::suback:
                     case control_packet_type::unsubscribe:
-                        if (h_length_check_) {
-                            return h_length_check_(cpt, remaining_length_);
+                        if (h_is_valid_length_) {
+                            return h_is_valid_length_(cpt, remaining_length_);
                         }
                         else {
                             return true;
@@ -4023,7 +4023,7 @@ private:
     serialize_pubrel_handler h_serialize_pubrel_;
     serialize_remove_handler h_serialize_remove_;
     pre_send_handler h_pre_send_;
-    length_check_handler h_length_check_;
+    is_valid_length_handler h_is_valid_length_;
     boost::optional<std::string> user_name_;
     boost::optional<std::string> password_;
     Mutex store_mtx_;
