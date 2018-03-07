@@ -1,3 +1,11 @@
+## 2.1.0
+* Added packet length checking handler for variable length MQTT packet. (#121)
+* Fixed doxygen comments. (#119)
+* Improved payload memory management. (#118)
+* Fixed malformed connack (send by client) problem. (#117)
+* Fixed missing packet length check on connect. (#116)
+* Improved pingreq sending timing. (#115)
+
 ## 2.0.0
 * << Breaking change >> Updated close_handler and error_handler invoking rule.
   When the socket is closed,
