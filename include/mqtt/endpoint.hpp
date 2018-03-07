@@ -343,6 +343,16 @@ public:
      */
     using pre_send_handler = std::function<void()>;
 
+    /**
+     * @brief is valid length handler
+     *        This handler is called when remaining length is received.
+     * @param control_packet_type control_packet_type that has variable length
+     * @param remaining length
+     * @return true if check is success, otherwise false
+     */
+    using is_valid_length_handler =
+        std::function<bool(std::uint8_t control_packet_type, std::size_t remaining_length)>;
+
     endpoint(this_type const&) = delete;
     endpoint(this_type&&) = delete;
     endpoint& operator=(this_type const&) = delete;
@@ -609,6 +619,14 @@ public:
      */
     void set_pre_send_handler(pre_send_handler h = pre_send_handler()) {
         h_pre_send_ = std::move(h);
+    }
+
+    /**
+     * @brief Set check length handler
+     * @param h handler
+     */
+    void set_is_valid_length_handler(is_valid_length_handler h = is_valid_length_handler()) {
+        h_is_valid_length_ = std::move(h);
     }
 
     /**
@@ -2650,6 +2668,7 @@ private:
                     return;
                 }
                 if (bytes_transferred != 1) {
+                    handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     return;
                 }
@@ -2661,7 +2680,11 @@ private:
     void handle_remaining_length(async_handler_t const& func) {
         remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
         remaining_length_multiplier_ *= 128;
-        if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) throw remaining_length_error();
+        if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) {
+            handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+            return;
+        }
         auto self = this->shared_from_this();
         if (buf_ & 0b10000000) {
             async_read(
@@ -2675,6 +2698,7 @@ private:
                         return;
                     }
                     if (bytes_transferred != 1) {
+                        handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
@@ -2683,6 +2707,41 @@ private:
             );
         }
         else {
+            auto check =
+                [&]() -> bool {
+                    auto cpt = get_control_packet_type(fixed_header_);
+                    switch (cpt) {
+                    case control_packet_type::connect:
+                    case control_packet_type::publish:
+                    case control_packet_type::subscribe:
+                    case control_packet_type::suback:
+                    case control_packet_type::unsubscribe:
+                        if (h_is_valid_length_) {
+                            return h_is_valid_length_(cpt, remaining_length_);
+                        }
+                        else {
+                            return true;
+                        }
+                    case control_packet_type::connack:
+                    case control_packet_type::puback:
+                    case control_packet_type::pubrec:
+                    case control_packet_type::pubrel:
+                    case control_packet_type::pubcomp:
+                    case control_packet_type::unsuback:
+                        return remaining_length_ == 2;
+                    case control_packet_type::pingreq:
+                    case control_packet_type::pingresp:
+                    case control_packet_type::disconnect:
+                        return remaining_length_ == 0;
+                    default:
+                        return false;
+                    }
+                };
+            if (!check()) {
+                handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                return;
+            }
             payload_.resize(remaining_length_);
             if (remaining_length_ == 0) {
                 handle_payload(func);
@@ -2705,6 +2764,7 @@ private:
                         return;
                     }
                     if (bytes_transferred != remaining_length_) {
+                        handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
@@ -2924,10 +2984,6 @@ private:
             return false;
         }
         connect_requested_ = false;
-        if (remaining_length_ != 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         if (static_cast<std::uint8_t>(payload_[1]) == connect_return_code::accepted) {
             if (clean_session_) {
                 LockGuard<Mutex> lck (store_mtx_);
@@ -3065,10 +3121,6 @@ private:
     }
 
     bool handle_puback(async_handler_t const& func) {
-        if (remaining_length_ != 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
             LockGuard<Mutex> lck (store_mtx_);
@@ -3083,10 +3135,6 @@ private:
     }
 
     bool handle_pubrec(async_handler_t const& func) {
-        if (remaining_length_ != 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
             LockGuard<Mutex> lck (store_mtx_);
@@ -3120,10 +3168,6 @@ private:
     }
 
     bool handle_pubrel(async_handler_t const& func) {
-        if (remaining_length_ != 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         auto res = [this, &packet_id, &func] {
             auto_pub_response(
@@ -3148,10 +3192,6 @@ private:
     }
 
     bool handle_pubcomp(async_handler_t const& func) {
-        if (remaining_length_ != 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
             LockGuard<Mutex> lck (store_mtx_);
@@ -3258,10 +3298,6 @@ private:
     }
 
     bool handle_unsuback(async_handler_t const& func) {
-        if (remaining_length_ != 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         std::uint16_t packet_id = make_uint16_t(payload_[0], payload_[1]);
         {
             LockGuard<Mutex> lck (store_mtx_);
@@ -3272,28 +3308,16 @@ private:
     }
 
     bool handle_pingreq(async_handler_t const& func) {
-        if (remaining_length_ != 0) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         if (h_pingreq_) return h_pingreq_();
         return true;
     }
 
     bool handle_pingresp(async_handler_t const& func) {
-        if (remaining_length_ != 0) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
         if (h_pingresp_) return h_pingresp_();
         return true;
     }
 
     void handle_disconnect(async_handler_t const& func) {
-        if (remaining_length_ != 0) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return;
-        }
         if (h_disconnect_) h_disconnect_();
     }
 
@@ -3999,6 +4023,7 @@ private:
     serialize_pubrel_handler h_serialize_pubrel_;
     serialize_remove_handler h_serialize_remove_;
     pre_send_handler h_pre_send_;
+    is_valid_length_handler h_is_valid_length_;
     boost::optional<std::string> user_name_;
     boost::optional<std::string> password_;
     Mutex store_mtx_;

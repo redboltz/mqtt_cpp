@@ -19,6 +19,7 @@ LIST (APPEND check_PROGRAMS
      manual_publish.cpp
      retain.cpp
      will.cpp
+     length_check.cpp
 )
 
 LIST (APPEND MQTT_LINK_LIBRARIES
