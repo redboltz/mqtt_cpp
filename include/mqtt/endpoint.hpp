@@ -3652,28 +3652,6 @@ private:
         std::shared_ptr<std::string> buf_;
     };
 
-#if 0
-    class packet {
-    public:
-        packet(
-            std::shared_ptr<std::string> const& b = nullptr,
-            char* p = nullptr,
-            std::size_t s = 0)
-            :
-            buf_(b),
-            ptr_(p),
-            size_(s) {}
-        std::shared_ptr<std::string> const& buf() const { return buf_; }
-        char const* ptr() const { return ptr_; }
-        char* ptr() { return ptr_; }
-        std::size_t size() const { return size_; }
-    private:
-        std::shared_ptr<std::string> buf_;
-        char* ptr_;
-        std::size_t size_;
-    };
-#endif
-
     struct store {
         store(
             std::uint16_t id,
