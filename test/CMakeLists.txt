@@ -15,6 +15,7 @@ LIST (APPEND check_PROGRAMS
      multi_sub.cpp
      resend.cpp
      resend_serialize.cpp
+     resend_serialize_ptr_size.cpp
      offline.cpp
      manual_publish.cpp
      retain.cpp

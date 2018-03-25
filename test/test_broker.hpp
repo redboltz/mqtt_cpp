@@ -115,7 +115,7 @@ public:
              std::string contents){
                 std::uint8_t qos = mqtt::publish::get_qos(header);
                 bool is_retain = mqtt::publish::is_retain(header);
-                do_publish(topic_name, contents, qos, is_retain);
+                do_publish(topic_name, std::make_shared<std::string>(std::move(contents)), qos, is_retain);
                 return true;
             });
         ep.set_subscribe_handler(
@@ -256,7 +256,11 @@ private:
         }
     }
 
-    void do_publish(std::string const& topic, std::string const& contents, std::uint8_t qos, bool is_retain) {
+    void do_publish(
+        std::string const& topic,
+        std::shared_ptr<std::string> const& contents,
+        std::uint8_t qos,
+        bool is_retain) {
         {
             auto const& idx = subs_.get<tag_topic>();
             auto r = idx.equal_range(topic);
@@ -288,7 +292,7 @@ private:
             }
         }
         if (is_retain) {
-            if (contents.empty()) {
+            if (contents->empty()) {
                 retains_.erase(topic);
             }
             else {
@@ -307,7 +311,11 @@ private:
             auto it = will_.find(con.shared_from_this());
             if (it != will_.end()) {
                 if (send_will) {
-                    do_publish(it->will.topic(), it->will.message(), it->will.qos(), it->will.retain());
+                    do_publish(
+                        it->will.topic(),
+                        std::make_shared<std::string>(std::move(it->will.message())),
+                        it->will.qos(),
+                        it->will.retain());
                 }
                 will_.erase(it);
             }
@@ -391,11 +399,11 @@ private:
     >;
 
     struct retain {
-        retain(std::string const& topic, std::uint8_t qos, std::string const& contents)
+        retain(std::string const& topic, std::uint8_t qos, std::shared_ptr<std::string> const& contents)
             :topic(topic), qos(qos), contents(contents) {}
         std::string topic;
         std::uint8_t qos;
-        std::string contents;
+        std::shared_ptr<std::string> contents;
     };
     using mi_retain = mi::multi_index_container<
         retain,
@@ -408,10 +416,10 @@ private:
     >;
 
     struct session_data {
-        session_data(std::string const& topic, std::string const& contents, std::uint8_t qos)
-            : topic(topic), contents(contents), qos(qos) {}
+        session_data(std::string topic, std::shared_ptr<std::string> const& contents, std::uint8_t qos)
+            : topic(std::move(topic)), contents(contents), qos(qos) {}
         std::string topic;
-        std::string contents;
+        std::shared_ptr<std::string> contents;
         std::uint8_t qos;
     };
     struct session {
