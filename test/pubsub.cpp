@@ -1289,5 +1289,126 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
     do_combi_test(test);
 }
 
+BOOST_AUTO_TEST_CASE( publish_dup_function ) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        c->set_clean_session(true);
+
+        std::uint16_t pid_sub;
+        std::uint16_t pid_unsub;
+
+        int order = 0;
+
+        std::vector<std::string> const expected = {
+            // connect
+            "h_connack",
+            // subscribe topic1 QoS1
+            "h_suback",
+            // publish topic1 QoS1
+            "h_publish",
+            "h_puback",
+            "h_unsuback",
+            // disconnect
+            "h_close",
+            "finish",
+        };
+
+        auto current =
+            [&order, &expected]() -> std::string {
+                try {
+                    return expected.at(order);
+                }
+                catch (std::out_of_range const& e) {
+                    return e.what();
+                }
+            };
+
+        c->set_connack_handler(
+            [&order, &current, &c, &pid_sub]
+            (bool sp, std::uint8_t connack_return_code) {
+                BOOST_TEST(current() == "h_connack");
+                ++order;
+                BOOST_TEST(sp == false);
+                BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                pid_sub = c->subscribe("topic1", mqtt::qos::at_least_once);
+                return true;
+            });
+        c->set_close_handler(
+            [&order, &current, &s]
+            () {
+                BOOST_TEST(current() == "h_close");
+                ++order;
+                s.close();
+            });
+        c->set_error_handler(
+            []
+            (boost::system::error_code const&) {
+                BOOST_CHECK(false);
+            });
+        c->set_puback_handler(
+            [&order, &current, &c, &pid_unsub]
+            (std::uint16_t packet_id) {
+                BOOST_TEST(current() == "h_puback");
+                ++order;
+                BOOST_TEST(packet_id == 1);
+                pid_unsub = c->unsubscribe("topic1");
+                return true;
+            });
+        c->set_pubrec_handler(
+            []
+            (std::uint16_t) {
+                BOOST_CHECK(false);
+                return true;
+            });
+        c->set_pubcomp_handler(
+            []
+            (std::uint16_t) {
+                BOOST_CHECK(false);
+                return true;
+            });
+        c->set_suback_handler(
+            [&order, &current, &c, &pid_sub]
+            (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+                BOOST_TEST(current() == "h_suback");
+                ++order;
+                BOOST_TEST(packet_id == pid_sub);
+                BOOST_TEST(results.size() == 1U);
+                BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
+                auto ret =
+                    c->publish_dup(1, "topic1", "topic1_contents", mqtt::qos::at_least_once);
+                BOOST_TEST(ret == true);
+                return true;
+            });
+        c->set_unsuback_handler(
+            [&order, &current, &c, &pid_unsub]
+            (std::uint16_t packet_id) {
+                BOOST_TEST(current() == "h_unsuback");
+                ++order;
+                BOOST_TEST(packet_id == pid_unsub);
+                c->disconnect();
+                return true;
+            });
+        c->set_publish_handler(
+            [&order, &current]
+            (std::uint8_t header,
+             boost::optional<std::uint16_t> packet_id,
+             std::string topic,
+             std::string contents) {
+                BOOST_TEST(current() == "h_publish");
+                ++order;
+                BOOST_TEST(mqtt::publish::is_dup(header) == false); // not propagated
+                BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_least_once);
+                BOOST_TEST(mqtt::publish::is_retain(header) == false);
+                BOOST_CHECK(packet_id.get() == 1);
+                BOOST_TEST(topic == "topic1");
+                BOOST_TEST(contents == "topic1_contents");
+                return true;
+            });
+        c->connect();
+        ios.run();
+        BOOST_TEST(current() == "finish");
+    };
+    do_combi_test(test);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
