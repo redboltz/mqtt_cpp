@@ -264,14 +264,14 @@ public:
         if (user_name) {
             connect_flags_ |= connect_flags::user_name_flag;
             user_name_ = as::buffer(user_name.get());
-            add_uint16_t_to_buf(user_name_length_buf_, get_size(user_name_));
+            add_uint16_t_to_buf(user_name_length_buf_, static_cast<std::uint16_t>(get_size(user_name_)));
 
             remaining_length_ += 2 + get_size(user_name_);
         }
         if (password) {
             connect_flags_ |= connect_flags::password_flag;
             password_ = as::buffer(password.get());
-            add_uint16_t_to_buf(password_length_buf_, get_size(password_));
+            add_uint16_t_to_buf(password_length_buf_, static_cast<std::uint16_t>(get_size(password_)));
 
             remaining_length_ += 2 + get_size(password_);
         }
@@ -281,9 +281,14 @@ public:
             connect_flags::set_will_qos(connect_flags_, w.get().qos());
 
             will_topic_name_ = as::buffer(w.get().topic());
-            add_uint16_t_to_buf(will_topic_name_length_buf_, get_size(will_topic_name_));
+            add_uint16_t_to_buf(
+                will_topic_name_length_buf_,
+                static_cast<std::uint16_t>(get_size(will_topic_name_))
+            );
             will_message_ = as::buffer(w.get().message());
-            add_uint16_t_to_buf(will_message_length_buf_, get_size(will_message_));
+            add_uint16_t_to_buf(
+                will_message_length_buf_,
+                static_cast<std::uint16_t>(get_size(will_message_)));
 
             remaining_length_ += 2 + get_size(will_topic_name_) + 2 + get_size(will_message_);
         }
