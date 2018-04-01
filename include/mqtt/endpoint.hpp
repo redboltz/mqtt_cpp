@@ -3228,16 +3228,33 @@ public:
         auto sp_topic_name = std::make_shared<std::string>(topic_name);
         auto sp_contents = std::make_shared<std::string>(contents);
 
-        async_send_publish(
-            as::buffer(*sp_topic_name),
-            qos,
-            retain,
-            false,
-            packet_id,
-            as::buffer(*sp_contents),
-            func,
-            [sp_topic_name, sp_contents] {}
-        );
+        if (qos == qos::at_most_once) {
+            async_send_publish(
+                as::buffer(*sp_topic_name),
+                qos,
+                retain,
+                false,
+                packet_id,
+                as::buffer(*sp_contents),
+                [func, sp_topic_name, sp_contents]
+                (boost::system::error_code const& ec) {
+                    if (func) func(ec);
+                },
+                [] {}
+            );
+        }
+        else {
+            async_send_publish(
+                as::buffer(*sp_topic_name),
+                qos,
+                retain,
+                false,
+                packet_id,
+                as::buffer(*sp_contents),
+                func,
+                [sp_topic_name, sp_contents] {}
+            );
+        }
     }
 
     /**
