@@ -190,17 +190,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                 ++order;
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                std::vector<std::tuple<std::string, std::uint8_t>> v
-                    {
-                        {
-                            std::string("topic1"),
-                            mqtt::qos::at_most_once,
-                        },
-                        {
-                            std::string("topic2"),
-                            mqtt::qos::exactly_once
-                        }
-                    };
+                std::vector<std::tuple<std::string, std::uint8_t>> v;
+                v.emplace_back("topic1", mqtt::qos::at_most_once);
+                v.emplace_back("topic2", mqtt::qos::exactly_once);
                 c->subscribe(v);
                 return true;
             });
@@ -433,17 +425,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                 ++order;
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                std::vector<std::tuple<std::string, std::uint8_t>> v
-                    {
-                        {
-                            std::string("topic1"),
-                            mqtt::qos::at_most_once,
-                        },
-                        {
-                            std::string("topic2"),
-                            mqtt::qos::exactly_once
-                        }
-                    };
+                std::vector<std::tuple<std::string, std::uint8_t>> v;
+                v.emplace_back("topic1", mqtt::qos::at_most_once);
+                v.emplace_back("topic2", mqtt::qos::exactly_once);
                 c->async_subscribe(
                     v,
                     [](boost::system::error_code const&) {}
