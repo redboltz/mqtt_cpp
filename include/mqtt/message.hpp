@@ -81,12 +81,11 @@ public:
     {}
 
     template <typename Iterator>
-    header_packet_id_message(Iterator it, std::size_t size) {
-        static_assert(std::is_same<typename Iterator::value_type, char>::value, "");
-        if (size != 4) throw remaining_length_error();
-        if (it[1] != 2) throw remaining_length_error();
+    header_packet_id_message(Iterator b, Iterator e) {
+        if (std::distance(b, e) != 4) throw remaining_length_error();
+        if (b[1] != 2) throw remaining_length_error();
 
-        std::copy(it, it + size, std::back_inserter(message_));
+        std::copy(b, e, std::back_inserter(message_));
     }
 
     /**
@@ -145,8 +144,8 @@ struct pubrel_message : detail::header_packet_id_message {
     }
 
     template <typename Iterator>
-    pubrel_message(Iterator it, std::size_t size)
-        : header_packet_id_message(it, size)
+    pubrel_message(Iterator b, Iterator e)
+        : header_packet_id_message(b, e)
     {
     }
 
@@ -454,47 +453,44 @@ public:
     }
 
     template <typename Iterator>
-    publish_message(Iterator it, std::size_t size) {
-        static_assert(std::is_same<typename Iterator::value_type, char>::value, "");
-        auto end = it + size;
-
-        if (it >= end) throw remaining_length_error();
-        fixed_header_ = *it;
+    publish_message(Iterator b, Iterator e) {
+        if (b >= e) throw remaining_length_error();
+        fixed_header_ = *b;
         auto qos = publish::get_qos(fixed_header_);
-        ++it;
+        ++b;
 
-        if (it + 4 >= end) throw remaining_length_error();
-        auto len_consumed = remaining_length(it, it + 4);
+        if (b + 4 >= e) throw remaining_length_error();
+        auto len_consumed = remaining_length(b, b + 4);
         remaining_length_ = std::get<0>(len_consumed);
         auto consumed = std::get<1>(len_consumed);
 
-        std::copy(it, it + consumed, std::back_inserter(remaining_length_buf_));
-        it += consumed;
+        std::copy(b, b + consumed, std::back_inserter(remaining_length_buf_));
+        b += consumed;
 
-        if (it + 2 >= end) throw remaining_length_error();
-        std::copy(it, it + 2, std::back_inserter(topic_name_length_buf_));
-        auto topic_name_length = make_uint16_t(it, it + 2);
-        it += 2;
+        if (b + 2 >= e) throw remaining_length_error();
+        std::copy(b, b + 2, std::back_inserter(topic_name_length_buf_));
+        auto topic_name_length = make_uint16_t(b, b + 2);
+        b += 2;
 
-        if (it + topic_name_length >= end) throw remaining_length_error();
-        topic_name_ = as::buffer(&*it, topic_name_length);
-        it += topic_name_length;
+        if (b + topic_name_length >= e) throw remaining_length_error();
+        topic_name_ = as::buffer(&*b, topic_name_length);
+        b += topic_name_length;
 
         switch (qos) {
         case qos::at_most_once:
             break;
         case qos::at_least_once:
         case qos::exactly_once:
-            if (it + 2 >= end) throw remaining_length_error();
-            std::copy(it, it + 2, std::back_inserter(packet_id_));
-            it += 2;
+            if (b + 2 >= e) throw remaining_length_error();
+            std::copy(b, b + 2, std::back_inserter(packet_id_));
+            b += 2;
             break;
         default:
             throw protocol_error();
             break;
         };
 
-        payload_ = as::buffer(&*it, std::distance(it, end));
+        payload_ = as::buffer(&*b, std::distance(b, e));
     }
 
     /**
@@ -565,13 +561,54 @@ public:
         return make_uint16_t(packet_id_.begin(), packet_id_.end());
     }
 
+    /**
+     * @brief Get qos
+     * @return qos
+     */
     std::uint8_t qos() const {
         return publish::get_qos(fixed_header_);
     }
 
+    /**
+     * @brief Check retain flag
+     * @return true if retain, otherwise return false.
+     */
+    bool is_retain() const {
+        return publish::is_retain(fixed_header_);
+    }
+
+    /**
+     * @brief Check dup flag
+     * @return true if dup, otherwise return false.
+     */
+    bool is_dup() const {
+        return publish::is_dup(fixed_header_);
+    }
+
+    /**
+     * @brief Get topic name
+     * @return topic name
+     */
+    as::const_buffer topic() const {
+        return topic_name_;
+    }
+
+    /**
+     * @brief Get payload
+     * @return payload
+     */
+    as::const_buffer payload() const {
+        return payload_;
+    }
+
+    /**
+     * @brief Set dup flag
+     * @param dup flag value to set
+     */
     void set_dup(bool dup) {
         publish::set_dup(fixed_header_, dup);
     }
+
 
 private:
     static std::size_t publish_remaining_length(

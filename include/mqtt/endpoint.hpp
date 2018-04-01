@@ -3287,16 +3287,32 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
-        async_send_publish(
-            topic_name,
-            qos,
-            retain,
-            false,
-            packet_id,
-            contents,
-            func,
-            life_keeper
-        );
+        if (qos == qos::at_most_once) {
+            async_send_publish(
+                topic_name,
+                qos,
+                retain,
+                false,
+                packet_id,
+                contents,
+                [life_keeper, func] (boost::system::error_code const& ec) {
+                    if (func) func(ec);
+                },
+                life_keeper
+            );
+        }
+        else {
+            async_send_publish(
+                topic_name,
+                qos,
+                retain,
+                false,
+                packet_id,
+                contents,
+                func,
+                life_keeper
+            );
+        }
     }
 
     /**
@@ -3923,11 +3939,11 @@ public:
         auto fixed_header = *b;
         switch (get_control_packet_type(fixed_header)) {
         case control_packet_type::publish: {
-            auto sp = std::make_shared<publish_message>(b, std::distance(b, e));
+            auto sp = std::make_shared<publish_message>(b, e);
             restore_serialized_message(*sp, [sp] {});
         } break;
         case control_packet_type::pubrel: {
-            auto sp = std::make_shared<pubrel_message>(b, std::distance(b, e));
+            auto sp = std::make_shared<pubrel_message>(b, e);
             restore_serialized_message(*sp, [sp] {});
         } break;
         default:
