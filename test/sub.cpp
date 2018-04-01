@@ -193,11 +193,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                 std::vector<std::tuple<std::string, std::uint8_t>> v
                     {
                         {
-                            "topic1",
+                            std::string("topic1"),
                             mqtt::qos::at_most_once,
                         },
                         {
-                            "topic2",
+                            std::string("topic2"),
                             mqtt::qos::exactly_once
                         }
                     };
@@ -436,11 +436,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                 std::vector<std::tuple<std::string, std::uint8_t>> v
                     {
                         {
-                            "topic1",
+                            std::string("topic1"),
                             mqtt::qos::at_most_once,
                         },
                         {
-                            "topic2",
+                            std::string("topic2"),
                             mqtt::qos::exactly_once
                         }
                     };
