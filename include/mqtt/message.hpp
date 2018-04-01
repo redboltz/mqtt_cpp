@@ -574,9 +574,9 @@ private:
         std::uint8_t qos,
         as::const_buffer const& payload) {
         return
-            2                   // topic name length
-            + topic_name.size() // topic name
-            + payload.size()    // payload
+            2                      // topic name length
+            + get_size(topic_name) // topic name
+            + get_size(payload)    // payload
             + [&] {
                   if (qos == qos::at_least_once || qos == qos::exactly_once) {
                       return 2; // packet_id

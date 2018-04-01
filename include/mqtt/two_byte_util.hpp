@@ -12,7 +12,7 @@
 #include <boost/assert.hpp>
 
 #define MQTT_16BITNUM_TO_BYTE_SEQ(val)                                  \
-    static_cast<char>(static_cast<unsigned char>(val) >> 8),            \
+    static_cast<char>(static_cast<std::uint16_t>(val) >> 8),            \
     static_cast<char>((val) & 0xff)
 
 namespace mqtt {
