@@ -5613,7 +5613,7 @@ private:
             write_completion_handler(
                 this->shared_from_this(),
                 func,
-                size(mv)
+                mqtt::size(mv)
             )
         );
     }
