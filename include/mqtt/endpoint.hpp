@@ -43,6 +43,7 @@
 #include <mqtt/exception.hpp>
 #include <mqtt/tcp_endpoint.hpp>
 #include <mqtt/unique_scope_guard.hpp>
+#include <mqtt/shared_scope_guard.hpp>
 #include <mqtt/message_variant.hpp>
 
 #if defined(MQTT_USE_WS)
@@ -3228,33 +3229,16 @@ public:
         auto sp_topic_name = std::make_shared<std::string>(topic_name);
         auto sp_contents = std::make_shared<std::string>(contents);
 
-        if (qos == qos::at_most_once) {
-            async_send_publish(
-                as::buffer(*sp_topic_name),
-                qos,
-                retain,
-                false,
-                packet_id,
-                as::buffer(*sp_contents),
-                [func, sp_topic_name, sp_contents]
-                (boost::system::error_code const& ec) {
-                    if (func) func(ec);
-                },
-                [] {}
-            );
-        }
-        else {
-            async_send_publish(
-                as::buffer(*sp_topic_name),
-                qos,
-                retain,
-                false,
-                packet_id,
-                as::buffer(*sp_contents),
-                func,
-                [sp_topic_name, sp_contents] {}
-            );
-        }
+        async_send_publish(
+            as::buffer(*sp_topic_name),
+            qos,
+            retain,
+            false,
+            packet_id,
+            as::buffer(*sp_contents),
+            func,
+            [sp_topic_name, sp_contents] {}
+        );
     }
 
     /**
@@ -3287,32 +3271,16 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
-        if (qos == qos::at_most_once) {
-            async_send_publish(
-                topic_name,
-                qos,
-                retain,
-                false,
-                packet_id,
-                contents,
-                [life_keeper, func] (boost::system::error_code const& ec) {
-                    if (func) func(ec);
-                },
-                life_keeper
-            );
-        }
-        else {
-            async_send_publish(
-                topic_name,
-                qos,
-                retain,
-                false,
-                packet_id,
-                contents,
-                func,
-                life_keeper
-            );
-        }
+        async_send_publish(
+            topic_name,
+            qos,
+            retain,
+            false,
+            packet_id,
+            contents,
+            func,
+            life_keeper
+        );
     }
 
     /**
@@ -5170,6 +5138,12 @@ private:
         as::const_buffer const& payload,
         life_keeper_t life_keeper) {
 
+        auto g = shared_scope_guard(
+            [MQTT_CAPTURE_MOVE(life_keeper)] {
+                if (life_keeper) life_keeper();
+            }
+        );
+
         auto msg =
             publish_message(
                 topic_name,
@@ -5190,7 +5164,8 @@ private:
                 qos == qos::at_least_once ? control_packet_type::puback
                                           : control_packet_type::pubrec,
                 msg,
-                std::move(life_keeper));
+                [g] {}
+            );
             if (h_serialize_publish_) {
                 h_serialize_publish_(msg);
             }
@@ -5374,6 +5349,12 @@ private:
         async_handler_t const& func,
         life_keeper_t life_keeper) {
 
+        auto g = shared_scope_guard(
+            [MQTT_CAPTURE_MOVE(life_keeper)] {
+                if (life_keeper) life_keeper();
+            }
+        );
+
         auto msg =
             publish_message(
                 topic_name,
@@ -5384,7 +5365,17 @@ private:
                 payload
             );
 
-        do_async_write(msg, func);
+        if (qos == qos::at_most_once) {
+            do_async_write(
+                msg,
+                [g, func](boost::system::error_code const& ec) {
+                    if (func) func(ec);
+                }
+            );
+        }
+        else {
+            do_async_write(msg, func);
+        }
 
 
         if (qos == qos::at_least_once || qos == qos::exactly_once) {
@@ -5395,7 +5386,8 @@ private:
                 qos == qos::at_least_once ? control_packet_type::puback
                                           : control_packet_type::pubrec,
                 msg,
-                std::move(life_keeper));
+                [g] {}
+            );
             if (h_serialize_publish_) {
                 h_serialize_publish_(msg);
             }
