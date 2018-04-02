@@ -198,19 +198,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                 ++order;
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                std::vector<std::tuple<as::const_buffer, std::uint8_t>> v;
                 std::string topic1("topic1");
                 std::string topic2("topic2");
-                std::vector<std::tuple<as::const_buffer, std::uint8_t>> v
-                    {
-                        {
-                            as::buffer(topic1),
-                            mqtt::qos::at_most_once,
-                        },
-                        {
-                            as::buffer(topic2),
-                            mqtt::qos::exactly_once
-                        }
-                    };
+                v.emplace_back(as::buffer(topic1), mqtt::qos::at_most_once);
+                v.emplace_back(as::buffer(topic2), mqtt::qos::exactly_once);
                 c->subscribe(v);
                 return true;
             });
@@ -458,17 +450,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 auto topic1 = std::make_shared<std::string>("topic1");
                 auto topic2 = std::make_shared<std::string>("topic2");
-                std::vector<std::tuple<as::const_buffer, std::uint8_t>> v
-                    {
-                        {
-                            as::buffer(*topic1),
-                            mqtt::qos::at_most_once,
-                        },
-                        {
-                            as::buffer(*topic2),
-                            mqtt::qos::exactly_once
-                        }
-                    };
+                std::vector<std::tuple<as::const_buffer, std::uint8_t>> v;
+                v.emplace_back(as::buffer(*topic1), mqtt::qos::at_most_once);
+                v.emplace_back(as::buffer(*topic2), mqtt::qos::exactly_once);
                 c->async_subscribe(
                     v,
                     [topic1, topic2](boost::system::error_code const&) {}
