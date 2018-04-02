@@ -39,6 +39,22 @@ remaining_length(std::string const& bytes) {
     return std::make_tuple(len, consumed);
 }
 
+template <typename Iterator>
+inline std::tuple<std::size_t, std::size_t>
+remaining_length(Iterator b, Iterator e) {
+    std::size_t len = 0;
+    std::size_t mul = 1;
+    std::size_t consumed = 0;
+    for (; b != e; ++b) {
+        len += (*b & 0b01111111) * mul;
+        mul *= 128;
+        ++consumed;
+        if (mul > 128 * 128 * 128 * 128) return std::make_tuple(0, 0);
+        if (!(*b & 0b10000000)) break;
+    }
+    return std::make_tuple(len, consumed);
+}
+
 } // namespace mqtt
 
 #endif // MQTT_REMAINING_LENGTH_HPP

@@ -17,4 +17,10 @@
 #define MQTT_CAPTURE_MOVE(v) v
 #endif
 
+#if __cplusplus >= 201402L
+#define MQTT_DEPRECATED(msg) [[deprecated(msg)]]
+#else  // __cplusplus >= 201402L
+#define MQTT_DEPRECATED(msg)
+#endif // __cplusplus >= 201402L
+
 #endif // MQTT_UTILITY_HPP
