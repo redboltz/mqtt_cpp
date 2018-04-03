@@ -318,7 +318,7 @@ public:
      *        To restore the message, use restore_serialized_message().
      * @param msg publish message
      */
-    using serialize_publish_handler = std::function<void(publish_message msg)>;
+    using serialize_publish_message_handler = std::function<void(publish_message msg)>;
 
     /**
      * @brief Serialize publish handler
@@ -328,7 +328,7 @@ public:
      * @param data      pointer to the serializing message
      * @param size      size of the serializing message
      */
-    using serialize_publish_handler_ptr_size = std::function<void(std::uint16_t packet_id, char const* data, std::size_t size)>;
+    using serialize_publish_handler = std::function<void(std::uint16_t packet_id, char const* data, std::size_t size)>;
 
     /**
      * @brief Serialize pubrel handler
@@ -338,7 +338,7 @@ public:
      *        To restore the message, use restore_serialized_message().
      * @param msg pubrel message
      */
-    using serialize_pubrel_handler = std::function<void(pubrel_message msg)>;
+    using serialize_pubrel_message_handler = std::function<void(pubrel_message msg)>;
 
     /**
      * @brief Serialize pubrel handler
@@ -350,7 +350,7 @@ public:
      * @param data      pointer to the serializing message
      * @param size      size of the serializing message
      */
-    using serialize_pubrel_handler_ptr_size = std::function<void(std::uint16_t packet_id, char const* data, std::size_t size)>;
+    using serialize_pubrel_handler = std::function<void(std::uint16_t packet_id, char const* data, std::size_t size)>;
 
     /**
      * @brief Remove serialized message
@@ -617,8 +617,8 @@ public:
      * @param h_remove remove handler for serialized message
      */
     void set_serialize_handlers(
-        serialize_publish_handler h_publish,
-        serialize_pubrel_handler h_pubrel,
+        serialize_publish_message_handler h_publish,
+        serialize_pubrel_message_handler h_pubrel,
         serialize_remove_handler h_remove) {
         h_serialize_publish_ = std::move(h_publish);
         h_serialize_pubrel_ = std::move(h_pubrel);
@@ -632,8 +632,8 @@ public:
      * @param h_remove remove handler for serialized message
      */
     void set_serialize_handlers(
-        serialize_publish_handler_ptr_size h_publish,
-        serialize_pubrel_handler_ptr_size h_pubrel,
+        serialize_publish_handler h_publish,
+        serialize_pubrel_handler h_pubrel,
         serialize_remove_handler h_remove) {
         h_serialize_publish_ =
             [MQTT_CAPTURE_MOVE(h_publish)]
@@ -5699,8 +5699,8 @@ private:
     pingreq_handler h_pingreq_;
     pingresp_handler h_pingresp_;
     disconnect_handler h_disconnect_;
-    serialize_publish_handler h_serialize_publish_;
-    serialize_pubrel_handler h_serialize_pubrel_;
+    serialize_publish_message_handler h_serialize_publish_;
+    serialize_pubrel_message_handler h_serialize_pubrel_;
     serialize_remove_handler h_serialize_remove_;
     pre_send_handler h_pre_send_;
     is_valid_length_handler h_is_valid_length_;
