@@ -26,7 +26,7 @@ matrix:
       env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=OFF" CXXFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers"
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=ON" CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer" CXXFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer" LDFLAGS="-Wno-ignored-qualifiers -fsanitize=address"
+      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=ON" CXXFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers"
     - os: osx
       compiler: clang
       env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF" CXXFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers"
