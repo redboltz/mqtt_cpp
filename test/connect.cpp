@@ -13,6 +13,7 @@ BOOST_AUTO_TEST_CASE( connect ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
+        BOOST_TEST(c->connected() == false);
 
         int order = 0;
 
@@ -38,16 +39,19 @@ BOOST_AUTO_TEST_CASE( connect ) {
             [&order, &current, &c]
             (bool sp, std::uint8_t connack_return_code) {
                 BOOST_TEST(current() == "h_connack");
+                BOOST_TEST(c->connected() == true);
                 ++order;
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 c->disconnect();
+                BOOST_TEST(c->connected() == true);
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&order, &current, &s, &c]
             () {
                 BOOST_TEST(current() == "h_close");
+                BOOST_TEST(c->connected() == false);
                 ++order;
                 s.close();
             });
@@ -57,6 +61,7 @@ BOOST_AUTO_TEST_CASE( connect ) {
                 BOOST_CHECK(false);
             });
         c->connect();
+        BOOST_TEST(c->connected() == false);
         ios.run();
         BOOST_TEST(current() == "finish");
     };
