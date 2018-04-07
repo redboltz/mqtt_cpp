@@ -21,6 +21,10 @@ LIST (APPEND check_PROGRAMS
      retain.cpp
      will.cpp
      length_check.cpp
+     sub.cpp
+     as_buffer_sub.cpp
+     as_buffer_pubsub.cpp
+     as_buffer_async_pubsub.cpp
 )
 
 LIST (APPEND MQTT_LINK_LIBRARIES
