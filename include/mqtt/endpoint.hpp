@@ -5642,9 +5642,9 @@ private:
              expected_(expected)
         {}
         void operator()(boost::system::error_code const& ec) const {
-            if (!self_->connected_) return;
             if (func_) func_(ec);
-            if (ec) { // Error is handled by async_read.
+            if (ec || // Error is handled by async_read.
+                !self_->connected_) {
                 self_->queue_.clear();
                 return;
             }
@@ -5656,9 +5656,9 @@ private:
         void operator()(
             boost::system::error_code const& ec,
             std::size_t bytes_transferred) const {
-            if (!self_->connected_) return;
             if (func_) func_(ec);
-            if (ec) { // Error is handled by async_read.
+            if (ec || // Error is handled by async_read.
+                !self_->connected_) {
                 self_->queue_.clear();
                 return;
             }
