@@ -4774,6 +4774,13 @@ private:
             i += password_length;
         }
         mqtt_connected_ = true;
+
+        if (clean_session_) {
+            LockGuard<Mutex> lck (store_mtx_);
+            store_.clear();
+            packet_id_.clear();
+        }
+
         if (h_connect_) {
             if (h_connect_(client_id_, user_name, password, std::move(w), clean_session_, keep_alive)) {
                 return true;
@@ -4793,6 +4800,7 @@ private:
             if (clean_session_) {
                 LockGuard<Mutex> lck (store_mtx_);
                 store_.clear();
+                packet_id_.clear();
             }
             else {
                 LockGuard<Mutex> lck (store_mtx_);
