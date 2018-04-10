@@ -3839,12 +3839,25 @@ public:
      * @brief Apply f to stored messages.
      * @param f applying function. f should be void(char const*, std::size_t)
      */
-    template <typename F>
-    void for_each_store(F&& f) {
+    void for_each_store(std::function<void(char const*, std::size_t)> const& f) {
         LockGuard<Mutex> lck (store_mtx_);
         auto& idx = store_.template get<tag_seq>();
         for (auto const & e : idx) {
-            f(e.ptr(), e.size());
+            auto const& m = e.message();
+            auto cb = continuous_buffer(m);
+            f(cb.data(), cb.size());
+        }
+    }
+
+    /**
+     * @brief Apply f to stored messages.
+     * @param f applying function. f should be void(message_variant const&)
+     */
+    void for_each_store(std::function<void(message_variant const&)> const& f) {
+        LockGuard<Mutex> lck (store_mtx_);
+        auto& idx = store_.template get<tag_seq>();
+        for (auto const & e : idx) {
+            f(e.message());
         }
     }
 
