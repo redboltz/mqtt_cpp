@@ -13,8 +13,8 @@ install:
  - if [ "$CXX" = "clang++" ] && [ "$TRAVIS_OS_NAME" == "linux" ]; then export CXX="clang++-5.0" CC="clang-5.0"; fi
 # boost
  - wget https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.zip && unzip -q boost_1_66_0.zip && cd boost_1_66_0 && ./bootstrap.sh && ./b2 -j3 --prefix=${BASE}/usr --with-timer --with-chrono --with-test address-model=64 install > /dev/null && cd ..
- - if [ "$TRAVIS_OS_NAME" == "linux" ]; then wget https://www.openssl.org/source/openssl-1.1.0h.tar.gz && tar xf openssl-1.1.0h.tar.gz && cd openssl-1.1.0h && ./config --prefix=${BASE}/usr && make && make install > /dev/null && cd ..; fi
- - if [ "$TRAVIS_OS_NAME" == "osx" ]; then wget https://www.openssl.org/source/openssl-1.1.0h.tar.gz && tar xf openssl-1.1.0h.tar.gz && cd openssl-1.1.0h && ./Configure darwin64-x86_64-cc --prefix=${BASE}/usr && make && make install > /dev/null && cd ..; fi
+ - if [ "$TRAVIS_OS_NAME" == "linux" ]; then wget https://www.openssl.org/source/openssl-1.1.0h.tar.gz && tar xf openssl-1.1.0h.tar.gz && cd openssl-1.1.0h && ./config --prefix=${BASE}/usr && make -j2 && make install > /dev/null && cd ..; fi
+ - if [ "$TRAVIS_OS_NAME" == "osx" ]; then wget https://www.openssl.org/source/openssl-1.1.0h.tar.gz && tar xf openssl-1.1.0h.tar.gz && cd openssl-1.1.0h && ./Configure darwin64-x86_64-cc --prefix=${BASE}/usr && make -j2 && make install > /dev/null && cd ..; fi
 
 matrix:
   include:
@@ -95,4 +95,4 @@ matrix:
             - libc6-dbg
 
 script:
-  - mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_C_COMPILER="${CC}" -DCMAKE_LIBRARY_PATH="${BASE}/usr/lib" -DBOOST_ROOT="${BASE}/usr" -DOPENSSL_ROOT_DIR="${BASE}/usr" $FLAGS $CXXFLAGS $LDFLAGS .. && make VERBOSE=1 && ctest -VV
+  - mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_C_COMPILER="${CC}" -DCMAKE_LIBRARY_PATH="${BASE}/usr/lib" -DBOOST_ROOT="${BASE}/usr" -DOPENSSL_ROOT_DIR="${BASE}/usr" $FLAGS $CXXFLAGS $LDFLAGS .. && make -j2 VERBOSE=1 && ctest -VV
