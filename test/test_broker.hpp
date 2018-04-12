@@ -46,13 +46,12 @@ class test_broker {
 public:
     test_broker(as::io_service& ios)
         :ios_(ios),
-         tim_disconnect_(ios_),
-         delay_disconnect_ms_(0)
+         tim_disconnect_(ios_)
     {}
 
     // [begin] for test setting
-    void set_disconnect_delay(std::size_t delay) {
-        delay_disconnect_ms_ = delay;
+    void set_disconnect_delay(boost::posix_time::time_duration const& delay) {
+        delay_disconnect_ = delay;
     }
     // [end] for test setting
 
@@ -97,12 +96,9 @@ public:
         ep.set_disconnect_handler(
             [&]
             (){
-                if (delay_disconnect_ms_ == 0) {
-                    close_proc(ep, false);
-                }
-                else {
+                if (delay_disconnect_) {
                     std::weak_ptr<Endpoint> wp(ep.shared_from_this());
-                    tim_disconnect_.expires_from_now(boost::posix_time::milliseconds(delay_disconnect_ms_));
+                    tim_disconnect_.expires_from_now(delay_disconnect_.get());
                     tim_disconnect_.async_wait(
                         [&, wp](boost::system::error_code const& ec) {
                             if (auto sp = wp.lock()) {
@@ -112,6 +108,9 @@ public:
                             }
                         }
                     );
+                }
+                else {
+                    close_proc(ep, false);
                 }
             });
         ep.set_puback_handler(
@@ -547,7 +546,7 @@ private:
 
     as::io_service& ios_;
     as::deadline_timer tim_disconnect_;
-    std::size_t delay_disconnect_ms_;
+    boost::optional<boost::posix_time::time_duration> delay_disconnect_;
     mi_cid_con cons_;
     mi_sub_con subs_;
     std::set<std::string> sessions_;

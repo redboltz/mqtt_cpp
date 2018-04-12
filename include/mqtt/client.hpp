@@ -309,49 +309,91 @@ public:
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
-     * @param timeout_ms if timeout_ms is not zero, force_disconnect() from the client
-     *                   after timeout_ms  elapsed.
+     * @param timeout after timeout elapsed, force_disconnect() is automatically called.
+     *                .
      */
-    void disconnect(std::size_t timeout_ms = 0) {
+    void disconnect(boost::posix_time::time_duration const& timeout) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
-            if (timeout_ms != 0) {
-                std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-                tim_close_.expires_from_now(boost::posix_time::milliseconds(timeout_ms));
-                tim_close_.async_wait(
-                    [wp](boost::system::error_code const& ec) {
-                        if (auto sp = wp.lock()) {
-                            if (!ec) {
-                                sp->force_disconnect();
-                            }
+            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+            tim_close_.expires_from_now(timeout);
+            tim_close_.async_wait(
+                [wp](boost::system::error_code const& ec) {
+                    if (auto sp = wp.lock()) {
+                        if (!ec) {
+                            sp->force_disconnect();
                         }
                     }
-                );
-            }
+                }
+            );
             base::disconnect();
         }
     }
 
-    void async_disconnect(std::size_t timeout_ms = 0) {
+    /**
+     * @brief Disconnect
+     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
+     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
+     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
+     *                .
+     */
+    void disconnect() {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
-            if (timeout_ms != 0) {
-                std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-                tim_close_.expires_from_now(boost::posix_time::milliseconds(timeout_ms));
-                tim_close_.async_wait(
-                    [wp](boost::system::error_code const& ec) {
-                        if (auto sp = wp.lock()) {
-                            if (!ec) {
-                                sp->force_disconnect();
-                            }
-                        }
-                    }
-                );
-            }
-            base::async_disconnect();
+            base::disconnect();
         }
     }
 
+    /**
+     * @brief Disconnect
+     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
+     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
+     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
+     * @param timeout after timeout elapsed, force_disconnect() is automatically called.
+     * @param func A callback function that is called when async operation will finish.
+     */
+    void async_disconnect(
+        boost::posix_time::time_duration const& timeout,
+        async_handler_t const& func = async_handler_t()) {
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (base::connected()) {
+            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+            tim_close_.expires_from_now(timeout);
+            tim_close_.async_wait(
+                [wp](boost::system::error_code const& ec) {
+                    if (auto sp = wp.lock()) {
+                        if (!ec) {
+                            sp->force_disconnect();
+                        }
+                    }
+                }
+            );
+            base::async_disconnect(func);
+        }
+    }
+
+    /**
+     * @brief Disconnect
+     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
+     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
+     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
+     * @param func A callback function that is called when async operation will finish.
+     */
+    void async_disconnect(async_handler_t const& func = async_handler_t()) {
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (base::connected()) {
+            base::async_disconnect(func);
+        }
+    }
+
+    /**
+     * @brief Disconnect by endpoint
+     * Force disconnect. It is not a clean disconnect sequence.<BR>
+     * When the endpoint disconnects using force_disconnect(), a will will send.<BR>
+     */
     void force_disconnect() {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         tim_close_.cancel();
