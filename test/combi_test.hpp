@@ -27,7 +27,7 @@ template <typename Test>
 inline void do_combi_test(Test const& test) {
     {
         boost::asio::io_service ios;
-        test_broker b;
+        test_broker b(ios);
         test_server_no_tls s(ios, b);
         auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
         test(ios, c, s);
@@ -35,7 +35,7 @@ inline void do_combi_test(Test const& test) {
 #if !defined(MQTT_NO_TLS)
     {
         boost::asio::io_service ios;
-        test_broker b;
+        test_broker b(ios);
         test_server_tls s(ios, b);
         auto c = mqtt::make_tls_client(ios, broker_url, broker_tls_port);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
@@ -48,7 +48,7 @@ inline void do_combi_test(Test const& test) {
 #if defined(MQTT_USE_WS)
     {
         boost::asio::io_service ios;
-        test_broker b;
+        test_broker b(ios);
         test_server_no_tls_ws s(ios, b);
         auto c = mqtt::make_client_ws(ios, broker_url, broker_notls_ws_port);
         test(ios, c, s);
@@ -56,7 +56,7 @@ inline void do_combi_test(Test const& test) {
 #if !defined(MQTT_NO_TLS)
     {
         boost::asio::io_service ios;
-        test_broker b;
+        test_broker b(ios);
         test_server_tls_ws s(ios, b);
         auto c = mqtt::make_tls_client_ws(ios, broker_url, broker_tls_ws_port);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];

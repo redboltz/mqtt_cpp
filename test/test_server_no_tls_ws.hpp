@@ -33,6 +33,10 @@ public:
         server_.listen();
     }
 
+    test_broker& broker() const {
+        return b_;
+    }
+
     void close() {
         server_.close();
     }

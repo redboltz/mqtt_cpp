@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
 
 BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
     int sub_count = 0;
 
@@ -390,7 +390,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
 
 BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
     // c3 --publish--> topic1 ----> c1, c2
 

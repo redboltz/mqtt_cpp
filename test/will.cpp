@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_SUITE(test_will)
 
 BOOST_AUTO_TEST_CASE( will_qos0 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
 
 BOOST_AUTO_TEST_CASE( will_qos1 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
@@ -329,7 +329,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( will_qos2 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
@@ -493,7 +493,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( will_retain ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
 
     auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
