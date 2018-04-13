@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_SUITE(test_pubsub_no_strand)
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
     auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c->set_clean_session(true);
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
     auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c->set_clean_session(true);
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
     auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c->set_clean_session(true);
@@ -379,7 +379,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
     auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c->set_clean_session(true);
@@ -496,7 +496,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
     auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c->set_clean_session(true);
@@ -627,7 +627,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
     auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c->set_clean_session(true);
@@ -761,7 +761,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
     auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c->set_clean_session(true);
@@ -878,7 +878,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
     auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c->set_clean_session(true);
@@ -1009,7 +1009,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
     auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c->set_clean_session(true);
@@ -1143,7 +1143,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( publish_function ) {
     boost::asio::io_service ios;
-    test_broker b;
+    test_broker b(ios);
     test_server_no_tls s(ios, b);
     auto c = mqtt::make_client_no_strand(ios, broker_url, broker_notls_port);
     c->set_clean_session(true);

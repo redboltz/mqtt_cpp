@@ -44,6 +44,17 @@ using con_sp_t = boost::variant<
 
 class test_broker {
 public:
+    test_broker(as::io_service& ios)
+        :ios_(ios),
+         tim_disconnect_(ios_)
+    {}
+
+    // [begin] for test setting
+    void set_disconnect_delay(boost::posix_time::time_duration const& delay) {
+        delay_disconnect_ = delay;
+    }
+    // [end] for test setting
+
     template <typename Endpoint>
     void handle_accept(Endpoint& ep) {
         auto sp = ep.shared_from_this();
@@ -85,7 +96,22 @@ public:
         ep.set_disconnect_handler(
             [&]
             (){
-                close_proc(ep, false);
+                if (delay_disconnect_) {
+                    std::weak_ptr<Endpoint> wp(ep.shared_from_this());
+                    tim_disconnect_.expires_from_now(delay_disconnect_.get());
+                    tim_disconnect_.async_wait(
+                        [&, wp](boost::system::error_code const& ec) {
+                            if (auto sp = wp.lock()) {
+                                if (!ec) {
+                                    close_proc(*sp, false);
+                                }
+                            }
+                        }
+                    );
+                }
+                else {
+                    close_proc(ep, false);
+                }
             });
         ep.set_puback_handler(
             [&]
@@ -518,6 +544,9 @@ private:
         >
     >;
 
+    as::io_service& ios_;
+    as::deadline_timer tim_disconnect_;
+    boost::optional<boost::posix_time::time_duration> delay_disconnect_;
     mi_cid_con cons_;
     mi_sub_con subs_;
     std::set<std::string> sessions_;

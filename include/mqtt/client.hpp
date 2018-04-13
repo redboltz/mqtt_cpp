@@ -242,7 +242,7 @@ public:
      */
     void set_keep_alive_sec_ping_ms(std::uint16_t keep_alive_sec, std::size_t ping_ms) {
         if (ping_duration_ms_ != 0 && base::connected() && ping_ms == 0) {
-            tim_->cancel();
+            tim_ping_.cancel();
         }
         keep_alive_sec_ = keep_alive_sec;
         ping_duration_ms_ = ping_ms;
@@ -309,23 +309,94 @@ public:
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
+     * @param timeout after timeout elapsed, force_disconnect() is automatically called.
+     *                .
+     */
+    void disconnect(boost::posix_time::time_duration const& timeout) {
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (base::connected()) {
+            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+            tim_close_.expires_from_now(timeout);
+            tim_close_.async_wait(
+                [wp](boost::system::error_code const& ec) {
+                    if (auto sp = wp.lock()) {
+                        if (!ec) {
+                            sp->force_disconnect();
+                        }
+                    }
+                }
+            );
+            base::disconnect();
+        }
+    }
+
+    /**
+     * @brief Disconnect
+     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
+     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
+     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
+     *                .
      */
     void disconnect() {
-        if (ping_duration_ms_ != 0) tim_->cancel();
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
             base::disconnect();
         }
     }
 
-    void async_disconnect() {
-        if (ping_duration_ms_ != 0) tim_->cancel();
+    /**
+     * @brief Disconnect
+     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
+     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
+     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
+     * @param timeout after timeout elapsed, force_disconnect() is automatically called.
+     * @param func A callback function that is called when async operation will finish.
+     */
+    void async_disconnect(
+        boost::posix_time::time_duration const& timeout,
+        async_handler_t const& func = async_handler_t()) {
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
-            base::async_disconnect();
+            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+            tim_close_.expires_from_now(timeout);
+            tim_close_.async_wait(
+                [wp](boost::system::error_code const& ec) {
+                    if (auto sp = wp.lock()) {
+                        if (!ec) {
+                            sp->force_disconnect();
+                        }
+                    }
+                }
+            );
+            base::async_disconnect(func);
         }
     }
 
+    /**
+     * @brief Disconnect
+     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
+     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
+     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
+     * @param func A callback function that is called when async operation will finish.
+     */
+    void async_disconnect(async_handler_t const& func = async_handler_t()) {
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (base::connected()) {
+            base::async_disconnect(func);
+        }
+    }
+
+    /**
+     * @brief Disconnect by endpoint
+     * Force disconnect. It is not a clean disconnect sequence.<BR>
+     * When the endpoint disconnects using force_disconnect(), a will will send.<BR>
+     */
     void force_disconnect() {
-        if (ping_duration_ms_ != 0) tim_->cancel();
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        tim_close_.cancel();
         base::force_disconnect();
     }
 
@@ -356,7 +427,8 @@ private:
 #endif // defined(MQTT_USE_WS)
     )
         :ios_(ios),
-         tim_(new boost::asio::deadline_timer(ios_)),
+         tim_ping_(ios_),
+         tim_close_(ios_),
          host_(std::move(host)),
          port_(std::move(port)),
          tls_(tls),
@@ -507,9 +579,9 @@ private:
     }
 
     void set_timer() {
-        tim_->expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
+        tim_ping_.expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
         std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-        tim_->async_wait(
+        tim_ping_.async_wait(
             [wp](boost::system::error_code const& ec) {
                 if (auto sp = wp.lock()) {
                     sp->handle_timer(ec);
@@ -519,24 +591,25 @@ private:
     }
 
     void reset_timer() {
-        tim_->cancel();
+        tim_ping_.cancel();
         set_timer();
     }
 
     void handle_close() {
-        if (ping_duration_ms_ != 0) tim_->cancel();
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (h_close_) h_close_();
     }
 
     void handle_error(boost::system::error_code const& ec) {
-        if (ping_duration_ms_ != 0) tim_->cancel();
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (h_error_) h_error_(ec);
     }
 
 
 private:
     as::io_service& ios_;
-    std::unique_ptr<as::deadline_timer> tim_;
+    as::deadline_timer tim_ping_;
+    as::deadline_timer tim_close_;
     std::string host_;
     std::string port_;
     bool tls_;
