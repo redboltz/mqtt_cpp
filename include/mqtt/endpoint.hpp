@@ -3961,6 +3961,10 @@ public:
         }
     }
 
+    bool connected() const {
+        return connected_ && mqtt_connected_;
+    }
+
 protected:
     void async_read_control_packet_type(async_handler_t const& func) {
         auto self = this->shared_from_this();
@@ -3981,10 +3985,6 @@ protected:
                 handle_control_packet_type(func);
             }
         );
-    }
-
-    bool connected() const {
-        return connected_;
     }
 
     bool handle_close_or_error(boost::system::error_code const& ec) {
