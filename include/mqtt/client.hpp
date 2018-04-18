@@ -310,7 +310,6 @@ public:
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
      * @param timeout after timeout elapsed, force_disconnect() is automatically called.
-     *                .
      */
     void disconnect(boost::posix_time::time_duration const& timeout) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -335,8 +334,7 @@ public:
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
-     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
-     *                .
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>.
      */
     void disconnect() {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();

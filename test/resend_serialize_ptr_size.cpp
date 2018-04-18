@@ -29,9 +29,11 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             serialized.emplace(packet_id, std::string(data, size));
         },
         [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -41,9 +43,11 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             serialized.emplace(packet_id, std::string(data, size));
         },
         [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -196,9 +200,11 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             serialized.emplace(packet_id, std::string(data, size));
         },
         [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -208,9 +214,11 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             serialized.emplace(packet_id, std::string(data, size));
         },
         [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -371,9 +379,11 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             serialized.emplace(packet_id, std::string(data, size));
         },
         [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -383,9 +393,11 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             serialized.emplace(packet_id, std::string(data, size));
         },
         [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -553,9 +565,11 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             serialized.emplace(packet_id, std::string(data, size));
         },
         [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -565,9 +579,11 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             serialized.emplace(packet_id, std::string(data, size));
         },
         [&serialized](std::uint16_t packet_id, char const* data, std::size_t size) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized[packet_id] = std::string(data, size);
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
