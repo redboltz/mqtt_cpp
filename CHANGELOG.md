@@ -1,3 +1,13 @@
+## 3.0.0
+* << Breaking change >> mqtt_cpp requires full C++14 feature.
+* Added boost::asio::const_buffer interface. User can use it as topic name and contents(payload).
+  (#127, #134, #136)
+* Improved CI environment. (#129, #130)
+* Fixed packet_id leak. (#132)
+* Fixed queuing message leak. (#133)
+* Added disconnect timeout. (#135)
+* Added connect status check function. (#131)
+
 ## 2.1.0
 * Added packet length checking handler for variable length MQTT packet. (#121)
 * Fixed doxygen comments. (#119)
