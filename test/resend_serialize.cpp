@@ -35,9 +35,11 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
         },
         [&serialized](mqtt::pubrel_message msg) {
-            serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
+            BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
+            serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -47,9 +49,11 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
         },
         [&serialized](mqtt::pubrel_message msg) {
-            serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
+            BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
+            serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -142,8 +146,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 else {
                     // pubrel
                     c2->restore_serialized_message(
-                        mqtt::publish_message(packet.begin(), packet.end()),
-                        []{}
+                        mqtt::pubrel_message(packet.begin(), packet.end())
                     );
                 }
             }
@@ -222,9 +225,11 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
         },
         [&serialized](mqtt::pubrel_message msg) {
-            serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
+            BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
+            serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -234,9 +239,11 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
         },
         [&serialized](mqtt::pubrel_message msg) {
-            serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
+            BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
+            serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -330,8 +337,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 else {
                     // pubrel
                     c2->restore_serialized_message(
-                        mqtt::publish_message(packet.begin(), packet.end()),
-                        []{}
+                        mqtt::pubrel_message(packet.begin(), packet.end())
                     );
                 }
             }
@@ -417,9 +423,11 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
         },
         [&serialized](mqtt::pubrel_message msg) {
-            serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
+            BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
+            serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -429,9 +437,11 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
         },
         [&serialized](mqtt::pubrel_message msg) {
-            serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
+            BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
+            serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -524,8 +534,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 else {
                     // pubrel
                     c2->restore_serialized_message(
-                        mqtt::publish_message(packet.begin(), packet.end()),
-                        []{}
+                        mqtt::pubrel_message(packet.begin(), packet.end())
                     );
                 }
             }
@@ -619,9 +628,11 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
         },
         [&serialized](mqtt::pubrel_message msg) {
-            serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
+            BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
+            serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -631,9 +642,11 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
         },
         [&serialized](mqtt::pubrel_message msg) {
-            serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
+            BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
+            serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
         },
         [&serialized](std::uint16_t packet_id) {
+            BOOST_CHECK(serialized.find(packet_id) != serialized.end());
             serialized.erase(packet_id);
         }
     );
@@ -733,8 +746,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                     else {
                         // pubrel
                         c2->restore_serialized_message(
-                            mqtt::publish_message(packet.begin(), packet.end()),
-                            []{}
+                            mqtt::pubrel_message(packet.begin(), packet.end())
                         );
                     }
                 }

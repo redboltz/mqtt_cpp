@@ -3099,6 +3099,9 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
+     * @param life_keeper
+     *        The function for keeping topic_name and contents life.
+     *        It is usually a lambda expression that captures shared_ptr of topic_name and contents.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
@@ -3924,8 +3927,7 @@ public:
             restore_serialized_message(*sp, [sp] {});
         } break;
         case control_packet_type::pubrel: {
-            auto sp = std::make_shared<pubrel_message>(b, e);
-            restore_serialized_message(*sp, [sp] {});
+            restore_serialized_message(pubrel_message(b, e));
         } break;
         default:
             throw protocol_error();
@@ -3933,6 +3935,12 @@ public:
         }
     }
 
+    /**
+     * @brief Restore serialized publish message.
+     *        This function shouold be called before connect.
+     * @param msg         publish message.
+     * @param life_keeper the function that keeps the msg lifetime.
+     */
     void restore_serialized_message(publish_message msg, life_keeper_t life_keeper) {
         auto packet_id = msg.packet_id();
         auto qos = msg.qos();
@@ -3948,7 +3956,12 @@ public:
         }
     }
 
-    void restore_serialized_message(pubrel_message msg, life_keeper_t life_keeper) {
+    /**
+     * @brief Restore serialized pubrel message.
+     *        This function shouold be called before connect.
+     * @param msg pubrel message.
+     */
+    void restore_serialized_message(pubrel_message msg) {
         auto packet_id = msg.packet_id();
         LockGuard<Mutex> lck (store_mtx_);
         if (packet_id_.insert(packet_id).second) {
@@ -3956,11 +3969,15 @@ public:
                 packet_id,
                 control_packet_type::pubcomp,
                 std::move(msg),
-                std::move(life_keeper)
+                []{}
             );
         }
     }
 
+    /**
+     * @brief Check connection status
+     * @returrn current connection status
+     */
     bool connected() const {
         return connected_ && mqtt_connected_;
     }
