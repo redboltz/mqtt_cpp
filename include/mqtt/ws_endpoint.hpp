@@ -171,6 +171,14 @@ public:
         strand_.post(std::forward<PostHandler>(handler));
     }
 
+    Strand const& strand() const {
+        return strand_;
+    }
+
+    Strand& strand() {
+        return strand_;
+    }
+
 private:
     boost::beast::websocket::stream<Socket> ws_;
     boost::beast::multi_buffer buffer_;

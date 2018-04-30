@@ -3982,6 +3982,22 @@ public:
         return connected_ && mqtt_connected_;
     }
 
+    /**
+     * @brief Get the const reference of strand corresponding to the endpoint.
+     * @returrn the reference of strand
+     */
+    auto const& strand() const {
+        return socket_->strand();
+    }
+
+    /**
+     * @brief Get the reference of strand corresponding to the endpoint.
+     * @returrn the reference of strand
+     */
+    auto& strand() {
+        return socket_->strand();
+    }
+
 protected:
     void async_read_control_packet_type(async_handler_t const& func) {
         auto self = this->shared_from_this();
