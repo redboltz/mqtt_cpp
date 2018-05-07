@@ -73,7 +73,13 @@ public:
          auto_pub_response_(true),
          auto_pub_response_async_(false),
          disconnect_requested_(false),
-         connect_requested_(false)
+         connect_requested_(false),
+         h_mqtt_message_processed_(
+             [this]
+             (async_handler_t const& func) {
+                 async_read_control_packet_type(func);
+             }
+         )
     {}
 
     /**
@@ -89,7 +95,13 @@ public:
          auto_pub_response_(true),
          auto_pub_response_async_(false),
          disconnect_requested_(false),
-         connect_requested_(false)
+         connect_requested_(false),
+         h_mqtt_message_processed_(
+             [this]
+             (async_handler_t const& func) {
+                 async_read_control_packet_type(func);
+             }
+         )
     {}
 
     /**
@@ -373,6 +385,14 @@ public:
      */
     using is_valid_length_handler =
         std::function<bool(std::uint8_t control_packet_type, std::size_t remaining_length)>;
+
+    /**
+     * @brief next read handler
+     *        This handler is called when the current mqtt message has been processed.
+     * @param func A callback function that is called when async operation will finish.
+     */
+    using mqtt_message_processed_handler =
+        std::function<void(async_handler_t const& func)>;
 
     endpoint(this_type const&) = delete;
     endpoint(this_type&&) = delete;
@@ -3976,10 +3996,45 @@ public:
 
     /**
      * @brief Check connection status
-     * @returrn current connection status
+     * @return current connection status
      */
     bool connected() const {
         return connected_ && mqtt_connected_;
+    }
+
+    /**
+     * @brief Set custom mqtt_message_processed_handler.
+     *        The default setting is calling async_read_control_packet_type().
+     *        (See endpoint() constructor).
+     *        The typical usecase of this function is delaying the next
+     *        message reading timing.
+     *        In order to do that
+     *        1) store func parameter of the mqtt_message_processed_handler.
+     *        2) call async_read_next_message with the stored func if
+     *           you are ready to read the next mqtt message.
+     * @param h mqtt_message_processed_handler.
+     */
+    void set_mqtt_message_processed_handler(
+        mqtt_message_processed_handler const& h = mqtt_message_processed_handler()) {
+        if (h) {
+            h_mqtt_message_processed_ = h;
+        }
+        else {
+            h_mqtt_message_processed_ =
+                [this]
+                (async_handler_t const& func) {
+                async_read_control_packet_type(func);
+            };
+        }
+    }
+
+    /**
+     * @brief Trigger next mqtt message manually.
+     *        If you call this function, you need to set manual receive mode
+     *        using set_auto_next_read(false);
+     */
+    void async_read_next_message(async_handler_t const& func) {
+        async_read_control_packet_type(func);
     }
 
 protected:
@@ -4681,8 +4736,12 @@ private:
         default:
             break;
         }
-        if (ret) async_read_control_packet_type(func);
-        else if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+        if (ret) {
+            h_mqtt_message_processed_(func);
+        }
+        else if (func) {
+            func(boost::system::errc::make_error_code(boost::system::errc::success));
+        }
     }
 
     void handle_close() {
@@ -5754,6 +5813,7 @@ private:
     bool auto_pub_response_async_;
     bool disconnect_requested_;
     bool connect_requested_;
+    mqtt_message_processed_handler h_mqtt_message_processed_;
 };
 
 } // namespace mqtt
