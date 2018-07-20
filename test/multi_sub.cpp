@@ -13,7 +13,9 @@
 BOOST_AUTO_TEST_SUITE(test_multi_sub)
 
 BOOST_AUTO_TEST_CASE( multi_channel ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
+
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 

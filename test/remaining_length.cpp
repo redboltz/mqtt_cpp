@@ -13,7 +13,9 @@
 BOOST_AUTO_TEST_SUITE(test_remaining_length)
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
+
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         std::string test_contents;
         for (std::size_t i = 0; i < 128; ++i) {
@@ -118,7 +120,9 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
+
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         std::string test_contents;
         for (std::size_t i = 0; i < 16384; ++i) {
@@ -225,7 +229,9 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
 # if 0 // It would make network load too much.
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
+
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         std::string test_contents;
         for (std::size_t i = 0; i < 2097152; ++i) {

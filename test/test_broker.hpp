@@ -19,9 +19,9 @@
 
 #include <mqtt_server_cpp.hpp>
 #include <mqtt/optional.hpp>
+#include <mqtt/visitor_util.hpp>
 
 #include "test_settings.hpp"
-#include "visitor_util.hpp"
 
 
 namespace mi = boost::multi_index;
@@ -89,6 +89,7 @@ public:
     void handle_accept(Endpoint& ep) {
         auto sp = ep.shared_from_this();
         ep.socket()->lowest_layer().set_option(as::ip::tcp::no_delay(true));
+        ep.set_auto_pub_response(false);
         ep.start_session(
             [sp] // keeping ep's lifetime as sp until session finished
             (boost::system::error_code const& /*ec*/) {
@@ -99,92 +100,110 @@ public:
         ep.set_close_handler(
             [&]
             (){
-                close_proc(ep, true);
+                close_proc(std::forward<Endpoint>(ep), true);
             });
         ep.set_error_handler(
             [&]
             (boost::system::error_code const& /*ec*/){
-                close_proc(ep, true);
+                close_proc(std::forward<Endpoint>(ep), true);
             });
 
         // set MQTT level handlers
         ep.set_connect_handler(
             [&]
             (std::string const& client_id,
-             mqtt::optional<std::string> const& /*username*/,
-             mqtt::optional<std::string> const& /*password*/,
+             mqtt::optional<std::string> const& username,
+             mqtt::optional<std::string> const& password,
              mqtt::optional<mqtt::will> will,
              bool clean_session,
-             std::uint16_t /*keep_alive*/) {
-                // If it's a not a clean session, but no client id
-                // is provided, we would have no way to map this
-                // connection's session to a new connection later.
-                // so the connection must be rejected.
-                if (client_id.empty() && !clean_session) {
-                    ep.connack(false, mqtt::connect_return_code::identifier_rejected);
-                    return false;
-                }
-                auto spep = ep.shared_from_this();
-                auto emplace =
-                    [&] {
-                        return cons_.emplace(
-                            client_id,
-                            spep,
-                            [this, spep] () {
-                                // send will no keep
-                                spep->force_disconnect();
-                                close_proc(*spep, true);
-                            }
-                        );
-                    };
-
-                auto it_ret = emplace();
-                // if the connection that has the same client_id exists, then overwrite it
-                auto const& it = std::get<0>(it_ret);
-                auto const& emplaced = std::get<1>(it_ret);
-                if (!emplaced) {
-                    it->before_overwrite();
-                    auto it_ret = emplace();
-                    // should be emplaced successfully because erased older one just before
-                    BOOST_ASSERT(std::get<1>(it_ret));
-                }
-                connect_proc(clean_session, spep, client_id, std::move(will));
-                return true;
+             std::uint16_t keep_alive) {
+                return
+                    connect_handler(
+                        ep,
+                        client_id,
+                        username,
+                        password,
+                        std::move(will),
+                        clean_session,
+                        keep_alive,
+                        {}
+                    );
+            }
+        );
+        ep.set_v5_connect_handler(
+            [&]
+            (std::string const& client_id,
+             mqtt::optional<std::string> const& username,
+             mqtt::optional<std::string> const& password,
+             mqtt::optional<mqtt::will> will,
+             bool clean_session,
+             std::uint16_t keep_alive,
+             std::vector<mqtt::v5::property_variant> props) {
+                return
+                    connect_handler(
+                        ep,
+                        client_id,
+                        username,
+                        password,
+                        std::move(will),
+                        clean_session,
+                        keep_alive,
+                        std::move(props)
+                    );
             }
         );
         ep.set_disconnect_handler(
             [&]
             (){
-                if (delay_disconnect_) {
-                    std::weak_ptr<Endpoint> wp(ep.shared_from_this());
-                    tim_disconnect_.expires_from_now(delay_disconnect_.value());
-                    tim_disconnect_.async_wait(
-                        [&, wp](boost::system::error_code const& ec) {
-                            if (auto sp = wp.lock()) {
-                                if (!ec) {
-                                    close_proc(*sp, false);
-                                }
-                            }
-                        }
-                    );
-                }
-                else {
-                    close_proc(ep, false);
-                }
-            });
+                return
+                    disconnect_handler(std::forward<Endpoint>(ep));
+            }
+        );
+        ep.set_v5_disconnect_handler(
+            [&]
+            (std::uint8_t /*reason_code*/, std::vector<mqtt::v5::property_variant> /*props*/) {
+                return
+                    disconnect_handler(std::forward<Endpoint>(ep));
+            }
+        );
         ep.set_puback_handler(
             [&]
             (typename Endpoint::packet_id_t /*packet_id*/){
                 return true;
             });
+        ep.set_v5_puback_handler(
+            [&]
+            (typename Endpoint::packet_id_t /*packet_id*/,
+             std::uint8_t /*reason_code*/,
+             std::vector<mqtt::v5::property_variant> /*props*/){
+                return true;
+            });
         ep.set_pubrec_handler(
             [&]
-            (typename Endpoint::packet_id_t /*packet_id*/){
+            (typename Endpoint::packet_id_t packet_id){
+                ep.pubrel(packet_id);
+                return true;
+            });
+        ep.set_v5_pubrec_handler(
+            [&]
+            (typename Endpoint::packet_id_t packet_id,
+             std::uint8_t /*reason_code*/,
+             std::vector<mqtt::v5::property_variant> /*props*/){
+                ep.pubrel(packet_id, mqtt::v5::reason_code::success, pubrel_props_);
                 return true;
             });
         ep.set_pubrel_handler(
             [&]
-            (typename Endpoint::packet_id_t /*packet_id*/){
+            (typename Endpoint::packet_id_t packet_id){
+                ep.pubcomp(packet_id);
+                return true;
+            });
+        ep.set_v5_pubrel_handler(
+            [&]
+            (typename Endpoint::packet_id_t packet_id,
+             std::uint8_t /*reason_code*/,
+             std::vector<mqtt::v5::property_variant> /*props*/){
+                ep.pubcomp(packet_id, mqtt::v5::reason_code::success, pubcomp_props_);
                 return true;
             });
         ep.set_pubcomp_handler(
@@ -192,70 +211,96 @@ public:
             (typename Endpoint::packet_id_t /*packet_id*/){
                 return true;
             });
+        ep.set_v5_pubcomp_handler(
+            [&]
+            (typename Endpoint::packet_id_t /*packet_id*/,
+             std::uint8_t /*reason_code*/,
+             std::vector<mqtt::v5::property_variant> /*props*/){
+                return true;
+            });
         ep.set_publish_handler(
             [&]
             (std::uint8_t header,
-             mqtt::optional<typename Endpoint::packet_id_t> /*packet_id*/,
+             mqtt::optional<typename Endpoint::packet_id_t> packet_id,
              std::string topic_name,
              std::string contents){
-                std::uint8_t qos = mqtt::publish::get_qos(header);
-                bool is_retain = mqtt::publish::is_retain(header);
-                do_publish(
-                    std::make_shared<std::string>(std::move(topic_name)),
-                    std::make_shared<std::string>(std::move(contents)),
-                    qos,
-                    is_retain);
-                return true;
+                return publish_handler(
+                    std::forward<Endpoint>(ep),
+                    header,
+                    packet_id,
+                    std::move(topic_name),
+                    std::move(contents),
+                    {}
+                );
+            });
+        ep.set_v5_publish_handler(
+            [&]
+            (std::uint8_t header,
+             mqtt::optional<typename Endpoint::packet_id_t> packet_id,
+             std::string topic_name,
+             std::string contents,
+             std::vector<mqtt::v5::property_variant> props
+            ) {
+                if (h_publish_props_) h_publish_props_(props);
+                return publish_handler(
+                    std::forward<Endpoint>(ep),
+                    header,
+                    packet_id,
+                    std::move(topic_name),
+                    std::move(contents),
+                    std::move(props)
+                );
             });
         ep.set_subscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
              std::vector<std::tuple<std::string, std::uint8_t>> entries) {
-                // An in-order list of qos settings, used to send the reply.
-                // The MQTT protocol 3.1.1 - 3.8.4 Response - paragraph 6
-                // allows the server to grant a lower QOS than requested
-                // So we reply with the QOS setting that was granted
-                // not the one requested.
-                std::vector<std::uint8_t> res;
-                res.reserve(entries.size());
-
-                for (auto const& e : entries) {
-                    std::string const& topic = std::get<0>(e);
-                    std::uint8_t qos = std::get<1>(e);
-                    res.emplace_back(qos);
-                    // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
-                    // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
-                    subs_.emplace(std::make_shared<std::string>(topic), ep.shared_from_this(), qos);
-                }
-
-                // Acknowledge the subscriptions, and the registered QOS settings
-                ep.suback(packet_id, std::move(res));
-                for (auto const& e : entries) {
-                    std::string const& topic = std::get<0>(e);
-                    std::uint8_t qos = std::get<1>(e);
-                    // Publish any retained messages that match the newly subscribed topic.
-                    auto it = retains_.find(topic);
-                    if (it != retains_.end()) {
-                        ep.publish(
-                            as::buffer(*it->topic),
-                            as::buffer(*it->contents),
-                            [t = it->topic, c = it->contents] {},
-                            std::min(it->qos, qos),
-                            true);
-                    }
-                }
-                return true;
+                return subscribe_handler(
+                    std::forward<Endpoint>(ep),
+                    packet_id,
+                    std::move(entries),
+                    {}
+                );
+            }
+        );
+        ep.set_v5_subscribe_handler(
+            [&]
+            (typename Endpoint::packet_id_t packet_id,
+             std::vector<std::tuple<std::string, std::uint8_t>> entries,
+             std::vector<mqtt::v5::property_variant> props
+            ) {
+                return subscribe_handler(
+                    std::forward<Endpoint>(ep),
+                    packet_id,
+                    std::move(entries),
+                    std::move(props)
+                );
             }
         );
         ep.set_unsubscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
              std::vector<std::string> topics) {
-                for (auto const& topic : topics) {
-                    subs_.erase(topic);
-                }
-                ep.unsuback(packet_id);
-                return true;
+                return unsubscribe_handler(
+                    std::forward<Endpoint>(ep),
+                    packet_id,
+                    std::move(topics),
+                    {}
+                );
+            }
+        );
+        ep.set_v5_unsubscribe_handler(
+            [&]
+            (typename Endpoint::packet_id_t packet_id,
+             std::vector<std::string> topics,
+             std::vector<mqtt::v5::property_variant> props
+            ) {
+                return unsubscribe_handler(
+                    std::forward<Endpoint>(ep),
+                    packet_id,
+                    std::move(topics),
+                    std::move(props)
+                );
             }
         );
         ep.set_pingreq_handler(
@@ -264,9 +309,283 @@ public:
                 return true;
             }
         );
+        ep.set_v5_auth_handler(
+            [&]
+            (std::uint8_t /*reason_code*/,
+             std::vector<mqtt::v5::property_variant> props
+            ) {
+                if (h_auth_props_) h_auth_props_(std::move(props));
+                return true;
+            }
+        );
+    }
+
+    void set_connack_props(std::vector<mqtt::v5::property_variant> props) {
+        connack_props_ = std::move(props);
+    }
+
+    void set_suback_props(std::vector<mqtt::v5::property_variant> props) {
+        suback_props_ = std::move(props);
+    }
+
+    void set_unsuback_props(std::vector<mqtt::v5::property_variant> props) {
+        unsuback_props_ = std::move(props);
+    }
+
+    void set_puback_props(std::vector<mqtt::v5::property_variant> props) {
+        puback_props_ = std::move(props);
+    }
+
+    void set_pubrec_props(std::vector<mqtt::v5::property_variant> props) {
+        pubrec_props_ = std::move(props);
+    }
+
+    void set_pubrel_props(std::vector<mqtt::v5::property_variant> props) {
+        pubrel_props_ = std::move(props);
+    }
+
+    void set_pubcomp_props(std::vector<mqtt::v5::property_variant> props) {
+        pubcomp_props_ = std::move(props);
+    }
+
+    void set_connect_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+        h_connect_props_ = std::move(h);
+    }
+
+    void set_publish_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+        h_publish_props_ = std::move(h);
+    }
+
+    void set_puback_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+        h_puback_props_ = std::move(h);
+    }
+
+    void set_pubrec_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+        h_pubrec_props_ = std::move(h);
+    }
+
+    void set_pubrel_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+        h_pubrel_props_ = std::move(h);
+    }
+
+    void set_pubcomp_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+        h_pubcomp_props_ = std::move(h);
+    }
+
+    void set_subscribe_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+        h_subscribe_props_ = std::move(h);
+    }
+
+    void set_unsubscribe_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+        h_unsubscribe_props_ = std::move(h);
+    }
+
+    void set_auth_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+        h_auth_props_ = std::move(h);
     }
 
 private:
+    template <typename Endpoint>
+    bool connect_handler(
+        Endpoint&& ep,
+        std::string const& client_id,
+        mqtt::optional<std::string> const& /*username*/,
+        mqtt::optional<std::string> const& /*password*/,
+        mqtt::optional<mqtt::will> will,
+        bool clean_session,
+        std::uint16_t /*keep_alive*/,
+        std::vector<mqtt::v5::property_variant> props
+    ) {
+        if (ep.protocol_version() == mqtt::protocol_version::v5 && h_connect_props_) h_connect_props_(props);
+        // If it's a not a clean session, but no client id
+        // is provided, we would have no way to map this
+        // connection's session to a new connection later.
+        // so the connection must be rejected.
+        if (client_id.empty() && !clean_session) {
+            ep.connack(false, mqtt::connect_return_code::identifier_rejected);
+            return false;
+        }
+        auto spep = ep.shared_from_this();
+        auto emplace =
+            [&] {
+                return cons_.emplace(
+                    client_id,
+                    spep,
+                    [this, spep] () {
+                        // send will no keep
+                        spep->force_disconnect();
+                        close_proc(*spep, true);
+                    }
+                );
+            };
+
+        auto it_ret = emplace();
+        // if the connection that has the same client_id exists, then overwrite it
+        auto const& it = std::get<0>(it_ret);
+        auto const& emplaced = std::get<1>(it_ret);
+        if (!emplaced) {
+            it->before_overwrite();
+            auto it_ret = emplace();
+            // should be emplaced successfully because erased older one just before
+            BOOST_ASSERT(std::get<1>(it_ret));
+        }
+        connect_proc(std::forward<Endpoint>(ep), clean_session, spep, client_id, std::move(will));
+        return true;
+    }
+
+    template <typename Endpoint>
+    void disconnect_handler(
+        Endpoint&& ep
+    ) {
+        if (delay_disconnect_) {
+            std::weak_ptr<std::remove_reference_t<decltype(ep)>> wp(ep.shared_from_this());
+            tim_disconnect_.expires_from_now(delay_disconnect_.value());
+            tim_disconnect_.async_wait(
+                [&, wp](boost::system::error_code const& ec) {
+                    if (auto sp = wp.lock()) {
+                        if (!ec) {
+                            close_proc(*sp, false);
+                        }
+                    }
+                }
+            );
+        }
+        else {
+            close_proc(ep, false);
+        }
+    }
+
+    template <typename Endpoint>
+    bool publish_handler(
+        Endpoint&& ep,
+        std::uint8_t header,
+        mqtt::optional<typename Endpoint::packet_id_t> packet_id,
+        std::string topic_name,
+        std::string contents,
+        std::vector<mqtt::v5::property_variant> props) {
+
+        std::uint8_t qos = mqtt::publish::get_qos(header);
+        bool is_retain = mqtt::publish::is_retain(header);
+        do_publish(
+            std::make_shared<std::string>(std::move(topic_name)),
+            std::make_shared<std::string>(std::move(contents)),
+            qos,
+            is_retain,
+            std::move(props));
+
+        switch (ep.protocol_version()) {
+        case mqtt::protocol_version::v3_1_1:
+            switch (qos) {
+            case mqtt::qos::at_least_once:
+                ep.puback(packet_id.value());
+                break;
+            case mqtt::qos::exactly_once:
+                ep.pubrec(packet_id.value());
+                break;
+            default:
+                break;
+            }
+            break;
+        case mqtt::protocol_version::v5:
+            switch (qos) {
+            case mqtt::qos::at_least_once:
+                ep.puback(packet_id.value(), mqtt::v5::reason_code::success, puback_props_);
+                break;
+            case mqtt::qos::exactly_once:
+                ep.pubrec(packet_id.value(), mqtt::v5::reason_code::success, pubrec_props_);
+                break;
+            default:
+                break;
+            }
+            break;
+        default:
+            BOOST_ASSERT(false);
+            break;
+        }
+
+        return true;
+    }
+
+    template <typename Endpoint>
+    bool subscribe_handler(
+        Endpoint&& ep,
+        typename Endpoint::packet_id_t packet_id,
+        std::vector<std::tuple<std::string, std::uint8_t>> entries,
+        std::vector<mqtt::v5::property_variant> props) {
+
+        // An in-order list of qos settings, used to send the reply.
+        // The MQTT protocol 3.1.1 - 3.8.4 Response - paragraph 6
+        // allows the server to grant a lower QOS than requested
+        // So we reply with the QOS setting that was granted
+        // not the one requested.
+        std::vector<std::uint8_t> res;
+        res.reserve(entries.size());
+        for (auto const& e : entries) {
+            std::string const& topic = std::get<0>(e);
+            std::uint8_t qos = std::get<1>(e);
+            res.emplace_back(qos);
+            // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
+            // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
+            subs_.emplace(std::make_shared<std::string>(topic), ep.shared_from_this(), qos);
+        }
+        switch (ep.protocol_version()) {
+        case mqtt::protocol_version::v3_1_1:
+            // Acknowledge the subscriptions, and the registered QOS settings
+            ep.suback(packet_id, res);
+            break;
+        case mqtt::protocol_version::v5:
+            if (h_subscribe_props_) h_subscribe_props_(props);
+            // Acknowledge the subscriptions, and the registered QOS settings
+            ep.suback(packet_id, res, suback_props_);
+            break;
+        default:
+            BOOST_ASSERT(false);
+            break;
+        }
+        for (auto const& e : entries) {
+            std::string const& topic = std::get<0>(e);
+            std::uint8_t qos = std::get<1>(e);
+            // Publish any retained messages that match the newly subscribed topic.
+            auto it = retains_.find(topic);
+            if (it != retains_.end()) {
+                ep.publish(
+                    as::buffer(*it->topic),
+                    as::buffer(*it->contents),
+                    [t = it->topic, c = it->contents] {},
+                    std::min(it->qos, qos),
+                    true,
+                    it->props);
+            }
+        }
+        return true;
+    }
+
+    template <typename Endpoint>
+    bool unsubscribe_handler(
+        Endpoint&& ep,
+        typename Endpoint::packet_id_t packet_id,
+        std::vector<std::string> topics,
+        std::vector<mqtt::v5::property_variant> props) {
+
+        for (auto const& topic : topics) {
+            subs_.erase(topic);
+        }
+
+        switch (ep.protocol_version()) {
+        case mqtt::protocol_version::v3_1_1:
+            ep.unsuback(packet_id);
+            break;
+        case mqtt::protocol_version::v5:
+            if (h_unsubscribe_props_) h_unsubscribe_props_(props);
+            ep.unsuback(packet_id, std::vector<std::uint8_t>(topics.size(), mqtt::v5::reason_code::success), unsuback_props_);
+            break;
+        default:
+            BOOST_ASSERT(false);
+            break;
+        }
+        return true;
+    }
+
     /**
      * @brief connect_proc Process an incoming CONNECT packet
      *
@@ -284,16 +603,35 @@ private:
      * @param client_id - the id that the client wants to use
      * @param will - the last-will-and-testiment of the connection, if any.
      */
+    template <typename Endpoint>
     void connect_proc(
+        Endpoint&& ep,
         bool clean_session,
         con_sp_t const& spep,
         std::string const& client_id,
         mqtt::optional<mqtt::will> will) {
         auto it = sessions_.find(client_id);
         mqtt::visit(
-            make_lambda_visitor<void>(
+            mqtt::make_lambda_visitor<void>(
                 [&](auto& con) {
-                    con->connack(!clean_session && it != sessions_.end(), mqtt::connect_return_code::accepted);
+                    switch (ep.protocol_version()) {
+                    case mqtt::protocol_version::v3_1_1:
+                        con->connack(
+                            !clean_session && it != sessions_.end(),
+                            mqtt::connect_return_code::accepted
+                        );
+                        break;
+                    case mqtt::protocol_version::v5:
+                        con->connack(
+                            !clean_session && it != sessions_.end(),
+                            mqtt::v5::reason_code::success,
+                            connack_props_
+                        );
+                        break;
+                    default:
+                        BOOST_ASSERT(false);
+                        break;
+                    }
                 }
             ),
             spep
@@ -321,7 +659,7 @@ private:
             // Any, of course, any saved messages need to go out as well.
             for (auto const& d : data) {
                 mqtt::visit(
-                    make_lambda_visitor<void>(
+                    mqtt::make_lambda_visitor<void>(
                         [&](auto& con) {
                             // But *only* for this connection
                             // Not every connection in the broker.
@@ -357,14 +695,15 @@ private:
         std::shared_ptr<std::string> const& topic,
         std::shared_ptr<std::string> const& contents,
         std::uint8_t qos,
-        bool is_retain) {
+        bool is_retain,
+        std::vector<mqtt::v5::property_variant> props) {
         {
             // For each subscription registered for this topic
             auto const& idx = subs_.get<tag_topic>();
             auto r = idx.equal_range(*topic);
             for (; r.first != r.second; ++r.first) {
                 mqtt::visit(
-                    make_lambda_visitor<void>(
+                    mqtt::make_lambda_visitor<void>(
                         [&](auto& con) {
                             // publish the message to subscribers.
                             // TODO: Probably this should be switched to async_publish?
@@ -377,7 +716,8 @@ private:
                                 as::buffer(*contents),
                                 [topic, contents] {},
                                 std::min(r.first->qos, qos),
-                                false
+                                false,
+                                props
                             );
                         }
                     ),
@@ -410,7 +750,7 @@ private:
             }
             else {
                 retains_.erase(*topic);
-                retains_.emplace(topic, contents, qos);
+                retains_.emplace(topic, contents, std::move(props), qos);
             }
         }
     }
@@ -423,7 +763,7 @@ private:
      */
     // TODO: Maybe change the name of this function.
     template <typename Endpoint>
-    void close_proc(Endpoint& ep, bool send_will) {
+    void close_proc(Endpoint&& ep, bool send_will) {
         auto spep = ep.shared_from_this();
         auto& idx = cons_.get<tag_con>();
         auto it = idx.find(spep);
@@ -440,7 +780,8 @@ private:
                         std::make_shared<std::string>(std::move(it->will.topic())),
                         std::make_shared<std::string>(std::move(it->will.message())),
                         it->will.qos(),
-                        it->will.retain());
+                        it->will.retain(),
+                        it->will.props());
                 }
                 will_.erase(it);
             }
@@ -532,13 +873,15 @@ private:
         retain(
             std::shared_ptr<std::string> topic,
             std::shared_ptr<std::string> contents,
+            std::vector<mqtt::v5::property_variant> props,
             std::uint8_t qos)
-            :topic(std::move(topic)), contents(std::move(contents)), qos(qos) {}
+            :topic(std::move(topic)), contents(std::move(contents)), props(std::move(props)), qos(qos) {}
         std::string const& get_topic() const {
             return *topic;
         }
         std::shared_ptr<std::string> topic;
         std::shared_ptr<std::string> contents;
+        std::vector<mqtt::v5::property_variant> props;
         std::uint8_t qos;
     };
     using mi_retain = mi::multi_index_container<
@@ -627,6 +970,22 @@ private:
     mi_sub_session subsessions_; ///< TODO: It's not clear what this is for.
     mi_retain retains_; ///< A list of messages retained so they can be sent to newly subscribed clients.
     mi_con_will will_; ///< Map of last-wills and their associated connection objects.
+    std::vector<mqtt::v5::property_variant> connack_props_;
+    std::vector<mqtt::v5::property_variant> suback_props_;
+    std::vector<mqtt::v5::property_variant> unsuback_props_;
+    std::vector<mqtt::v5::property_variant> puback_props_;
+    std::vector<mqtt::v5::property_variant> pubrec_props_;
+    std::vector<mqtt::v5::property_variant> pubrel_props_;
+    std::vector<mqtt::v5::property_variant> pubcomp_props_;
+    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_connect_props_;
+    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_publish_props_;
+    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_puback_props_;
+    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_pubrec_props_;
+    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_pubrel_props_;
+    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_pubcomp_props_;
+    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_subscribe_props_;
+    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_unsubscribe_props_;
+    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_auth_props_;
 };
 
 #endif // MQTT_TEST_BROKER_HPP

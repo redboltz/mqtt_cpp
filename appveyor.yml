@@ -14,7 +14,7 @@ install:
 build_script:
 - md build
 - cd build
-- cmake %flags% -DBoost_NO_SYSTEM_PATHS=ON -DBOOST_ROOT="C:/Libraries/boost_1_64_0" -DBOOST_INCLUDEDIR="C:/Libraries/boost_1_64_0/include" -DBOOST_LIBRARYDIR="C:/Libraries/boost_1_64_0/lib32-msvc-14.1" -DCMAKE_CXX_FLAGS="/IC:\Libraries\boost_1_64_0\include /EHsc" -DBoost_LIBRARY_DIRS=C:\Libraries\boost_1_64_0\stage\lib -DCMAKE_EXE_LINKER_FLAGS=/LIBPATH:C:\Libraries\boost_1_64_0\lib32-msvc-14.1 -DOPENSSL_ROOT_DIR="C:\OpenSSL-Win32" -DOPENSSL_INCLUDE_DIR="C:\OpenSSL-Win32\include" -DMQTT_OPENSSL_INCLUDE_DIR="C:\OpenSSL-Win32\include" ..
+- cmake %flags% -DBoost_NO_SYSTEM_PATHS=ON -DBOOST_ROOT="C:/Libraries/boost_1_64_0" -DBOOST_INCLUDEDIR="C:/Libraries/boost_1_64_0/include" -DBOOST_LIBRARYDIR="C:/Libraries/boost_1_64_0/lib32-msvc-14.1" -DCMAKE_CXX_FLAGS="/IC:\Libraries\boost_1_64_0\include /EHsc -D_WIN32_WINNT=0x0501" -DBoost_LIBRARY_DIRS=C:\Libraries\boost_1_64_0\stage\lib -DCMAKE_EXE_LINKER_FLAGS=/LIBPATH:C:\Libraries\boost_1_64_0\lib32-msvc-14.1 -DOPENSSL_ROOT_DIR="C:\OpenSSL-Win32" -DOPENSSL_INCLUDE_DIR="C:\OpenSSL-Win32\include" -DMQTT_OPENSSL_INCLUDE_DIR="C:\OpenSSL-Win32\include" ..
 - cmake --build . --config Release
 
 test_script:

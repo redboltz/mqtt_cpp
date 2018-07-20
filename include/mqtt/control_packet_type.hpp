@@ -27,7 +27,7 @@ constexpr std::uint8_t const unsuback    = 11;
 constexpr std::uint8_t const pingreq     = 12;
 constexpr std::uint8_t const pingresp    = 13;
 constexpr std::uint8_t const disconnect  = 14;
- // reserved    = 15
+constexpr std::uint8_t const auth        = 15;
 
 } // namespace control_packet_type
 

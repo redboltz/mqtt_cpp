@@ -436,7 +436,8 @@ BOOST_AUTO_TEST_CASE( combination ) {
 
 BOOST_AUTO_TEST_CASE( connect_overlength_client_id ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto&) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& /*s*/, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
         try {
             std::string cid(0x10000, 'a');
             c->set_client_id(cid);
@@ -455,7 +456,8 @@ BOOST_AUTO_TEST_CASE( connect_overlength_client_id ) {
 
 BOOST_AUTO_TEST_CASE( connect_invalid_client_id ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto&) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& /*s*/, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
         try {
             std::string cid(1, '\0');
             c->set_client_id(cid);
@@ -474,7 +476,8 @@ BOOST_AUTO_TEST_CASE( connect_invalid_client_id ) {
 
 BOOST_AUTO_TEST_CASE( connect_overlength_user_name ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto&) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& /*s*/, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
         try {
             std::string un(0x10000, 'a');
             c->set_user_name(un);
@@ -493,7 +496,8 @@ BOOST_AUTO_TEST_CASE( connect_overlength_user_name ) {
 
 BOOST_AUTO_TEST_CASE( connect_invalid_user_name ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto&) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& /*s*/, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
         try {
             std::string un(1, '\0');
             c->set_user_name(un);
@@ -512,7 +516,8 @@ BOOST_AUTO_TEST_CASE( connect_invalid_user_name ) {
 
 BOOST_AUTO_TEST_CASE( connect_overlength_will_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto&) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& /*s*/, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
         try {
             std::string wt(0x10000, 'a');
             c->set_will(mqtt::will(wt, ""));
@@ -531,7 +536,8 @@ BOOST_AUTO_TEST_CASE( connect_overlength_will_topic ) {
 
 BOOST_AUTO_TEST_CASE( connect_invalid_will_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto&) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& /*s*/, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
         try {
             std::string wt(1, '\0');
             c->set_will(mqtt::will(wt, ""));
@@ -550,7 +556,8 @@ BOOST_AUTO_TEST_CASE( connect_invalid_will_topic ) {
 
 BOOST_AUTO_TEST_CASE( publish_overlength_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
         std::string tp(0x10000, 'a');
         c->set_clean_session(true);
         c->connect();
@@ -577,7 +584,8 @@ BOOST_AUTO_TEST_CASE( publish_overlength_topic ) {
 
 BOOST_AUTO_TEST_CASE( publish_invalid_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
         std::string tp(1, '\0');
         c->set_clean_session(true);
         c->connect();
@@ -604,7 +612,8 @@ BOOST_AUTO_TEST_CASE( publish_invalid_topic ) {
 
 BOOST_AUTO_TEST_CASE( subscribe_overlength_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
         std::string tp(0x10000, 'a');
         c->set_clean_session(true);
         c->connect();
@@ -631,7 +640,8 @@ BOOST_AUTO_TEST_CASE( subscribe_overlength_topic ) {
 
 BOOST_AUTO_TEST_CASE( subscribe_invalid_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
         std::string tp(1, '\0');
         c->set_clean_session(true);
         c->connect();
@@ -658,7 +668,8 @@ BOOST_AUTO_TEST_CASE( subscribe_invalid_topic ) {
 
 BOOST_AUTO_TEST_CASE( unsubscribe_overlength_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
         std::string tp(0x10000, 'a');
         c->set_clean_session(true);
         c->connect();
@@ -685,7 +696,8 @@ BOOST_AUTO_TEST_CASE( unsubscribe_overlength_topic ) {
 
 BOOST_AUTO_TEST_CASE( unsubscribe_invalid_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
         std::string tp(1, '\0');
         c->set_clean_session(true);
         c->connect();

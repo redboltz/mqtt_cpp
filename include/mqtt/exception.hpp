@@ -28,6 +28,12 @@ struct remaining_length_error : std::exception {
     }
 };
 
+struct variable_length_error : std::exception {
+    virtual char const* what() const noexcept {
+        return "variable length error";
+    }
+};
+
 struct utf8string_length_error : std::exception {
     virtual char const* what() const noexcept {
         return "utf8string length error";
@@ -89,6 +95,18 @@ struct write_bytes_transferred_error : bytes_transferred_error {
 struct packet_id_exhausted_error : std::exception {
     virtual char const* what() const noexcept {
         return "packet_id exhausted error";
+    }
+};
+
+struct property_parse_error : std::exception {
+    virtual char const* what() const noexcept {
+        return "property parse error";
+    }
+};
+
+struct property_length_error : std::exception {
+    virtual char const* what() const noexcept {
+        return "property length error";
     }
 };
 

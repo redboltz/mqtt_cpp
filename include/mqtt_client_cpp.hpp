@@ -5,6 +5,7 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 
+#include <mqtt/variant.hpp> // should be top to configure variant limit
 #include <mqtt/client.hpp>
 #include <mqtt/sync_client.hpp>
 #include <mqtt/async_client.hpp>

@@ -4,10 +4,11 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#if !defined(MQTT_VARIANT_MESSAGE_HPP)
-#define MQTT_VARIANT_MESSAGE_HPP
+#if !defined(MQTT_MESSAGE_VARIANT_HPP)
+#define MQTT_MESSAGE_VARIANT_HPP
 
 #include <mqtt/message.hpp>
+#include <mqtt/v5_message.hpp>
 #include <mqtt/variant.hpp>
 
 namespace mqtt {
@@ -16,20 +17,35 @@ namespace mqtt {
 
 template <std::size_t PacketIdBytes>
 using basic_message_variant = variant<
-    connect_message,
-    connack_message,
-    basic_publish_message<PacketIdBytes>,
-    basic_puback_message<PacketIdBytes>,
-    basic_pubrec_message<PacketIdBytes>,
-    basic_pubrel_message<PacketIdBytes>,
-    basic_pubcomp_message<PacketIdBytes>,
-    basic_subscribe_message<PacketIdBytes>,
-    basic_suback_message<PacketIdBytes>,
-    basic_unsubscribe_message<PacketIdBytes>,
-    basic_unsuback_message<PacketIdBytes>,
-    pingreq_message,
-    pingresp_message,
-    disconnect_message
+    v3_1_1::connect_message,
+    v3_1_1::connack_message,
+    v3_1_1::basic_publish_message<PacketIdBytes>,
+    v3_1_1::basic_puback_message<PacketIdBytes>,
+    v3_1_1::basic_pubrec_message<PacketIdBytes>,
+    v3_1_1::basic_pubrel_message<PacketIdBytes>,
+    v3_1_1::basic_pubcomp_message<PacketIdBytes>,
+    v3_1_1::basic_subscribe_message<PacketIdBytes>,
+    v3_1_1::basic_suback_message<PacketIdBytes>,
+    v3_1_1::basic_unsubscribe_message<PacketIdBytes>,
+    v3_1_1::basic_unsuback_message<PacketIdBytes>,
+    v3_1_1::pingreq_message,
+    v3_1_1::pingresp_message,
+    v3_1_1::disconnect_message,
+    v5::connect_message,
+    v5::connack_message,
+    v5::basic_publish_message<PacketIdBytes>,
+    v5::basic_puback_message<PacketIdBytes>,
+    v5::basic_pubrec_message<PacketIdBytes>,
+    v5::basic_pubrel_message<PacketIdBytes>,
+    v5::basic_pubcomp_message<PacketIdBytes>,
+    v5::basic_subscribe_message<PacketIdBytes>,
+    v5::basic_suback_message<PacketIdBytes>,
+    v5::basic_unsubscribe_message<PacketIdBytes>,
+    v5::basic_unsuback_message<PacketIdBytes>,
+    v5::pingreq_message,
+    v5::pingresp_message,
+    v5::disconnect_message,
+    v5::auth_message
 >;
 
 using message_variant = basic_message_variant<2>;
@@ -39,11 +55,6 @@ namespace detail {
 template <typename T>
 struct is_shared_ptr {
     static constexpr bool value = false;
-};
-
-template <typename T>
-struct is_shared_ptr<std::shared_ptr<T>> {
-    static constexpr bool value = true;
 };
 
 struct const_buffer_sequence_visitor
@@ -127,8 +138,10 @@ inline std::string continuous_buffer(basic_message_variant<PacketIdBytes> const&
 
 template <std::size_t PacketIdBytes>
 using basic_store_message_variant = variant<
-    basic_publish_message<PacketIdBytes>,
-    basic_pubrel_message<PacketIdBytes>
+    v3_1_1::basic_publish_message<PacketIdBytes>,
+    v3_1_1::basic_pubrel_message<PacketIdBytes>,
+    v5::basic_publish_message<PacketIdBytes>,
+    v5::basic_pubrel_message<PacketIdBytes>
 >;
 
 using store_message_variant = basic_store_message_variant<2>;
@@ -160,4 +173,4 @@ basic_message_variant<PacketIdBytes> get_basic_message_variant(
 
 } // namespace mqtt
 
-#endif // MQTT_VARIANT_MESSAGE_HPP
+#endif // MQTT_MESSAGE_VARIANT_HPP

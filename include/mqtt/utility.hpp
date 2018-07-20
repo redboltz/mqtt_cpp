@@ -8,6 +8,7 @@
 #define MQTT_UTILITY_HPP
 
 #include <utility>
+#include <memory>
 
 #if __cplusplus >= 201402L
 #define MQTT_CAPTURE_FORWARD(T, v) v = std::forward<T>(v)
