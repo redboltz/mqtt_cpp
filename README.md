@@ -84,7 +84,7 @@ make test
 In order to build tests, you need to prepare the Boost Libraries 1.59.0.
 
 ## Documents
-http://redboltz.github.io/contents/mqtt/index.html
+https://github.com/redboltz/mqtt_cpp/wiki
 
 You can create html documents using doxygen.
 
