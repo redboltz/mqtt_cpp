@@ -46,14 +46,12 @@ inline validation
 validate_contents(std::string const& str) {
     // This code is based on https://www.cl.cam.ac.uk/~mgk25/ucs/utf8_check.c
     auto result = validation::well_formed;
-#if !defined(MQTT_USE_STR_CK)
-    static_cast<void>(str);
-#else
-    auto s = reinterpret_cast<const unsigned char*>(str.c_str());
+#if defined(MQTT_USE_STR_CHECK)
+    auto s = reinterpret_cast<unsigned char const*>(str.c_str());
     auto end = s + str.size();
 
-    while (s < end) {
-        if (s[0] < 0x80) {
+    while (s != end) {
+        if (s[0] < 0b1000'0000) {
             // 0xxxxxxxxx
             if (s[0] == 0x00) {
                 result = validation::ill_formed;
@@ -62,61 +60,64 @@ validate_contents(std::string const& str) {
             if ((s[0] >= 0x01 && s[0] <= 0x1f) || s[0] == 0x7f) {
                 result = validation::well_formed_with_non_charactor;
             }
-            s++;
+            ++s;
         }
-        else if ((s[0] & 0xe0) == 0xc0) {
+        else if ((s[0] & 0b1110'0000) == 0b1100'0000) {
             // 110XXXXx 10xxxxxx
-            if ((s[1] & 0xc0 ) != 0x80 ||
-                (s[0] & 0xfe) == 0xc0) { // overlong
+            if ((s[1] & 0b1100'0000) != 0b1000'0000 ||
+                (s[0] & 0b1111'1110) == 0b1100'0000) { // overlong
                 result = validation::ill_formed;
                 break;
             }
-            else {
-                if (s[0] == 0xc2 &&
-                    s[1] >= 0x80 && s[1] <= 0x9f) {
-                    result = validation::well_formed_with_non_charactor;
-                }
-                s += 2;
+            if (s[0] == 0b1100'0010 &&
+                s[1] >= 0b1000'0000 && s[1] <= 0b1001'1111) {
+                result = validation::well_formed_with_non_charactor;
             }
+            s += 2;
         }
-        else if ((s[0] & 0xf0) == 0xe0) {
+        else if ((s[0] & 0b1111'0000) == 0b1110'0000) {
             // 1110XXXX 10Xxxxxx 10xxxxxx
-            if ((s[1] & 0xc0) != 0x80 ||
-                (s[2] & 0xc0) != 0x80 ||
-                (s[0] == 0xe0 && (s[1] & 0xe0) == 0x80) || // overlong?
-                (s[0] == 0xed && (s[1] & 0xe0) == 0xa0)) { // surrogate?
+            if ((s[1] & 0b1100'0000) != 0b1000'0000 ||
+                (s[2] & 0b1100'0000) != 0b1000'0000 ||
+                (s[0] == 0b1110'0000 && (s[1] & 0b1110'0000) == 0b1000'0000) || // overlong?
+                (s[0] == 0b1110'1101 && (s[1] & 0b1110'0000) == 0b1010'0000)) { // surrogate?
                 result = validation::ill_formed;
                 break;
             }
-            else {
-                if (s[0] == 0xef && s[1] == 0xbf && (s[2] & 0xfe) == 0xbe) {
-                    // U+FFFE or U+FFFF?
-                    result = validation::well_formed_with_non_charactor;
-                }
-                s += 3;
+            if (s[0] == 0b1110'1111 &&
+                s[1] == 0b1011'1111 &&
+                (s[2] & 0b1111'1110) == 0b1011'1110) {
+                // U+FFFE or U+FFFF?
+                result = validation::well_formed_with_non_charactor;
             }
+            s += 3;
         }
-        else if ((s[0] & 0xf8) == 0xf0) {
+        else if ((s[0] & 0b1111'1000) == 0b1111'0000) {
             // 11110XXX 10XXxxxx 10xxxxxx 10xxxxxx
-            if ((s[1] & 0xc0) != 0x80 ||
-                (s[2] & 0xc0) != 0x80 ||
-                (s[3] & 0xc0) != 0x80 ||
-                (s[0] == 0xf0 && (s[1] & 0xf0) == 0x80) ||    // overlong?
-                (s[0] == 0xf4 && s[1] > 0x8f) || s[0] > 0xf4) { // > U+10FFFF?
+            if ((s[1] & 0b1100'0000) != 0b1000'0000 ||
+                (s[2] & 0b1100'0000) != 0b1000'0000 ||
+                (s[3] & 0b1100'0000) != 0b1000'0000 ||
+                (s[0] == 0b1111'0000 && (s[1] & 0b1111'0000) == 0b1000'0000) ||    // overlong?
+                (s[0] == 0b1111'0100 && s[1] > 0b1000'1111) || s[0] > 0b1111'0100) { // > U+10FFFF?
                 result = validation::ill_formed;
                 break;
             }
-            else {
-                if ((s[1] & 0xcf) == 0x8f && s[2] == 0xbf &&
-                    (s[3] & 0xfe) == 0xbe) {
-                    // U+nFFFE or U+nFFFF?
-                    result = validation::well_formed_with_non_charactor;
-                }
-                s += 4;
+            if ((s[1] & 0b1100'1111) == 0b1000'1111 &&
+                s[2] == 0b1011'1111 &&
+                (s[3] & 0b1111'1110) == 0b1011'1110) {
+                // U+nFFFE or U+nFFFF?
+                result = validation::well_formed_with_non_charactor;
             }
+            s += 4;
+        }
+        else {
+            result = validation::ill_formed;
+            break;
         }
     }
-#endif
+#else // MQTT_USE_STR_CHECK
+    static_cast<void>(str);
+#endif // MQTT_USE_STR_CHECK
     return result;
 }
 
