@@ -24,7 +24,8 @@ LIST (APPEND check_PROGRAMS
      sub.cpp
      as_buffer_sub.cpp
      as_buffer_pubsub.cpp
-     as_buffer_async_pubsub.cpp
+     as_buffer_async_pubsub_1.cpp
+     as_buffer_async_pubsub_2.cpp
      utf8string_validate.cpp
 )
 
