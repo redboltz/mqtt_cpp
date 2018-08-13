@@ -26,6 +26,7 @@ LIST (APPEND check_PROGRAMS
      as_buffer_pubsub.cpp
      as_buffer_async_pubsub_1.cpp
      as_buffer_async_pubsub_2.cpp
+     utf8string_validate.cpp
 )
 
 LIST (APPEND MQTT_LINK_LIBRARIES
