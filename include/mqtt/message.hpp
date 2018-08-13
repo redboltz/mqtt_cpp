@@ -24,13 +24,24 @@
 #include <mqtt/will.hpp>
 #include <mqtt/connect_flags.hpp>
 #include <mqtt/publish.hpp>
-
+#include <mqtt/utility.hpp>
+#include <mqtt/exception.hpp>
+#include <mqtt/utf8encoded_strings.hpp>
 
 namespace mqtt {
 
 namespace as = boost::asio;
 
 namespace detail {
+
+inline void utf8string_check(string_view str) {
+    if (!utf8string::is_valid_length(str)) throw utf8string_length_error();
+    auto r = utf8string::validate_contents(str);
+    if (r != utf8string::validation::well_formed) {
+        throw utf8string_contents_error(r);
+    }
+}
+
 
 class header_only_message {
 public:
@@ -259,8 +270,10 @@ public:
           client_id_length_buf_{ MQTT_16BITNUM_TO_BYTE_SEQ(client_id.size()) },
           keep_alive_buf_ { MQTT_16BITNUM_TO_BYTE_SEQ(keep_alive_sec ) }
     {
+        detail::utf8string_check(client_id);
         if (clean_session) connect_flags_ |= connect_flags::clean_session;
         if (user_name) {
+            detail::utf8string_check(user_name.get());
             connect_flags_ |= connect_flags::user_name_flag;
             user_name_ = as::buffer(user_name.get());
             add_uint16_t_to_buf(user_name_length_buf_, static_cast<std::uint16_t>(get_size(user_name_)));
@@ -279,11 +292,13 @@ public:
             if (w.get().retain()) connect_flags_ |= connect_flags::will_retain;
             connect_flags::set_will_qos(connect_flags_, w.get().qos());
 
+            detail::utf8string_check(w.get().topic());
             will_topic_name_ = as::buffer(w.get().topic());
             add_uint16_t_to_buf(
                 will_topic_name_length_buf_,
                 static_cast<std::uint16_t>(get_size(will_topic_name_))
             );
+            if (w.get().message().size() > 0xffffL) throw will_message_length_error();
             will_message_ = as::buffer(w.get().message());
             add_uint16_t_to_buf(
                 will_message_length_buf_,
@@ -437,6 +452,7 @@ public:
           payload_(payload),
           remaining_length_(publish_remaining_length(topic_name, qos, payload))
     {
+        detail::utf8string_check(string_view(get_pointer(topic_name), get_size(topic_name)));
         publish::set_qos(fixed_header_, qos);
         publish::set_retain(fixed_header_, retain);
         publish::set_dup(fixed_header_, dup);
@@ -473,6 +489,7 @@ public:
         b += 2;
 
         if (b + topic_name_length >= e) throw remaining_length_error();
+        detail::utf8string_check(string_view(&*b, topic_name_length));
         topic_name_ = as::buffer(&*b, topic_name_length);
         b += topic_name_length;
 
@@ -664,6 +681,8 @@ public:
     {
         for (auto const& e : params) {
             auto const& topic_name = std::get<0>(e);
+            detail::utf8string_check(string_view(get_pointer(topic_name), get_size(topic_name)));
+
             auto qos = std::get<1>(e);
             entries_.emplace_back(topic_name, qos);
             remaining_length_ +=
@@ -698,11 +717,11 @@ public:
         ret.emplace_back(as::buffer(packet_id_.data(), packet_id_.size()));
 
         for (auto const& e : entries_) {
+            detail::utf8string_check(string_view(get_pointer(e.topic_name), get_size(e.topic_name)));
             ret.emplace_back(as::buffer(e.topic_name_length_buf.data(), e.topic_name_length_buf.size()));
             ret.emplace_back(e.topic_name);
             ret.emplace_back(as::buffer(&e.qos, 1));
         }
-
 
         return ret;
     }
@@ -844,6 +863,7 @@ public:
           remaining_length_(2)
     {
         for (auto const& e : params) {
+            detail::utf8string_check(string_view(get_pointer(e), get_size(e)));
             entries_.emplace_back(e);
             remaining_length_ +=
                 2 +          // topic name length
@@ -875,6 +895,7 @@ public:
         ret.emplace_back(as::buffer(packet_id_.data(), packet_id_.size()));
 
         for (auto const& e : entries_) {
+            detail::utf8string_check(string_view(get_pointer(e.topic_name), get_size(e.topic_name)));
             ret.emplace_back(as::buffer(e.topic_name_length_buf.data(), e.topic_name_length_buf.size()));
             ret.emplace_back(e.topic_name);
         }

@@ -23,4 +23,36 @@
 #define MQTT_DEPRECATED(msg)
 #endif // __cplusplus >= 201402L
 
+
+// string_view
+
+#if __cplusplus >= 201703L
+
+#include <string_view>
+
+namespace mqtt {
+using string_view = std::string_view;
+} // namespace mqtt
+
+#else  // __cplusplus >= 201703L
+
+#include <boost/version.hpp>
+#if (BOOST_VERSION / 100000) >= 1 && ((BOOST_VERSION / 100) % 1000) >= 61
+
+#include <boost/utility/string_view.hpp>
+namespace mqtt {
+using string_view = boost::string_view;
+} // namespace mqtt
+
+#else // (BOOST_VERSION / 100000) >= 1 && ((BOOST_VERSION / 100) % 1000) >= 61
+
+#include <boost/utility/string_ref.hpp>
+namespace mqtt {
+using string_view = boost::string_ref;
+} // namespace mqtt
+
+#endif // (BOOST_VERSION / 100000) >= 1 && ((BOOST_VERSION / 100) % 1000) >= 61
+
+#endif // __cplusplus >= 201703L
+
 #endif // MQTT_UTILITY_HPP

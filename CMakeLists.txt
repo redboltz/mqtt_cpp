@@ -21,6 +21,13 @@ ELSE ()
     MESSAGE (STATUS "WebSocket disabled")
 ENDIF ()
 
+IF (MQTT_USE_STR_CHECK)
+    MESSAGE (STATUS "UTF8String check enabled")
+    SET (CMAKE_CXX_FLAGS "-DMQTT_USE_STR_CHECK ${CMAKE_CXX_FLAGS}")
+ELSE ()
+    MESSAGE (STATUS "UTF8String check disabled")
+ENDIF ()
+
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     SET (CMAKE_CXX_FLAGS "/bigobj ${CMAKE_CXX_FLAGS}")
 ENDIF ()

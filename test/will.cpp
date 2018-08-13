@@ -687,5 +687,25 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
     BOOST_TEST(current2() == "finish");
 }
 
+BOOST_AUTO_TEST_CASE( overlength_message ) {
+    boost::asio::io_service ios;
+    test_broker b(ios);
+    test_server_no_tls s(ios, b);
+
+    auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
+    c1->set_client_id("cid1");
+    c1->set_clean_session(true);
+    std::string wm(0x10000, 'a');
+    c1->set_will(mqtt::will("topic1", wm));
+    c1->set_clean_session(true);
+    c1->connect();
+    try {
+        ios.run();
+        BOOST_CHECK(false);
+    }
+    catch (mqtt::will_message_length_error const&) {
+        BOOST_CHECK(true);
+    }
+}
 
 BOOST_AUTO_TEST_SUITE_END()
