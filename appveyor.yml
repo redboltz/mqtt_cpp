@@ -4,10 +4,10 @@ image: Visual Studio 2017
 
 environment:
   matrix:
-    - flags: -DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON
-    - flags: -DMQTT_NO_TLS=ON  -DMQTT_USE_WS=OFF
-    - flags: -DMQTT_NO_TLS=OFF -DMQTT_USE_WS=ON
-    - flags: -DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF
+    - flags: -DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON
+    - flags: -DMQTT_NO_TLS=ON  -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=OFF
+    - flags: -DMQTT_NO_TLS=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON
+    - flags: -DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON
 
 install:
 - git submodule update --init --recursive

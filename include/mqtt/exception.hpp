@@ -12,6 +12,8 @@
 
 #include <boost/system/error_code.hpp>
 
+#include <mqtt/utf8encoded_strings.hpp>
+
 namespace mqtt {
 
 struct protocol_error : std::exception {
@@ -33,9 +35,17 @@ struct utf8string_length_error : std::exception {
 };
 
 struct utf8string_contents_error : std::exception {
+    utf8string_contents_error(utf8string::validation r):r(r) {}
     virtual char const* what() const noexcept {
-        return "utf8string contents error";
+        if (r == utf8string::validation::ill_formed) {
+            return "utf8string ill_formed";
+        }
+        else {
+            BOOST_ASSERT(r == utf8string::validation::well_formed_with_non_charactor);
+            return "utf8string well_formed_with_non_charactor";
+        }
     }
+    utf8string::validation r;
 };
 
 struct will_message_length_error : std::exception {

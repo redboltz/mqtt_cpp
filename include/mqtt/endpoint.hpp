@@ -4783,7 +4783,12 @@ private:
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return false;
         }
-        client_id_.assign(payload_.data() + i, client_id_length);
+        std::string client_id(payload_.data() + i, client_id_length);
+        if (utf8string::validate_contents(client_id) != utf8string::validation::well_formed) {
+            if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
+            return false;
+        }
+        client_id_ = std::move(client_id);
         i += client_id_length;
 
         clean_session_ = connect_flags::has_clean_session(byte8);
@@ -4803,6 +4808,11 @@ private:
                 return false;
             }
             std::string topic_name(payload_.data() + i, topic_name_length);
+            if (utf8string::validate_contents(topic_name) != utf8string::validation::well_formed) {
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
+                return false;
+            }
+
             i += topic_name_length;
 
             if (remaining_length_ < i + 2) {
@@ -4841,6 +4851,10 @@ private:
                 return false;
             }
             user_name = std::string(payload_.data() + i, user_name_length);
+            if (utf8string::validate_contents(user_name.get()) != utf8string::validation::well_formed) {
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
+                return false;
+            }
             i += user_name_length;
         }
 
@@ -4927,6 +4941,10 @@ private:
             return false;
         }
         std::string topic_name(payload_.data() + i, topic_name_length);
+        if (utf8string::validate_contents(topic_name) != utf8string::validation::well_formed) {
+            if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
+            return false;
+        }
         i += topic_name_length;
 
         boost::optional<std::uint16_t> packet_id;
@@ -5109,6 +5127,10 @@ private:
                 return false;
             }
             std::string topic_filter(payload_.data() + i, topic_length);
+            if (utf8string::validate_contents(topic_filter) != utf8string::validation::well_formed) {
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
+                return false;
+            }
             i += topic_length;
 
             if (remaining_length_ < i + 1) {
@@ -5171,6 +5193,10 @@ private:
                 return false;
             }
             std::string topic_filter(payload_.data() + i, topic_length);
+            if (utf8string::validate_contents(topic_filter) != utf8string::validation::well_formed) {
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
+                return false;
+            }
             i += topic_length;
 
             topic_filters.emplace_back(std::move(topic_filter));
