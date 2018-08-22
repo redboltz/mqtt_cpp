@@ -9,7 +9,8 @@ CMAKE_MINIMUM_REQUIRED (VERSION 2.8.6)
 LIST (APPEND check_PROGRAMS
      connect.cpp
      pubsub.cpp
-     async_pubsub.cpp
+     async_pubsub_1.cpp
+     async_pubsub_2.cpp
      pubsub_no_strand.cpp
      remaining_length.cpp
      multi_sub.cpp

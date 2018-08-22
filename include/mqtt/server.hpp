@@ -78,6 +78,8 @@ public:
         do_accept();
     }
 
+    unsigned short port() const { return acceptor_.local_endpoint().port(); }
+
     void close() {
         close_request_ = true;
         acceptor_.close();
@@ -185,6 +187,8 @@ public:
         renew_socket();
         do_accept();
     }
+
+    unsigned short port() const { return acceptor_.local_endpoint().port(); }
 
     void close() {
         close_request_ = true;
@@ -316,6 +320,8 @@ public:
         renew_socket();
         do_accept();
     }
+
+    unsigned short port() const { return acceptor_.local_endpoint().port(); }
 
     void close() {
         close_request_ = true;
@@ -461,6 +467,8 @@ public:
         renew_socket();
         do_accept();
     }
+
+    unsigned short port() const { return acceptor_.local_endpoint().port(); }
 
     void close() {
         close_request_ = true;
