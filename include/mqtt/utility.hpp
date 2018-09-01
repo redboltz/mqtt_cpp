@@ -31,27 +31,62 @@
 #include <string_view>
 
 namespace mqtt {
+
 using string_view = std::string_view;
+
+template<class CharT, class Traits = std::char_traits<CharT>>
+using basic_string_view = std::basic_string_view<CharT, Traits>;
+
 } // namespace mqtt
 
 #else  // __cplusplus >= 201703L
 
 #include <boost/version.hpp>
-#if (BOOST_VERSION / 100000) >= 1 && ((BOOST_VERSION / 100) % 1000) >= 61
 
-#include <boost/utility/string_view.hpp>
-namespace mqtt {
-using string_view = boost::string_view;
-} // namespace mqtt
+#if !defined(MQTT_NO_BOOST_STRING_VIEW)
 
-#else // (BOOST_VERSION / 100000) >= 1 && ((BOOST_VERSION / 100) % 1000) >= 61
+#if BOOST_VERSION >= 106400
+
+#define MQTT_NO_BOOST_STRING_VIEW 0
+
+#else  // BOOST_VERSION >= 106400
+
+#define MQTT_NO_BOOST_STRING_VIEW 1
+
+#endif // BOOST_VERSION >= 106400
+
+#endif // !defined(MQTT_NO_BOOST_STRING_VIEW)
+
+
+#if MQTT_NO_BOOST_STRING_VIEW
 
 #include <boost/utility/string_ref.hpp>
-namespace mqtt {
-using string_view = boost::string_ref;
-} // namespace mqtt
 
-#endif // (BOOST_VERSION / 100000) >= 1 && ((BOOST_VERSION / 100) % 1000) >= 61
+#else  // MQTT_NO_BOOST_STRING_VIEW
+
+#include <boost/utility/string_view.hpp>
+
+#endif // MQTT_NO_BOOST_STRING_VIEW
+
+namespace mqtt {
+
+#if MQTT_NO_BOOST_STRING_VIEW
+
+using string_view = boost::string_ref;
+
+template<class CharT, class Traits = std::char_traits<CharT> >
+using basic_string_view = boost::basic_string_ref<CharT, Traits>;
+
+#else //  MQTT_NO_BOOST_STRING_VIEW
+
+using string_view = boost::string_view;
+
+template<class CharT, class Traits = std::char_traits<CharT> >
+using basic_string_view = boost::basic_string_view<CharT, Traits>;
+
+#endif // MQTT_NO_BOOST_STRING_VIEW
+
+} // namespace mqtt
 
 #endif // __cplusplus >= 201703L
 
