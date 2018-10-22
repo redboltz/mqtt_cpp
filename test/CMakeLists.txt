@@ -56,7 +56,7 @@ FOREACH (source_file ${check_PROGRAMS})
     )
     IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         SET_PROPERTY (TARGET ${source_file_we}
-                      APPEND_STRING PROPERTY COMPILE_FLAGS "-std=c++14 -pthread")
+                      APPEND_STRING PROPERTY COMPILE_FLAGS "-pthread")
     ENDIF ()
     IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
         IF (CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
