@@ -1,6 +1,9 @@
 CMAKE_MINIMUM_REQUIRED (VERSION 2.8.6)
 PROJECT (mqtt_cpp)
 
+OPTION(BUILD_EXAMPLES "enable building example applications" ON)
+OPTION(BUILD_TESTS "enable building test applications" ON)
+
 IF ((CMAKE_VERSION VERSION_GREATER 3.1) OR
     (CMAKE_VERSION VERSION_EQUAL 3.1))
     CMAKE_POLICY(SET CMP0054 NEW)
@@ -58,8 +61,16 @@ IF (NOT MQTT_NO_TLS)
 ENDIF ()
 
 ENABLE_TESTING ()
-ADD_SUBDIRECTORY (test)
-ADD_SUBDIRECTORY (example)
+
+IF (BUILD_TESTS)
+    MESSAGE(STATUS "Tests enabled")
+    ADD_SUBDIRECTORY (test)
+ENDIF ()
+
+IF (BUILD_EXAMPLES)
+    MESSAGE(STATUS "Examples enabled")
+    ADD_SUBDIRECTORY (example)
+ENDIF ()
 
 # Doxygen
 FIND_PACKAGE (Doxygen)
