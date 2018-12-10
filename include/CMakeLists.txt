@@ -2,10 +2,16 @@
 file(GLOB HDR_ROOT "*.hpp")
 file(GLOB HDR_MQTT "mqtt/*.hpp")
 
-add_library(mqtt_cpp_iface INTERFACE)
+add_library(${PROJECT_NAME} INTERFACE)
 
-target_include_directories(mqtt_cpp_iface INTERFACE ${HDR_ROOT} ${HDR_MQTT})
+target_include_directories(${PROJECT_NAME} INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<INSTALL_INTERFACE:${HEADER_INSTALL_PATH}>
+)
 
 install(FILES ${HDR_ROOT} DESTINATION include)
 install(FILES ${HDR_MQTT} DESTINATION include/mqtt)
 
+SET(CMAKE_INSTALL_PATH "${CMAKE_ROOT}/Modules/")
+install(TARGETS ${PROJECT_NAME} EXPORT Find${PROJECT_NAME} DESTINATION include)
+install(EXPORT Find${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PATH})
