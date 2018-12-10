@@ -4,6 +4,7 @@ file(GLOB HDR_MQTT "mqtt/*.hpp")
 
 add_library(${PROJECT_NAME} INTERFACE)
 
+target_link_libraries(${PROJECT_NAME} INTERFACE -lboost_system -lpthread)
 target_include_directories(${PROJECT_NAME} INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   $<INSTALL_INTERFACE:${HEADER_INSTALL_PATH}>
