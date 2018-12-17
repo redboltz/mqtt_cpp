@@ -74,6 +74,7 @@ public:
         : server(std::forward<AsioEndpoint>(ep), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
+        close_request_ = false;
         renew_socket();
         do_accept();
     }
@@ -109,6 +110,7 @@ private:
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
+                    acceptor_.close();
                     if (h_error_) h_error_(ec);
                     return;
                 }
@@ -184,6 +186,7 @@ public:
         : server_tls(std::forward<AsioEndpoint>(ep), std::move(ctx), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
+        close_request_ = false;
         renew_socket();
         do_accept();
     }
@@ -219,6 +222,7 @@ private:
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
+                    acceptor_.close();
                     if (h_error_) h_error_(ec);
                     return;
                 }
@@ -317,6 +321,7 @@ public:
         : server_ws(std::forward<AsioEndpoint>(ep), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
+        close_request_ = false;
         renew_socket();
         do_accept();
     }
@@ -352,6 +357,7 @@ private:
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
+                    acceptor_.close();
                     if (h_error_) h_error_(ec);
                     return;
                 }
@@ -364,10 +370,12 @@ private:
                     [this, sb, request]
                     (boost::system::error_code const& ec, std::size_t) {
                         if (ec) {
+                            acceptor_.close();
                             if (h_error_) h_error_(ec);
                             return;
                         }
                         if (!boost::beast::websocket::is_upgrade(*request)) {
+                            acceptor_.close();
                             if (h_error_) h_error_(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                             return;
                         }
@@ -383,6 +391,7 @@ private:
                             [this]
                             (boost::system::error_code const& ec) {
                                 if (ec) {
+                                    acceptor_.close();
                                     if (h_error_) h_error_(ec);
                                     return;
                                 }
@@ -464,6 +473,7 @@ public:
         : server_tls_ws(std::forward<AsioEndpoint>(ep), std::move(ctx), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
+        close_request_ = false;
         renew_socket();
         do_accept();
     }
@@ -499,6 +509,7 @@ private:
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
+                    acceptor_.close();
                     if (h_error_) h_error_(ec);
                     return;
                 }
@@ -507,6 +518,7 @@ private:
                     [this]
                     (boost::system::error_code ec) {
                         if (ec) {
+                            acceptor_.close();
                             if (h_error_) h_error_(ec);
                             return;
                         }
@@ -519,10 +531,12 @@ private:
                             [this, sb, request]
                             (boost::system::error_code const& ec, std::size_t) {
                                 if (ec) {
+                                    acceptor_.close();
                                     if (h_error_) h_error_(ec);
                                     return;
                                 }
                                 if (!boost::beast::websocket::is_upgrade(*request)) {
+                                    acceptor_.close();
                                     if (h_error_) h_error_(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                                     return;
                                 }
@@ -538,6 +552,7 @@ private:
                                     [this]
                                     (boost::system::error_code const& ec) {
                                         if (ec) {
+                                            acceptor_.close();
                                             if (h_error_) h_error_(ec);
                                             return;
                                         }
