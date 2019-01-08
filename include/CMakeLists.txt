@@ -1,5 +1,6 @@
-
+set(Boost_USE_STATIC_LIBS OFF)
 find_package(Boost REQUIRED system)
+
 file(GLOB HDR_ROOT "*.hpp")
 file(GLOB HDR_MQTT "mqtt/*.hpp")
 
