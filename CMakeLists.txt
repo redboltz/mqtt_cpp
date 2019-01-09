@@ -35,9 +35,9 @@ IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     SET (CMAKE_CXX_FLAGS "/bigobj ${CMAKE_CXX_FLAGS}")
 ENDIF ()
 
-SET (Boost_USE_STATIC_LIBS        ON) # only find static libs
+#SET (Boost_USE_STATIC_LIBS        ON) # only find static libs
 SET (Boost_USE_MULTITHREADED      ON)
-# SET (Boost_USE_STATIC_RUNTIME    OFF)
+#SET (Boost_USE_STATIC_RUNTIME    OFF)
 FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS chrono timer test_exec_monitor system)
 FIND_PACKAGE (Threads)
 
