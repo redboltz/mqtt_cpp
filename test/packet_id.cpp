@@ -57,6 +57,8 @@ BOOST_AUTO_TEST_CASE( release_but_increment ) {
 BOOST_AUTO_TEST_CASE( rotate ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+    if (sizeof(packet_id_t) == 4) return;
     for (std::uint16_t i = 0; i != 0xffff; ++i) {
         BOOST_TEST(c->acquire_unique_packet_id() == i + 1);
     }
@@ -71,6 +73,8 @@ BOOST_AUTO_TEST_CASE( rotate ) {
 BOOST_AUTO_TEST_CASE( exhausted ) {
     boost::asio::io_service ios;
     auto c = mqtt::make_client(ios, broker_url, broker_notls_port);
+    using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+    if (sizeof(packet_id_t) == 4) return;
     for (std::uint16_t i = 0; i != 0xffff; ++i) {
         c->acquire_unique_packet_id();
     }

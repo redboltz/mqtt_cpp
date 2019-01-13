@@ -11,8 +11,6 @@ install:
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export LD_LIBRARY_PATH="${BASE}/usr/lib:$LD_LIBRARY_PATH"; fi
  - if [ "$CXX" = "g++" ]; then export CXX="g++-7" CC="gcc-7"; fi
  - if [ "$CXX" = "clang++" ] && [ "$TRAVIS_OS_NAME" == "linux" ]; then export CXX="clang++-5.0" CC="clang-5.0"; fi
-# boost
- - wget https://dl.bintray.com/boostorg/release/1.67.0/source/boost_1_67_0.zip && unzip -q boost_1_67_0.zip && cd boost_1_67_0 && ./bootstrap.sh && ./b2 toolset=clang -j4 --prefix=${BASE}/usr --with-timer --with-chrono --with-test address-model=64 install > /dev/null && cd ..
  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then wget https://www.openssl.org/source/openssl-1.1.0i.tar.gz && tar xf openssl-1.1.0i.tar.gz && cd openssl-1.1.0i && ./Configure darwin64-x86_64-cc --prefix=${BASE}/usr && make -j4 && make install > /dev/null && cd ..; fi
 
 matrix:
@@ -25,10 +23,10 @@ matrix:
       env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=OFF" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
     - os: linux
       compiler: clang
       env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
@@ -38,6 +36,7 @@ matrix:
             - ubuntu-toolchain-r-test
             - llvm-toolchain-trusty-5.0
             - llvm-toolchain-trusty
+            - sourceline: 'ppa:mhier/libboost-latest'
           packages:
             - g++-multilib
             - gcc-multilib
@@ -46,6 +45,7 @@ matrix:
             - bzip2
             - clang-5.0
             - libc6-dbg
+            - boost1.67
     - os: linux
       sudo: required
       compiler: clang
@@ -56,6 +56,7 @@ matrix:
             - ubuntu-toolchain-r-test
             - llvm-toolchain-trusty-5.0
             - llvm-toolchain-trusty
+            - sourceline: 'ppa:mhier/libboost-latest'
           packages:
             - openssl
             - g++-multilib
@@ -65,13 +66,15 @@ matrix:
             - bzip2
             - clang-5.0
             - libc6-dbg
+            - boost1.67
     - os: linux
       compiler: gcc
-      env: FLAGS="-DMQTT_NO_TLS=ON -DMQTT_USE_WS=OFF" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_NO_TLS=ON -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:mhier/libboost-latest'
           packages:
             - g++-multilib
             - gcc-multilib
@@ -79,14 +82,16 @@ matrix:
             - g++-7-multilib
             - bzip2
             - libc6-dbg
+            - boost1.67
     - os: linux
       sudo: required
       compiler: gcc
-      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=OFF" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:mhier/libboost-latest'
           packages:
             - openssl
             - g++-multilib
@@ -95,6 +100,7 @@ matrix:
             - g++-7-multilib
             - bzip2
             - libc6-dbg
+            - boost1.67
 
 script:
-  - mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_C_COMPILER="${CC}" -DCMAKE_LIBRARY_PATH="${BASE}/usr/lib" -DBOOST_ROOT="${BASE}/usr" -DOPENSSL_ROOT_DIR="${BASE}/usr" $FLAGS $CXXFLAGS $LDFLAGS .. && make $MAKEFLAGS VERBOSE=1 && ctest -VV
+  - mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_C_COMPILER="${CC}" -DCMAKE_LIBRARY_PATH="${BASE}/usr/lib" -DOPENSSL_ROOT_DIR="${BASE}/usr" $FLAGS $CXXFLAGS $LDFLAGS .. && travis_wait 50 make $MAKEFLAGS VERBOSE=1 && ctest -VV

@@ -115,28 +115,28 @@ public:
             });
         ep.set_puback_handler(
             [&]
-            (std::uint16_t /*packet_id*/){
+            (typename Endpoint::packet_id_t /*packet_id*/){
                 return true;
             });
         ep.set_pubrec_handler(
             [&]
-            (std::uint16_t /*packet_id*/){
+            (typename Endpoint::packet_id_t /*packet_id*/){
                 return true;
             });
         ep.set_pubrel_handler(
             [&]
-            (std::uint16_t /*packet_id*/){
+            (typename Endpoint::packet_id_t /*packet_id*/){
                 return true;
             });
         ep.set_pubcomp_handler(
             [&]
-            (std::uint16_t /*packet_id*/){
+            (typename Endpoint::packet_id_t /*packet_id*/){
                 return true;
             });
         ep.set_publish_handler(
             [&]
             (std::uint8_t header,
-             boost::optional<std::uint16_t> /*packet_id*/,
+             boost::optional<typename Endpoint::packet_id_t> /*packet_id*/,
              std::string topic_name,
              std::string contents){
                 std::uint8_t qos = mqtt::publish::get_qos(header);
@@ -150,7 +150,7 @@ public:
             });
         ep.set_subscribe_handler(
             [&]
-            (std::uint16_t packet_id,
+            (typename Endpoint::packet_id_t packet_id,
              std::vector<std::tuple<std::string, std::uint8_t>> entries) {
                 std::vector<std::uint8_t> res;
                 res.reserve(entries.size());
@@ -179,7 +179,7 @@ public:
         );
         ep.set_unsubscribe_handler(
             [&]
-            (std::uint16_t packet_id,
+            (typename Endpoint::packet_id_t packet_id,
              std::vector<std::string> topics) {
                 for (auto const& topic : topics) {
                     subs_.erase(topic);

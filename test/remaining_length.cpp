@@ -11,6 +11,7 @@ BOOST_AUTO_TEST_SUITE(test_remaining_length)
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         std::string test_contents;
         for (std::size_t i = 0; i < 128; ++i) {
             test_contents.push_back(static_cast<char>(i));
@@ -88,7 +89,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
             });
         c->set_suback_handler(
             [&order, &current, &c, &pid_sub, &test_contents]
-            (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+            (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 BOOST_TEST(packet_id == pid_sub);
@@ -99,7 +100,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
             });
         c->set_unsuback_handler(
             [&order, &current, &c, &pid_unsub]
-            (std::uint16_t packet_id) {
+            (packet_id_t packet_id) {
                 BOOST_TEST(current() == "h_unsuback");
                 ++order;
                 BOOST_TEST(packet_id == pid_unsub);
@@ -109,7 +110,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
         c->set_publish_handler(
             [&order, &current, &c, &pid_unsub, &test_contents]
             (std::uint8_t header,
-             boost::optional<std::uint16_t> packet_id,
+             boost::optional<packet_id_t> packet_id,
              std::string topic,
              std::string contents) {
                 BOOST_TEST(current() == "h_publish");
@@ -132,6 +133,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         std::string test_contents;
         for (std::size_t i = 0; i < 16384; ++i) {
             test_contents.push_back(static_cast<char>(i & 0xff));
@@ -209,7 +211,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
             });
         c->set_suback_handler(
             [&order, &current, &c, &pid_sub, &test_contents]
-            (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+            (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 BOOST_TEST(packet_id == pid_sub);
@@ -220,7 +222,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
             });
         c->set_unsuback_handler(
             [&order, &current, &c, &pid_unsub]
-            (std::uint16_t packet_id) {
+            (packet_id_t packet_id) {
                 BOOST_TEST(current() == "h_unsuback");
                 ++order;
                 BOOST_TEST(packet_id == pid_unsub);
@@ -230,7 +232,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
         c->set_publish_handler(
             [&order, &current, &c, &pid_unsub, &test_contents]
             (std::uint8_t header,
-             boost::optional<std::uint16_t> packet_id,
+             boost::optional<packet_id_t> packet_id,
              std::string topic,
              std::string contents) {
                 BOOST_TEST(current() == "h_publish");
@@ -255,6 +257,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         std::string test_contents;
         for (std::size_t i = 0; i < 2097152; ++i) {
             test_contents.push_back(static_cast<char>(i % 0xff));
@@ -332,7 +335,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
             });
         c->set_suback_handler(
             [&order, &current, &c, &pid_sub, &test_contents]
-            (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+            (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 BOOST_TEST(packet_id == pid_sub);
@@ -343,7 +346,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
             });
         c->set_unsuback_handler(
             [&order, &current, &c, &pid_unsub]
-            (std::uint16_t packet_id) {
+            (packet_id_t packet_id) {
                 BOOST_TEST(current() == "h_unsuback");
                 ++order;
                 BOOST_TEST(packet_id == pid_unsub);
@@ -353,7 +356,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
         c->set_publish_handler(
             [&order, &current, &c, &pid_unsub, &test_contents]
             (std::uint8_t header,
-             boost::optional<std::uint16_t> packet_id,
+             boost::optional<packet_id_t> packet_id,
              std::string topic,
              std::string contents) {
                 BOOST_TEST(current() == "h_publish");

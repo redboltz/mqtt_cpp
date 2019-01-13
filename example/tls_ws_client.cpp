@@ -31,6 +31,8 @@ int main(int argc, char** argv) {
     // Create TLS client
     auto c = mqtt::make_tls_client_ws(ios, host, port);
 
+    using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+
     auto disconnect = [&] {
         if (++count == 5) c->disconnect();
     };
@@ -67,27 +69,27 @@ int main(int argc, char** argv) {
         });
     c->set_puback_handler(
         [&]
-        (std::uint16_t packet_id){
+        (packet_id_t packet_id){
             std::cout << "puback received. packet_id: " << packet_id << std::endl;
             disconnect();
             return true;
         });
     c->set_pubrec_handler(
         [&]
-        (std::uint16_t packet_id){
+        (packet_id_t packet_id){
             std::cout << "pubrec received. packet_id: " << packet_id << std::endl;
             return true;
         });
     c->set_pubcomp_handler(
         [&]
-        (std::uint16_t packet_id){
+        (packet_id_t packet_id){
             std::cout << "pubcomp received. packet_id: " << packet_id << std::endl;
             disconnect();
             return true;
         });
     c->set_suback_handler(
         [&]
-        (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results){
+        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results){
             std::cout << "suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : results) {
                 if (e) {
@@ -109,7 +111,7 @@ int main(int argc, char** argv) {
     c->set_publish_handler(
         [&]
         (std::uint8_t header,
-         boost::optional<std::uint16_t> packet_id,
+         boost::optional<packet_id_t> packet_id,
          std::string topic_name,
          std::string contents){
             std::cout << "publish received. "

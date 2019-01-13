@@ -32,6 +32,8 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
     c2->set_client_id("cid2");
     c2->set_clean_session(true);
 
+    using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
+
     int order1 = 0;
 
     std::vector<std::string> const expected1 = {
@@ -126,7 +128,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
         });
     c2->set_suback_handler(
         [&order2, &current2, &c1_force_disconnect, &pid_sub2]
-        (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(current2() == "h_suback");
             ++order2;
             BOOST_TEST(packet_id == pid_sub2);
@@ -137,7 +139,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
         });
     c2->set_unsuback_handler(
         [&order2, &current2, &c2, &pid_unsub2]
-        (std::uint16_t packet_id) {
+        (packet_id_t packet_id) {
             BOOST_TEST(current2() == "h_unsuback");
             ++order2;
             BOOST_TEST(packet_id == pid_unsub2);
@@ -147,7 +149,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
     c2->set_publish_handler(
         [&order2, &current2, &c2, &pid_unsub2]
         (std::uint8_t header,
-         boost::optional<std::uint16_t> packet_id,
+         boost::optional<packet_id_t> packet_id,
          std::string topic,
          std::string contents) {
             BOOST_TEST(current2() == "h_publish");
@@ -188,6 +190,8 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
     c2->set_client_id("cid2");
     c2->set_clean_session(true);
+
+    using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
     int order1 = 0;
 
@@ -283,7 +287,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
         });
     c2->set_suback_handler(
         [&order2, &current2, &c1_force_disconnect, &pid_sub2]
-        (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(current2() == "h_suback");
             ++order2;
             BOOST_TEST(packet_id == pid_sub2);
@@ -294,7 +298,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
         });
     c2->set_unsuback_handler(
         [&order2, &current2, &c2, &pid_unsub2]
-        (std::uint16_t packet_id) {
+        (packet_id_t packet_id) {
             BOOST_TEST(current2() == "h_unsuback");
             ++order2;
             BOOST_TEST(packet_id == pid_unsub2);
@@ -304,7 +308,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
     c2->set_publish_handler(
         [&order2, &current2, &c2, &pid_unsub2]
         (std::uint8_t header,
-         boost::optional<std::uint16_t> packet_id,
+         boost::optional<packet_id_t> packet_id,
          std::string topic,
          std::string contents) {
             BOOST_TEST(current2() == "h_publish");
@@ -345,6 +349,8 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
     c2->set_client_id("cid2");
     c2->set_clean_session(true);
+
+    using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
     int order1 = 0;
 
@@ -441,7 +447,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
         });
     c2->set_suback_handler(
         [&order2, &current2, &c1_force_disconnect, &pid_sub2]
-        (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(current2() == "h_suback");
             ++order2;
             BOOST_TEST(packet_id == pid_sub2);
@@ -452,7 +458,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
         });
     c2->set_unsuback_handler(
         [&order2, &current2, &c2, &pid_unsub2]
-        (std::uint16_t packet_id) {
+        (packet_id_t packet_id) {
             BOOST_TEST(current2() == "h_unsuback");
             ++order2;
             BOOST_TEST(packet_id == pid_unsub2);
@@ -462,7 +468,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
     c2->set_publish_handler(
         [&order2, &current2]
         (std::uint8_t header,
-         boost::optional<std::uint16_t> packet_id,
+         boost::optional<packet_id_t> packet_id,
          std::string topic,
          std::string contents) {
             BOOST_TEST(current2() == "h_publish");
@@ -509,6 +515,8 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
     auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
     c2->set_client_id("cid2");
     c2->set_clean_session(true);
+
+    using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
     int order1 = 0;
 
@@ -609,7 +617,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
         });
     c2->set_suback_handler(
         [&order2, &current2, &c1_force_disconnect, &pid_sub2]
-        (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
@@ -630,7 +638,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
         });
     c2->set_unsuback_handler(
         [&order2, &current2, &c2, &pid_unsub2, &pid_sub2]
-        (std::uint16_t packet_id) {
+        (packet_id_t packet_id) {
             BOOST_TEST(packet_id == pid_unsub2);
             switch (order2) {
             case 3:
@@ -652,7 +660,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
     c2->set_publish_handler(
         [&order2, &current2, &c2, &pid_unsub2]
         (std::uint8_t header,
-         boost::optional<std::uint16_t> packet_id,
+         boost::optional<packet_id_t> packet_id,
          std::string topic,
          std::string contents) {
             BOOST_TEST(mqtt::publish::is_dup(header) == false);
