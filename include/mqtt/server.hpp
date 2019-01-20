@@ -110,7 +110,8 @@ private:
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
-                    acceptor_.close();
+                    boost::system::error_code close_ec;
+                    acceptor_.close(close_ec);
                     if (h_error_) h_error_(ec);
                     return;
                 }
@@ -222,7 +223,8 @@ private:
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
-                    acceptor_.close();
+                    boost::system::error_code close_ec;
+                    acceptor_.close(close_ec);
                     if (h_error_) h_error_(ec);
                     return;
                 }
@@ -357,7 +359,8 @@ private:
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
-                    acceptor_.close();
+                    boost::system::error_code close_ec;
+                    acceptor_.close(close_ec);
                     if (h_error_) h_error_(ec);
                     return;
                 }
@@ -370,12 +373,14 @@ private:
                     [this, sb, request]
                     (boost::system::error_code const& ec, std::size_t) {
                         if (ec) {
-                            acceptor_.close();
+                            boost::system::error_code close_ec;
+                            acceptor_.close(close_ec);
                             if (h_error_) h_error_(ec);
                             return;
                         }
                         if (!boost::beast::websocket::is_upgrade(*request)) {
-                            acceptor_.close();
+                            boost::system::error_code close_ec;
+                            acceptor_.close(close_ec);
                             if (h_error_) h_error_(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                             return;
                         }
@@ -391,7 +396,8 @@ private:
                             [this]
                             (boost::system::error_code const& ec) {
                                 if (ec) {
-                                    acceptor_.close();
+                                    boost::system::error_code close_ec;
+                                    acceptor_.close(close_ec);
                                     if (h_error_) h_error_(ec);
                                     return;
                                 }
@@ -509,7 +515,8 @@ private:
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
-                    acceptor_.close();
+                    boost::system::error_code close_ec;
+                    acceptor_.close(close_ec);
                     if (h_error_) h_error_(ec);
                     return;
                 }
@@ -518,7 +525,8 @@ private:
                     [this]
                     (boost::system::error_code ec) {
                         if (ec) {
-                            acceptor_.close();
+                            boost::system::error_code close_ec;
+                            acceptor_.close(close_ec);
                             if (h_error_) h_error_(ec);
                             return;
                         }
@@ -531,12 +539,14 @@ private:
                             [this, sb, request]
                             (boost::system::error_code const& ec, std::size_t) {
                                 if (ec) {
-                                    acceptor_.close();
+                                    boost::system::error_code close_ec;
+                                    acceptor_.close(close_ec);
                                     if (h_error_) h_error_(ec);
                                     return;
                                 }
                                 if (!boost::beast::websocket::is_upgrade(*request)) {
-                                    acceptor_.close();
+                                    boost::system::error_code close_ec;
+                                    acceptor_.close(close_ec);
                                     if (h_error_) h_error_(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                                     return;
                                 }
@@ -552,7 +562,8 @@ private:
                                     [this]
                                     (boost::system::error_code const& ec) {
                                         if (ec) {
-                                            acceptor_.close();
+                                            boost::system::error_code close_ec;
+                                            acceptor_.close(close_ec);
                                             if (h_error_) h_error_(ec);
                                             return;
                                         }
