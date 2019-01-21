@@ -1,6 +1,5 @@
-include(CMakeFindDependencyMacro)
-find_dependency(Boost REQUIRED COMPONENTS system)
-find_dependency(Threads REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system)
+find_package(Threads REQUIRED)
 
 if(NOT TARGET mqtt_cpp::mqtt_cpp)
   get_filename_component(MQTT_CPP_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY)
