@@ -3910,8 +3910,7 @@ public:
         auto prev = *b;
         if (prev != 1) {
             packet_id_master_ = 1;
-            auto ret = packet_id_.insert(packet_id_master_);
-            BOOST_ASSERT(ret.second);
+            packet_id_.insert(b, packet_id_master_);
             return packet_id_master_;
         }
         ++b;
@@ -3920,8 +3919,7 @@ public:
             ++b;
         }
         packet_id_master_ = prev + 1;
-        auto ret = packet_id_.insert(packet_id_master_);
-        BOOST_ASSERT(ret.second);
+        packet_id_.insert(b, packet_id_master_);
         return packet_id_master_;
     }
 
