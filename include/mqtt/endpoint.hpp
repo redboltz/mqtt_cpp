@@ -3896,10 +3896,32 @@ public:
      */
     std::uint16_t acquire_unique_packet_id() {
         LockGuard<Mutex> lck (store_mtx_);
-        if (packet_id_.size() == 0xffff - 1) throw packet_id_exhausted_error();
-        do {
-            if (++packet_id_master_ == 0) ++packet_id_master_;
-        } while (!packet_id_.insert(packet_id_master_).second);
+        if (packet_id_.size() == 0xffff) throw packet_id_exhausted_error();
+        if (packet_id_master_ == 0xffff) {
+            packet_id_master_ = 1;
+        }
+        else {
+            ++packet_id_master_;
+        }
+        if (packet_id_.insert(packet_id_master_).second) return packet_id_master_;
+        auto b = packet_id_.begin();
+        auto e = packet_id_.end();
+        BOOST_ASSERT(b != e);
+        auto prev = *b;
+        if (prev != 1) {
+            packet_id_master_ = 1;
+            auto ret = packet_id_.insert(packet_id_master_);
+            BOOST_ASSERT(ret.second);
+            return packet_id_master_;
+        }
+        ++b;
+        while (*b - 1 == prev && b != e) {
+            prev = *b;
+            ++b;
+        }
+        packet_id_master_ = prev + 1;
+        auto ret = packet_id_.insert(packet_id_master_);
+        BOOST_ASSERT(ret.second);
         return packet_id_master_;
     }
 
