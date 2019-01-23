@@ -85,15 +85,15 @@ struct continuous_buffer_visitor
 } // namespace detail
 
 inline std::vector<as::const_buffer> const_buffer_sequence(message_variant const& mv) {
-    return visit(detail::const_buffer_sequence_visitor(), mv);
+    return mqtt::visit(detail::const_buffer_sequence_visitor(), mv);
 }
 
 inline std::size_t size(message_variant const& mv) {
-    return visit(detail::size_visitor(), mv);
+    return mqtt::visit(detail::size_visitor(), mv);
 }
 
 inline std::string continuous_buffer(message_variant const& mv) {
-    return visit(detail::continuous_buffer_visitor(), mv);
+    return mqtt::visit(detail::continuous_buffer_visitor(), mv);
 }
 
 
@@ -122,7 +122,7 @@ struct message_variant_visitor
 } // detail
 
 inline message_variant get_message_variant(store_message_variant const& smv) {
-    return visit(detail::message_variant_visitor(), smv);
+    return mqtt::visit(detail::message_variant_visitor(), smv);
 }
 
 } // namespace mqtt
