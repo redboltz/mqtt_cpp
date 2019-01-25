@@ -5734,7 +5734,8 @@ private:
             [this, self, MQTT_CAPTURE_MOVE(mv), func]
             () {
                 if (!connected_) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::connection_reset));
+                    // offline async publish is successfully finished
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                     return;
                 }
                 queue_.emplace_back(std::move(mv), func);
