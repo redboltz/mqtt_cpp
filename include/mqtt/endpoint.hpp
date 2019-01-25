@@ -5729,14 +5729,14 @@ private:
     };
 
     void do_async_write(message_variant mv, async_handler_t const& func) {
-        if (!connected_) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
-            return;
-        }
         auto self = this->shared_from_this();
         socket_->post(
             [this, self, MQTT_CAPTURE_MOVE(mv), func]
             () {
+                if (!connected_) {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::connection_reset));
+                    return;
+                }
                 queue_.emplace_back(std::move(mv), func);
                 if (queue_.size() > 1) return;
                 do_async_write();
