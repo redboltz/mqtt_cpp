@@ -414,6 +414,22 @@ public:
         h_error_ = std::move(h);
     }
 
+    /**
+     * @brief Get close handler
+     * @return handler
+     */
+    close_handler get_close_handler() const {
+        return h_close_;
+    }
+
+    /**
+     * @brief Get error handler
+     * @return handler
+     */
+    error_handler get_error_handler() const {
+        return h_error_;
+    }
+
 private:
     client(as::io_service& ios,
            std::string host,

@@ -527,7 +527,7 @@ public:
     }
 
     /**
-     * @brief Set puback handler
+     * @brief Set publish handler
      * @param h handler
      */
     void set_publish_handler(publish_handler h = publish_handler()) {
@@ -698,6 +698,184 @@ public:
     void set_is_valid_length_handler(is_valid_length_handler h = is_valid_length_handler()) {
         h_is_valid_length_ = std::move(h);
     }
+
+
+    /**
+     * @brief Get close handler
+     * @return handler
+     */
+    close_handler get_close_handler() const {
+        return h_close_;
+    }
+
+    /**
+     * @brief Get error handler
+     * @return handler
+     */
+    error_handler get_error_handler() const {
+        return h_error_;
+    }
+
+    /**
+     * @brief Get connect handler
+     * @return handler
+     */
+    connect_handler get_connect_handler() const {
+        return h_connect_;
+    }
+
+    /**
+     * @brief Get connack handler
+     * @return handler
+     */
+    connack_handler get_connack_handler() const {
+        return h_connack_;
+    }
+
+    /**
+     * @brief Set publish handler
+     * @return handler
+     */
+    publish_handler get_publish_handler() const {
+        return h_publish_;
+    }
+
+    /**
+     * @brief Get puback handler
+     * @return handler
+     */
+    puback_handler get_puback_handler() const {
+        return h_puback_;
+    }
+
+    /**
+     * @brief Get pubrec handler
+     * @return handler
+     */
+    pubrec_handler get_pubrec_handler() const {
+        return h_pubrec_;
+    }
+
+    /**
+     * @brief Get pubrel handler
+     * @return handler
+     */
+    pubrel_handler get_pubrel_handler() const {
+        return h_pubrel_;
+    }
+
+    /**
+     * @brief Get pubcomp handler
+     * @return handler
+     */
+    pubcomp_handler get_pubcomp_handler() const {
+        return h_pubcomp_;
+    }
+
+    /**
+     * @brief Get pubcomp handler
+     * @return handler
+     */
+    pub_res_sent_handler get_pub_res_sent_handler() const {
+        return h_pub_res_sent_;
+    }
+
+    /**
+     * @brief Get subscribe handler
+     * @return handler
+     */
+    subscribe_handler get_subscribe_handler() const {
+        return h_subscribe_;
+    }
+
+    /**
+     * @brief Get suback handler
+     * @return handler
+     */
+    suback_handler get_suback_handler() const {
+        return h_suback_;
+    }
+
+    /**
+     * @brief Get unsubscribe handler
+     * @return handler
+     */
+    unsubscribe_handler get_unsubscribe_handler() const {
+        return h_unsubscribe_;
+    }
+
+    /**
+     * @brief Get unsuback handler
+     * @return handler
+     */
+    unsuback_handler get_unsuback_handler() const {
+        return h_unsuback_;
+    }
+
+    /**
+     * @brief Get pingreq handler
+     * @return handler
+     */
+    pingreq_handler get_pingreq_handler() const {
+        return h_pingreq_;
+    }
+
+    /**
+     * @brief Get pingresp handler
+     * @return handler
+     */
+    pingresp_handler get_pingresp_handler() const {
+        return h_pingresp_;
+    }
+
+    /**
+     * @brief Get disconnect handler
+     * @return handler
+     */
+    disconnect_handler get_disconnect_handler() const {
+        return h_disconnect_;
+    }
+
+    /**
+     * @brief Get serialize publish handler
+     * @return handler
+     */
+    serialize_publish_message_handler get_serialize_publish_message_handler() const {
+        return h_serialize_publish_;
+    }
+
+    /**
+     * @brief Get serialize pubrel handler
+     * @return handler
+     */
+    serialize_pubrel_message_handler get_serialize_pubrel_message_handler() const {
+        return h_serialize_pubrel_;
+    }
+
+    /**
+     * @brief Get serialize remove handler
+     * @return handler
+     */
+    serialize_remove_handler get_serialize_remove_handler() const {
+        return h_serialize_remove_;
+    }
+
+    /**
+     * @brief Get pre-send handler
+     * @return handler
+     */
+    pre_send_handler get_pre_send_handler() const {
+        return h_pre_send_;
+    }
+
+    /**
+     * @brief Get check length handler
+     * @return handler
+     */
+    is_valid_length_handler get_is_valid_length_handler() const {
+        return h_is_valid_length_;
+    }
+
 
     /**
      * @brief start session with a connected endpoint.
