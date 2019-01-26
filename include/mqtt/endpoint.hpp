@@ -5729,14 +5729,15 @@ private:
     };
 
     void do_async_write(message_variant mv, async_handler_t const& func) {
-        if (!connected_) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
-            return;
-        }
         auto self = this->shared_from_this();
         socket_->post(
             [this, self, MQTT_CAPTURE_MOVE(mv), func]
             () {
+                if (!connected_) {
+                    // offline async publish is successfully finished
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+                    return;
+                }
                 queue_.emplace_back(std::move(mv), func);
                 if (queue_.size() > 1) return;
                 do_async_write();
@@ -5778,12 +5779,16 @@ private:
         {}
         void operator()(boost::system::error_code const& ec) const {
             if (func_) func_(ec);
+            self_->queue_.pop_front();
             if (ec || // Error is handled by async_read.
                 !self_->connected_) {
-                self_->queue_.clear();
+                self_->connected_ = false;
+                while (!self_->queue_.empty()) {
+                    self_->queue_.front().handler()(ec);
+                    self_->queue_.pop_front();
+                }
                 return;
             }
-            self_->queue_.pop_front();
             if (!self_->queue_.empty()) {
                 self_->do_async_write();
             }
@@ -5792,16 +5797,24 @@ private:
             boost::system::error_code const& ec,
             std::size_t bytes_transferred) const {
             if (func_) func_(ec);
+            self_->queue_.pop_front();
             if (ec || // Error is handled by async_read.
                 !self_->connected_) {
-                self_->queue_.clear();
+                self_->connected_ = false;
+                while (!self_->queue_.empty()) {
+                    self_->queue_.front().handler()(ec);
+                    self_->queue_.pop_front();
+                }
                 return;
             }
             if (expected_ != bytes_transferred) {
-                self_->queue_.clear();
+                self_->connected_ = false;
+                while (!self_->queue_.empty()) {
+                    self_->queue_.front().handler()(ec);
+                    self_->queue_.pop_front();
+                }
                 throw write_bytes_transferred_error(expected_, bytes_transferred);
             }
-            self_->queue_.pop_front();
             if (!self_->queue_.empty()) {
                 self_->do_async_write();
             }
