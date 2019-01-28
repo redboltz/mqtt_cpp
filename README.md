@@ -68,9 +68,12 @@ If you want to use MQTT on WebSocket, you need to define `MQTT_USE_WS` macro. mq
 
 ## Usage in cmake project
 
-Add following lines to your `CMakeList.txt`
+Add following lines to your `CMakeLists.txt`
 
 ```
+set(LIBNAME "your_project_name")
+add_library(${LIBNAME} <your dependencies here>)
+
 find_package(mqtt_cpp REQUIRED)
 target_link_libraries(${LIBNAME} LINK_PUBLIC mqtt_cpp::mqtt_cpp)
 ```
