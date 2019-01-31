@@ -4164,13 +4164,14 @@ public:
         auto qos = msg.qos();
         LockGuard<Mutex> lck (store_mtx_);
         if (packet_id_.insert(packet_id).second) {
-            store_.emplace(
+            auto ret = store_.emplace(
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
                                           : control_packet_type::pubrec,
                 std::move(msg),
                 std::move(life_keeper)
             );
+            BOOST_ASSERT(ret.second);
         }
     }
 
@@ -4183,12 +4184,13 @@ public:
         auto packet_id = msg.packet_id();
         LockGuard<Mutex> lck (store_mtx_);
         if (packet_id_.insert(packet_id).second) {
-            store_.emplace(
+            auto ret = store_.emplace(
                 packet_id,
                 control_packet_type::pubcomp,
                 std::move(msg),
                 []{}
             );
+            BOOST_ASSERT(ret.second);
         }
     }
 
@@ -5480,13 +5482,14 @@ private:
         if (qos == qos::at_least_once || qos == qos::exactly_once) {
             msg.set_dup(true);
             LockGuard<Mutex> lck (store_mtx_);
-            store_.emplace(
+            auto ret = store_.emplace(
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
                                           : control_packet_type::pubrec,
                 msg,
                 [g] {}
             );
+            BOOST_ASSERT(ret.second);
             if (h_serialize_publish_) {
                 h_serialize_publish_(msg);
             }
@@ -5509,12 +5512,13 @@ private:
         do_sync_write(msg);
 
         LockGuard<Mutex> lck (store_mtx_);
-        store_.emplace(
+        auto ret = store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
             msg,
             [] {}
         );
+        BOOST_ASSERT(ret.second);
         if (h_serialize_pubrel_) {
             h_serialize_pubrel_(msg);
         }
@@ -5525,12 +5529,13 @@ private:
         auto msg = pubrel_message(packet_id);
 
         LockGuard<Mutex> lck (store_mtx_);
-        store_.emplace(
+        auto ret = store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
             msg,
             [] {}
         );
+        BOOST_ASSERT(ret.second);
         if (h_serialize_pubrel_) {
             h_serialize_pubrel_(msg);
         }
@@ -5696,13 +5701,14 @@ private:
         if (qos == qos::at_least_once || qos == qos::exactly_once) {
             msg.set_dup(true);
             LockGuard<Mutex> lck (store_mtx_);
-            store_.emplace(
+            auto ret = store_.emplace(
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
                                           : control_packet_type::pubrec,
                 msg,
                 [g] {}
             );
+            BOOST_ASSERT(ret.second);
             if (h_serialize_publish_) {
                 h_serialize_publish_(msg);
             }
@@ -5735,11 +5741,12 @@ private:
         do_async_write(msg, func);
 
         LockGuard<Mutex> lck (store_mtx_);
-        store_.emplace(
+        auto ret = store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
             msg,
             [] {});
+        BOOST_ASSERT(ret.second);
         if (h_serialize_pubrel_) {
             h_serialize_pubrel_(msg);
         }
