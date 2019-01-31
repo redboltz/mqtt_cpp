@@ -5686,18 +5686,12 @@ private:
                 payload
             );
 
-        if (qos == qos::at_most_once) {
-            do_async_write(
-                msg,
-                [g, func](boost::system::error_code const& ec) {
-                    if (func) func(ec);
-                }
-            );
-        }
-        else {
-            do_async_write(msg, func);
-        }
-
+        do_async_write(
+            msg,
+            [g, func](boost::system::error_code const& ec) {
+                if (func) func(ec);
+            }
+        );
 
         if (qos == qos::at_least_once || qos == qos::exactly_once) {
             msg.set_dup(true);
