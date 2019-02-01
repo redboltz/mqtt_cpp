@@ -5512,6 +5512,10 @@ private:
         do_sync_write(msg);
 
         LockGuard<Mutex> lck (store_mtx_);
+
+        // insert if not registerd (start from pubrel sending case)
+        packet_id_.insert(packet_id);
+
         auto ret = store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
@@ -5741,6 +5745,10 @@ private:
         do_async_write(msg, func);
 
         LockGuard<Mutex> lck (store_mtx_);
+
+        // insert if not registerd (start from pubrel sending case)
+        packet_id_.insert(packet_id);
+
         auto ret = store_.emplace(
             packet_id,
             control_packet_type::pubcomp,
