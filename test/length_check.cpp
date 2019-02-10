@@ -11,6 +11,7 @@ BOOST_AUTO_TEST_SUITE(test_length_check)
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
         int order = 0;
@@ -64,7 +65,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 c->publish_at_most_once("topic1", "topic1_contents");
@@ -73,7 +74,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
         c->set_publish_handler(
             []
             (std::uint8_t /*header*/,
-             boost::optional<std::uint16_t> /*packet_id*/,
+             boost::optional<packet_id_t> ,
              std::string /*topic*/,
              std::string /*contents*/) {
                 BOOST_CHECK(false);

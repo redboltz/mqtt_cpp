@@ -14,22 +14,25 @@ namespace mqtt {
 
 //  message_variant
 
-using message_variant = variant<
+template <std::size_t PacketIdBytes>
+using basic_message_variant = variant<
     connect_message,
     connack_message,
-    publish_message,
-    puback_message,
-    pubrec_message,
-    pubrel_message,
-    pubcomp_message,
-    subscribe_message,
-    suback_message,
-    unsubscribe_message,
-    unsuback_message,
+    basic_publish_message<PacketIdBytes>,
+    basic_puback_message<PacketIdBytes>,
+    basic_pubrec_message<PacketIdBytes>,
+    basic_pubrel_message<PacketIdBytes>,
+    basic_pubcomp_message<PacketIdBytes>,
+    basic_subscribe_message<PacketIdBytes>,
+    basic_suback_message<PacketIdBytes>,
+    basic_unsubscribe_message<PacketIdBytes>,
+    basic_unsuback_message<PacketIdBytes>,
     pingreq_message,
     pingresp_message,
     disconnect_message
 >;
+
+using message_variant = basic_message_variant<2>;
 
 namespace detail {
 
@@ -84,45 +87,56 @@ struct continuous_buffer_visitor
 
 } // namespace detail
 
-inline std::vector<as::const_buffer> const_buffer_sequence(message_variant const& mv) {
+template <std::size_t PacketIdBytes>
+inline std::vector<as::const_buffer> const_buffer_sequence(
+    basic_message_variant<PacketIdBytes> const& mv) {
     return mqtt::visit(detail::const_buffer_sequence_visitor(), mv);
 }
 
-inline std::size_t size(message_variant const& mv) {
+template <std::size_t PacketIdBytes>
+inline std::size_t size(basic_message_variant<PacketIdBytes> const& mv) {
     return mqtt::visit(detail::size_visitor(), mv);
 }
 
-inline std::string continuous_buffer(message_variant const& mv) {
+template <std::size_t PacketIdBytes>
+inline std::string continuous_buffer(basic_message_variant<PacketIdBytes> const& mv) {
     return mqtt::visit(detail::continuous_buffer_visitor(), mv);
 }
 
 
 //  store_message_variant
 
-using store_message_variant = variant<
-    publish_message,
-    pubrel_message
+template <std::size_t PacketIdBytes>
+using basic_store_message_variant = variant<
+    basic_publish_message<PacketIdBytes>,
+    basic_pubrel_message<PacketIdBytes>
 >;
+
+using store_message_variant = basic_store_message_variant<2>;
 
 namespace detail {
 
-struct message_variant_visitor
+template <std::size_t PacketIdBytes>
+struct basic_message_variant_visitor
 
 #if !defined(MQTT_STD_VARIANT)
-    : boost::static_visitor<message_variant>
+    : boost::static_visitor<basic_message_variant<PacketIdBytes>>
 #endif // !defined(MQTT_STD_VARIANT)
 
 {
     template <typename T>
-    message_variant operator()(T&& t) const {
+    basic_message_variant<PacketIdBytes> operator()(T&& t) const {
         return t;
     }
 };
 
 } // detail
 
-inline message_variant get_message_variant(store_message_variant const& smv) {
-    return mqtt::visit(detail::message_variant_visitor(), smv);
+template <std::size_t PacketIdBytes>
+inline
+basic_message_variant<PacketIdBytes> get_basic_message_variant(
+    basic_store_message_variant<PacketIdBytes> const& smv) {
+    return mqtt::visit(detail::basic_message_variant_visitor<PacketIdBytes>(), smv);
 }
 
 } // namespace mqtt

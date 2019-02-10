@@ -20,6 +20,9 @@ void client_proc(
     std::uint16_t& pid_sub1,
     std::uint16_t& pid_sub2,
     Disconnect const& disconnect) {
+
+    using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+
     // Setup client
     c->set_client_id("cid1");
     c->set_clean_session(true);
@@ -51,27 +54,27 @@ void client_proc(
         });
     c->set_puback_handler(
         [&]
-        (std::uint16_t packet_id){
+        (packet_id_t packet_id){
             std::cout << "[client] puback received. packet_id: " << packet_id << std::endl;
             disconnect();
             return true;
         });
     c->set_pubrec_handler(
         [&]
-        (std::uint16_t packet_id){
+        (packet_id_t packet_id){
             std::cout << "[client] pubrec received. packet_id: " << packet_id << std::endl;
             return true;
         });
     c->set_pubcomp_handler(
         [&]
-        (std::uint16_t packet_id){
+        (packet_id_t packet_id){
             std::cout << "[client] pubcomp received. packet_id: " << packet_id << std::endl;
             disconnect();
             return true;
         });
     c->set_suback_handler(
         [&]
-        (std::uint16_t packet_id, std::vector<boost::optional<std::uint8_t>> results){
+        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results){
             std::cout << "[client] suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : results) {
                 if (e) {
@@ -93,7 +96,7 @@ void client_proc(
     c->set_publish_handler(
         [&]
         (std::uint8_t header,
-         boost::optional<std::uint16_t> packet_id,
+         boost::optional<packet_id_t> packet_id,
          std::string topic_name,
          std::string contents){
             std::cout << "[client] publish received. "
@@ -166,6 +169,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
     );
     s.set_accept_handler(
         [&](con_t& ep) {
+            using packet_id_t = typename std::remove_reference_t<decltype(ep)>::packet_id_t;
             std::cout << "[server]accept" << std::endl;
             auto sp = ep.shared_from_this();
             ep.start_session(
@@ -217,32 +221,32 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 });
             ep.set_puback_handler(
                 [&]
-                (std::uint16_t packet_id){
+                (packet_id_t packet_id){
                     std::cout << "[server]puback received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_pubrec_handler(
                 [&]
-                (std::uint16_t packet_id){
+                (packet_id_t packet_id){
                     std::cout << "[server]pubrec received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_pubrel_handler(
                 [&]
-                (std::uint16_t packet_id){
+                (packet_id_t packet_id){
                     std::cout << "[server]pubrel received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_pubcomp_handler(
                 [&]
-                (std::uint16_t packet_id){
+                (packet_id_t packet_id){
                     std::cout << "[server]pubcomp received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_publish_handler(
                 [&]
                 (std::uint8_t header,
-                 boost::optional<std::uint16_t> packet_id,
+                 boost::optional<packet_id_t> packet_id,
                  std::string topic_name,
                  std::string contents){
                     std::uint8_t qos = mqtt::publish::get_qos(header);
@@ -269,7 +273,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 });
             ep.set_subscribe_handler(
                 [&]
-                (std::uint16_t packet_id,
+                (packet_id_t packet_id,
                  std::vector<std::tuple<std::string, std::uint8_t>> entries) {
                     std::cout << "[server]subscribe received. packet_id: " << packet_id << std::endl;
                     std::vector<std::uint8_t> res;
@@ -287,7 +291,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
             );
             ep.set_unsubscribe_handler(
                 [&]
-                (std::uint16_t packet_id,
+                (packet_id_t packet_id,
                  std::vector<std::string> topics) {
                     std::cout << "[server]unsubscribe received. packet_id: " << packet_id << std::endl;
                     for (auto const& topic : topics) {

@@ -11,6 +11,7 @@ BOOST_AUTO_TEST_SUITE(test_as_buffer_sub)
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
         int order = 0;
@@ -62,7 +63,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 std::string topic1("topic1");
@@ -71,7 +72,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
             });
         c->set_unsuback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/) {
+            (packet_id_t /*packet_id*/) {
                 BOOST_TEST(current() == "h_unsuback");
                 ++order;
                 c->disconnect();
@@ -86,6 +87,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
         int order = 0;
@@ -140,7 +142,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 std::string topic1("topic1");
@@ -150,7 +152,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
             });
         c->set_unsuback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/) {
+            (packet_id_t /*packet_id*/) {
                 BOOST_TEST(current() == "h_unsuback");
                 ++order;
                 c->disconnect();
@@ -165,6 +167,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
         int order = 0;
@@ -220,7 +223,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 std::string topic1("topic1");
@@ -235,7 +238,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
             });
         c->set_unsuback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/) {
+            (packet_id_t /*packet_id*/) {
                 BOOST_TEST(current() == "h_unsuback");
                 ++order;
                 c->disconnect();
@@ -250,6 +253,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
         int order = 0;
@@ -304,7 +308,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 auto topic = std::make_shared<std::string>("topic1");
@@ -315,7 +319,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
             });
         c->set_unsuback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/) {
+            (packet_id_t /*packet_id*/) {
                 BOOST_TEST(current() == "h_unsuback");
                 ++order;
                 c->disconnect();
@@ -330,6 +334,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
         int order = 0;
@@ -386,7 +391,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 auto topic1 = std::make_shared<std::string>("topic1");
@@ -400,7 +405,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
             });
         c->set_unsuback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/) {
+            (packet_id_t /*packet_id*/) {
                 BOOST_TEST(current() == "h_unsuback");
                 ++order;
                 c->disconnect();
@@ -415,6 +420,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
         int order = 0;
@@ -473,7 +479,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 auto topic1 = std::make_shared<std::string>("topic1");
@@ -491,7 +497,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
             });
         c->set_unsuback_handler(
             [&order, &current, &c]
-            (std::uint16_t /*packet_id*/) {
+            (packet_id_t /*packet_id*/) {
                 BOOST_TEST(current() == "h_unsuback");
                 ++order;
                 c->disconnect();

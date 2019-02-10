@@ -27,6 +27,8 @@
 #include <mqtt/utility.hpp>
 #include <mqtt/exception.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
+#include <mqtt/four_byte_util.hpp>
+#include <mqtt/packet_id_type.hpp>
 
 namespace mqtt {
 
@@ -82,17 +84,24 @@ private:
     boost::container::static_vector<char, 2> message_;
 };
 
-class header_packet_id_message {
+
+template <std::size_t PacketIdBytes>
+class basic_header_packet_id_message;
+
+
+
+template <>
+class basic_header_packet_id_message<2> {
 public:
     /**
      * @brief Create empty header_packet_id_message.
      */
-    header_packet_id_message(std::uint8_t type, std::uint8_t flags, std::uint16_t packet_id)
+    basic_header_packet_id_message(std::uint8_t type, std::uint8_t flags, std::uint16_t packet_id)
         : message_ { make_fixed_header(type, flags), 2, MQTT_16BITNUM_TO_BYTE_SEQ(packet_id) }
     {}
 
     template <typename Iterator>
-    header_packet_id_message(Iterator b, Iterator e) {
+    basic_header_packet_id_message(Iterator b, Iterator e) {
         if (std::distance(b, e) != 4) throw remaining_length_error();
         if (b[1] != 2) throw remaining_length_error();
 
@@ -134,29 +143,92 @@ private:
     boost::container::static_vector<char, 4> message_;
 };
 
+template <>
+class basic_header_packet_id_message<4> {
+public:
+    /**
+     * @brief Create empty header_packet_id_message.
+     */
+    basic_header_packet_id_message(std::uint8_t type, std::uint8_t flags, std::uint32_t packet_id)
+        : message_ { make_fixed_header(type, flags), 4, MQTT_32BITNUM_TO_BYTE_SEQ(packet_id) }
+    {}
+
+    template <typename Iterator>
+    basic_header_packet_id_message(Iterator b, Iterator e) {
+        if (std::distance(b, e) != 6) throw remaining_length_error();
+        if (b[1] != 4) throw remaining_length_error();
+
+        std::copy(b, e, std::back_inserter(message_));
+    }
+
+    /**
+     * @brief Create const buffer sequence
+     *        it is for boost asio APIs
+     * @return const buffer sequence
+     */
+    std::vector<as::const_buffer> const_buffer_sequence() const {
+        return { as::buffer(message_.data(), message_.size()) };
+    }
+
+    /**
+     * @brief Get whole size of sequence
+     * @return whole size
+     */
+    std::size_t size() const {
+        return message_.size();
+    }
+
+    /**
+     * @brief Create one continuours buffer.
+     *        All sequence of buffers are concatinated.
+     *        It is useful to store to file/database.
+     * @return continuous buffer
+     */
+    std::string continuous_buffer() const {
+        return std::string(message_.data(), message_.size());
+    }
+protected:
+    boost::container::static_vector<char, 6> const& message() const {
+        return message_;
+    }
+
+private:
+    boost::container::static_vector<char, 6> message_;
+};
+
 } // namespace detail
 
-struct puback_message : detail::header_packet_id_message {
-    puback_message(std::uint16_t packet_id)
-        : detail::header_packet_id_message(control_packet_type::puback, 0b0000, packet_id)
+template <std::size_t PacketIdBytes>
+struct basic_puback_message : detail::basic_header_packet_id_message<PacketIdBytes> {
+    using base = detail::basic_header_packet_id_message<PacketIdBytes>;
+    basic_puback_message(typename packet_id_type<PacketIdBytes>::type packet_id)
+        : base(control_packet_type::puback, 0b0000, packet_id)
     {}
 };
 
-struct pubrec_message : detail::header_packet_id_message {
-    pubrec_message(std::uint16_t packet_id)
-        : detail::header_packet_id_message(control_packet_type::pubrec, 0b0000, packet_id)
+using puback_message = basic_puback_message<2>;
+
+template <std::size_t PacketIdBytes>
+struct basic_pubrec_message : detail::basic_header_packet_id_message<PacketIdBytes> {
+    using base = detail::basic_header_packet_id_message<PacketIdBytes>;
+    basic_pubrec_message(typename packet_id_type<PacketIdBytes>::type packet_id)
+        : base(control_packet_type::pubrec, 0b0000, packet_id)
     {}
 };
 
-struct pubrel_message : detail::header_packet_id_message {
-    pubrel_message(std::uint16_t packet_id)
-        : detail::header_packet_id_message(control_packet_type::pubrel, 0b0010, packet_id)
+using pubrec_message = basic_pubrec_message<2>;
+
+template <std::size_t PacketIdBytes>
+struct basic_pubrel_message : detail::basic_header_packet_id_message<PacketIdBytes> {
+    using base = detail::basic_header_packet_id_message<PacketIdBytes>;
+    basic_pubrel_message(typename packet_id_type<PacketIdBytes>::type packet_id)
+        : base(control_packet_type::pubrel, 0b0010, packet_id)
     {
     }
 
     template <typename Iterator>
-    pubrel_message(Iterator b, Iterator e)
-        : header_packet_id_message(b, e)
+    basic_pubrel_message(Iterator b, Iterator e)
+        : base(b, e)
     {
     }
 
@@ -164,22 +236,31 @@ struct pubrel_message : detail::header_packet_id_message {
      * @brief Get packet id
      * @return packet_id
      */
-    std::uint16_t packet_id() const {
-        return make_uint16_t(message().begin() + 2, message().end());
+    typename packet_id_type<PacketIdBytes>::type packet_id() const {
+        return make_packet_id<PacketIdBytes>::apply(base::message().begin() + 2, base::message().end());
     }
 };
 
-struct pubcomp_message : detail::header_packet_id_message {
-    pubcomp_message(std::uint16_t packet_id)
-        : detail::header_packet_id_message(control_packet_type::pubcomp, 0b0000, packet_id)
+using pubrel_message = basic_pubrel_message<2>;
+using pubrel_32_message = basic_pubrel_message<4>;
+
+template <std::size_t PacketIdBytes>
+struct basic_pubcomp_message : detail::basic_header_packet_id_message<PacketIdBytes> {
+    basic_pubcomp_message(typename packet_id_type<PacketIdBytes>::type packet_id)
+        : detail::basic_header_packet_id_message<PacketIdBytes>(control_packet_type::pubcomp, 0b0000, packet_id)
     {}
 };
 
-struct unsuback_message : detail::header_packet_id_message {
-    unsuback_message(std::uint16_t packet_id)
-        : detail::header_packet_id_message(control_packet_type::unsuback, 0b0000, packet_id)
+using pubcomp_message = basic_pubcomp_message<2>;
+
+template <std::size_t PacketIdBytes>
+struct basic_unsuback_message : detail::basic_header_packet_id_message<PacketIdBytes> {
+    basic_unsuback_message(typename packet_id_type<PacketIdBytes>::type packet_id)
+        : detail::basic_header_packet_id_message<PacketIdBytes>(control_packet_type::unsuback, 0b0000, packet_id)
     {}
 };
+
+using unsuback_message = basic_unsuback_message<2>;
 
 struct pingreq_message : detail::header_only_message {
     pingreq_message()
@@ -436,9 +517,10 @@ private:
     boost::container::static_vector<char, 2> keep_alive_buf_;
 };
 
-class publish_message {
+template <std::size_t PacketIdBytes>
+class basic_publish_message {
 public:
-    publish_message(
+    basic_publish_message(
         as::const_buffer const& topic_name,
         std::uint8_t qos,
         bool retain,
@@ -463,13 +545,13 @@ public:
         }
         if (qos == qos::at_least_once ||
             qos == qos::exactly_once) {
-            packet_id_.reserve(2);
-            add_uint16_t_to_buf(packet_id_, packet_id);
+            packet_id_.reserve(PacketIdBytes);
+            add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
         }
     }
 
     template <typename Iterator>
-    publish_message(Iterator b, Iterator e) {
+    basic_publish_message(Iterator b, Iterator e) {
         if (b >= e) throw remaining_length_error();
         fixed_header_ = *b;
         auto qos = publish::get_qos(fixed_header_);
@@ -498,9 +580,9 @@ public:
             break;
         case qos::at_least_once:
         case qos::exactly_once:
-            if (b + 2 >= e) throw remaining_length_error();
-            std::copy(b, b + 2, std::back_inserter(packet_id_));
-            b += 2;
+            if (b + PacketIdBytes >= e) throw remaining_length_error();
+            std::copy(b, b + PacketIdBytes, std::back_inserter(packet_id_));
+            b += PacketIdBytes;
             break;
         default:
             throw protocol_error();
@@ -574,8 +656,8 @@ public:
      * @brief Get packet id
      * @return packet_id
      */
-    std::uint16_t packet_id() const {
-        return make_uint16_t(packet_id_.begin(), packet_id_.end());
+    typename packet_id_type<PacketIdBytes>::type packet_id() const {
+        return make_packet_id<PacketIdBytes>::apply(packet_id_.begin(), packet_id_.end());
     }
 
     /**
@@ -636,9 +718,9 @@ private:
             2                      // topic name length
             + get_size(topic_name) // topic name
             + get_size(payload)    // payload
-            + [&] {
+            + [&] () -> typename packet_id_type<PacketIdBytes>::type {
                   if (qos == qos::at_least_once || qos == qos::exactly_once) {
-                      return 2; // packet_id
+                      return PacketIdBytes; // packet_id
                   }
                   else {
                       return 0;
@@ -650,13 +732,17 @@ private:
     char fixed_header_;
     as::const_buffer topic_name_;
     boost::container::static_vector<char, 2> topic_name_length_buf_;
-    boost::container::static_vector<char, 2> packet_id_;
+    boost::container::static_vector<char, PacketIdBytes> packet_id_;
     as::const_buffer payload_;
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 };
 
-class subscribe_message {
+using publish_message = basic_publish_message<2>;
+using publish_32_message = basic_publish_message<4>;
+
+template <std::size_t PacketIdBytes>
+class basic_subscribe_message {
 private:
     struct entry {
         entry(as::const_buffer const& topic_name, std::uint8_t qos)
@@ -671,14 +757,14 @@ private:
     };
 
 public:
-    subscribe_message(
+    basic_subscribe_message(
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
-        std::uint16_t packet_id
+        typename packet_id_type<PacketIdBytes>::type packet_id
     )
         : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::subscribe, 0b0010))),
-          packet_id_ { MQTT_16BITNUM_TO_BYTE_SEQ(packet_id) },
-          remaining_length_(2)
+          remaining_length_(PacketIdBytes)
     {
+        add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
         for (auto const& e : params) {
             auto const& topic_name = std::get<0>(e);
             detail::utf8string_check(string_view(get_pointer(topic_name), get_size(topic_name)));
@@ -763,21 +849,24 @@ public:
 private:
     char fixed_header_;
     std::vector<entry> entries_;
-    boost::container::static_vector<char, 2> packet_id_;
+    boost::container::static_vector<char, PacketIdBytes> packet_id_;
     std::size_t remaining_length_;
     boost::container::static_vector<char, 2> remaining_length_buf_;
 };
 
-class suback_message {
+using subscribe_message = basic_subscribe_message<2>;
+
+template <std::size_t PacketIdBytes>
+class basic_suback_message {
 public:
-    suback_message(
+    basic_suback_message(
         std::vector<std::uint8_t> const& params,
-        std::uint16_t packet_id
+        typename packet_id_type<PacketIdBytes>::type packet_id
     )
         : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::suback, 0b0000))),
-          packet_id_ { MQTT_16BITNUM_TO_BYTE_SEQ(packet_id) },
-          remaining_length_(params.size() + 2)
+          remaining_length_(params.size() + PacketIdBytes)
     {
+        add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
         auto rb = remaining_bytes(remaining_length_);
         for (auto e : rb) {
             remaining_length_buf_.push_back(e);
@@ -836,12 +925,15 @@ public:
 private:
     char fixed_header_;
     std::string entries_;
-    boost::container::static_vector<char, 2> packet_id_;
+    boost::container::static_vector<char, PacketIdBytes> packet_id_;
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 };
 
-class unsubscribe_message {
+using suback_message = basic_suback_message<2>;
+
+template <std::size_t PacketIdBytes>
+class basic_unsubscribe_message {
 private:
     struct entry {
         entry(as::const_buffer const& topic_name)
@@ -854,14 +946,14 @@ private:
     };
 
 public:
-    unsubscribe_message(
+    basic_unsubscribe_message(
         std::vector<as::const_buffer> const& params,
-        std::uint16_t packet_id
+        typename packet_id_type<PacketIdBytes>::type packet_id
     )
         : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::unsubscribe, 0b0010))),
-          packet_id_ { MQTT_16BITNUM_TO_BYTE_SEQ(packet_id) },
-          remaining_length_(2)
+          remaining_length_(PacketIdBytes)
     {
+        add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
         for (auto const& e : params) {
             detail::utf8string_check(string_view(get_pointer(e), get_size(e)));
             entries_.emplace_back(e);
@@ -939,7 +1031,7 @@ public:
 private:
     char fixed_header_;
     std::vector<entry> entries_;
-    boost::container::static_vector<char, 2> packet_id_;
+    boost::container::static_vector<char, PacketIdBytes> packet_id_;
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 };

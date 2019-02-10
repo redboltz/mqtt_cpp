@@ -11,6 +11,7 @@ BOOST_AUTO_TEST_SUITE(test_offline)
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -93,7 +94,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             });
         c->set_puback_handler(
             [&order, &current, &c, &pid_pub]
-            (std::uint16_t packet_id) {
+            (packet_id_t packet_id) {
                 BOOST_TEST(current() == "h_puback");
                 ++order;
                 BOOST_TEST(packet_id == pid_pub);
@@ -109,6 +110,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -192,7 +194,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             });
         c->set_pubrec_handler(
             [&order, &current, &pid_pub]
-            (std::uint16_t packet_id) {
+            (packet_id_t packet_id) {
                 BOOST_TEST(current() == "h_pubrec");
                 ++order;
                 BOOST_TEST(packet_id == pid_pub);
@@ -200,7 +202,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             });
         c->set_pubcomp_handler(
             [&order, &current, &c, &pid_pub]
-            (std::uint16_t packet_id) {
+            (packet_id_t packet_id) {
                 BOOST_TEST(current() == "h_pubcomp");
                 ++order;
                 BOOST_TEST(packet_id == pid_pub);
@@ -216,6 +218,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -302,7 +305,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             });
         c->set_puback_handler(
             [&order, &current, &c, &pid_pub1, &pid_pub2]
-            (std::uint16_t packet_id) {
+            (packet_id_t packet_id) {
                 switch (order) {
                 case 3:
                     BOOST_TEST(current() == "h_puback1");
@@ -329,6 +332,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -421,7 +425,7 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
             });
         c->set_puback_handler(
             [&order, &current, &c, &pid_pub]
-            (std::uint16_t packet_id) {
+            (packet_id_t packet_id) {
                 BOOST_TEST(current() == "h_puback");
                 ++order;
                 BOOST_TEST(packet_id == pid_pub);
