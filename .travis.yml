@@ -11,7 +11,8 @@ install:
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export LD_LIBRARY_PATH="${BASE}/usr/lib:$LD_LIBRARY_PATH"; fi
  - if [ "$CXX" = "g++" ]; then export CXX="g++-7" CC="gcc-7"; fi
  - if [ "$CXX" = "clang++" ] && [ "$TRAVIS_OS_NAME" == "linux" ]; then export CXX="clang++-5.0" CC="clang-5.0"; fi
- - if [ "$TRAVIS_OS_NAME" == "osx" ]; then wget https://www.openssl.org/source/openssl-1.1.0i.tar.gz && tar xf openssl-1.1.0i.tar.gz && cd openssl-1.1.0i && ./Configure darwin64-x86_64-cc --prefix=${BASE}/usr && make -j4 && make install > /dev/null && cd ..; fi
+ - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export OPENSSL_ROOT_DIR="${BASE}/usr"; fi
+ - if [ "$TRAVIS_OS_NAME" == "osx" ]; then export OPENSSL_ROOT_DIR="/usr/local/opt/openssl"; fi
 
 matrix:
   include:
@@ -103,4 +104,4 @@ matrix:
             - boost1.67
 
 script:
-  - mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_C_COMPILER="${CC}" -DCMAKE_LIBRARY_PATH="${BASE}/usr/lib" -DOPENSSL_ROOT_DIR="${BASE}/usr" $FLAGS $CXXFLAGS $LDFLAGS .. && travis_wait 50 make $MAKEFLAGS VERBOSE=1 && ctest -VV
+  - mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_C_COMPILER="${CC}" -DCMAKE_LIBRARY_PATH="${BASE}/usr/lib" -DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}" $FLAGS $CXXFLAGS $LDFLAGS .. && travis_wait 50 make $MAKEFLAGS VERBOSE=1 && ctest -VV
