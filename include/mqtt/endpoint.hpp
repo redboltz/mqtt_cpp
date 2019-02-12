@@ -4085,10 +4085,20 @@ public:
         else {
             ++packet_id_master_;
         }
-        if (packet_id_.insert(packet_id_master_).second) return packet_id_master_;
+        auto ret = packet_id_.insert(packet_id_master_);
+        if (ret.second) return packet_id_master_;
+
+        auto last = packet_id_.end();
+        auto e = last;
+        --last;
+
+        if (*last != std::numeric_limits<packet_id_t>::max()) {
+            packet_id_master_ = *last + 1;
+            packet_id_.insert(e, packet_id_master_);
+            return packet_id_master_;
+        }
+
         auto b = packet_id_.begin();
-        auto e = packet_id_.end();
-        BOOST_ASSERT(b != e);
         auto prev = *b;
         if (prev != 1) {
             packet_id_master_ = 1;
