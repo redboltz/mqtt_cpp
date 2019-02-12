@@ -27,11 +27,16 @@ namespace mqtt {
 
 namespace as = boost::asio;
 
-template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
+template <
+    typename Strand = as::io_service::strand,
+    typename Mutex = std::mutex,
+    template<typename...> class LockGuard = std::lock_guard,
+    std::size_t PacketIdBytes = 2
+>
 class server {
 public:
     using socket_t = tcp_endpoint<as::ip::tcp::socket, Strand>;
-    using endpoint_t = endpoint<socket_t, Mutex, LockGuard>;
+    using endpoint_t = endpoint<socket_t, Mutex, LockGuard, PacketIdBytes>;
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -135,11 +140,16 @@ private:
 
 #if !defined(MQTT_NO_TLS)
 
-template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
+template <
+    typename Strand = as::io_service::strand,
+    typename Mutex = std::mutex,
+    template<typename...> class LockGuard = std::lock_guard,
+    std::size_t PacketIdBytes = 2
+>
 class server_tls {
 public:
     using socket_t = tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
-    using endpoint_t = endpoint<socket_t, Mutex, LockGuard>;
+    using endpoint_t = endpoint<socket_t, Mutex, LockGuard, PacketIdBytes>;
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -276,11 +286,16 @@ private:
     std::string s_;
 };
 
-template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
+template <
+    typename Strand = as::io_service::strand,
+    typename Mutex = std::mutex,
+    template<typename...> class LockGuard = std::lock_guard,
+    std::size_t PacketIdBytes = 2
+>
 class server_ws {
 public:
     using socket_t = ws_endpoint<as::ip::tcp::socket, Strand>;
-    using endpoint_t = endpoint<socket_t, Mutex, LockGuard>;
+    using endpoint_t = endpoint<socket_t, Mutex, LockGuard, PacketIdBytes>;
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -426,11 +441,16 @@ private:
 
 #if !defined(MQTT_NO_TLS)
 
-template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
+template <
+    typename Strand = as::io_service::strand,
+    typename Mutex = std::mutex,
+    template<typename...> class LockGuard = std::lock_guard,
+    std::size_t PacketIdBytes = 2
+>
 class server_tls_ws {
 public:
     using socket_t = mqtt::ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
-    using endpoint_t = endpoint<socket_t, Mutex, LockGuard>;
+    using endpoint_t = endpoint<socket_t, Mutex, LockGuard, PacketIdBytes>;
 
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
