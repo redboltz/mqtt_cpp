@@ -58,6 +58,7 @@ public:
     template <typename Endpoint>
     void handle_accept(Endpoint& ep) {
         auto sp = ep.shared_from_this();
+        ep.socket()->lowest_layer().set_option(as::ip::tcp::no_delay(true));
         ep.start_session(
             [sp] // keeping ep's lifetime as sp until session finished
             (boost::system::error_code const& /*ec*/) {

@@ -2,6 +2,7 @@ LIST (APPEND exec_PROGRAMS
     no_tls_client.cpp
     no_tls_server.cpp
     no_tls_both.cpp
+    broker.cpp
 )
 
 IF (NOT MQTT_NO_TLS)
