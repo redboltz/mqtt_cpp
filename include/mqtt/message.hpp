@@ -851,7 +851,7 @@ private:
     std::vector<entry> entries_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
     std::size_t remaining_length_;
-    boost::container::static_vector<char, 2> remaining_length_buf_;
+    boost::container::static_vector<char, 4> remaining_length_buf_;
 };
 
 using subscribe_message = basic_subscribe_message<2>;
