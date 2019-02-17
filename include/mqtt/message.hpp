@@ -1018,12 +1018,12 @@ public:
 
         ret.append(remaining_length_buf_.data(), remaining_length_buf_.size());
 
+        ret.append(packet_id_.data(), packet_id_.size());
+
         for (auto const& e : entries_) {
             ret.append(e.topic_name_length_buf.data(), e.topic_name_length_buf.size());
             ret.append(get_pointer(e.topic_name), get_size(e.topic_name));
         }
-
-        ret.append(packet_id_.data(), packet_id_.size());
 
         return ret;
     }
