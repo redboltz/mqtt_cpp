@@ -4339,7 +4339,7 @@ private:
             + get_size(payload)    // payload
             + [&] {
                   if (qos == qos::at_least_once || qos == qos::exactly_once) {
-                      return 2; // packet_id
+                      return PacketIdBytes;
                   }
                   else {
                       return 0;
@@ -4350,7 +4350,7 @@ private:
     static std::size_t subscribe_remaining_length(
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params
     ) {
-        std::size_t remaining_length = 2; // packet_id
+        std::size_t remaining_length = PacketIdBytes;
         for (auto const& e : params) {
             remaining_length += 2 + get_size(std::get<0>(e)) + 1;
         }
@@ -4360,7 +4360,7 @@ private:
     static std::size_t unsubscribe_remaining_length(
         std::vector<as::const_buffer> const& params
     ) {
-        std::size_t remaining_length = 2; // packet_id
+        std::size_t remaining_length = PacketIdBytes;
         for (auto const& e : params) {
             remaining_length += 2 + get_size(e);
         }
