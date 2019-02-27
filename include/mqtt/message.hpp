@@ -90,20 +90,22 @@ class basic_header_packet_id_message;
 
 
 
-template <>
-class basic_header_packet_id_message<2> {
+template <std::size_t PacketIdBytes>
+class basic_header_packet_id_message {
 public:
     /**
      * @brief Create empty header_packet_id_message.
      */
-    basic_header_packet_id_message(std::uint8_t type, std::uint8_t flags, std::uint16_t packet_id)
-        : message_ { make_fixed_header(type, flags), 2, MQTT_16BITNUM_TO_BYTE_SEQ(packet_id) }
-    {}
+    basic_header_packet_id_message(std::uint8_t type, std::uint8_t flags, typename packet_id_type<PacketIdBytes>::type packet_id)
+        : message_ { make_fixed_header(type, flags), PacketIdBytes }
+    {
+        add_packet_id_to_buf<PacketIdBytes>::apply(message_, packet_id);
+    }
 
     template <typename Iterator>
     basic_header_packet_id_message(Iterator b, Iterator e) {
-        if (std::distance(b, e) != 4) throw remaining_length_error();
-        if (b[1] != 2) throw remaining_length_error();
+        if (std::distance(b, e) != 2 + PacketIdBytes) throw remaining_length_error();
+        if (b[1] != PacketIdBytes) throw remaining_length_error();
 
         std::copy(b, e, std::back_inserter(message_));
     }
@@ -135,65 +137,12 @@ public:
         return std::string(message_.data(), message_.size());
     }
 protected:
-    boost::container::static_vector<char, 4> const& message() const {
+    boost::container::static_vector<char, 2 + PacketIdBytes> const& message() const {
         return message_;
     }
 
 private:
-    boost::container::static_vector<char, 4> message_;
-};
-
-template <>
-class basic_header_packet_id_message<4> {
-public:
-    /**
-     * @brief Create empty header_packet_id_message.
-     */
-    basic_header_packet_id_message(std::uint8_t type, std::uint8_t flags, std::uint32_t packet_id)
-        : message_ { make_fixed_header(type, flags), 4, MQTT_32BITNUM_TO_BYTE_SEQ(packet_id) }
-    {}
-
-    template <typename Iterator>
-    basic_header_packet_id_message(Iterator b, Iterator e) {
-        if (std::distance(b, e) != 6) throw remaining_length_error();
-        if (b[1] != 4) throw remaining_length_error();
-
-        std::copy(b, e, std::back_inserter(message_));
-    }
-
-    /**
-     * @brief Create const buffer sequence
-     *        it is for boost asio APIs
-     * @return const buffer sequence
-     */
-    std::vector<as::const_buffer> const_buffer_sequence() const {
-        return { as::buffer(message_.data(), message_.size()) };
-    }
-
-    /**
-     * @brief Get whole size of sequence
-     * @return whole size
-     */
-    std::size_t size() const {
-        return message_.size();
-    }
-
-    /**
-     * @brief Create one continuours buffer.
-     *        All sequence of buffers are concatinated.
-     *        It is useful to store to file/database.
-     * @return continuous buffer
-     */
-    std::string continuous_buffer() const {
-        return std::string(message_.data(), message_.size());
-    }
-protected:
-    boost::container::static_vector<char, 6> const& message() const {
-        return message_;
-    }
-
-private:
-    boost::container::static_vector<char, 6> message_;
+    boost::container::static_vector<char, 2 + PacketIdBytes> message_;
 };
 
 } // namespace detail
@@ -525,7 +474,7 @@ public:
         std::uint8_t qos,
         bool retain,
         bool dup,
-        std::uint16_t packet_id,
+        typename packet_id_type<PacketIdBytes>::type packet_id,
         as::const_buffer const& payload
     )
         : fixed_header_(make_fixed_header(control_packet_type::publish, 0b0000)),
