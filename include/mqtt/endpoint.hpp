@@ -4071,7 +4071,7 @@ public:
     /**
      * @brief Acquire the new unique packet id.
      *        If all packet ids are already in use, then throw packet_id_exhausted_error exception.
-     *        After acquiring the packet id, you can call acuired_* functions.
+     *        After acquiring the packet id, you can call acquired_* functions.
      *        The ownership of packet id is moved to the library.
      *        Or you can call release_packet_id to release it.
      * @return packet id
@@ -4117,7 +4117,7 @@ public:
 
     /**
      * @brief Register packet_id to the library.
-     *        After registering the packet_id, you can call acuired_* functions.
+     *        After registering the packet_id, you can call acquired_* functions.
      *        The ownership of packet id is moved to the library.
      *        Or you can call release_packet_id to release it.
      * @return If packet_id is successfully registerd then return true, otherwise return false.
