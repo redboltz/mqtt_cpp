@@ -4142,7 +4142,7 @@ public:
 
     /**
      * @brief Restore serialized publish and pubrel messages.
-     *        This function shouold be called before connect.
+     *        This function should be called before connect.
      * @param packet_id packet id of the message
      * @param b         iterator begin of the message
      * @param e         iterator end of the message
@@ -4169,7 +4169,7 @@ public:
 
     /**
      * @brief Restore serialized publish message.
-     *        This function shouold be called before connect.
+     *        This function should be called before connect.
      * @param msg         publish message.
      * @param life_keeper the function that keeps the msg lifetime.
      */
@@ -4191,7 +4191,7 @@ public:
 
     /**
      * @brief Restore serialized pubrel message.
-     *        This function shouold be called before connect.
+     *        This function should be called before connect.
      * @param msg pubrel message.
      */
     void restore_serialized_message(basic_pubrel_message<PacketIdBytes> msg) {
