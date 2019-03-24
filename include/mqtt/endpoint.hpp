@@ -1090,7 +1090,7 @@ public:
     template <typename... Args>
     packet_id_t subscribe(
         std::string const& topic_name,
-        std::uint8_t qos, Args... args) {
+        std::uint8_t qos, Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
@@ -1113,7 +1113,7 @@ public:
     template <typename... Args>
     packet_id_t subscribe(
         as::const_buffer const& topic_name,
-        std::uint8_t qos, Args... args) {
+        std::uint8_t qos, Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
@@ -1166,7 +1166,7 @@ public:
     template <typename... Args>
     packet_id_t unsubscribe(
         std::string const& topic_name,
-        Args... args) {
+        Args&&... args) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_unsubscribe(packet_id, topic_name, std::forward<Args>(args)...);
         return packet_id;
@@ -1186,7 +1186,7 @@ public:
     template <typename... Args>
     packet_id_t unsubscribe(
         as::const_buffer const& topic_name,
-        Args... args) {
+        Args&&... args) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_unsubscribe(packet_id, topic_name, std::forward<Args>(args)...);
         return packet_id;
@@ -1511,7 +1511,7 @@ public:
     bool subscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
-        std::uint8_t qos, Args... args) {
+        std::uint8_t qos, Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
             acquired_subscribe(packet_id, topic_name,  qos, std::forward<Args>(args)...);
@@ -1539,7 +1539,7 @@ public:
     bool subscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
-        std::uint8_t qos, Args... args) {
+        std::uint8_t qos, Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
             acquired_subscribe(packet_id, topic_name,  qos, std::forward<Args>(args)...);
@@ -1607,7 +1607,7 @@ public:
     bool unsubscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
-        Args... args) {
+        Args&&... args) {
         if (register_packet_id(packet_id)) {
             acquired_unsubscribe(packet_id, topic_name, std::forward<Args>(args)...);
             return true;
@@ -1632,7 +1632,7 @@ public:
     bool unsubscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
-        Args... args) {
+        Args&&... args) {
         if (register_packet_id(packet_id)) {
             acquired_unsubscribe(packet_id, topic_name, std::forward<Args>(args)...);
             return true;
@@ -1993,11 +1993,11 @@ public:
     void acquired_subscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
-        std::uint8_t qos, Args... args) {
+        std::uint8_t qos, Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
-        send_subscribe(params, packet_id, as::buffer(topic_name), qos, args...);
+        send_subscribe(params, packet_id, as::buffer(topic_name), qos, std::forward<Args>(args)...);
     }
 
     /**
@@ -2018,11 +2018,11 @@ public:
     void acquired_subscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
-        std::uint8_t qos, Args... args) {
+        std::uint8_t qos, Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
-        send_subscribe(params, packet_id, topic_name, qos, args...);
+        send_subscribe(params, packet_id, topic_name, qos, std::forward<Args>(args)...);
     }
 
     /**
@@ -2078,10 +2078,10 @@ public:
     void acquired_unsubscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
-        Args... args) {
+        Args&&... args) {
         std::vector<as::const_buffer> params;
         params.reserve(sizeof...(args) + 1);
-        send_unsubscribe(params, packet_id, as::buffer(topic_name), args...);
+        send_unsubscribe(params, packet_id, as::buffer(topic_name), std::forward<Args>(args)...);
     }
 
     /**
@@ -2100,11 +2100,10 @@ public:
     void acquired_unsubscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
-        Args... args) {
-
+        Args&&... args) {
         std::vector<as::const_buffer> params;
         params.reserve(sizeof...(args) + 1);
-        send_unsubscribe(params, packet_id, topic_name, args...);
+        send_unsubscribe(params, packet_id, topic_name, std::forward<Args>(args)...);
     }
 
     /**
@@ -5591,9 +5590,9 @@ private:
         std::vector<std::tuple<as::const_buffer, std::uint8_t>>& params,
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t qos, Args... args) {
+        std::uint8_t qos, Args&&... args) {
         params.emplace_back(std::move(topic_name), qos);
-        send_subscribe(params, packet_id, args...);
+        send_subscribe(params, packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -5601,9 +5600,9 @@ private:
         std::vector<std::tuple<as::const_buffer, std::uint8_t>>& params,
         packet_id_t packet_id,
         std::string const& topic_name,
-        std::uint8_t qos, Args... args) {
+        std::uint8_t qos, Args&&... args) {
         params.emplace_back(as::buffer(topic_name), qos);
-        send_subscribe(params, packet_id, args...);
+        send_subscribe(params, packet_id, std::forward<Args>(args)...);
     }
 
     void send_subscribe(
@@ -5632,9 +5631,9 @@ private:
         std::vector<as::const_buffer>& params,
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        Args... args) {
+        Args&&... args) {
         params.emplace_back(std::move(topic_name));
-        send_unsubscribe(params, packet_id, args...);
+        send_unsubscribe(params, packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -5642,9 +5641,9 @@ private:
         std::vector<as::const_buffer>& params,
         packet_id_t packet_id,
         std::string const&  topic_name,
-        Args... args) {
+        Args&&... args) {
         params.emplace_back(as::buffer(topic_name));
-        send_unsubscribe(params, packet_id, args...);
+        send_unsubscribe(params, packet_id, std::forward<Args>(args)...);
     }
 
     void send_unsubscribe(
@@ -5821,10 +5820,10 @@ private:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         std::uint8_t qos,
-        Args... args) {
+        Args&&... args) {
 
         params.emplace_back(std::move(topic_name), qos);
-        async_send_subscribe(params, life_keepers, packet_id, args...);
+        async_send_subscribe(params, life_keepers, packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -5834,11 +5833,11 @@ private:
         packet_id_t packet_id,
         std::string const& topic_name,
         std::uint8_t qos,
-        Args... args) {
+        Args&&... args) {
 
         life_keepers.emplace_back(std::make_shared<std::string>(topic_name));
         params.emplace_back(as::buffer(*life_keepers.back()), qos);
-        async_send_subscribe(params, life_keepers, packet_id, args...);
+        async_send_subscribe(params, life_keepers, packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_subscribe(
@@ -5860,9 +5859,9 @@ private:
     void async_send_suback(
         std::vector<std::uint8_t>& params,
         packet_id_t packet_id,
-        std::uint8_t qos, Args... args) {
+        std::uint8_t qos, Args&&... args) {
         params.push_back(qos);
-        async_send_suback(params, packet_id, args...);
+        async_send_suback(params, packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_suback(
@@ -5878,9 +5877,9 @@ private:
         std::vector<std::shared_ptr<std::string>>& life_keepers,
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        Args... args) {
+        Args&&... args) {
         params.emplace_back(std::move(topic_name));
-        async_send_unsubscribe(params, life_keepers, packet_id, args...);
+        async_send_unsubscribe(params, life_keepers, packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -5889,11 +5888,11 @@ private:
         std::vector<std::shared_ptr<std::string>>& life_keepers,
         packet_id_t packet_id,
         std::string const& topic_name,
-        Args... args) {
+        Args&&... args) {
 
         life_keepers.emplace_back(std::make_shared<std::string>(topic_name));
         params.emplace_back(as::buffer(*life_keepers.back()));
-        async_send_unsubscribe(params, life_keepers, packet_id, args...);
+        async_send_unsubscribe(params, life_keepers, packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_unsubscribe(
