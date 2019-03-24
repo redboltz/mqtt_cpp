@@ -4012,7 +4012,7 @@ public:
     }
 
     /**
-     * @brief Clear storead publish message that has packet_id.
+     * @brief Clear stored publish message that has packet_id.
      * @param packet_id packet id corresponding to stored publish
      */
     void clear_stored_publish(packet_id_t packet_id) {
