@@ -526,25 +526,6 @@ private:
         >
     >;
 
-    struct pending {
-        pending(
-            bool clean_session,
-            con_sp_t const& spep,
-            std::string const& client_id,
-            boost::optional<mqtt::will> will)
-            : clean_session(clean_session), spep(spep), client_id(client_id), will(std::move(will)) {}
-        bool clean_session;
-        con_sp_t spep;
-        std::string const& client_id;
-        boost::optional<mqtt::will> will;
-    };
-    using mi_pending = mi::multi_index_container<
-        pending,
-        mi::indexed_by<
-            mi::sequenced<>
-        >
-    >;
-
     as::io_service& ios_;
     as::deadline_timer tim_disconnect_;
     boost::optional<boost::posix_time::time_duration> delay_disconnect_;
@@ -554,7 +535,6 @@ private:
     mi_sub_session subsessions_;
     mi_retain retains_;
     mi_con_will will_;
-    mi_pending pending_;
 };
 
 #endif // MQTT_TEST_BROKER_HPP
