@@ -4079,7 +4079,7 @@ public:
         LockGuard<Mutex> lck (store_mtx_);
         if (packet_id_.size() == std::numeric_limits<packet_id_t>::max()) throw packet_id_exhausted_error();
         if (packet_id_master_ == std::numeric_limits<packet_id_t>::max()) {
-            packet_id_master_ = 1;
+            packet_id_master_ = 1U;
         }
         else {
             ++packet_id_master_;
@@ -4092,24 +4092,24 @@ public:
         --last;
 
         if (*last != std::numeric_limits<packet_id_t>::max()) {
-            packet_id_master_ = *last + 1;
+            packet_id_master_ = static_cast<packet_id_t>(*last + 1U);
             packet_id_.insert(e, packet_id_master_);
             return packet_id_master_;
         }
 
         auto b = packet_id_.begin();
         auto prev = *b;
-        if (prev != 1) {
-            packet_id_master_ = 1;
+        if (prev != 1U) {
+            packet_id_master_ = 1U;
             packet_id_.insert(b, packet_id_master_);
             return packet_id_master_;
         }
         ++b;
-        while (*b - 1 == prev && b != e) {
+        while (*b - 1U == prev && b != e) {
             prev = *b;
             ++b;
         }
-        packet_id_master_ = prev + 1;
+        packet_id_master_ = static_cast<packet_id_t>(prev + 1U);
         packet_id_.insert(b, packet_id_master_);
         return packet_id_master_;
     }
@@ -4151,7 +4151,7 @@ public:
     restore_serialized_message(packet_id_t /*packet_id*/, Iterator b, Iterator e) {
         if (b == e) return;
 
-        auto fixed_header = *b;
+        auto fixed_header = static_cast<std::uint8_t>(*b);
         switch (get_control_packet_type(fixed_header)) {
         case control_packet_type::publish: {
             auto sp = std::make_shared<basic_publish_message<PacketIdBytes>>(b, e);
@@ -5386,7 +5386,7 @@ private:
                 results.push_back(boost::none);
             }
             else {
-                results.push_back(*it);
+                results.push_back(static_cast<std::uint8_t>(*it));
             }
         }
         if (h_suback_) return h_suback_(packet_id, std::move(results));
@@ -5992,8 +5992,10 @@ private:
 
     static std::uint16_t make_uint16_t(char b1, char b2) {
         return
-            ((static_cast<std::uint16_t>(b1) & 0xff)) << 8 |
-            (static_cast<std::uint16_t>(b2) & 0xff);
+            static_cast<std::uint16_t>(
+                ((static_cast<std::uint16_t>(b1) & 0xff)) << 8 |
+                (static_cast<std::uint16_t>(b2) & 0xff)
+            );
     }
 
     struct write_completion_handler {

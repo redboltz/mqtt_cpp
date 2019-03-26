@@ -14,7 +14,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -244,7 +244,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -318,7 +318,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -400,7 +400,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect

@@ -36,10 +36,12 @@ std::uint32_t make_uint32_t(It b, It e) {
     auto b3 = b++;
     auto b4 = b++;
     return
-        (static_cast<std::uint16_t>(*b1) & 0xff) << 24 |
-        (static_cast<std::uint16_t>(*b2) & 0xff) << 16 |
-        (static_cast<std::uint16_t>(*b3) & 0xff) <<  8 |
-        (static_cast<std::uint16_t>(*b4) & 0xff);
+        static_cast<std::uint32_t>(
+            (static_cast<std::uint16_t>(*b1) & 0xff) << 24 |
+            (static_cast<std::uint16_t>(*b2) & 0xff) << 16 |
+            (static_cast<std::uint16_t>(*b3) & 0xff) <<  8 |
+            (static_cast<std::uint16_t>(*b4) & 0xff)
+        );
 }
 
 } // namespace mqtt

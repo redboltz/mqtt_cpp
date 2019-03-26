@@ -14,7 +14,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
         int lc_order = 0;
 
         std::vector<std::string> const expected = {

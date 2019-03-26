@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_CASE( connect ) {
         c->set_clean_session(true);
         BOOST_TEST(c->connected() == false);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE( connect_no_strand ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -275,7 +275,7 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
         c->set_clean_session(true);
 
         bool first = true;
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -346,7 +346,7 @@ BOOST_AUTO_TEST_CASE( nocid ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -398,7 +398,7 @@ BOOST_AUTO_TEST_CASE( nocid ) {
 BOOST_AUTO_TEST_CASE( nocid_noclean ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -450,7 +450,7 @@ BOOST_AUTO_TEST_CASE( noclean ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
         c->set_client_id("cid1");
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -560,7 +560,7 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -615,7 +615,7 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -670,7 +670,7 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -725,7 +725,7 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect

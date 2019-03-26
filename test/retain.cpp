@@ -17,7 +17,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
         std::uint16_t pid_sub;
         std::uint16_t pid_unsub;
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
         std::uint16_t pid_sub;
         std::uint16_t pid_unsub;
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -259,7 +259,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
         std::uint16_t pid_sub;
         std::uint16_t pid_unsub;
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect

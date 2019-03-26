@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
-    int order1 = 0;
+    std::size_t order1 = 0;
 
     std::vector<std::string> const expected1 = {
         // connect
@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
     std::uint16_t pid_sub2;
     std::uint16_t pid_unsub2;
 
-    int order2 = 0;
+    std::size_t order2 = 0;
 
     std::vector<std::string> const expected2 = {
         // connect
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
-    int order1 = 0;
+    std::size_t order1 = 0;
 
     std::vector<std::string> const expected1 = {
         // connect
@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
     std::uint16_t pid_sub2;
     std::uint16_t pid_unsub2;
 
-    int order2 = 0;
+    std::size_t order2 = 0;
 
     std::vector<std::string> const expected2 = {
         // connect
@@ -352,7 +352,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
-    int order1 = 0;
+    std::size_t order1 = 0;
 
     std::vector<std::string> const expected1 = {
         // connect
@@ -397,7 +397,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
     std::uint16_t pid_sub2;
     std::uint16_t pid_unsub2;
 
-    int order2 = 0;
+    std::size_t order2 = 0;
 
     std::vector<std::string> const expected2 = {
         // connect
@@ -518,7 +518,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
-    int order1 = 0;
+    std::size_t order1 = 0;
 
     std::vector<std::string> const expected1 = {
         // connect
@@ -563,7 +563,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
     std::uint16_t pid_sub2;
     std::uint16_t pid_unsub2;
 
-    int order2 = 0;
+    std::size_t order2 = 0;
 
     std::vector<std::string> const expected2 = {
         // connect
