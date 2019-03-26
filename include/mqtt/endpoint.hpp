@@ -2469,17 +2469,15 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0,
-        packet_id_t
-    >::type
-    async_subscribe(
+    template <typename Arg0, typename... Args>
+    packet_id_t async_subscribe(
         std::string const& topic_name,
-        std::uint8_t qos, Args&&... args) {
+        std::uint8_t qos,
+        Arg0&& arg0,
+        Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
+        acquired_async_subscribe(packet_id, topic_name, qos, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
         return packet_id;
     }
 
@@ -2497,17 +2495,15 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0,
-        packet_id_t
-    >::type
-    async_subscribe(
+    template <typename Arg0, typename... Args>
+    packet_id_t async_subscribe(
         as::const_buffer const& topic_name,
-        std::uint8_t qos, Args&&... args) {
+        std::uint8_t qos,
+        Arg0&& arg0,
+        Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
+        acquired_async_subscribe(packet_id, topic_name, qos, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
         return packet_id;
     }
 
@@ -2601,16 +2597,13 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0,
-        packet_id_t
-    >::type
-    async_unsubscribe(
+    template <typename Arg0, typename... Args>
+    packet_id_t async_unsubscribe(
         std::string const& topic_name,
+        Arg0&& arg0,
         Args&&... args) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, topic_name, std::forward<Args>(args)...);
+        acquired_async_unsubscribe(packet_id, topic_name, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
         return packet_id;
     }
 
@@ -2626,16 +2619,13 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0,
-        packet_id_t
-    >::type
-    async_unsubscribe(
+    template <typename Arg0, typename... Args>
+    packet_id_t async_unsubscribe(
         as::const_buffer const& topic_name,
+        Arg0&& arg0,
         Args&&... args) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, topic_name, std::forward<Args>(args)...);
+        acquired_async_unsubscribe(packet_id, topic_name, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
         return packet_id;
     }
 
@@ -2999,18 +2989,16 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066<BR>
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0,
-        bool
-    >::type
-    async_subscribe(
+    template <typename Arg0, typename... Args>
+    bool async_subscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
-        std::uint8_t qos, Args&&... args) {
+        std::uint8_t qos,
+        Arg0&& arg0,
+        Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
+            acquired_async_subscribe(packet_id, topic_name, qos, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
             return true;
         }
         return false;
@@ -3031,18 +3019,16 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066<BR>
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0,
-        bool
-    >::type
-    async_subscribe(
+    template <typename Arg0, typename... Args>
+    bool async_subscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
-        std::uint8_t qos, Args&&... args) {
+        std::uint8_t qos,
+        Arg0&& arg0,
+        Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
+            acquired_async_subscribe(packet_id, topic_name, qos, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
             return true;
         }
         return false;
@@ -3160,17 +3146,14 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0,
-        bool
-    >::type
-    async_unsubscribe(
+    template <typename Arg0, typename... Args>
+    bool async_unsubscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
+        Arg0&& arg0,
         Args&&... args) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, topic_name, std::forward<Args>(args)...);
+            acquired_async_unsubscribe(packet_id, topic_name, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
             return true;
         }
         return false;
@@ -3190,17 +3173,14 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0,
-        bool
-    >::type
-    async_unsubscribe(
+    template <typename Arg0, typename... Args>
+    bool async_unsubscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
+        Arg0&& arg0,
         Args&&... args) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, topic_name, std::forward<Args>(args)...);
+            acquired_async_unsubscribe(packet_id, topic_name, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
             return true;
         }
         return false;
@@ -3587,17 +3567,15 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066<BR>
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0,
-        void
-    >::type
-    acquired_async_subscribe(
+    template <typename Arg0, typename... Args>
+    void acquired_async_subscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
-        std::uint8_t qos, Args&&... args) {
+        std::uint8_t qos,
+        Arg0&& arg0,
+        Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
-        return acquired_async_subscribe_imp(packet_id, topic_name, qos, std::forward<Args>(args)...);
+        acquired_async_subscribe_imp(packet_id, topic_name, qos, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
     }
 
     /**
@@ -3615,17 +3593,15 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066<BR>
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0,
-        void
-    >::type
-    acquired_async_subscribe(
+    template <typename Arg0, typename... Args>
+    void acquired_async_subscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
-        std::uint8_t qos, Args&&... args) {
+        std::uint8_t qos,
+        Arg0&& arg0,
+        Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
-        return acquired_async_subscribe_imp(packet_id, topic_name, qos, std::forward<Args>(args)...);
+        acquired_async_subscribe_imp(packet_id, topic_name, qos, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
     }
 
     /**
@@ -3768,15 +3744,13 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0
-    >::type
-    acquired_async_unsubscribe(
+    template <typename Arg0, typename... Args>
+    void acquired_async_unsubscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
+        Arg0&& arg0,
         Args&&... args) {
-        acquired_async_unsubscribe_imp(packet_id, topic_name, std::forward<Args>(args)...);
+        acquired_async_unsubscribe_imp(packet_id, topic_name, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
     }
 
     /**
@@ -3791,15 +3765,13 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718066
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0
-    >::type
-    acquired_async_unsubscribe(
+    template <typename Arg0, typename... Args>
+    void acquired_async_unsubscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
+        Arg0&& arg0,
         Args&&... args) {
-        acquired_async_unsubscribe_imp(packet_id, topic_name, std::forward<Args>(args)...);
+        acquired_async_unsubscribe_imp(packet_id, topic_name, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
     }
 
     /**
@@ -3957,15 +3929,14 @@ public:
      *        and the last one is a callback function that is called when async operation will finish.
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718068
      */
-    template <typename... Args>
-    typename std::enable_if<
-        sizeof...(Args) != 0
-    >::type
-    async_suback(
+    template <typename Arg0, typename... Args>
+    void async_suback(
         packet_id_t packet_id,
-        std::uint8_t qos, Args&&... args) {
+        std::uint8_t qos,
+        Arg0&& arg0,
+        Args&&... args) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
-        async_suback_imp(packet_id, qos, std::forward<Args>(args)...);
+        async_suback_imp(packet_id, qos, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
     }
 
     /**
