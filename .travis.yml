@@ -18,16 +18,16 @@ matrix:
   include:
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
     - os: linux
       compiler: clang
-      env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
       addons:
         apt:
           sources:
@@ -47,7 +47,7 @@ matrix:
     - os: linux
       sudo: required
       compiler: clang
-      env: FLAGS="-DMQTT_NO_TLS=OFF  -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON" CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer" LDFLAGS="-Wno-ignored-qualifiers -fsanitize=address" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_NO_TLS=OFF  -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON" CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fsanitize=address -fno-omit-frame-pointer" LDFLAGS="-Wno-ignored-qualifiers -fsanitize=address" MAKEFLAGS="-j2"
       addons:
         apt:
           sources:
@@ -67,7 +67,7 @@ matrix:
             - boost1.67
     - os: linux
       compiler: gcc
-      env: FLAGS="-DMQTT_NO_TLS=ON -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_NO_TLS=ON -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
       addons:
         apt:
           sources:
@@ -84,7 +84,7 @@ matrix:
     - os: linux
       sudo: required
       compiler: gcc
-      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=OFF" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=OFF" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
       addons:
         apt:
           sources:

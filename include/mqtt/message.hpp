@@ -51,7 +51,7 @@ public:
      * @brief Create empty header_packet_id_message.
      */
     header_only_message(std::uint8_t type, std::uint8_t flags)
-        : message_ { make_fixed_header(type, flags), 0 }
+        : message_ { static_cast<char>(make_fixed_header(type, flags)), 0 }
     {}
 
     /**
@@ -97,7 +97,7 @@ public:
      * @brief Create empty header_packet_id_message.
      */
     basic_header_packet_id_message(std::uint8_t type, std::uint8_t flags, typename packet_id_type<PacketIdBytes>::type packet_id)
-        : message_ { make_fixed_header(type, flags), PacketIdBytes }
+        : message_ { static_cast<char>(make_fixed_header(type, flags)), PacketIdBytes }
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(message_, packet_id);
     }
@@ -233,7 +233,7 @@ class connack_message {
 public:
     connack_message(bool session_present, std::uint8_t return_code)
         : message_ {
-              make_fixed_header(control_packet_type::connack, 0b0000),
+                    static_cast<char>(make_fixed_header(control_packet_type::connack, 0b0000)),
               0b0010,
               static_cast<char>(session_present ? 1 : 0),
               static_cast<char>(return_code)
@@ -283,7 +283,7 @@ public:
         boost::optional<std::string> const& user_name,
         boost::optional<std::string> const& password
     )
-        : fixed_header_(make_fixed_header(control_packet_type::connect, 0b0000)),
+        : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::connect, 0b0000))),
           connect_flags_(0),
           // protocol name length, protocol name, protocol level, connect flag, client id length, client id, keep alive
           remaining_length_(
@@ -413,7 +413,7 @@ public:
 
         ret.reserve(size());
 
-        ret.push_back(fixed_header_);
+        ret.push_back(static_cast<char>(fixed_header_));
         ret.append(remaining_length_buf_.data(), remaining_length_buf_.size());
         ret.append(protocol_name_and_level_.data(), protocol_name_and_level_.size());
         ret.push_back(connect_flags_);
@@ -477,7 +477,7 @@ public:
         typename packet_id_type<PacketIdBytes>::type packet_id,
         as::const_buffer const& payload
     )
-        : fixed_header_(make_fixed_header(control_packet_type::publish, 0b0000)),
+        : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::publish, 0b0000))),
           topic_name_(topic_name),
           topic_name_length_buf_ { MQTT_16BITNUM_TO_BYTE_SEQ(get_size(topic_name)) },
           payload_(payload),
@@ -502,14 +502,14 @@ public:
     template <typename Iterator>
     basic_publish_message(Iterator b, Iterator e) {
         if (b >= e) throw remaining_length_error();
-        fixed_header_ = *b;
+        fixed_header_ = static_cast<std::uint8_t>(*b);
         auto qos = publish::get_qos(fixed_header_);
         ++b;
 
         if (b + 4 >= e) throw remaining_length_error();
         auto len_consumed = remaining_length(b, b + 4);
         remaining_length_ = std::get<0>(len_consumed);
-        auto consumed = std::get<1>(len_consumed);
+        auto consumed = static_cast<std::string::difference_type>(std::get<1>(len_consumed));
 
         std::copy(b, b + consumed, std::back_inserter(remaining_length_buf_));
         b += consumed;
@@ -538,7 +538,7 @@ public:
             break;
         };
 
-        payload_ = as::buffer(&*b, std::distance(b, e));
+        payload_ = as::buffer(&*b, static_cast<std::size_t>(std::distance(b, e)));
     }
 
     /**
@@ -589,7 +589,7 @@ public:
 
         ret.reserve(size());
 
-        ret.push_back(fixed_header_);
+        ret.push_back(static_cast<char>(fixed_header_));
         ret.append(remaining_length_buf_.data(), remaining_length_buf_.size());
 
         ret.append(topic_name_length_buf_.data(), topic_name_length_buf_.size());
@@ -678,7 +678,7 @@ private:
     }
 
 private:
-    char fixed_header_;
+    std::uint8_t fixed_header_;
     as::const_buffer topic_name_;
     boost::container::static_vector<char, 2> topic_name_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
@@ -710,7 +710,7 @@ public:
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
         typename packet_id_type<PacketIdBytes>::type packet_id
     )
-        : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::subscribe, 0b0010))),
+        : fixed_header_(static_cast<char>(static_cast<char>(make_fixed_header(control_packet_type::subscribe, 0b0010)))),
           remaining_length_(PacketIdBytes)
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
@@ -780,7 +780,7 @@ public:
 
         ret.reserve(size());
 
-        ret.push_back(fixed_header_);
+        ret.push_back(static_cast<char>(fixed_header_));
         ret.append(remaining_length_buf_.data(), remaining_length_buf_.size());
 
         ret.append(packet_id_.data(), packet_id_.size());
@@ -788,7 +788,7 @@ public:
         for (auto const& e : entries_) {
             ret.append(e.topic_name_length_buf.data(), e.topic_name_length_buf.size());
             ret.append(get_pointer(e.topic_name), get_size(e.topic_name));
-            ret.push_back(e.qos);
+            ret.push_back(static_cast<char>(e.qos));
         }
 
 
@@ -812,7 +812,7 @@ public:
         std::vector<std::uint8_t> const& params,
         typename packet_id_type<PacketIdBytes>::type packet_id
     )
-        : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::suback, 0b0000))),
+        : fixed_header_(static_cast<char>(static_cast<char>(make_fixed_header(control_packet_type::suback, 0b0000)))),
           remaining_length_(params.size() + PacketIdBytes)
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
@@ -862,7 +862,7 @@ public:
 
         ret.reserve(size());
 
-        ret.push_back(fixed_header_);
+        ret.push_back(static_cast<char>(fixed_header_));
         ret.append(remaining_length_buf_.data(), remaining_length_buf_.size());
 
         ret.append(packet_id_.data(), packet_id_.size());
@@ -963,7 +963,7 @@ public:
         std::string ret;
         ret.reserve(size());
 
-        ret.push_back(fixed_header_);
+        ret.push_back(static_cast<char>(fixed_header_));
 
         ret.append(remaining_length_buf_.data(), remaining_length_buf_.size());
 

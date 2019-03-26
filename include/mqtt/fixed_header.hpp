@@ -12,10 +12,10 @@
 namespace mqtt {
 
 inline constexpr
-char make_fixed_header(std::uint8_t type, std::uint8_t flags) {
+std::uint8_t make_fixed_header(std::uint8_t type, std::uint8_t flags) {
     return
-        static_cast<char>(
-            (static_cast<std::uint8_t>(type) << 4) |
+        static_cast<std::uint8_t>(
+            (type << 4) |
             (flags & 0x0f)
         );
 }

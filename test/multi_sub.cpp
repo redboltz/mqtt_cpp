@@ -17,7 +17,7 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
         std::uint16_t pid_sub;
         std::uint16_t pid_unsub;
 
-        int order = 0;
+        std::size_t order = 0;
 
         std::vector<std::string> const expected = {
             // connect
@@ -168,7 +168,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
         if (++close_count == 2) s.close();
     };
 
-    int order1 = 0;
+    std::size_t order1 = 0;
 
     std::vector<std::string> const expected1 = {
         // connect
@@ -279,7 +279,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
     std::uint16_t pid_sub2;
     std::uint16_t pid_unsub2;
 
-    int order2 = 0;
+    std::size_t order2 = 0;
 
     std::vector<std::string> const expected2 = {
         // connect
@@ -409,9 +409,9 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
     c1->set_client_id("cid1");
     c2->set_client_id("cid2");
     c3->set_client_id("cid3");
-    int order1 = 0;
-    int order2 = 0;
-    int order3 = 0;
+    std::size_t order1 = 0;
+    std::size_t order2 = 0;
+    std::size_t order3 = 0;
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 

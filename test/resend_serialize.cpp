@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
     std::uint16_t pid_pub;
 
-    int order = 0;
+    std::size_t order = 0;
 
     std::vector<std::string> const expected = {
         // connect
@@ -291,7 +291,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 
     std::uint16_t pid_pub;
 
-    int order = 0;
+    std::size_t order = 0;
 
     std::vector<std::string> const expected = {
         // connect
@@ -461,7 +461,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 
     std::uint16_t pid_pub;
 
-    int order = 0;
+    std::size_t order = 0;
 
     std::vector<std::string> const expected = {
         // connect
@@ -639,7 +639,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     std::uint16_t pid_pub1;
     std::uint16_t pid_pub2;
 
-    int order = 0;
+    std::size_t order = 0;
 
     std::vector<std::string> const expected = {
         // connect

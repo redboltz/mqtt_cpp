@@ -29,8 +29,10 @@ std::uint16_t make_uint16_t(It b, It e) {
     auto b1 = b++;
     auto b2 = b++;
     return
-        (static_cast<std::uint16_t>(*b1) & 0xff) << 8 |
-        (static_cast<std::uint16_t>(*b2) & 0xff);
+        static_cast<std::uint16_t>(
+            (static_cast<std::uint16_t>(*b1) & 0xff) << 8 |
+            (static_cast<std::uint16_t>(*b2) & 0xff)
+        );
 }
 
 } // namespace mqtt
