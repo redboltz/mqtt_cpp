@@ -18,6 +18,7 @@
 #include <boost/multi_index/identity.hpp>
 
 #include <mqtt_server_cpp.hpp>
+#include <mqtt/optional.hpp>
 
 #include "test_settings.hpp"
 #include "visitor_util.hpp"
@@ -26,7 +27,7 @@
 namespace mi = boost::multi_index;
 namespace as = boost::asio;
 
-using con_sp_t = boost::variant<
+using con_sp_t = mqtt::variant<
     std::shared_ptr<mqtt::server<>::endpoint_t>
 #if !defined(MQTT_NO_TLS)
     ,
@@ -81,9 +82,9 @@ public:
         ep.set_connect_handler(
             [&]
             (std::string const& client_id,
-             boost::optional<std::string> const& /*username*/,
-             boost::optional<std::string> const& /*password*/,
-             boost::optional<mqtt::will> will,
+             mqtt::optional<std::string> const& /*username*/,
+             mqtt::optional<std::string> const& /*password*/,
+             mqtt::optional<mqtt::will> will,
              bool clean_session,
              std::uint16_t /*keep_alive*/) {
                 if (client_id.empty() && !clean_session) {
@@ -99,7 +100,7 @@ public:
             (){
                 if (delay_disconnect_) {
                     std::weak_ptr<Endpoint> wp(ep.shared_from_this());
-                    tim_disconnect_.expires_from_now(delay_disconnect_.get());
+                    tim_disconnect_.expires_from_now(delay_disconnect_.value());
                     tim_disconnect_.async_wait(
                         [&, wp](boost::system::error_code const& ec) {
                             if (auto sp = wp.lock()) {
@@ -137,7 +138,7 @@ public:
         ep.set_publish_handler(
             [&]
             (std::uint8_t header,
-             boost::optional<typename Endpoint::packet_id_t> /*packet_id*/,
+             mqtt::optional<typename Endpoint::packet_id_t> /*packet_id*/,
              std::string topic_name,
              std::string contents){
                 std::uint8_t qos = mqtt::publish::get_qos(header);
@@ -202,13 +203,13 @@ private:
         bool clean_session,
         con_sp_t const& spep,
         std::string const& client_id,
-        boost::optional<mqtt::will> will) {
+        mqtt::optional<mqtt::will> will) {
         auto it_ret = cons_.emplace(client_id, spep);
         if (!std::get<1>(it_ret)) {
             pending_.emplace_back(clean_session, spep, client_id, std::move(will));
             return false;
         }
-        auto cid = boost::apply_visitor(
+        auto cid = mqtt::visit(
             make_lambda_visitor<std::string>(
                 [&](auto const& con) {
                     return con->client_id();
@@ -224,9 +225,9 @@ private:
         bool clean_session,
         con_sp_t const& spep,
         std::string const& client_id,
-        boost::optional<mqtt::will> will) {
+        mqtt::optional<mqtt::will> will) {
         if (clean_session) {
-            boost::apply_visitor(
+            mqtt::visit(
                 make_lambda_visitor<void>(
                     [&](auto& con) {
                         con->connack(false, mqtt::connect_return_code::accepted);
@@ -241,7 +242,7 @@ private:
             {
                 auto it = sessions_.find(client_id);
                 if (it == sessions_.end()) {
-                    boost::apply_visitor(
+                    mqtt::visit(
                         make_lambda_visitor<void>(
                             [&](auto& con) {
                                 con->connack(false, mqtt::connect_return_code::accepted);
@@ -252,7 +253,7 @@ private:
                 }
                 else {
                     sessions_.erase(it);
-                    boost::apply_visitor(
+                    mqtt::visit(
                         make_lambda_visitor<void>(
                             [&](auto& con) {
                                 con->connack(true, mqtt::connect_return_code::accepted);
@@ -272,7 +273,7 @@ private:
                 r.first = subsessions_.erase(r.first);
             }
             for (auto const& d : data) {
-                boost::apply_visitor(
+                mqtt::visit(
                     make_lambda_visitor<void>(
                         [&](auto& con) {
                             con->publish(
@@ -289,7 +290,7 @@ private:
             }
         }
         if (will) {
-            will_.emplace(spep, std::move(will.get()));
+            will_.emplace(spep, std::move(will.value()));
         }
     }
 
@@ -302,7 +303,7 @@ private:
             auto const& idx = subs_.get<tag_topic>();
             auto r = idx.equal_range(*topic);
             for (; r.first != r.second; ++r.first) {
-                boost::apply_visitor(
+                mqtt::visit(
                     make_lambda_visitor<void>(
                         [&](auto& con) {
                             con->publish(
@@ -531,12 +532,12 @@ private:
             bool clean_session,
             con_sp_t const& spep,
             std::string const& client_id,
-            boost::optional<mqtt::will> will)
+            mqtt::optional<mqtt::will> will)
             : clean_session(clean_session), spep(spep), client_id(client_id), will(std::move(will)) {}
         bool clean_session;
         con_sp_t spep;
         std::string const& client_id;
-        boost::optional<mqtt::will> will;
+        mqtt::optional<mqtt::will> will;
     };
     using mi_pending = mi::multi_index_container<
         pending,
@@ -547,7 +548,7 @@ private:
 
     as::io_service& ios_;
     as::deadline_timer tim_disconnect_;
-    boost::optional<boost::posix_time::time_duration> delay_disconnect_;
+    mqtt::optional<boost::posix_time::time_duration> delay_disconnect_;
     mi_cid_con cons_;
     mi_sub_con subs_;
     std::set<std::string> sessions_;

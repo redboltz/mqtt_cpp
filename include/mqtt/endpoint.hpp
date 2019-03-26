@@ -48,6 +48,7 @@
 #include <mqtt/two_byte_util.hpp>
 #include <mqtt/four_byte_util.hpp>
 #include <mqtt/packet_id_type.hpp>
+#include <mqtt/optional.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -164,9 +165,9 @@ public:
      */
     using connect_handler = std::function<
         bool(std::string const& client_id,
-             boost::optional<std::string> const& username,
-             boost::optional<std::string> const& password,
-             boost::optional<will> will,
+             mqtt::optional<std::string> const& username,
+             mqtt::optional<std::string> const& password,
+             mqtt::optional<will> will,
              bool clean_session,
              std::uint16_t keep_alive)>;
 
@@ -192,7 +193,7 @@ public:
      *        You can check the fixed header using mqtt::publish functions.
      * @param packet_id
      *        packet identifier<BR>
-     *        If received publish's QoS is 0, packet_id is boost::none.<BR>
+     *        If received publish's QoS is 0, packet_id is mqtt::nullopt.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718039<BR>
      *        3.3.2  Variable header
      * @param topic_name
@@ -202,7 +203,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using publish_handler = std::function<bool(std::uint8_t fixed_header,
-                                               boost::optional<packet_id_t> packet_id,
+                                               mqtt::optional<packet_id_t> packet_id,
                                                std::string topic_name,
                                                std::string contents)>;
 
@@ -276,12 +277,12 @@ public:
      *        3.9.2 Variable header
      * @param qoss
      *        Collection of QoS that is corresponding to subscribed topic order.<BR>
-     *        If subscription is failure, the value is boost::none.<BR>
+     *        If subscription is failure, the value is mqtt::nullopt.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718071<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using suback_handler = std::function<bool(packet_id_t packet_id,
-                                              std::vector<boost::optional<std::uint8_t>> qoss)>;
+                                              std::vector<mqtt::optional<std::uint8_t>> qoss)>;
 
     /**
      * @brief Unsubscribe handler
@@ -4315,15 +4316,15 @@ private:
     std::size_t connect_remaining_length() const {
         std::size_t remaining_length = 10; // variable header
         if (user_name_) {
-            remaining_length += 2 + user_name_.get().size();
+            remaining_length += 2 + user_name_.value().size();
         }
         if (password_) {
-            remaining_length += 2 + password_.get().size();
+            remaining_length += 2 + password_.value().size();
         }
         remaining_length += 2 + client_id_.size();
         if (will_) {
-            remaining_length += 2 + will_.get().topic().size();
-            remaining_length += 2 + will_.get().message().size();
+            remaining_length += 2 + will_.value().topic().size();
+            remaining_length += 2 + will_.value().message().size();
         }
         return remaining_length;
     }
@@ -4989,7 +4990,7 @@ private:
         i += client_id_length;
 
         clean_session_ = connect_flags::has_clean_session(byte8);
-        boost::optional<will> w;
+        mqtt::optional<will> w;
         if (connect_flags::has_will_flag(byte8)) {
 
             if (remaining_length_ < i + 2) {
@@ -5032,7 +5033,7 @@ private:
                      connect_flags::will_qos(byte8));
         }
 
-        boost::optional<std::string> user_name;
+        mqtt::optional<std::string> user_name;
         if (connect_flags::has_user_name_flag(byte8)) {
 
             if (remaining_length_ < i + 2) {
@@ -5048,14 +5049,14 @@ private:
                 return false;
             }
             user_name = std::string(payload_.data() + i, user_name_length);
-            if (utf8string::validate_contents(user_name.get()) != utf8string::validation::well_formed) {
+            if (utf8string::validate_contents(user_name.value()) != utf8string::validation::well_formed) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
                 return false;
             }
             i += user_name_length;
         }
 
-        boost::optional<std::string> password;
+        mqtt::optional<std::string> password;
         if (connect_flags::has_password_flag(byte8)) {
 
             if (remaining_length_ < i + 2) {
@@ -5144,7 +5145,7 @@ private:
         }
         i += topic_name_length;
 
-        boost::optional<packet_id_t> packet_id;
+        mqtt::optional<packet_id_t> packet_id;
         auto qos = publish::get_qos(fixed_header_);
         switch (qos) {
         case qos::at_most_once:
@@ -5377,13 +5378,13 @@ private:
             LockGuard<Mutex> lck (store_mtx_);
             packet_id_.erase(packet_id);
         }
-        std::vector<boost::optional<std::uint8_t>> results;
+        std::vector<mqtt::optional<std::uint8_t>> results;
         results.reserve(payload_.size() - sizeof(packet_id_t));
         auto it = payload_.cbegin() + sizeof(packet_id_t);
         auto end = payload_.cend();
         for (; it != end; ++it) {
             if (*it & 0b10000000) {
-                results.push_back(boost::none);
+                results.push_back(mqtt::nullopt);
             }
             else {
                 results.push_back(static_cast<std::uint8_t>(*it));
@@ -6062,7 +6063,7 @@ private:
     std::atomic<bool> mqtt_connected_;
     std::string client_id_;
     bool clean_session_;
-    boost::optional<will> will_;
+    mqtt::optional<will> will_;
     char buf_;
     std::uint8_t fixed_header_;
     std::size_t remaining_length_multiplier_;
@@ -6090,8 +6091,8 @@ private:
     serialize_remove_handler h_serialize_remove_;
     pre_send_handler h_pre_send_;
     is_valid_length_handler h_is_valid_length_;
-    boost::optional<std::string> user_name_;
-    boost::optional<std::string> password_;
+    mqtt::optional<std::string> user_name_;
+    mqtt::optional<std::string> password_;
     Mutex store_mtx_;
     mi_store store_;
     std::set<packet_id_t> qos2_publish_handled_;

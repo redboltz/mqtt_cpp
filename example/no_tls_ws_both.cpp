@@ -13,6 +13,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include <mqtt_client_cpp.hpp>
+#include <mqtt/optional.hpp>
 
 template <typename Client, typename Disconnect>
 void client_proc(
@@ -73,7 +74,7 @@ void client_proc(
         });
     c->set_suback_handler(
         [&]
-        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results){
+        (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results){
             std::cout << "[client] suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : results) {
                 if (e) {
@@ -95,7 +96,7 @@ void client_proc(
     c->set_publish_handler(
         [&]
         (std::uint8_t header,
-         boost::optional<packet_id_t> packet_id,
+         mqtt::optional<packet_id_t> packet_id,
          std::string topic_name,
          std::string contents){
             std::cout << "[client] publish received. "
@@ -196,9 +197,9 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
             ep.set_connect_handler(
                 [&]
                 (std::string const& client_id,
-                 boost::optional<std::string> const& username,
-                 boost::optional<std::string> const& password,
-                 boost::optional<mqtt::will>,
+                 mqtt::optional<std::string> const& username,
+                 mqtt::optional<std::string> const& password,
+                 mqtt::optional<mqtt::will>,
                  bool clean_session,
                  std::uint16_t keep_alive) {
                     std::cout << "[server]client_id    : " << client_id << std::endl;
@@ -244,7 +245,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
             ep.set_publish_handler(
                 [&]
                 (std::uint8_t header,
-                 boost::optional<packet_id_t> packet_id,
+                 mqtt::optional<packet_id_t> packet_id,
                  std::string topic_name,
                  std::string contents){
                     std::uint8_t qos = mqtt::publish::get_qos(header);

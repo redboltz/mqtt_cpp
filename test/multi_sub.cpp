@@ -7,6 +7,8 @@
 #include "test_main.hpp"
 #include "combi_test.hpp"
 
+#include <mqtt/optional.hpp>
+
 BOOST_AUTO_TEST_SUITE(test_multi_sub)
 
 BOOST_AUTO_TEST_CASE( multi_channel ) {
@@ -89,7 +91,7 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
             });
         c->set_suback_handler(
             [&order, &current, &c, &pid_sub]
-            (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+            (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 BOOST_TEST(packet_id == pid_sub);
@@ -111,7 +113,7 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
         c->set_publish_handler(
             [&order, &current, &c, &pid_unsub]
             (std::uint8_t header,
-             boost::optional<packet_id_t> packet_id,
+             mqtt::optional<packet_id_t> packet_id,
              std::string topic,
              std::string contents) {
                 BOOST_TEST(mqtt::publish::is_dup(header) == false);
@@ -235,7 +237,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
         });
     c1->set_suback_handler(
         [&order1, &current1, &c1, &sub_count, &pid_sub1]
-        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+        (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
             BOOST_TEST(current1() == "h_suback");
             ++order1;
             BOOST_TEST(packet_id == pid_sub1);
@@ -257,7 +259,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
     c1->set_publish_handler(
         [&order1, &current1, &c1, &pid_unsub1]
         (std::uint8_t header,
-         boost::optional<packet_id_t> packet_id,
+         mqtt::optional<packet_id_t> packet_id,
          std::string topic,
          std::string contents) {
             BOOST_TEST(current1() == "h_publish");
@@ -346,7 +348,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
         });
     c2->set_suback_handler(
         [&order2, &current2, &c2, &sub_count, &pid_sub2]
-        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+        (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
             BOOST_TEST(current2() == "h_suback");
             ++order2;
             BOOST_TEST(packet_id == pid_sub2);
@@ -368,7 +370,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
     c2->set_publish_handler(
         [&order2, &current2, &c2, &pid_unsub2]
         (std::uint8_t header,
-         boost::optional<packet_id_t> packet_id,
+         mqtt::optional<packet_id_t> packet_id,
          std::string topic,
          std::string contents) {
             BOOST_TEST(current2() == "h_publish");
@@ -513,7 +515,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
         });
     c1->set_suback_handler(
         [&order1, &current1, &c1ready, &c2ready, &c3ready, &c3, &pid_sub1, &pid_pub3]
-        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+        (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
             BOOST_TEST(current1() == "h_suback");
             ++order1;
             BOOST_TEST(packet_id == pid_sub1);
@@ -538,7 +540,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
     c1->set_publish_handler(
         [&order1, &current1, &c1, &pid_unsub1]
         (std::uint8_t header,
-         boost::optional<packet_id_t> packet_id,
+         mqtt::optional<packet_id_t> packet_id,
          std::string topic,
          std::string contents) {
             BOOST_TEST(current1() == "h_publish");
@@ -580,7 +582,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
         });
     c2->set_suback_handler(
         [&order2, &current2, &c1ready, &c2ready, &c3ready, &c3, &pid_sub2, &pid_pub3]
-        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+        (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
             BOOST_TEST(current2() == "h_suback");
             ++order2;
             BOOST_TEST(packet_id == pid_sub2);
@@ -605,7 +607,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
     c2->set_publish_handler(
         [&order2, &current2, &c2, &pid_unsub2]
         (std::uint8_t header,
-         boost::optional<packet_id_t> packet_id,
+         mqtt::optional<packet_id_t> packet_id,
          std::string topic,
          std::string contents) {
             BOOST_TEST(current2() == "h_publish");

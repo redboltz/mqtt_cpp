@@ -7,6 +7,8 @@
 #include "test_main.hpp"
 #include "combi_test.hpp"
 
+#include <mqtt/optional.hpp>
+
 BOOST_AUTO_TEST_SUITE(test_length_check)
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
@@ -65,7 +67,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 c->publish_at_most_once("topic1", "topic1_contents");
@@ -74,7 +76,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
         c->set_publish_handler(
             []
             (std::uint8_t /*header*/,
-             boost::optional<packet_id_t> ,
+             mqtt::optional<packet_id_t> ,
              std::string /*topic*/,
              std::string /*contents*/) {
                 BOOST_CHECK(false);
