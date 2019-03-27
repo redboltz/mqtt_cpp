@@ -38,8 +38,12 @@ ENDIF ()
 SET (Boost_USE_STATIC_LIBS        OFF) # only find static libs
 SET (Boost_USE_MULTITHREADED      ON)
 # SET (Boost_USE_STATIC_RUNTIME    OFF)
-FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS chrono timer unit_test_framework system)
+FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS system)
 FIND_PACKAGE (Threads)
+
+IF(BUILD_TESTS)
+    FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS chrono timer unit_test_framework)
+ENDIF()
 
 IF (NOT MQTT_BEAST_INCLUDE_DIR)
     IF (${Boost_VERSION} LESS 106600)
