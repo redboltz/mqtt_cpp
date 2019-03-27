@@ -525,7 +525,7 @@ public:
         return h_error_;
     }
 
-private:
+protected:
     client(as::io_service& ios,
            std::string host,
            std::string port,
@@ -557,6 +557,7 @@ private:
 #endif // !defined(MQTT_NO_TLS)
     }
 
+private:
     template <typename Strand>
     void setup_socket(std::unique_ptr<tcp_endpoint<as::ip::tcp::socket, Strand>>& socket) {
         socket.reset(new Socket(ios_));
