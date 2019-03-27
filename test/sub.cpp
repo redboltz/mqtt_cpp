@@ -7,6 +7,8 @@
 #include "test_main.hpp"
 #include "combi_test.hpp"
 
+#include <mqtt/optional.hpp>
+
 BOOST_AUTO_TEST_SUITE(test_sub)
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
@@ -62,7 +64,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 c->unsubscribe("topic1");
@@ -136,7 +138,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 c->unsubscribe("topic1", "topic2");
@@ -213,7 +215,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 std::vector<std::string> v
@@ -292,7 +294,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 c->async_unsubscribe("topic1", [](boost::system::error_code const&) {});
@@ -370,7 +372,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 c->async_unsubscribe(
@@ -454,7 +456,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
             });
         c->set_suback_handler(
             [&order, &current, &c]
-            (packet_id_t /*packet_id*/, std::vector<boost::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 std::vector<std::string> v

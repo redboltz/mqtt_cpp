@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
         });
     c2->set_suback_handler(
         [&order2, &current2, &c1_force_disconnect, &pid_sub2]
-        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+        (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
             BOOST_TEST(current2() == "h_suback");
             ++order2;
             BOOST_TEST(packet_id == pid_sub2);
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
     c2->set_publish_handler(
         [&order2, &current2, &c2, &pid_unsub2]
         (std::uint8_t header,
-         boost::optional<packet_id_t> packet_id,
+         mqtt::optional<packet_id_t> packet_id,
          std::string topic,
          std::string contents) {
             BOOST_TEST(current2() == "h_publish");
@@ -287,7 +287,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
         });
     c2->set_suback_handler(
         [&order2, &current2, &c1_force_disconnect, &pid_sub2]
-        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+        (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
             BOOST_TEST(current2() == "h_suback");
             ++order2;
             BOOST_TEST(packet_id == pid_sub2);
@@ -308,7 +308,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
     c2->set_publish_handler(
         [&order2, &current2, &c2, &pid_unsub2]
         (std::uint8_t header,
-         boost::optional<packet_id_t> packet_id,
+         mqtt::optional<packet_id_t> packet_id,
          std::string topic,
          std::string contents) {
             BOOST_TEST(current2() == "h_publish");
@@ -447,7 +447,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
         });
     c2->set_suback_handler(
         [&order2, &current2, &c1_force_disconnect, &pid_sub2]
-        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+        (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
             BOOST_TEST(current2() == "h_suback");
             ++order2;
             BOOST_TEST(packet_id == pid_sub2);
@@ -468,7 +468,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
     c2->set_publish_handler(
         [&order2, &current2]
         (std::uint8_t header,
-         boost::optional<packet_id_t> packet_id,
+         mqtt::optional<packet_id_t> packet_id,
          std::string topic,
          std::string contents) {
             BOOST_TEST(current2() == "h_publish");
@@ -617,7 +617,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
         });
     c2->set_suback_handler(
         [&order2, &current2, &c1_force_disconnect, &pid_sub2]
-        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+        (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
@@ -660,7 +660,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
     c2->set_publish_handler(
         [&order2, &current2, &c2, &pid_unsub2]
         (std::uint8_t header,
-         boost::optional<packet_id_t> packet_id,
+         mqtt::optional<packet_id_t> packet_id,
          std::string topic,
          std::string contents) {
             BOOST_TEST(mqtt::publish::is_dup(header) == false);

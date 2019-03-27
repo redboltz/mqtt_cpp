@@ -29,6 +29,7 @@
 #include <mqtt/utf8encoded_strings.hpp>
 #include <mqtt/four_byte_util.hpp>
 #include <mqtt/packet_id_type.hpp>
+#include <mqtt/optional.hpp>
 
 namespace mqtt {
 
@@ -279,9 +280,9 @@ public:
         std::uint16_t keep_alive_sec,
         std::string const& client_id,
         bool clean_session,
-        boost::optional<will> const& w,
-        boost::optional<std::string> const& user_name,
-        boost::optional<std::string> const& password
+        mqtt::optional<will> const& w,
+        mqtt::optional<std::string> const& user_name,
+        mqtt::optional<std::string> const& password
     )
         : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::connect, 0b0000))),
           connect_flags_(0),
@@ -303,33 +304,33 @@ public:
         detail::utf8string_check(client_id);
         if (clean_session) connect_flags_ |= connect_flags::clean_session;
         if (user_name) {
-            detail::utf8string_check(user_name.get());
+            detail::utf8string_check(user_name.value());
             connect_flags_ |= connect_flags::user_name_flag;
-            user_name_ = as::buffer(user_name.get());
+            user_name_ = as::buffer(user_name.value());
             add_uint16_t_to_buf(user_name_length_buf_, static_cast<std::uint16_t>(get_size(user_name_)));
 
             remaining_length_ += 2 + get_size(user_name_);
         }
         if (password) {
             connect_flags_ |= connect_flags::password_flag;
-            password_ = as::buffer(password.get());
+            password_ = as::buffer(password.value());
             add_uint16_t_to_buf(password_length_buf_, static_cast<std::uint16_t>(get_size(password_)));
 
             remaining_length_ += 2 + get_size(password_);
         }
         if (w) {
             connect_flags_ |= connect_flags::will_flag;
-            if (w.get().retain()) connect_flags_ |= connect_flags::will_retain;
-            connect_flags::set_will_qos(connect_flags_, w.get().qos());
+            if (w.value().retain()) connect_flags_ |= connect_flags::will_retain;
+            connect_flags::set_will_qos(connect_flags_, w.value().qos());
 
-            detail::utf8string_check(w.get().topic());
-            will_topic_name_ = as::buffer(w.get().topic());
+            detail::utf8string_check(w.value().topic());
+            will_topic_name_ = as::buffer(w.value().topic());
             add_uint16_t_to_buf(
                 will_topic_name_length_buf_,
                 static_cast<std::uint16_t>(get_size(will_topic_name_))
             );
-            if (w.get().message().size() > 0xffffL) throw will_message_length_error();
-            will_message_ = as::buffer(w.get().message());
+            if (w.value().message().size() > 0xffffL) throw will_message_length_error();
+            will_message_ = as::buffer(w.value().message());
             add_uint16_t_to_buf(
                 will_message_length_buf_,
                 static_cast<std::uint16_t>(get_size(will_message_)));

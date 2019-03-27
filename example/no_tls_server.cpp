@@ -14,6 +14,7 @@
 #include <boost/multi_index/member.hpp>
 
 #include <mqtt_server_cpp.hpp>
+#include <mqtt/optional.hpp>
 
 namespace mi = boost::multi_index;
 
@@ -108,14 +109,14 @@ int main(int argc, char** argv) {
             ep.set_connect_handler(
                 [&]
                 (std::string const& client_id,
-                 boost::optional<std::string> const& username,
-                 boost::optional<std::string> const& password,
-                 boost::optional<mqtt::will>,
+                 mqtt::optional<std::string> const& username,
+                 mqtt::optional<std::string> const& password,
+                 mqtt::optional<mqtt::will>,
                  bool clean_session,
                  std::uint16_t keep_alive) {
                     std::cout << "client_id    : " << client_id << std::endl;
-                    std::cout << "username     : " << (username ? username.get() : "none") << std::endl;
-                    std::cout << "password     : " << (password ? password.get() : "none") << std::endl;
+                    std::cout << "username     : " << (username ? username.value() : "none") << std::endl;
+                    std::cout << "password     : " << (password ? password.value() : "none") << std::endl;
                     std::cout << "clean_session: " << std::boolalpha << clean_session << std::endl;
                     std::cout << "keep_alive   : " << keep_alive << std::endl;
                     connections.insert(ep.shared_from_this());
@@ -156,7 +157,7 @@ int main(int argc, char** argv) {
             ep.set_publish_handler(
                 [&]
                 (std::uint8_t header,
-                 boost::optional<packet_id_t> packet_id,
+                 mqtt::optional<packet_id_t> packet_id,
                  std::string topic_name,
                  std::string contents){
                     std::uint8_t qos = mqtt::publish::get_qos(header);

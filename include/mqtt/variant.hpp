@@ -25,19 +25,14 @@ namespace mqtt {
 template <typename... Types>
 using variant = std::variant<Types...>;
 
-template <typename Visitor, typename... Variants>
-constexpr auto visit(Visitor&& vis, Variants&&... vars) {
-    return std::visit(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
-}
+using std::visit;
 
 #else  // defined(MQTT_STD_VARIANT)
 
-template <typename... Types>
-using variant = boost::variant<Types...>;
+using boost::variant;
 
 template <typename Visitor, typename... Variants>
-constexpr auto visit(Visitor&& vis, Variants&&... vars)
-    -> decltype(boost::apply_visitor(std::forward<Visitor>(vis), std::forward<Variants>(vars)...))
+constexpr decltype(auto) visit(Visitor&& vis, Variants&&... vars)
 {
     return boost::apply_visitor(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
 }

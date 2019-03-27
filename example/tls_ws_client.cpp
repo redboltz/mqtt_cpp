@@ -11,6 +11,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include <mqtt_client_cpp.hpp>
+#include <mqtt/optional.hpp>
 
 int main(int argc, char** argv) {
     if (argc != 4) {
@@ -89,7 +90,7 @@ int main(int argc, char** argv) {
         });
     c->set_suback_handler(
         [&]
-        (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results){
+        (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results){
             std::cout << "suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : results) {
                 if (e) {
@@ -111,7 +112,7 @@ int main(int argc, char** argv) {
     c->set_publish_handler(
         [&]
         (std::uint8_t header,
-         boost::optional<packet_id_t> packet_id,
+         mqtt::optional<packet_id_t> packet_id,
          std::string topic_name,
          std::string contents){
             std::cout << "publish received. "

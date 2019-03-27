@@ -7,6 +7,8 @@
 #include "test_main.hpp"
 #include "combi_test.hpp"
 
+#include <mqtt/optional.hpp>
+
 BOOST_AUTO_TEST_SUITE(test_remaining_length)
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
@@ -89,7 +91,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
             });
         c->set_suback_handler(
             [&order, &current, &c, &pid_sub, &test_contents]
-            (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+            (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 BOOST_TEST(packet_id == pid_sub);
@@ -110,7 +112,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
         c->set_publish_handler(
             [&order, &current, &c, &pid_unsub, &test_contents]
             (std::uint8_t header,
-             boost::optional<packet_id_t> packet_id,
+             mqtt::optional<packet_id_t> packet_id,
              std::string topic,
              std::string contents) {
                 BOOST_TEST(current() == "h_publish");
@@ -211,7 +213,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
             });
         c->set_suback_handler(
             [&order, &current, &c, &pid_sub, &test_contents]
-            (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+            (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 BOOST_TEST(packet_id == pid_sub);
@@ -232,7 +234,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
         c->set_publish_handler(
             [&order, &current, &c, &pid_unsub, &test_contents]
             (std::uint8_t header,
-             boost::optional<packet_id_t> packet_id,
+             mqtt::optional<packet_id_t> packet_id,
              std::string topic,
              std::string contents) {
                 BOOST_TEST(current() == "h_publish");
@@ -335,7 +337,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
             });
         c->set_suback_handler(
             [&order, &current, &c, &pid_sub, &test_contents]
-            (packet_id_t packet_id, std::vector<boost::optional<std::uint8_t>> results) {
+            (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
                 BOOST_TEST(current() == "h_suback");
                 ++order;
                 BOOST_TEST(packet_id == pid_sub);
@@ -356,7 +358,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
         c->set_publish_handler(
             [&order, &current, &c, &pid_unsub, &test_contents]
             (std::uint8_t header,
-             boost::optional<packet_id_t> packet_id,
+             mqtt::optional<packet_id_t> packet_id,
              std::string topic,
              std::string contents) {
                 BOOST_TEST(current() == "h_publish");
