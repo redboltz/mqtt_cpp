@@ -8,6 +8,7 @@ OPTION(MQTT_USE_WS "Enable building WebSockets code" OFF)
 OPTION(MQTT_USE_STR_CHECK "Enable UTF8 String check" ON)
 OPTION(MQTT_STD_VARIANT "Use std::variant from C++17 instead of boost::variant" OFF)
 OPTION(MQTT_STD_OPTIONAL "Use std::optional from C++17 instead of boost::optional" OFF)
+OPTION(MQTT_STD_STRING_VIEW "Use std::string_view from C++17 instead of boost::string_view" OFF)
 
 IF ((CMAKE_VERSION VERSION_GREATER 3.1) OR
     (CMAKE_VERSION VERSION_EQUAL 3.1))
@@ -52,6 +53,15 @@ IF (MQTT_STD_OPTIONAL)
     SET (CMAKE_CXX_FLAGS "-DMQTT_STD_OPTIONAL ${CMAKE_CXX_FLAGS}")
 ELSE ()
     MESSAGE (STATUS "Using boost::optional instead of std::optional")
+ENDIF ()
+
+IF (MQTT_STD_STRING_VIEW)
+    SET(CMAKE_CXX_STANDARD 17)
+    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+    MESSAGE (STATUS "Using std::string_view instead of boost::string_view. Enables C++17!!!")
+    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_STRING_VIEW ${CMAKE_CXX_FLAGS}")
+ELSE ()
+    MESSAGE (STATUS "Using boost::string_view instead of std::string_view")
 ENDIF ()
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
