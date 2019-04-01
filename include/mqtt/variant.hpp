@@ -22,8 +22,7 @@ namespace mqtt {
 
 #if defined(MQTT_STD_VARIANT)
 
-template <typename... Types>
-using variant = std::variant<Types...>;
+using std::variant;
 
 using std::visit;
 

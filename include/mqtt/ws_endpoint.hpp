@@ -14,6 +14,7 @@
 #include <boost/beast/websocket.hpp>
 
 #include <mqtt/utility.hpp>
+#include <mqtt/string_view.hpp>
 
 namespace mqtt {
 
@@ -74,8 +75,8 @@ public:
 
     template<typename HandshakeHandler>
     void async_handshake(
-        boost::string_view const& host,
-        boost::string_view const& resource,
+        string_view const& host,
+        string_view const& resource,
         HandshakeHandler&& h) {
         ws_.async_handshake(host, resource, std::forward<HandshakeHandler>(h));
     }

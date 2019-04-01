@@ -30,6 +30,7 @@
 #include <mqtt/four_byte_util.hpp>
 #include <mqtt/packet_id_type.hpp>
 #include <mqtt/optional.hpp>
+#include <mqtt/string_view.hpp>
 
 namespace mqtt {
 
