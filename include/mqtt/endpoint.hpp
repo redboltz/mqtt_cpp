@@ -5948,15 +5948,14 @@ private:
     void do_async_write() {
         auto const& elem = queue_.front();
         auto const& mv = elem.message();
-        auto const& func = elem.handler();
         auto self = this->shared_from_this();
         if (h_pre_send_) h_pre_send_();
         async_write(
             *socket_,
             const_buffer_sequence(mv),
             write_completion_handler(
-                this->shared_from_this(),
-                func,
+                std::move(self),
+                elem.handler(),
                 mqtt::size<PacketIdBytes>(mv)
             )
         );
