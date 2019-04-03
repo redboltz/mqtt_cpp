@@ -655,7 +655,7 @@ private:
 #endif // defined(MQTT_NO_TLS)
 
     template <typename Iterator>
-    void connect_impl(Socket& socket, Iterator it, Iterator end, async_handler_t const& func = async_handler_t()) {
+    void connect_impl(Socket& socket, Iterator it, Iterator end, async_handler_t const& func) {
         auto self = this->shared_from_this();
         as::async_connect(
             socket.lowest_layer(), it, end,
