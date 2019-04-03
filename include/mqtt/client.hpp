@@ -321,7 +321,7 @@ public:
 #endif // !defined(MQTT_NO_TLS)
 
     /**
-     * @brief Set a keep alive second and a pimg milli seconds.
+     * @brief Set a keep alive second and a ping milli seconds.
      * @param keep_alive_sec keep alive seconds
      * @param ping_ms ping sending interval
      *
@@ -344,7 +344,7 @@ public:
     }
 
     /**
-     * @brief Set a keep alive second and a pimg milli seconds.
+     * @brief Set a keep alive second and a ping milli seconds.
      * @param keep_alive_sec keep alive seconds
      *
      * Call set_keep_alive_sec_ping_ms(keep_alive_sec, keep_alive_sec * 1000 / 2)<BR>
