@@ -209,14 +209,6 @@ private:
             pending_.emplace_back(clean_session, spep, client_id, std::move(will));
             return false;
         }
-        auto cid = mqtt::visit(
-            make_lambda_visitor<std::string>(
-                [&](auto const& con) {
-                    return con->client_id();
-                }
-            ),
-            spep
-        );
         connect_proc(clean_session, spep, client_id, std::move(will));
         return true;
     }
