@@ -5971,11 +5971,11 @@ private:
 
     struct write_completion_handler {
         write_completion_handler(
-            std::shared_ptr<this_type> const& self,
-            async_handler_t const& func,
+            std::shared_ptr<this_type> self,
+            async_handler_t func,
             std::size_t expected)
-            :self_(self),
-             func_(func),
+            :self_(std::move(self)),
+             func_(std::move(func)),
              expected_(expected)
         {}
         void operator()(boost::system::error_code const& ec) const {
