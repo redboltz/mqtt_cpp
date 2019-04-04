@@ -138,9 +138,10 @@ public:
         ep.set_publish_handler(
             [&]
             (std::uint8_t header,
-             mqtt::optional<typename Endpoint::packet_id_t> /*packet_id*/,
+             mqtt::optional<typename Endpoint::packet_id_t> packet_id,
              std::string topic_name,
              std::string contents){
+                std::cout << packet_id.get() << " " << topic_name << " " << contents << std::endl;
                 std::uint8_t qos = mqtt::publish::get_qos(header);
                 bool is_retain = mqtt::publish::is_retain(header);
                 do_publish(
@@ -158,6 +159,7 @@ public:
                 res.reserve(entries.size());
                 for (auto const& e : entries) {
                     std::string const& topic = std::get<0>(e);
+                    std::cout << "subscribe: " << topic << std::endl;
                     std::uint8_t qos = std::get<1>(e);
                     res.emplace_back(qos);
                     subs_.emplace(std::make_shared<std::string>(topic), ep.shared_from_this(), qos);

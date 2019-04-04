@@ -5498,6 +5498,7 @@ private:
     }
 
     void send_puback(packet_id_t packet_id) {
+        std::cout << "send_puback" << std::endl;
         do_sync_write(basic_puback_message<PacketIdBytes>(packet_id));
         if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
     }
@@ -5580,6 +5581,7 @@ private:
     void send_subscribe(
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
         packet_id_t packet_id) {
+        std::cout << "send_subscribe" << std::endl;
         do_sync_write(basic_subscribe_message<PacketIdBytes>(params, packet_id));
     }
 

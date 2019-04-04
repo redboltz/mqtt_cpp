@@ -10,6 +10,8 @@ IF (NOT MQTT_NO_TLS)
         tls_client.cpp
         tls_server.cpp
         tls_both.cpp
+        subscribe.cpp
+        publish.cpp
     )
 ENDIF ()
 
