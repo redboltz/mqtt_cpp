@@ -3,6 +3,7 @@ PROJECT (mqtt_cpp)
 
 OPTION(BUILD_EXAMPLES "Enable building example applications" ON)
 OPTION(BUILD_TESTS "Enable building test applications" ON)
+OPTION(MQTT_USE_STATIC_BOOST "Statically link with boost libraries" OFF)
 OPTION(MQTT_NO_TLS "Disable building TLS code" ON)
 OPTION(MQTT_USE_WS "Enable building WebSockets code" OFF)
 OPTION(MQTT_USE_STR_CHECK "Enable UTF8 String check" ON)
@@ -13,6 +14,12 @@ OPTION(MQTT_STD_STRING_VIEW "Use std::string_view from C++17 instead of boost::s
 IF ((CMAKE_VERSION VERSION_GREATER 3.1) OR
     (CMAKE_VERSION VERSION_EQUAL 3.1))
     CMAKE_POLICY(SET CMP0054 NEW)
+ENDIF ()
+
+IF (MQTT_USE_STATIC_BOOST)
+    SET (Boost_USE_STATIC_LIBS ON) # only find static libs
+ELSE ()
+    SET (Boost_USE_STATIC_LIBS OFF) # only find shared libs
 ENDIF ()
 
 IF (MQTT_NO_TLS)
@@ -68,9 +75,7 @@ IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     SET (CMAKE_CXX_FLAGS "/bigobj ${CMAKE_CXX_FLAGS}")
 ENDIF ()
 
-SET (Boost_USE_STATIC_LIBS        OFF) # only find static libs
 SET (Boost_USE_MULTITHREADED      ON)
-# SET (Boost_USE_STATIC_RUNTIME    OFF)
 FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS system)
 FIND_PACKAGE (Threads)
 
