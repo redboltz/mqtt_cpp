@@ -169,8 +169,8 @@ public:
                     auto it = retains_.find(topic);
                     if (it != retains_.end()) {
                         ep.publish(
-                            as::buffer(*it->topic),
-                            as::buffer(*it->contents),
+                            as::const_buffer(*it->topic),
+                            as::const_buffer(*it->contents),
                             [t = it->topic, c = it->contents] {},
                             std::min(it->qos, qos),
                             true);
@@ -269,8 +269,8 @@ private:
                     make_lambda_visitor<void>(
                         [&](auto& con) {
                             con->publish(
-                                as::buffer(*d.topic),
-                                as::buffer(*d.contents),
+                                as::const_buffer(*d.topic),
+                                as::const_buffer(*d.contents),
                                 [t = d.topic, c = d.contents] {},
                                 d.qos,
                                 true
@@ -299,8 +299,8 @@ private:
                     make_lambda_visitor<void>(
                         [&](auto& con) {
                             con->publish(
-                                as::buffer(*topic),
-                                as::buffer(*contents),
+                                as::const_buffer(*topic),
+                                as::const_buffer(*contents),
                                 [topic, contents] {},
                                 std::min(r.first->qos, qos),
                                 false
