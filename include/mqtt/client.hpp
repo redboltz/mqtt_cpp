@@ -36,6 +36,15 @@
 #include <mqtt/endpoint.hpp>
 #include <mqtt/null_strand.hpp>
 
+#include <fstream>
+
+void keylog_cb(const SSL *ssl, const char *line)
+{
+  std::ofstream file;
+  file.open ("ssl-key.log");
+  file << line;
+}
+
 namespace mqtt {
 
 namespace as = boost::asio;
@@ -259,6 +268,9 @@ public:
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/load_verify_file.html
      */
     void set_ca_cert_file(std::string file) {
+        auto handle = ctx_.native_handle();
+        ::SSL_CTX_set_keylog_callback(handle, keylog_cb);
+
         ctx_.load_verify_file(std::move(file));
     }
 
