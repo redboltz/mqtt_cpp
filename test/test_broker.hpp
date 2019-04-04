@@ -218,43 +218,23 @@ private:
         con_sp_t const& spep,
         std::string const& client_id,
         mqtt::optional<mqtt::will> will) {
+        auto it = sessions_.find(client_id);
+        mqtt::visit(
+            make_lambda_visitor<void>(
+                [&](auto& con) {
+                    con->connack(!clean_session && it != sessions_.end(), mqtt::connect_return_code::accepted);
+                }
+            ),
+            spep
+        );
+        if (it != sessions_.end()) {
+            sessions_.erase(it);
+        }
+
         if (clean_session) {
-            mqtt::visit(
-                make_lambda_visitor<void>(
-                    [&](auto& con) {
-                        con->connack(false, mqtt::connect_return_code::accepted);
-                    }
-                ),
-                spep
-            );
-            sessions_.erase(client_id);
             subsessions_.erase(client_id);
         }
         else {
-            {
-                auto it = sessions_.find(client_id);
-                if (it == sessions_.end()) {
-                    mqtt::visit(
-                        make_lambda_visitor<void>(
-                            [&](auto& con) {
-                                con->connack(false, mqtt::connect_return_code::accepted);
-                            }
-                        ),
-                        spep
-                    );
-                }
-                else {
-                    sessions_.erase(it);
-                    mqtt::visit(
-                        make_lambda_visitor<void>(
-                            [&](auto& con) {
-                                con->connack(true, mqtt::connect_return_code::accepted);
-                            }
-                        ),
-                        spep
-                    );
-                }
-            }
             auto r = subsessions_.equal_range(client_id);
             std::vector<session_data> data;
             if (r.first != r.second) {
