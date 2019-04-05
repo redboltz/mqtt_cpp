@@ -6052,9 +6052,9 @@ private:
         }
         std::shared_ptr<this_type> self_;
         async_handler_t func_;
-        std::size_t expected_;
         std::size_t num_of_messages_;
-    };
+        std::size_t expected_;
+   };
 
 private:
     std::unique_ptr<Socket> socket_;
