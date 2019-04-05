@@ -206,7 +206,7 @@ private:
         mqtt::optional<mqtt::will> will) {
         auto it_ret = cons_.emplace(client_id, spep);
         if (!std::get<1>(it_ret)) {
-            pending_.emplace_back(clean_session, spep, client_id, std::move(will));
+            pending_.emplace(clean_session, spep, client_id, std::move(will));
             return false;
         }
         connect_proc(clean_session, spep, client_id, std::move(will));
@@ -350,14 +350,17 @@ private:
             }
         }
 
-        auto it = pending_.begin();
-        auto end = pending_.end();
-        while (it != end) {
-            if (try_connect(it->clean_session, it->spep, it->client_id, it->will)) {
-                it = pending_.erase(it);
-            }
-            else {
-                ++it;
+        // Connect the next pending connection for this client_id
+        {
+            auto& idx = pending_.get<tag_client_id>();
+            auto it = idx.find(client_id);
+            if(it != idx.end())
+            {
+                connect_proc(it->clean_session,
+                             std::move(it->spep),
+                             std::move(it->client_id),
+                             std::move(it->will));
+                idx.erase(it);
             }
         }
     }
@@ -511,10 +514,18 @@ private:
         std::string client_id;
         mqtt::optional<mqtt::will> will;
     };
+
     using mi_pending = mi::multi_index_container<
         pending,
         mi::indexed_by<
-            mi::sequenced<>
+            mi::ordered_non_unique<
+                mi::tag<tag_client_id>,
+                BOOST_MULTI_INDEX_MEMBER(pending, std::string, client_id)
+            >,
+            mi::ordered_unique<
+                mi::tag<tag_con>,
+                BOOST_MULTI_INDEX_MEMBER(pending, con_sp_t, spep)
+            >
         >
     >;
 
