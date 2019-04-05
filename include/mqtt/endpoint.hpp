@@ -5990,7 +5990,7 @@ private:
         auto end = [&] {
                        if (max_queue_send_count_ == 0) return queue_.cend();
                        if (max_queue_send_count_ >= queue_.size()) return queue_.cend();
-                       return start + max_queue_send_count_;
+                       return start + static_cast<typename decltype(start)::difference_type>(max_queue_send_count_);
                    } ();
 
         std::size_t total = 0;
@@ -6031,7 +6031,7 @@ private:
                         if (h) h(ec);
                     }
                 },
-                std::distance(start, end),
+                static_cast<std::size_t>(std::distance(start, end)),
                 total
             )
         );
