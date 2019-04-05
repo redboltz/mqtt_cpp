@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
 
     int count = 0;
     // Create no TLS client
-    auto c = mqtt::make_client(ios, argv[1], boost::lexical_cast<std::uint16_t>(argv[2]));
+    auto c = mqtt::make_sync_client(ios, argv[1], boost::lexical_cast<std::uint16_t>(argv[2]));
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
 
     auto disconnect = [&] {

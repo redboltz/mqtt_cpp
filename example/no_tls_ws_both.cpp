@@ -332,7 +332,7 @@ int main(int argc, char** argv) {
     std::uint16_t pid_sub1;
     std::uint16_t pid_sub2;
 
-    auto c = mqtt::make_client_ws(ios, "localhost", port);
+    auto c = mqtt::make_sync_client_ws(ios, "localhost", port);
 
     int count = 0;
     auto disconnect = [&] {

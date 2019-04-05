@@ -550,24 +550,26 @@ BOOST_AUTO_TEST_CASE( connect_invalid_will_topic ) {
 
 BOOST_AUTO_TEST_CASE( publish_overlength_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto&) {
-        try {
-            std::string tp(0x10000, 'a');
-            c->set_clean_session(true);
-            c->connect();
-            c->set_connack_handler(
-                [&]
-                (bool, std::uint8_t) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        std::string tp(0x10000, 'a');
+        c->set_clean_session(true);
+        c->connect();
+        c->set_connack_handler(
+            [&]
+            (bool, std::uint8_t) {
+                try {
                     c->publish(tp, "topic1_contents", mqtt::qos::at_most_once);
                     return true;
                 }
-            );
-            ios.run();
-            BOOST_CHECK(false);
-        }
-        catch (mqtt::utf8string_length_error const&) {
-            BOOST_CHECK(true);
-        }
+                catch (mqtt::utf8string_length_error const&) {
+                    BOOST_CHECK(true);
+                    s.close();
+                    c->force_disconnect();
+                    return false;
+                }
+            }
+        );
+        ios.run();
     };
     do_combi_test(test);
 #endif // MQTT_USE_STR_CHECK
@@ -575,24 +577,26 @@ BOOST_AUTO_TEST_CASE( publish_overlength_topic ) {
 
 BOOST_AUTO_TEST_CASE( publish_invalid_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto&) {
-        try {
-            std::string tp(1, '\0');
-            c->set_clean_session(true);
-            c->connect();
-            c->set_connack_handler(
-                [&]
-                (bool, std::uint8_t) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        std::string tp(1, '\0');
+        c->set_clean_session(true);
+        c->connect();
+        c->set_connack_handler(
+            [&]
+            (bool, std::uint8_t) {
+                try {
                     c->publish(tp, "topic1_contents", mqtt::qos::at_most_once);
                     return true;
                 }
-            );
-            ios.run();
-            BOOST_CHECK(false);
-        }
-        catch (mqtt::utf8string_contents_error const&) {
-            BOOST_CHECK(true);
-        }
+                catch (mqtt::utf8string_contents_error const&) {
+                    BOOST_CHECK(true);
+                    s.close();
+                    c->force_disconnect();
+                    return false;
+                }
+            }
+        );
+        ios.run();
     };
     do_combi_test(test);
 #endif // MQTT_USE_STR_CHECK
@@ -600,24 +604,26 @@ BOOST_AUTO_TEST_CASE( publish_invalid_topic ) {
 
 BOOST_AUTO_TEST_CASE( subscribe_overlength_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto&) {
-        try {
-            std::string tp(0x10000, 'a');
-            c->set_clean_session(true);
-            c->connect();
-            c->set_connack_handler(
-                [&]
-                (bool, std::uint8_t) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        std::string tp(0x10000, 'a');
+        c->set_clean_session(true);
+        c->connect();
+        c->set_connack_handler(
+            [&]
+            (bool, std::uint8_t) {
+                try {
                     c->subscribe(tp, mqtt::qos::at_most_once);
                     return true;
                 }
-            );
-            ios.run();
-            BOOST_CHECK(false);
-        }
-        catch (mqtt::utf8string_length_error const&) {
-            BOOST_CHECK(true);
-        }
+                catch (mqtt::utf8string_length_error const&) {
+                    BOOST_CHECK(true);
+                    s.close();
+                    c->force_disconnect();
+                    return false;
+                }
+            }
+        );
+        ios.run();
     };
     do_combi_test(test);
 #endif // MQTT_USE_STR_CHECK
@@ -625,24 +631,26 @@ BOOST_AUTO_TEST_CASE( subscribe_overlength_topic ) {
 
 BOOST_AUTO_TEST_CASE( subscribe_invalid_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto&) {
-        try {
-            std::string tp(1, '\0');
-            c->set_clean_session(true);
-            c->connect();
-            c->set_connack_handler(
-                [&]
-                (bool, std::uint8_t) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        std::string tp(1, '\0');
+        c->set_clean_session(true);
+        c->connect();
+        c->set_connack_handler(
+            [&]
+            (bool, std::uint8_t) {
+                try {
                     c->subscribe(tp, mqtt::qos::at_most_once);
                     return true;
                 }
-            );
-            ios.run();
-            BOOST_CHECK(false);
-        }
-        catch (mqtt::utf8string_contents_error const&) {
-            BOOST_CHECK(true);
-        }
+                catch (mqtt::utf8string_contents_error const&) {
+                    BOOST_CHECK(true);
+                    s.close();
+                    c->force_disconnect();
+                    return false;
+                }
+            }
+        );
+        ios.run();
     };
     do_combi_test(test);
 #endif // MQTT_USE_STR_CHECK
@@ -650,24 +658,26 @@ BOOST_AUTO_TEST_CASE( subscribe_invalid_topic ) {
 
 BOOST_AUTO_TEST_CASE( unsubscribe_overlength_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto&) {
-        try {
-            std::string tp(0x10000, 'a');
-            c->set_clean_session(true);
-            c->connect();
-            c->set_connack_handler(
-                [&]
-                (bool, std::uint8_t) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        std::string tp(0x10000, 'a');
+        c->set_clean_session(true);
+        c->connect();
+        c->set_connack_handler(
+            [&]
+            (bool, std::uint8_t) {
+                try {
                     c->unsubscribe(tp);
                     return true;
                 }
-            );
-            ios.run();
-            BOOST_CHECK(false);
-        }
-        catch (mqtt::utf8string_length_error const&) {
-            BOOST_CHECK(true);
-        }
+                catch (mqtt::utf8string_length_error const&) {
+                    BOOST_CHECK(true);
+                    s.close();
+                    c->force_disconnect();
+                    return false;
+                }
+            }
+        );
+        ios.run();
     };
     do_combi_test(test);
 #endif // MQTT_USE_STR_CHECK
@@ -675,24 +685,26 @@ BOOST_AUTO_TEST_CASE( unsubscribe_overlength_topic ) {
 
 BOOST_AUTO_TEST_CASE( unsubscribe_invalid_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_service& ios, auto& c, auto&) {
-        try {
-            std::string tp(1, '\0');
-            c->set_clean_session(true);
-            c->connect();
-            c->set_connack_handler(
-                [&]
-                (bool, std::uint8_t) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+        std::string tp(1, '\0');
+        c->set_clean_session(true);
+        c->connect();
+        c->set_connack_handler(
+            [&]
+            (bool, std::uint8_t) {
+                try {
                     c->unsubscribe(tp);
                     return true;
                 }
-            );
-            ios.run();
-            BOOST_CHECK(false);
-        }
-        catch (mqtt::utf8string_contents_error const&) {
-            BOOST_CHECK(true);
-        }
+                catch (mqtt::utf8string_contents_error const&) {
+                    BOOST_CHECK(true);
+                    s.close();
+                    c->force_disconnect();
+                    return false;
+                }
+            }
+        );
+        ios.run();
     };
     do_combi_test(test);
 #endif // MQTT_USE_STR_CHECK
