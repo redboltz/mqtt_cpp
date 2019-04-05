@@ -5969,6 +5969,7 @@ private:
                         if (h) h(ec);
                     }
                 },
+                queue_.size(),
                 total
             )
         );
@@ -5986,14 +5987,18 @@ private:
         write_completion_handler(
             std::shared_ptr<this_type> self,
             async_handler_t func,
+            std::size_t num_of_messages,
             std::size_t expected)
             :self_(std::move(self)),
              func_(std::move(func)),
+             num_of_messages_(num_of_messages),
              expected_(expected)
         {}
         void operator()(boost::system::error_code const& ec) const {
             if (func_) func_(ec);
-            self_->queue_.pop_front();
+            for (std::size_t i = 0; i != num_of_messages_; ++i) {
+                self_->queue_.pop_front();
+            }
             if (ec || // Error is handled by async_read.
                 !self_->connected_) {
                 self_->connected_ = false;
@@ -6011,7 +6016,9 @@ private:
             boost::system::error_code const& ec,
             std::size_t bytes_transferred) const {
             if (func_) func_(ec);
-            self_->queue_.pop_front();
+            for (std::size_t i = 0; i != num_of_messages_; ++i) {
+                self_->queue_.pop_front();
+            }
             if (ec || // Error is handled by async_read.
                 !self_->connected_) {
                 self_->connected_ = false;
@@ -6036,6 +6043,7 @@ private:
         std::shared_ptr<this_type> self_;
         async_handler_t func_;
         std::size_t expected_;
+        std::size_t num_of_messages_;
     };
 
 private:
