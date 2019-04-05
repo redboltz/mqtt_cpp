@@ -308,7 +308,7 @@ private:
             }
             else {
                 retains_.erase(*topic);
-                retains_.emplace(topic, qos, contents);
+                retains_.emplace(topic, contents, qos);
             }
         }
     }
@@ -369,8 +369,8 @@ private:
     struct tag_client_id {};
 
     struct cid_con {
-        cid_con(std::string const& cid, con_sp_t const& con)
-            :cid(cid), con(con) {}
+        cid_con(std::string cid, con_sp_t con)
+            :cid(std::move(cid)), con(std::move(con)) {}
         std::string cid;
         con_sp_t con;
     };
@@ -390,10 +390,10 @@ private:
 
     struct sub_con {
         sub_con(
-            std::shared_ptr<std::string> const& topic,
-            con_sp_t const& con,
+            std::shared_ptr<std::string> topic,
+            con_sp_t con,
             std::uint8_t qos)
-            :topic(topic), con(con), qos(qos) {}
+            :topic(std::move(topic)), con(std::move(con)), qos(qos) {}
         std::string const& get_topic() const {
             return *topic;
         }
@@ -417,16 +417,16 @@ private:
 
     struct retain {
         retain(
-            std::shared_ptr<std::string> const& topic,
-            std::uint8_t qos,
-            std::shared_ptr<std::string> const& contents)
-            :topic(topic), qos(qos), contents(contents) {}
+            std::shared_ptr<std::string> topic,
+            std::shared_ptr<std::string> contents,
+            std::uint8_t qos)
+            :topic(std::move(topic)), contents(std::move(contents)), qos(qos) {}
         std::string const& get_topic() const {
             return *topic;
         }
         std::shared_ptr<std::string> topic;
-        std::uint8_t qos;
         std::shared_ptr<std::string> contents;
+        std::uint8_t qos;
     };
     using mi_retain = mi::multi_index_container<
         retain,
@@ -440,26 +440,26 @@ private:
 
     struct session_data {
         session_data(
-            std::shared_ptr<std::string> const& topic,
-            std::shared_ptr<std::string> const& contents,
+            std::shared_ptr<std::string> topic,
+            std::shared_ptr<std::string> contents,
             std::uint8_t qos)
-            : topic(std::move(topic)), contents(contents), qos(qos) {}
+            : topic(std::move(topic)), contents(std::move(contents)), qos(qos) {}
         std::shared_ptr<std::string> topic;
         std::shared_ptr<std::string> contents;
         std::uint8_t qos;
     };
     struct session {
-        explicit session(std::string const& client_id)
-            :client_id(client_id) {}
+        explicit session(std::string client_id)
+            :client_id(std::move(client_id)) {}
         std::string client_id;
         std::vector<session_data> data;
     };
     struct sub_session {
         sub_session(
-            std::shared_ptr<std::string> const& topic,
-            std::shared_ptr<session> const& s,
+            std::shared_ptr<std::string> topic,
+            std::shared_ptr<session> s,
             std::uint8_t qos)
-            :topic(topic), s(s), qos(qos) {}
+            :topic(std::move(topic)), s(std::move(s)), qos(qos) {}
         std::string const& get_client_id() const {
             return s->client_id;
         }
@@ -485,7 +485,7 @@ private:
     >;
 
     struct con_will {
-        con_will(con_sp_t const& con, mqtt::will&& will):con(con), will(will) {}
+        con_will(con_sp_t con, mqtt::will will):con(std::move(con)), will(std::move(will)) {}
         con_sp_t con;
         mqtt::will will;
     };
@@ -502,13 +502,13 @@ private:
     struct pending {
         pending(
             bool clean_session,
-            con_sp_t const& spep,
-            std::string const& client_id,
+            con_sp_t spep,
+            std::string client_id,
             mqtt::optional<mqtt::will> will)
-            : clean_session(clean_session), spep(spep), client_id(client_id), will(std::move(will)) {}
+            : clean_session(clean_session), spep(std::move(spep)), client_id(std::move(client_id)), will(std::move(will)) {}
         bool clean_session;
         con_sp_t spep;
-        std::string const& client_id;
+        std::string client_id;
         mqtt::optional<mqtt::will> will;
     };
     using mi_pending = mi::multi_index_container<
