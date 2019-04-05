@@ -345,7 +345,7 @@ int main(int argc, char** argv) {
     std::uint16_t pid_sub1;
     std::uint16_t pid_sub2;
 
-    auto c = mqtt::make_tls_client(ios, "localhost", port);
+    auto c = mqtt::make_tls_sync_client(ios, "localhost", port);
     c->set_ca_cert_file(base + "cacert.pem");
 
     int count = 0;

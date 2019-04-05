@@ -6,6 +6,7 @@
 
 #include "test_main.hpp"
 #include "combi_test.hpp"
+#include "checker.hpp"
 
 #include <mqtt/optional.hpp>
 
@@ -16,45 +17,31 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        std::size_t order = 0;
 
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // subscribe topic1
-            "h_suback",
+            cont("h_suback"),
             // unsubscribe topic1
-            "h_unsuback",
+            cont("h_unsuback"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 c->subscribe("topic1", mqtt::qos::at_most_once);
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -63,26 +50,24 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
                 BOOST_CHECK(false);
             });
         c->set_suback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
-                BOOST_TEST(current() == "h_suback");
-                ++order;
+                MQTT_CHK("h_suback");
                 c->unsubscribe("topic1");
                 return true;
             });
         c->set_unsuback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t /*packet_id*/) {
-                BOOST_TEST(current() == "h_unsuback");
-                ++order;
+                MQTT_CHK("h_unsuback");
                 c->disconnect();
                 return true;
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
@@ -90,45 +75,31 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        std::size_t order = 0;
 
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // subscribe topic1
-            "h_suback",
+            cont("h_suback"),
             // unsubscribe topic1
-            "h_unsuback",
+            cont("h_unsuback"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 c->subscribe("topic1", mqtt::qos::at_most_once, "topic2", mqtt::qos::exactly_once);
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -137,26 +108,24 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
                 BOOST_CHECK(false);
             });
         c->set_suback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
-                BOOST_TEST(current() == "h_suback");
-                ++order;
+                MQTT_CHK("h_suback");
                 c->unsubscribe("topic1", "topic2");
                 return true;
             });
         c->set_unsuback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t /*packet_id*/) {
-                BOOST_TEST(current() == "h_unsuback");
-                ++order;
+                MQTT_CHK("h_unsuback");
                 c->disconnect();
                 return true;
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
@@ -164,35 +133,22 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        std::size_t order = 0;
 
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // subscribe topic1
-            "h_suback",
+            cont("h_suback"),
             // unsubscribe topic1
-            "h_unsuback",
+            cont("h_unsuback"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 std::vector<std::tuple<std::string, std::uint8_t>> v;
@@ -202,10 +158,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -214,10 +169,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                 BOOST_CHECK(false);
             });
         c->set_suback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
-                BOOST_TEST(current() == "h_suback");
-                ++order;
+                MQTT_CHK("h_suback");
                 std::vector<std::string> v
                     {
                         "topic1",
@@ -227,18 +181,17 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                 return true;
             });
         c->set_unsuback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t /*packet_id*/) {
-                BOOST_TEST(current() == "h_unsuback");
-                ++order;
+                MQTT_CHK("h_unsuback");
                 c->disconnect();
                 return true;
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
@@ -246,45 +199,31 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        std::size_t order = 0;
 
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // subscribe topic1
-            "h_suback",
+            cont("h_suback"),
             // unsubscribe topic1
-            "h_unsuback",
+            cont("h_unsuback"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 c->async_subscribe("topic1", mqtt::qos::at_most_once, [](boost::system::error_code const&) {});
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -293,26 +232,24 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
                 BOOST_CHECK(false);
             });
         c->set_suback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
-                BOOST_TEST(current() == "h_suback");
-                ++order;
+                MQTT_CHK("h_suback");
                 c->async_unsubscribe("topic1", [](boost::system::error_code const&) {});
                 return true;
             });
         c->set_unsuback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t /*packet_id*/) {
-                BOOST_TEST(current() == "h_unsuback");
-                ++order;
-                c->disconnect();
+                MQTT_CHK("h_unsuback");
+                c->async_disconnect();
                 return true;
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_async(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
@@ -320,35 +257,22 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        std::size_t order = 0;
 
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // subscribe topic1
-            "h_suback",
+            cont("h_suback"),
             // unsubscribe topic1
-            "h_unsuback",
+            cont("h_unsuback"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 c->async_subscribe(
@@ -359,10 +283,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -371,10 +294,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                 BOOST_CHECK(false);
             });
         c->set_suback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
-                BOOST_TEST(current() == "h_suback");
-                ++order;
+                MQTT_CHK("h_suback");
                 c->async_unsubscribe(
                     "topic1",
                     "topic2",
@@ -383,18 +305,17 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                 return true;
             });
         c->set_unsuback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t /*packet_id*/) {
-                BOOST_TEST(current() == "h_unsuback");
-                ++order;
-                c->disconnect();
+                MQTT_CHK("h_unsuback");
+                c->async_disconnect();
                 return true;
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_async(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
@@ -402,35 +323,22 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        std::size_t order = 0;
 
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // subscribe topic1
-            "h_suback",
+            cont("h_suback"),
             // unsubscribe topic1
-            "h_unsuback",
+            cont("h_unsuback"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 std::vector<std::tuple<std::string, std::uint8_t>> v;
@@ -443,10 +351,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -455,10 +362,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                 BOOST_CHECK(false);
             });
         c->set_suback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
-                BOOST_TEST(current() == "h_suback");
-                ++order;
+                MQTT_CHK("h_suback");
                 std::vector<std::string> v
                     {
                         "topic1",
@@ -471,18 +377,17 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                 return true;
             });
         c->set_unsuback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t /*packet_id*/) {
-                BOOST_TEST(current() == "h_unsuback");
-                ++order;
-                c->disconnect();
+                MQTT_CHK("h_unsuback");
+                c->async_disconnect();
                 return true;
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_async(test);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
