@@ -74,6 +74,14 @@ public:
     }
 
     /**
+     * @brief Get number of element of const_buffer_sequence
+     * @return number of element of const_buffer_sequence
+     */
+    std::size_t num_of_const_buffer_sequence() const {
+        return 1;
+    }
+
+    /**
      * @brief Create one continuours buffer.
      *        All sequence of buffers are concatinated.
      *        It is useful to store to file/database.
@@ -127,6 +135,14 @@ public:
      */
     std::size_t size() const {
         return message_.size();
+    }
+
+    /**
+     * @brief Get number of element of const_buffer_sequence
+     * @return number of element of const_buffer_sequence
+     */
+    std::size_t num_of_const_buffer_sequence() const {
+        return 1;
     }
 
     /**
@@ -260,6 +276,14 @@ public:
     }
 
     /**
+     * @brief Get number of element of const_buffer_sequence
+     * @return number of element of const_buffer_sequence
+     */
+    std::size_t num_of_const_buffer_sequence() const {
+        return 1;
+    }
+
+    /**
      * @brief Create one continuours buffer.
      *        All sequence of buffers are concatinated.
      *        It is useful to store to file/database.
@@ -352,20 +376,7 @@ public:
      */
     std::vector<as::const_buffer> const_buffer_sequence() const {
         std::vector<as::const_buffer> ret;
-        ret.reserve(
-            1 +                   // fixed header
-            1 +                   // remaining length
-            1 +                   // protocol name and level
-            1 +                   // connect flags
-            1 +                   // keep alive
-
-            2 +                   // client id length, client id
-
-            2 +                   // will topic name length, will topic name
-            2 +                   // will message length, will message
-            2 +                   // user name length, user name
-            2                     // password length, password
-        );
+        ret.reserve(num_of_const_buffer_sequence());
 
         ret.emplace_back(as::buffer(&fixed_header_, 1));
         ret.emplace_back(as::buffer(remaining_length_buf_.data(), remaining_length_buf_.size()));
@@ -402,6 +413,26 @@ public:
      */
     std::size_t size() const {
         return 1 + remaining_length_buf_.size() + remaining_length_;
+    }
+
+    /**
+     * @brief Get number of element of const_buffer_sequence
+     * @return number of element of const_buffer_sequence
+     */
+    std::size_t num_of_const_buffer_sequence() const {
+        return
+            1 +                   // fixed header
+            1 +                   // remaining length
+            1 +                   // protocol name and level
+            1 +                   // connect flags
+            1 +                   // keep alive
+
+            2 +                   // client id length, client id
+
+            2 +                   // will topic name length, will topic name
+            2 +                   // will message length, will message
+            2 +                   // user name length, user name
+            2;                    // password length, password
     }
 
     /**
@@ -581,6 +612,19 @@ public:
     }
 
     /**
+     * @brief Get number of element of const_buffer_sequence
+     * @return number of element of const_buffer_sequence
+     */
+    std::size_t num_of_const_buffer_sequence() const {
+        return
+            1 +                   // fixed header
+            1 +                   // remaining length
+            2 +                   // topic name length, topic name
+            (packet_id_.empty() ? 0 : 1) +  // packet_id
+            1;                    // payload
+    }
+
+    /**
      * @brief Create one continuours buffer.
      *        All sequence of buffers are concatinated.
      *        It is useful to store to file/database.
@@ -740,12 +784,7 @@ public:
      */
     std::vector<as::const_buffer> const_buffer_sequence() const {
         std::vector<as::const_buffer> ret;
-        ret.reserve(
-            1 +                   // fixed header
-            1 +                   // remaining length
-            1 +                   // packet id
-            entries_.size() * 3   // topic name length, topic name, qos
-        );
+        ret.reserve(num_of_const_buffer_sequence());
 
         ret.emplace_back(as::buffer(&fixed_header_, 1));
 
@@ -769,6 +808,18 @@ public:
      */
     std::size_t size() const {
         return 1 + remaining_length_buf_.size() + remaining_length_;
+    }
+
+    /**
+     * @brief Get number of element of const_buffer_sequence
+     * @return number of element of const_buffer_sequence
+     */
+    std::size_t num_of_const_buffer_sequence() const {
+        return
+            1 +                   // fixed header
+            1 +                   // remaining length
+            1 +                   // packet id
+            entries_.size() * 3;  // topic name length, topic name, qos
     }
 
     /**
@@ -835,7 +886,7 @@ public:
      */
     std::vector<as::const_buffer> const_buffer_sequence() const {
         std::vector<as::const_buffer> ret;
-        ret.reserve(4); // fixed header, remaining length, packet_id, entries
+        ret.reserve(num_of_const_buffer_sequence());
 
         ret.emplace_back(as::buffer(&fixed_header_, 1));
         ret.emplace_back(as::buffer(remaining_length_buf_.data(), remaining_length_buf_.size()));
@@ -851,6 +902,14 @@ public:
      */
     std::size_t size() const {
         return 1 + remaining_length_buf_.size() + remaining_length_;
+    }
+
+    /**
+     * @brief Get number of element of const_buffer_sequence
+     * @return number of element of const_buffer_sequence
+     */
+    std::size_t num_of_const_buffer_sequence() const {
+        return 4; // fixed header, remaining length, packet_id, entries
     }
 
     /**
@@ -925,12 +984,7 @@ public:
      */
     std::vector<as::const_buffer> const_buffer_sequence() const {
         std::vector<as::const_buffer> ret;
-        ret.reserve(
-            1 +                   // fixed header
-            1 +                   // remaining length
-            1 +                   // packet id
-            entries_.size() * 2   // topic name length, topic name
-        );
+        ret.reserve(num_of_const_buffer_sequence());
 
         ret.emplace_back(as::buffer(&fixed_header_, 1));
         ret.emplace_back(as::buffer(remaining_length_buf_.data(), remaining_length_buf_.size()));
@@ -943,7 +997,6 @@ public:
             ret.emplace_back(e.topic_name);
         }
 
-
         return ret;
     }
 
@@ -953,6 +1006,18 @@ public:
      */
     std::size_t size() const {
         return 1 + remaining_length_buf_.size() + remaining_length_;
+    }
+
+    /**
+     * @brief Get number of element of const_buffer_sequence
+     * @return number of element of const_buffer_sequence
+     */
+    std::size_t num_of_const_buffer_sequence() const {
+        return
+            1 +                   // fixed header
+            1 +                   // remaining length
+            1 +                   // packet id
+            entries_.size() * 2;  // topic name length, topic name
     }
 
     /**

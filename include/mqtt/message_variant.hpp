@@ -72,6 +72,19 @@ struct size_visitor
     }
 };
 
+struct num_of_const_buffer_sequence_visitor
+
+#if !defined(MQTT_STD_VARIANT)
+    : boost::static_visitor<std::size_t>
+#endif // !defined(MQTT_STD_VARIANT)
+
+{
+    template <typename T>
+    std::size_t operator()(T&& t) const {
+        return t.num_of_const_buffer_sequence();
+    }
+};
+
 struct continuous_buffer_visitor
 
 #if !defined(MQTT_STD_VARIANT)
@@ -96,6 +109,12 @@ inline std::vector<as::const_buffer> const_buffer_sequence(
 template <std::size_t PacketIdBytes>
 inline std::size_t size(basic_message_variant<PacketIdBytes> const& mv) {
     return mqtt::visit(detail::size_visitor(), mv);
+}
+
+template <std::size_t PacketIdBytes>
+inline std::size_t num_of_const_buffer_sequence(
+    basic_message_variant<PacketIdBytes> const& mv) {
+    return mqtt::visit(detail::num_of_const_buffer_sequence_visitor(), mv);
 }
 
 template <std::size_t PacketIdBytes>

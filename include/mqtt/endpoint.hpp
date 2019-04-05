@@ -5948,6 +5948,16 @@ private:
     void do_async_write() {
         std::vector<as::const_buffer> buf;
         std::vector<async_handler_t> handlers;
+
+        std::size_t total_const_buffer_sequence = 0;
+        for (auto const& elem : queue_) {
+            auto const& mv = elem.message();
+            total_const_buffer_sequence += num_of_const_buffer_sequence(mv);
+        }
+
+        buf.reserve(total_const_buffer_sequence);
+        handlers.reserve(queue_.size());
+
         std::size_t total = 0;
         for (auto const& elem : queue_) {
             auto const& mv = elem.message();
