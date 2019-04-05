@@ -5946,17 +5946,30 @@ private:
     }
 
     void do_async_write() {
-        auto const& elem = queue_.front();
-        auto const& mv = elem.message();
+        std::vector<as::const_buffer> buf;
+        std::vector<async_handler_t> handlers;
+        std::size_t total = 0;
+        for (auto const& elem : queue_) {
+            auto const& mv = elem.message();
+            auto const& cbs = const_buffer_sequence(mv);
+            std::copy(cbs.begin(), cbs.end(), std::back_inserter(buf));
+            total += mqtt::size<PacketIdBytes>(mv);
+            handlers.emplace_back(elem.handler());
+        }
         auto self = this->shared_from_this();
         if (h_pre_send_) h_pre_send_();
         async_write(
             *socket_,
-            const_buffer_sequence(mv),
+            buf,
             write_completion_handler(
                 std::move(self),
-                elem.handler(),
-                mqtt::size<PacketIdBytes>(mv)
+                [MQTT_CAPTURE_MOVE(handlers)]
+                (boost::system::error_code const& ec) {
+                    for (auto const& h : handlers) {
+                        if (h) h(ec);
+                    }
+                },
+                total
             )
         );
     }
