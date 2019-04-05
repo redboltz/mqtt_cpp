@@ -5987,11 +5987,14 @@ private:
 
         std::size_t total_const_buffer_sequence = 0;
         auto start = queue_.cbegin();
-        auto end = [&] {
-                       if (max_queue_send_count_ == 0) return queue_.cend();
-                       if (max_queue_send_count_ >= queue_.size()) return queue_.cend();
-                       return start + static_cast<typename decltype(start)::difference_type>(max_queue_send_count_);
-                   } ();
+        auto end =
+            [&] {
+                if (max_queue_send_count_ == 0) return queue_.cend();
+                if (max_queue_send_count_ >= queue_.size()) return queue_.cend();
+                return
+                    start +
+                    static_cast<typename std::deque<async_packet>::const_iterator::difference_type>(max_queue_send_count_);
+            } ();
 
         std::size_t total = 0;
         for (auto it = start; it != end; ++it) {
