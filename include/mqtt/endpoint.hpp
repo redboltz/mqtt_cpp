@@ -84,7 +84,9 @@ public:
              (async_handler_t const& func) {
                  async_read_control_packet_type(func);
              }
-         )
+         ),
+         max_queue_send_count_(1),
+         max_queue_send_size_(0)
     {}
 
     /**
@@ -106,7 +108,9 @@ public:
              (async_handler_t const& func) {
                  async_read_control_packet_type(func);
              }
-         )
+         ),
+         max_queue_send_count_(1),
+         max_queue_send_size_(0)
     {}
 
     /**
@@ -4222,6 +4226,38 @@ public:
         async_read_control_packet_type(func);
     }
 
+     /**
+     * @brief Set maximum number of queued message sending.
+     *        When async message sending function called during asynchronous
+     *        processing, the message is enqueued. When current asynchronous
+     *        message is processed, then concatenate queued messages and
+     *        send it.
+     *        This value limits the maximum number of concatenating messages.
+     *        The default value is 1.
+     *
+     * @param count maximum number of queued message sending. 0 means infinity.
+     *
+     */
+    void set_max_queue_send_count(std::size_t count) {
+        max_queue_send_count_ = count;
+    }
+
+     /**
+     * @brief Set maximum size of queued message sending.
+     *        When async message sending function called during asynchronous
+     *        processing, the message is enqueued. When current asynchronous
+     *        message is processed, then concatenate queued messages and
+     *        send it.
+     *        This value limits the maximum size of concatenating messages.
+     *        The default value is 0.
+     *
+     * @param size maximum size of queued message sending. 0 means infinity.
+     *
+     */
+    void set_max_queue_send_size(std::size_t size) {
+        max_queue_send_size_ = size;
+    }
+
 protected:
     void async_read_control_packet_type(async_handler_t const& func) {
         auto self = this->shared_from_this();
@@ -5946,17 +5982,60 @@ private:
     }
 
     void do_async_write() {
-        auto const& elem = queue_.front();
-        auto const& mv = elem.message();
+        std::vector<as::const_buffer> buf;
+        std::vector<async_handler_t> handlers;
+
+        std::size_t total_const_buffer_sequence = 0;
+        auto start = queue_.cbegin();
+        auto end =
+            [&] {
+                if (max_queue_send_count_ == 0) return queue_.cend();
+                if (max_queue_send_count_ >= queue_.size()) return queue_.cend();
+                return
+                    start +
+                    static_cast<typename std::deque<async_packet>::const_iterator::difference_type>(max_queue_send_count_);
+            } ();
+
+        std::size_t total = 0;
+        for (auto it = start; it != end; ++it) {
+            auto const& elem = *it;
+            auto const& mv = elem.message();
+            auto size = mqtt::size<PacketIdBytes>(mv);
+
+            if (max_queue_send_size_ != 0 && max_queue_send_size_ < total + size) {
+                end = it;
+                break;
+            }
+            total += size;
+            total_const_buffer_sequence += num_of_const_buffer_sequence(mv);
+        }
+
+        buf.reserve(total_const_buffer_sequence);
+        handlers.reserve(queue_.size());
+
+        for (auto it = start; it != end; ++it) {
+            auto const& elem = *it;
+            auto const& mv = elem.message();
+            auto const& cbs = const_buffer_sequence(mv);
+            std::copy(cbs.begin(), cbs.end(), std::back_inserter(buf));
+            handlers.emplace_back(elem.handler());
+        }
+
         auto self = this->shared_from_this();
         if (h_pre_send_) h_pre_send_();
         async_write(
             *socket_,
-            const_buffer_sequence(mv),
+            buf,
             write_completion_handler(
                 std::move(self),
-                elem.handler(),
-                mqtt::size<PacketIdBytes>(mv)
+                [MQTT_CAPTURE_MOVE(handlers)]
+                (boost::system::error_code const& ec) {
+                    for (auto const& h : handlers) {
+                        if (h) h(ec);
+                    }
+                },
+                static_cast<std::size_t>(std::distance(start, end)),
+                total
             )
         );
     }
@@ -5973,14 +6052,18 @@ private:
         write_completion_handler(
             std::shared_ptr<this_type> self,
             async_handler_t func,
+            std::size_t num_of_messages,
             std::size_t expected)
             :self_(std::move(self)),
              func_(std::move(func)),
+             num_of_messages_(num_of_messages),
              expected_(expected)
         {}
         void operator()(boost::system::error_code const& ec) const {
             if (func_) func_(ec);
-            self_->queue_.pop_front();
+            for (std::size_t i = 0; i != num_of_messages_; ++i) {
+                self_->queue_.pop_front();
+            }
             if (ec || // Error is handled by async_read.
                 !self_->connected_) {
                 self_->connected_ = false;
@@ -5998,7 +6081,9 @@ private:
             boost::system::error_code const& ec,
             std::size_t bytes_transferred) const {
             if (func_) func_(ec);
-            self_->queue_.pop_front();
+            for (std::size_t i = 0; i != num_of_messages_; ++i) {
+                self_->queue_.pop_front();
+            }
             if (ec || // Error is handled by async_read.
                 !self_->connected_) {
                 self_->connected_ = false;
@@ -6022,8 +6107,9 @@ private:
         }
         std::shared_ptr<this_type> self_;
         async_handler_t func_;
+        std::size_t num_of_messages_;
         std::size_t expected_;
-    };
+   };
 
 private:
     std::unique_ptr<Socket> socket_;
@@ -6074,6 +6160,8 @@ private:
     bool disconnect_requested_;
     bool connect_requested_;
     mqtt_message_processed_handler h_mqtt_message_processed_;
+    std::size_t max_queue_send_count_;
+    std::size_t max_queue_send_size_;
 };
 
 } // namespace mqtt
