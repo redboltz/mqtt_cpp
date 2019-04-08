@@ -6,6 +6,7 @@
 
 #include "test_main.hpp"
 #include "combi_test.hpp"
+#include "checker.hpp"
 
 BOOST_AUTO_TEST_SUITE(test_connect)
 
@@ -15,32 +16,18 @@ BOOST_AUTO_TEST_CASE( connect ) {
         c->set_clean_session(true);
         BOOST_TEST(c->connected() == false);
 
-        std::size_t order = 0;
-
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
+                MQTT_CHK("h_connack");
                 BOOST_TEST(c->connected() == true);
-                ++order;
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 c->disconnect();
@@ -48,11 +35,10 @@ BOOST_AUTO_TEST_CASE( connect ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s, &c]
+            [&chk, &s, &c]
             () {
-                BOOST_TEST(current() == "h_close");
+                MQTT_CHK("h_close");
                 BOOST_TEST(c->connected() == false);
-                ++order;
                 s.close();
             });
         c->set_error_handler(
@@ -63,9 +49,9 @@ BOOST_AUTO_TEST_CASE( connect ) {
         c->connect();
         BOOST_TEST(c->connected() == false);
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( connect_no_strand ) {
@@ -73,41 +59,26 @@ BOOST_AUTO_TEST_CASE( connect_no_strand ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::size_t order = 0;
-
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 c->disconnect();
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -117,9 +88,9 @@ BOOST_AUTO_TEST_CASE( connect_no_strand ) {
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( keep_alive ) {
@@ -127,41 +98,26 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::size_t order = 0;
-
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
-            "h_pingresp",
+            cont("h_connack"),
+            cont("h_pingresp"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current]
+            [&chk]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -170,19 +126,18 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
                 BOOST_CHECK(false);
             });
         c->set_pingresp_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             () {
-                BOOST_TEST(current() == "h_pingresp");
-                ++order;
+                MQTT_CHK("h_pingresp");
                 c->disconnect();
                 return true;
             });
         c->set_keep_alive_sec(3);
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
@@ -190,49 +145,33 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::size_t order = 0;
-
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
-            "2sec",
-            "h_pingresp",
-            "4sec_cancelled",
+            cont("h_connack"),
+            cont("2sec"),
+            cont("h_pingresp"),
+            cont("4sec_cancelled"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
-
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
 
         boost::asio::deadline_timer tim(ios);
         c->set_connack_handler(
-            [&order, &current, &c, &tim]
+            [&chk, &c, &tim]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 tim.expires_from_now(boost::posix_time::seconds(2));
                 tim.async_wait(
-                    [&order, &current, &c, &tim](boost::system::error_code const& ec) {
-                        BOOST_TEST(current() == "2sec");
-                        ++order;
+                    [&chk, &c, &tim](boost::system::error_code const& ec) {
+                        MQTT_CHK("2sec");
                         BOOST_CHECK(!ec);
                         c->publish_at_most_once("topic1", "timer_reset");
                         tim.expires_from_now(boost::posix_time::seconds(4));
                         tim.async_wait(
-                            [&order, &current](boost::system::error_code const& ec) {
-                                BOOST_TEST(current() == "4sec_cancelled");
-                                ++order;
+                            [&chk](boost::system::error_code const& ec) {
+                                MQTT_CHK("4sec_cancelled");
                                 BOOST_TEST(ec == boost::asio::error::operation_aborted );
                             }
                         );
@@ -241,10 +180,9 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -253,10 +191,9 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                 BOOST_CHECK(false);
             });
         c->set_pingresp_handler(
-            [&order, &current, &c, &tim]
+            [&chk, &c, &tim]
             () {
-                BOOST_TEST(current() == "h_pingresp");
-                ++order;
+                MQTT_CHK("h_pingresp");
                 tim.cancel();
                 c->disconnect();
                 return true;
@@ -264,9 +201,9 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
         c->set_keep_alive_sec_ping_ms(3, 3 * 1000);
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( connect_again ) {
@@ -275,40 +212,26 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
         c->set_clean_session(true);
 
         bool first = true;
-        std::size_t order = 0;
 
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack1",
+            cont("h_connack1"),
             // disconnect
-            "h_close1",
+            cont("h_close1"),
             // connect
-            "h_connack2",
+            cont("h_connack2"),
             // disconnect
-            "h_close2",
-            "finish",
+            cont("h_close2"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&first, &order, &current, &c]
+            [&first, &chk, &c]
             (bool sp, std::uint8_t connack_return_code) {
                 if (first) {
-                    BOOST_TEST(current() == "h_connack1");
-                    ++order;
+                    MQTT_CHK("h_connack1");
                 }
                 else {
-                    BOOST_TEST(current() == "h_connack2");
-                    ++order;
+                    MQTT_CHK("h_connack2");
                 }
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
@@ -316,17 +239,15 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
                 return true;
             });
         c->set_close_handler(
-            [&first, &order, &current, &c, &s]
+            [&first, &chk, &c, &s]
             () {
                 if (first) {
-                    BOOST_TEST(current() == "h_close1");
-                    ++order;
+                    MQTT_CHK("h_close1");
                     first = false;
                     c->connect();
                 }
                 else {
-                    BOOST_TEST(current() == "h_close2");
-                    ++order;
+                    MQTT_CHK("h_close2");
                     s.close();
                 }
             });
@@ -337,50 +258,35 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( nocid ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
         c->set_clean_session(true);
 
-        std::size_t order = 0;
-
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 c->disconnect();
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -390,39 +296,25 @@ BOOST_AUTO_TEST_CASE( nocid ) {
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( nocid_noclean ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
 
-        std::size_t order = 0;
-
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // disconnect
-            "h_error",
-            "finish",
+            cont("h_error"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current]
+            [&chk]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::identifier_rejected);
                 return true;
@@ -433,78 +325,60 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
                 BOOST_CHECK(false);
             });
         c->set_error_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             (boost::system::error_code const&) {
-                BOOST_TEST(current() == "h_error");
-                ++order;
+                MQTT_CHK("h_error");
                 s.close();
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( noclean ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
         c->set_client_id("cid1");
 
-        std::size_t order = 0;
-
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack1",
+            cont("h_connack1"),
             // disconnect
-            "h_close1",
+            cont("h_close1"),
             // connect
-            "h_connack2",
+            cont("h_connack2"),
             // disconnect
-            "h_close2",
+            cont("h_close2"),
             // connect
-            "h_connack3",
+            cont("h_connack3"),
             // disconnect
-            "h_close3",
+            cont("h_close3"),
             // connect
-            "h_connack4",
+            cont("h_connack4"),
             // disconnect
-            "h_close4",
-            "finish",
+            cont("h_close4"),
         };
-
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
 
         int connect = 0;
         c->set_connack_handler(
-            [&order, &current, &connect, &c]
+            [&chk, &connect, &c]
             (bool sp, std::uint8_t connack_return_code) {
                 switch (connect) {
                 case 0:
-                    BOOST_TEST(current() == "h_connack1");
-                    ++order;
+                    MQTT_CHK("h_connack1");
                     BOOST_TEST(sp == false);
                     break;
                 case 1:
-                    BOOST_TEST(current() == "h_connack2");
-                    ++order;
+                    MQTT_CHK("h_connack2");
                     BOOST_TEST(sp == true);
                     break;
                 case 2:
-                    BOOST_TEST(current() == "h_connack3");
-                    ++order;
+                    MQTT_CHK("h_connack3");
                     BOOST_TEST(sp == false);
                     break;
                 case 3:
-                    BOOST_TEST(current() == "h_connack4");
-                    ++order;
+                    MQTT_CHK("h_connack4");
                     BOOST_TEST(sp == false);
                     break;
                 }
@@ -513,32 +387,28 @@ BOOST_AUTO_TEST_CASE( noclean ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &connect, &c, &s]
+            [&chk, &connect, &c, &s]
             () {
                 switch (connect) {
                 case 0:
-                    BOOST_TEST(current() == "h_close1");
-                    ++order;
+                    MQTT_CHK("h_close1");
                     c->connect();
                     ++connect;
                     break;
                 case 1:
-                    BOOST_TEST(current() == "h_close2");
-                    ++order;
+                    MQTT_CHK("h_close2");
                     c->set_clean_session(true);
                     c->connect();
                     ++connect;
                     break;
                 case 2:
-                    BOOST_TEST(current() == "h_close3");
-                    ++order;
+                    MQTT_CHK("h_close3");
                     c->set_clean_session(false);
                     c->connect();
                     ++connect;
                     break;
                 case 3:
-                    BOOST_TEST(current() == "h_close4");
-                    ++order;
+                    MQTT_CHK("h_close4");
                     s.close();
                     break;
                 }
@@ -550,9 +420,9 @@ BOOST_AUTO_TEST_CASE( noclean ) {
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
@@ -560,31 +430,17 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::size_t order = 0;
-
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // disconnect
-            "h_error",
-            "finish",
+            cont("h_error"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c, &s]
+            [&chk, &c, &s]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 s.broker().set_disconnect_delay(boost::posix_time::seconds(2));
@@ -597,17 +453,16 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
                 BOOST_CHECK(false);
             });
         c->set_error_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             (boost::system::error_code const&) {
-                BOOST_TEST(current() == "h_error");
-                ++order;
+                MQTT_CHK("h_error");
                 s.close();
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
@@ -615,31 +470,17 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::size_t order = 0;
-
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c, &s]
+            [&chk, &c, &s]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 s.broker().set_disconnect_delay(boost::posix_time::seconds(1));
@@ -647,10 +488,9 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -660,9 +500,9 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
@@ -670,31 +510,17 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::size_t order = 0;
-
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // disconnect
-            "h_error",
-            "finish",
+            cont("h_error"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c, &s]
+            [&chk, &c, &s]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 s.broker().set_disconnect_delay(boost::posix_time::seconds(2));
@@ -707,17 +533,16 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
                 BOOST_CHECK(false);
             });
         c->set_error_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             (boost::system::error_code const&) {
-                BOOST_TEST(current() == "h_error");
-                ++order;
+                MQTT_CHK("h_error");
                 s.close();
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_async(test);
 }
 
 BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
@@ -725,31 +550,17 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::size_t order = 0;
-
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c, &s]
+            [&chk, &c, &s]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 s.broker().set_disconnect_delay(boost::posix_time::seconds(1));
@@ -757,10 +568,9 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -770,9 +580,9 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_async(test);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

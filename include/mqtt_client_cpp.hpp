@@ -6,6 +6,8 @@
 
 
 #include <mqtt/client.hpp>
+#include <mqtt/sync_client.hpp>
+#include <mqtt/async_client.hpp>
 #include <mqtt/connect_flags.hpp>
 #include <mqtt/connect_return_code.hpp>
 #include <mqtt/control_packet_type.hpp>

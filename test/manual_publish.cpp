@@ -6,6 +6,7 @@
 
 #include "test_main.hpp"
 #include "combi_test.hpp"
+#include "checker.hpp"
 
 #include <mqtt/optional.hpp>
 
@@ -16,37 +17,24 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
-        std::size_t order = 0;
 
-        std::vector<std::string> const expected = {
+        checker chk = {
             // connect
-            "h_connack",
+            cont("h_connack"),
             // subscribe topic1 QoS0
-            "h_suback",
+            cont("h_suback"),
             // publish topic1 QoS1
-            "h_publish",
-            "h_puback",
-            "h_unsuback",
+            cont("h_publish"),
+            cont("h_puback"),
+            cont("h_unsuback"),
             // disconnect
-            "h_close",
-            "finish",
+            cont("h_close"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
         c->set_connack_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(current() == "h_connack");
-                ++order;
+                MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                 BOOST_TEST(
@@ -67,10 +55,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 return true;
             });
         c->set_close_handler(
-            [&order, &current, &s]
+            [&chk, &s]
             () {
-                BOOST_TEST(current() == "h_close");
-                ++order;
+                MQTT_CHK("h_close");
                 s.close();
             });
         c->set_error_handler(
@@ -79,11 +66,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 BOOST_CHECK(false);
             });
         c->set_puback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t packet_id) {
                 BOOST_TEST(packet_id == 1);
-                BOOST_TEST(current() == "h_puback");
-                ++order;
+                MQTT_CHK("h_puback");
                 {
                     packet_id_t packet_id = 0;
                     BOOST_TEST(
@@ -108,10 +94,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 return true;
             });
         c->set_suback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results) {
-                BOOST_TEST(current() == "h_suback");
-                ++order;
+                MQTT_CHK("h_suback");
                 BOOST_TEST(packet_id == 1);
                 BOOST_TEST(results.size() == 1U);
                 BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
@@ -133,16 +118,15 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 return true;
             });
         c->set_unsuback_handler(
-            [&order, &current, &c]
+            [&chk, &c]
             (packet_id_t packet_id) {
-                BOOST_TEST(current() == "h_unsuback");
-                ++order;
+                MQTT_CHK("h_unsuback");
                 BOOST_TEST(packet_id == 1);
                 c->disconnect();
                 return true;
             });
         c->set_publish_handler(
-            [&order, &current]
+            [&chk]
             (std::uint8_t header,
              mqtt::optional<packet_id_t> packet_id,
              std::string topic,
@@ -153,15 +137,14 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 BOOST_CHECK(!packet_id);
                 BOOST_TEST(topic == "topic1");
                 BOOST_TEST(contents == "topic1_contents");
-                BOOST_TEST(current() == "h_publish");
-                ++order;
+                MQTT_CHK("h_publish");
                 return true;
             });
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

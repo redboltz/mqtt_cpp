@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
 
     int count = 0;
     // Create TLS client
-    auto c = mqtt::make_tls_client_ws(ios, host, port);
+    auto c = mqtt::make_tls_sync_client_ws(ios, host, port);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
 
