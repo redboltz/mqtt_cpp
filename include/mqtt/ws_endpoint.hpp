@@ -78,7 +78,10 @@ public:
         string_view const& host,
         string_view const& resource,
         HandshakeHandler&& h) {
-        ws_.async_handshake(host, resource, std::forward<HandshakeHandler>(h));
+        ws_.async_handshake(
+            boost::beast::string_view(host.data(), host.size()),
+            boost::beast::string_view(resource.data(), resource.size()),
+            std::forward<HandshakeHandler>(h));
     }
 
     template <typename MutableBufferSequence, typename ReadHandler>

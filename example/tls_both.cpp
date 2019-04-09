@@ -205,8 +205,8 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                  bool clean_session,
                  std::uint16_t keep_alive) {
                     std::cout << "[server]client_id    : " << client_id << std::endl;
-                    std::cout << "[server]username     : " << (username ? username.get() : "none") << std::endl;
-                    std::cout << "[server]password     : " << (password ? password.get() : "none") << std::endl;
+                    std::cout << "[server]username     : " << (username ? username.value() : "none") << std::endl;
+                    std::cout << "[server]password     : " << (password ? password.value() : "none") << std::endl;
                     std::cout << "[server]clean_session: " << std::boolalpha << clean_session << std::endl;
                     std::cout << "[server]keep_alive   : " << keep_alive << std::endl;
                     connections.insert(ep.shared_from_this());
