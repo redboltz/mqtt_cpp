@@ -91,7 +91,31 @@ public:
                     ep.connack(false, mqtt::connect_return_code::identifier_rejected);
                     return false;
                 }
-                try_connect(clean_session, ep.shared_from_this(), client_id, std::move(will));
+                auto spep = ep.shared_from_this();
+                auto emplace =
+                    [&] {
+                        return cons_.emplace(
+                            client_id,
+                            spep,
+                            [this, spep] () {
+                                // send will no keep
+                                spep->force_disconnect();
+                                close_proc(*spep, true);
+                            }
+                        );
+                    };
+
+                auto it_ret = emplace();
+                // if the connection that has the same client_id exists, then overwrite it
+                auto const& it = std::get<0>(it_ret);
+                auto const& emplaced = std::get<1>(it_ret);
+                if (!emplaced) {
+                    it->before_overwrite();
+                    auto it_ret = emplace();
+                    // should be emplaced successfully because erased older one just before
+                    BOOST_ASSERT(std::get<1>(it_ret));
+                }
+                connect_proc(clean_session, spep, client_id, std::move(will));
                 return true;
             }
         );
@@ -199,20 +223,6 @@ public:
     }
 
 private:
-    bool try_connect(
-        bool clean_session,
-        con_sp_t const& spep,
-        std::string const& client_id,
-        mqtt::optional<mqtt::will> will) {
-        auto it_ret = cons_.emplace(client_id, spep);
-        if (!std::get<1>(it_ret)) {
-            pending_.emplace_back(clean_session, spep, client_id, std::move(will));
-            return false;
-        }
-        connect_proc(clean_session, spep, client_id, std::move(will));
-        return true;
-    }
-
     void connect_proc(
         bool clean_session,
         con_sp_t const& spep,
@@ -314,12 +324,17 @@ private:
     }
 
     template <typename Endpoint>
-    void close_proc(Endpoint& con, bool send_will) {
-        auto cs = con.clean_session();
-        auto client_id = con.client_id();
+    void close_proc(Endpoint& ep, bool send_will) {
+        auto spep = ep.shared_from_this();
+        auto& idx = cons_.get<tag_con>();
+        auto it = idx.find(spep);
+        if (it == idx.end()) return;
+
+        auto cs = ep.clean_session();
+        auto client_id = ep.client_id();
 
         {   // will processing
-            auto it = will_.find(con.shared_from_this());
+            auto it = will_.find(spep);
             if (it != will_.end()) {
                 if (send_will) {
                     do_publish(
@@ -332,11 +347,10 @@ private:
             }
         }
 
-        auto& idx = cons_.get<tag_con>();
-        idx.erase(con.shared_from_this());
+        idx.erase(it);
         {
             auto& idx = subs_.get<tag_con>();
-            auto r = idx.equal_range(con.shared_from_this());
+            auto r = idx.equal_range(spep);
             if (cs) {
                 idx.erase(r.first, r.second);
             }
@@ -349,17 +363,6 @@ private:
                 }
             }
         }
-
-        auto it = pending_.begin();
-        auto end = pending_.end();
-        while (it != end) {
-            if (try_connect(it->clean_session, it->spep, it->client_id, it->will)) {
-                it = pending_.erase(it);
-            }
-            else {
-                ++it;
-            }
-        }
     }
 
 private:
@@ -369,10 +372,11 @@ private:
     struct tag_client_id {};
 
     struct cid_con {
-        cid_con(std::string cid, con_sp_t con)
-            :cid(std::move(cid)), con(std::move(con)) {}
+        cid_con(std::string cid, con_sp_t con, std::function<void()> before_overwrite)
+            :cid(std::move(cid)), con(std::move(con)), before_overwrite(std::move(before_overwrite)) {}
         std::string cid;
         con_sp_t con;
+        std::function<void()> before_overwrite;
     };
     using mi_cid_con = mi::multi_index_container<
         cid_con,
@@ -499,25 +503,6 @@ private:
         >
     >;
 
-    struct pending {
-        pending(
-            bool clean_session,
-            con_sp_t spep,
-            std::string client_id,
-            mqtt::optional<mqtt::will> will)
-            : clean_session(clean_session), spep(std::move(spep)), client_id(std::move(client_id)), will(std::move(will)) {}
-        bool clean_session;
-        con_sp_t spep;
-        std::string client_id;
-        mqtt::optional<mqtt::will> will;
-    };
-    using mi_pending = mi::multi_index_container<
-        pending,
-        mi::indexed_by<
-            mi::sequenced<>
-        >
-    >;
-
     as::io_service& ios_;
     as::deadline_timer tim_disconnect_;
     mqtt::optional<boost::posix_time::time_duration> delay_disconnect_;
@@ -527,7 +512,6 @@ private:
     mi_sub_session subsessions_;
     mi_retain retains_;
     mi_con_will will_;
-    mi_pending pending_;
 };
 
 #endif // MQTT_TEST_BROKER_HPP
