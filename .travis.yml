@@ -27,7 +27,7 @@ matrix:
       env: FLAGS="-DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
     - os: linux
       compiler: clang
-      env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_OPTIONAL=ON -DMQTT_STD_VARIANT=ON -DMQTT_STD_STRING_VIEW=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
       addons:
         apt:
           sources:
