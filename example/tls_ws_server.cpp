@@ -127,8 +127,8 @@ int main(int argc, char** argv) {
                  bool clean_session,
                  std::uint16_t keep_alive) {
                     std::cout << "client_id    : " << client_id << std::endl;
-                    std::cout << "username     : " << (username ? username.get() : "none") << std::endl;
-                    std::cout << "password     : " << (password ? password.get() : "none") << std::endl;
+                    std::cout << "username     : " << (username ? username.value() : "none") << std::endl;
+                    std::cout << "password     : " << (password ? password.value() : "none") << std::endl;
                     std::cout << "clean_session: " << std::boolalpha << clean_session << std::endl;
                     std::cout << "keep_alive   : " << keep_alive << std::endl;
                     connections.insert(ep.shared_from_this());
