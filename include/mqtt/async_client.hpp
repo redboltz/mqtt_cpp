@@ -205,7 +205,7 @@ public:
     /**
      * @brief Set auto publish response mode.
      * @param b set value
-     * @param async auto publish ressponse send asynchronous
+     * @param async auto publish response send asynchronous
      *
      * When set auto publish response mode to true, puback, pubrec, pubrel,and pub comp automatically send.<BR>
      */
