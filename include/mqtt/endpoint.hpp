@@ -5942,12 +5942,7 @@ private:
     class async_packet {
     public:
         async_packet(
-            basic_message_variant<PacketIdBytes> const& mv,
-            async_handler_t h = async_handler_t())
-            :
-            mv_(mv), handler_(std::move(h)) {}
-        async_packet(
-            basic_message_variant<PacketIdBytes>&& mv,
+            basic_message_variant<PacketIdBytes> mv,
             async_handler_t h = async_handler_t())
             :
             mv_(std::move(mv)), handler_(std::move(h)) {}
@@ -5965,87 +5960,21 @@ private:
     };
 
     void do_async_write(basic_message_variant<PacketIdBytes> mv, async_handler_t const& func) {
-        auto self = this->shared_from_this();
+        // Move this job to the socket's strand so that it can be queued without mutexes.
         socket_->post(
-            [this, self, MQTT_CAPTURE_MOVE(mv), func]
+            [this, self = this->shared_from_this(), MQTT_CAPTURE_MOVE(mv), func]
             () {
                 if (!connected_) {
-                    // offline async publish is successfully finished
+                    // offline async publish is successfully finished, because there's nothing to do.
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                     return;
                 }
                 queue_.emplace_back(std::move(mv), func);
+                // Only need to start async writes if there was nothing in the queue before the above item.
                 if (queue_.size() > 1) return;
                 do_async_write();
             }
         );
-    }
-
-    void do_async_write() {
-        std::vector<as::const_buffer> buf;
-        std::vector<async_handler_t> handlers;
-
-        std::size_t total_const_buffer_sequence = 0;
-        auto start = queue_.cbegin();
-        auto end =
-            [&] {
-                if (max_queue_send_count_ == 0) return queue_.cend();
-                if (max_queue_send_count_ >= queue_.size()) return queue_.cend();
-                return
-                    start +
-                    static_cast<typename std::deque<async_packet>::const_iterator::difference_type>(max_queue_send_count_);
-            } ();
-
-        std::size_t total = 0;
-        for (auto it = start; it != end; ++it) {
-            auto const& elem = *it;
-            auto const& mv = elem.message();
-            auto size = mqtt::size<PacketIdBytes>(mv);
-
-            if (max_queue_send_size_ != 0 && max_queue_send_size_ < total + size) {
-                end = it;
-                break;
-            }
-            total += size;
-            total_const_buffer_sequence += num_of_const_buffer_sequence(mv);
-        }
-
-        buf.reserve(total_const_buffer_sequence);
-        handlers.reserve(queue_.size());
-
-        for (auto it = start; it != end; ++it) {
-            auto const& elem = *it;
-            auto const& mv = elem.message();
-            auto const& cbs = const_buffer_sequence(mv);
-            std::copy(cbs.begin(), cbs.end(), std::back_inserter(buf));
-            handlers.emplace_back(elem.handler());
-        }
-
-        auto self = this->shared_from_this();
-        if (h_pre_send_) h_pre_send_();
-        async_write(
-            *socket_,
-            buf,
-            write_completion_handler(
-                std::move(self),
-                [MQTT_CAPTURE_MOVE(handlers)]
-                (boost::system::error_code const& ec) {
-                    for (auto const& h : handlers) {
-                        if (h) h(ec);
-                    }
-                },
-                static_cast<std::size_t>(std::distance(start, end)),
-                total
-            )
-        );
-    }
-
-    static std::uint16_t make_uint16_t(char b1, char b2) {
-        return
-            static_cast<std::uint16_t>(
-                ((static_cast<std::uint16_t>(b1) & 0xff)) << 8 |
-                (static_cast<std::uint16_t>(b2) & 0xff)
-            );
     }
 
     struct write_completion_handler {
@@ -6109,7 +6038,74 @@ private:
         async_handler_t func_;
         std::size_t num_of_messages_;
         std::size_t expected_;
-   };
+    };
+
+    void do_async_write() {
+        std::vector<as::const_buffer> buf;
+        std::vector<async_handler_t> handlers;
+
+        std::size_t total_const_buffer_sequence = 0;
+        auto start = queue_.cbegin();
+        auto end =
+            [&] {
+                if (max_queue_send_count_ == 0) return queue_.cend();
+                if (max_queue_send_count_ >= queue_.size()) return queue_.cend();
+                return
+                    start +
+                    static_cast<typename std::deque<async_packet>::const_iterator::difference_type>(max_queue_send_count_);
+            } ();
+
+        std::size_t total = 0;
+        for (auto it = start; it != end; ++it) {
+            auto const& elem = *it;
+            auto const& mv = elem.message();
+            auto size = mqtt::size<PacketIdBytes>(mv);
+
+            if (max_queue_send_size_ != 0 && max_queue_send_size_ < total + size) {
+                end = it;
+                break;
+            }
+            total += size;
+            total_const_buffer_sequence += num_of_const_buffer_sequence(mv);
+        }
+
+        buf.reserve(total_const_buffer_sequence);
+        handlers.reserve(queue_.size());
+
+        for (auto it = start; it != end; ++it) {
+            auto const& elem = *it;
+            auto const& mv = elem.message();
+            auto const& cbs = const_buffer_sequence(mv);
+            std::copy(cbs.begin(), cbs.end(), std::back_inserter(buf));
+            handlers.emplace_back(elem.handler());
+        }
+
+        auto self = this->shared_from_this();
+        if (h_pre_send_) h_pre_send_();
+        async_write(
+            *socket_,
+            buf,
+            write_completion_handler(
+                std::move(self),
+                [MQTT_CAPTURE_MOVE(handlers)]
+                (boost::system::error_code const& ec) {
+                    for (auto const& h : handlers) {
+                        if (h) h(ec);
+                    }
+                },
+                static_cast<std::size_t>(std::distance(start, end)),
+                total
+            )
+        );
+    }
+
+    static constexpr std::uint16_t make_uint16_t(char b1, char b2) {
+        return
+            static_cast<std::uint16_t>(
+                ((static_cast<std::uint16_t>(b1) & 0xff)) << 8 |
+                (static_cast<std::uint16_t>(b2) & 0xff)
+            );
+    }
 
 private:
     std::unique_ptr<Socket> socket_;
