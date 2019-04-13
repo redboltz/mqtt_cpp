@@ -53,8 +53,7 @@ public:
         AcceptorConfig&& config)
         : ios_accept_(ios_accept),
           ios_con_(ios_con),
-          acceptor_(ios_accept_, std::forward<AsioEndpoint>(ep)),
-          close_request_(false) {
+          acceptor_(ios_accept_, std::forward<AsioEndpoint>(ep)) {
         config(acceptor_);
     }
 
@@ -261,7 +260,7 @@ private:
     as::io_service& ios_con_;
     as::ip::tcp::acceptor acceptor_;
     std::unique_ptr<socket_t> socket_;
-    bool close_request_;
+    bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
     as::ssl::context ctx_;

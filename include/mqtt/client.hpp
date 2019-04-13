@@ -540,13 +540,7 @@ protected:
          tim_close_(ios_),
          host_(std::move(host)),
          port_(std::move(port)),
-         tls_(tls),
-         keep_alive_sec_(0),
-         ping_duration_ms_(0)
-#if !defined(MQTT_NO_TLS)
-         ,
-         ctx_(as::ssl::context::tlsv12)
-#endif // !defined(MQTT_NO_TLS)
+         tls_(tls)
 #if defined(MQTT_USE_WS)
          ,
          path_(std::move(path))
@@ -723,10 +717,10 @@ private:
     std::string host_;
     std::string port_;
     bool tls_;
-    std::uint16_t keep_alive_sec_;
-    std::size_t ping_duration_ms_;
+    std::uint16_t keep_alive_sec_{0};
+    std::size_t ping_duration_ms_{0};
 #if !defined(MQTT_NO_TLS)
-    as::ssl::context ctx_;
+    as::ssl::context ctx_{as::ssl::context::tlsv12};
 #endif // !defined(MQTT_NO_TLS)
     close_handler h_close_;
     error_handler h_error_;

@@ -71,46 +71,27 @@ public:
      * @brief Constructor for client
      */
     endpoint()
-        :connected_(false),
-         mqtt_connected_(false),
-         clean_session_(false),
-         packet_id_master_(0),
-         auto_pub_response_(true),
-         auto_pub_response_async_(false),
-         disconnect_requested_(false),
-         connect_requested_(false),
-         h_mqtt_message_processed_(
+        :h_mqtt_message_processed_(
              [this]
              (async_handler_t const& func) {
                  async_read_control_packet_type(func);
              }
-         ),
-         max_queue_send_count_(1),
-         max_queue_send_size_(0)
+         )
     {}
 
     /**
      * @brief Constructor for server.
      *        socket should have already been connected with another endpoint.
      */
-    endpoint(std::unique_ptr<Socket>&& socket)
-        :socket_(std::move(socket)),
-         connected_(true),
-         mqtt_connected_(false),
-         clean_session_(false),
-         packet_id_master_(0),
-         auto_pub_response_(true),
-         auto_pub_response_async_(false),
-         disconnect_requested_(false),
-         connect_requested_(false),
-         h_mqtt_message_processed_(
+    explicit endpoint(std::unique_ptr<Socket> socket)
+        :socket_(std::move(socket))
+        ,connected_(true)
+        ,h_mqtt_message_processed_(
              [this]
              (async_handler_t const& func) {
                  async_read_control_packet_type(func);
              }
-         ),
-         max_queue_send_count_(1),
-         max_queue_send_size_(0)
+         )
     {}
 
     /**
@@ -6111,10 +6092,10 @@ private:
     std::unique_ptr<Socket> socket_;
     std::string host_;
     std::string port_;
-    std::atomic<bool> connected_;
-    std::atomic<bool> mqtt_connected_;
+    std::atomic<bool> connected_{false};
+    std::atomic<bool> mqtt_connected_{false};
     std::string client_id_;
-    bool clean_session_;
+    bool clean_session_{false};
     mqtt::optional<will> will_;
     char buf_;
     std::uint8_t fixed_header_;
@@ -6149,15 +6130,15 @@ private:
     mi_store store_;
     std::set<packet_id_t> qos2_publish_handled_;
     std::deque<async_packet> queue_;
-    packet_id_t packet_id_master_;
+    packet_id_t packet_id_master_{0};
     std::set<packet_id_t> packet_id_;
-    bool auto_pub_response_;
-    bool auto_pub_response_async_;
-    bool disconnect_requested_;
-    bool connect_requested_;
+    bool auto_pub_response_{true};
+    bool auto_pub_response_async_{false};
+    bool disconnect_requested_{false};
+    bool connect_requested_{false};
+    std::size_t max_queue_send_count_{1};
+    std::size_t max_queue_send_size_{0};
     mqtt_message_processed_handler h_mqtt_message_processed_;
-    std::size_t max_queue_send_count_;
-    std::size_t max_queue_send_size_;
 };
 
 } // namespace mqtt
