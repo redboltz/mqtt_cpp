@@ -15,8 +15,17 @@ template <typename Socket, std::size_t PacketIdBytes = 2>
 class sync_client : public client<Socket, PacketIdBytes> {
     using this_type = sync_client<Socket, PacketIdBytes>;
     using base = client<Socket, PacketIdBytes>;
-
+    using constructor_access = typename base::constructor_access;
 public:
+
+    /**
+     * Constructor used by factory functions at the end of this file.
+     */
+    template<typename ... Args>
+    sync_client(constructor_access, Args && ... args)
+     : sync_client(std::forward<Args>(args)...)
+    { }
+
     /**
      * @brief Create no tls sync_client with strand.
      * @param ios io_service object.
@@ -259,78 +268,48 @@ protected:
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>>>
 make_sync_client(as::io_service& ios, std::string host, std::string port) {
-    struct impl : sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls)
-        : sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>>(ios, std::move(host), std::move(port), tls) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false);
+    using sync_client_t = sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), false);
 }
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>>>
 make_sync_client(as::io_service& ios, std::string host, std::uint16_t port) {
-    return make_sync_client(ios, std::move(host), boost::lexical_cast<std::string>(port));
+    return make_sync_client(ios, std::move(host), std::to_string(port));
 }
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>>>
 make_sync_client_no_strand(as::io_service& ios, std::string host, std::string port) {
-    struct impl : sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls)
-        : sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>>(ios, std::move(host), std::move(port), tls) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false);
+    using sync_client_t = sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), false);
 }
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>>>
 make_sync_client_no_strand(as::io_service& ios, std::string host, std::uint16_t port) {
-    return make_sync_client_no_strand(ios, std::move(host), boost::lexical_cast<std::string>(port));
+    return make_sync_client_no_strand(ios, std::move(host), std::to_string(port));
 }
 
 #if defined(MQTT_USE_WS)
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>>>
 make_sync_client_ws(as::io_service& ios, std::string host, std::string port, std::string path = "/") {
-    struct impl : sync_client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls,
-             std::string path)
-            :
-            sync_client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>>
-            (ios, std::move(host), std::move(port), tls, std::move(path)) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false, std::move(path));
+    using sync_client_t = sync_client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), false, std::move(path));
 }
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>>>
 make_sync_client_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/") {
-    return make_sync_client_ws(ios, std::move(host), boost::lexical_cast<std::string>(port), std::move(path));
+    return make_sync_client_ws(ios, std::move(host), std::to_string(port), std::move(path));
 }
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>>>
 make_sync_client_no_strand_ws(as::io_service& ios, std::string host, std::string port, std::string path = "/") {
-    struct impl : sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls,
-             std::string path)
-            :
-            sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>>
-            (ios, std::move(host), std::move(port), tls, std::move(path)) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false, std::move(path));
+    using sync_client_t = sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), false, std::move(path));
 }
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>>>
 make_sync_client_no_strand_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/") {
-    return make_sync_client_no_strand_ws(ios, std::move(host), boost::lexical_cast<std::string>(port), std::move(path));
+    return make_sync_client_no_strand_ws(ios, std::move(host), std::to_string(port), std::move(path));
 }
 
 #endif // defined(MQTT_USE_WS)
@@ -339,79 +318,48 @@ make_sync_client_no_strand_ws(as::io_service& ios, std::string host, std::uint16
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>>
 make_tls_sync_client(as::io_service& ios, std::string host, std::string port) {
-    struct impl : sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls)
-        : sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>(ios, std::move(host), std::move(port), tls) {}
-    };
-    return std::make_shared<impl>
-        (std::ref(ios), std::move(host), std::move(port), true);
+    using sync_client_t = sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), true);
 }
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>>
 make_tls_sync_client(as::io_service& ios, std::string host, std::uint16_t port) {
-    return make_tls_sync_client(ios, std::move(host), boost::lexical_cast<std::string>(port));
+    return make_tls_sync_client(ios, std::move(host), std::to_string(port));
 }
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>
 make_tls_sync_client_no_strand(as::io_service& ios, std::string host, std::string port) {
-    struct impl : sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls)
-        : sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>(ios, std::move(host), std::move(port), tls) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), true);
+    using sync_client_t = sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), true);
 }
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>
 make_tls_sync_client_no_strand(as::io_service& ios, std::string host, std::uint16_t port) {
-    return make_tls_sync_client_no_strand(ios, std::move(host), boost::lexical_cast<std::string>(port));
+    return make_tls_sync_client_no_strand(ios, std::move(host), std::to_string(port));
 }
 
 #if defined(MQTT_USE_WS)
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>>
 make_tls_sync_client_ws(as::io_service& ios, std::string host, std::string port, std::string path = "/") {
-    struct impl : sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls,
-             std::string path)
-            :
-            sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>
-            (ios, std::move(host), std::move(port), tls, std::move(path)) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), true, std::move(path));
+    using sync_client_t = sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), true, std::move(path));
 }
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>>
 make_tls_sync_client_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/") {
-    return make_tls_sync_client_ws(ios, std::move(host), boost::lexical_cast<std::string>(port), std::move(path));
+    return make_tls_sync_client_ws(ios, std::move(host), std::to_string(port), std::move(path));
 }
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>
 make_tls_sync_client_no_strand_ws(as::io_service& ios, std::string host, std::string port, std::string path = "/") {
-    struct impl : sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls,
-             std::string path)
-            :
-            sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>
-            (ios, std::move(host), std::move(port), tls, std::move(path)) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), true, std::move(path));
+    using sync_client_t = sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), true, std::move(path));
 }
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>
 make_tls_sync_client_no_strand_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/") {
-    return make_tls_sync_client_no_strand_ws(ios, std::move(host), boost::lexical_cast<std::string>(port), std::move(path));
+    return make_tls_sync_client_no_strand_ws(ios, std::move(host), std::to_string(port), std::move(path));
 }
 
 #endif // defined(MQTT_USE_WS)
@@ -423,78 +371,48 @@ make_tls_sync_client_no_strand_ws(as::io_service& ios, std::string host, std::ui
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>>
 make_sync_client_32(as::io_service& ios, std::string host, std::string port) {
-    struct impl : sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls)
-        : sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>(ios, std::move(host), std::move(port), tls) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false);
+    using sync_client_t = sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), false);
 }
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>>
 make_sync_client_32(as::io_service& ios, std::string host, std::uint16_t port) {
-    return make_sync_client_32(ios, std::move(host), boost::lexical_cast<std::string>(port));
+    return make_sync_client_32(ios, std::move(host), std::to_string(port));
 }
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>>
 make_sync_client_no_strand_32(as::io_service& ios, std::string host, std::string port) {
-    struct impl : sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls)
-        : sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>(ios, std::move(host), std::move(port), tls) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false);
+    using sync_client_t = sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), false);
 }
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>>
 make_sync_client_no_strand_32(as::io_service& ios, std::string host, std::uint16_t port) {
-    return make_sync_client_no_strand_32(ios, std::move(host), boost::lexical_cast<std::string>(port));
+    return make_sync_client_no_strand_32(ios, std::move(host), std::to_string(port));
 }
 
 #if defined(MQTT_USE_WS)
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>>
 make_sync_client_ws_32(as::io_service& ios, std::string host, std::string port, std::string path = "/") {
-    struct impl : sync_client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls,
-             std::string path)
-            :
-            sync_client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>
-            (ios, std::move(host), std::move(port), tls, std::move(path)) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false, std::move(path));
+    using sync_client_t = sync_client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), false, std::move(path));
 }
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>>
 make_sync_client_ws_32(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/") {
-    return make_sync_client_ws_32(ios, std::move(host), boost::lexical_cast<std::string>(port), std::move(path));
+    return make_sync_client_ws_32(ios, std::move(host), std::to_string(port), std::move(path));
 }
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>>
 make_sync_client_no_strand_ws_32(as::io_service& ios, std::string host, std::string port, std::string path = "/") {
-    struct impl : sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls,
-             std::string path)
-            :
-            sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>
-            (ios, std::move(host), std::move(port), tls, std::move(path)) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false, std::move(path));
+    using sync_client_t = sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), false, std::move(path));
 }
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>>
 make_sync_client_no_strand_ws_32(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/") {
-    return make_sync_client_no_strand_ws_32(ios, std::move(host), boost::lexical_cast<std::string>(port), std::move(path));
+    return make_sync_client_no_strand_ws_32(ios, std::move(host), std::to_string(port), std::move(path));
 }
 
 #endif // defined(MQTT_USE_WS)
@@ -503,79 +421,48 @@ make_sync_client_no_strand_ws_32(as::io_service& ios, std::string host, std::uin
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>>
 make_tls_sync_client_32(as::io_service& ios, std::string host, std::string port) {
-    struct impl : sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls)
-        : sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>(ios, std::move(host), std::move(port), tls) {}
-    };
-    return std::make_shared<impl>
-        (std::ref(ios), std::move(host), std::move(port), true);
+    using sync_client_t = sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), true);
 }
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>>
 make_tls_sync_client_32(as::io_service& ios, std::string host, std::uint16_t port) {
-    return make_tls_sync_client_32(ios, std::move(host), boost::lexical_cast<std::string>(port));
+    return make_tls_sync_client_32(ios, std::move(host), std::to_string(port));
 }
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>
 make_tls_sync_client_no_strand_32(as::io_service& ios, std::string host, std::string port) {
-    struct impl : sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls)
-        : sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>(ios, std::move(host), std::move(port), tls) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), true);
+    using sync_client_t = sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), true);
 }
 
 inline std::shared_ptr<sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>
 make_tls_sync_client_no_strand_32(as::io_service& ios, std::string host, std::uint16_t port) {
-    return make_tls_sync_client_no_strand_32(ios, std::move(host), boost::lexical_cast<std::string>(port));
+    return make_tls_sync_client_no_strand_32(ios, std::move(host), std::to_string(port));
 }
 
 #if defined(MQTT_USE_WS)
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>>
 make_tls_sync_client_ws_32(as::io_service& ios, std::string host, std::string port, std::string path = "/") {
-    struct impl : sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls,
-             std::string path)
-            :
-            sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>
-            (ios, std::move(host), std::move(port), tls, std::move(path)) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), true, std::move(path));
+    using sync_client_t = sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), true, std::move(path));
 }
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>>
 make_tls_sync_client_ws_32(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/") {
-    return make_tls_sync_client_ws_32(ios, std::move(host), boost::lexical_cast<std::string>(port), std::move(path));
+    return make_tls_sync_client_ws_32(ios, std::move(host), std::to_string(port), std::move(path));
 }
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>
 make_tls_sync_client_no_strand_ws_32(as::io_service& ios, std::string host, std::string port, std::string path = "/") {
-    struct impl : sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls,
-             std::string path)
-            :
-            sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>
-            (ios, std::move(host), std::move(port), tls, std::move(path)) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), true, std::move(path));
+    using sync_client_t = sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>;
+    return std::make_shared<sync_client_t>(sync_client_t::constructor_access(), std::ref(ios), std::move(host), std::move(port), true, std::move(path));
 }
 
 inline std::shared_ptr<sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>
 make_tls_sync_client_no_strand_ws_32(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/") {
-    return make_tls_sync_client_no_strand_ws_32(ios, std::move(host), boost::lexical_cast<std::string>(port), std::move(path));
+    return make_tls_sync_client_no_strand_ws_32(ios, std::move(host), std::to_string(port), std::move(path));
 }
 
 #endif // defined(MQTT_USE_WS)
