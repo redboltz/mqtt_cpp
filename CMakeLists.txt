@@ -10,6 +10,7 @@ OPTION(MQTT_USE_STR_CHECK "Enable UTF8 String check" ON)
 OPTION(MQTT_STD_VARIANT "Use std::variant from C++17 instead of boost::variant" OFF)
 OPTION(MQTT_STD_OPTIONAL "Use std::optional from C++17 instead of boost::optional" OFF)
 OPTION(MQTT_STD_STRING_VIEW "Use std::string_view from C++17 instead of boost::string_view" OFF)
+OPTION(MQTT_STD_ANY "Use std::any from C++17 instead of boost::any" OFF)
 
 IF ((CMAKE_VERSION VERSION_GREATER 3.1) OR
     (CMAKE_VERSION VERSION_EQUAL 3.1))
@@ -69,6 +70,15 @@ IF (MQTT_STD_STRING_VIEW)
     SET (CMAKE_CXX_FLAGS "-DMQTT_STD_STRING_VIEW ${CMAKE_CXX_FLAGS}")
 ELSE ()
     MESSAGE (STATUS "Using boost::string_view instead of std::string_view")
+ENDIF ()
+
+IF (MQTT_STD_ANY_VIEW)
+    SET(CMAKE_CXX_STANDARD 17)
+    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+    MESSAGE (STATUS "Using std::any instead of boost::any. Enables C++17!!!")
+    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_ANY ${CMAKE_CXX_FLAGS}")
+ELSE ()
+    MESSAGE (STATUS "Using boost::any instead of std::any")
 ENDIF ()
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")

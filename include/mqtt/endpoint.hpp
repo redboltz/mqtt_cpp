@@ -30,6 +30,7 @@
 #include <boost/system/error_code.hpp>
 #include <boost/assert.hpp>
 
+#include <mqtt/any.hpp>
 #include <mqtt/fixed_header.hpp>
 #include <mqtt/remaining_length.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
@@ -64,7 +65,6 @@ class endpoint : public std::enable_shared_from_this<endpoint<Socket, Mutex, Loc
     using this_type = endpoint<Socket, Mutex, LockGuard, PacketIdBytes>;
 public:
     using async_handler_t = std::function<void(boost::system::error_code const& ec)>;
-    using life_keeper_t = std::function<void()>;
     using packet_id_t = typename packet_id_type<PacketIdBytes>::type;
 
     /**
@@ -911,7 +911,7 @@ public:
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
         bool retain = false) {
-        acquired_publish(0, topic_name, contents, [] {}, qos::at_most_once, retain);
+        acquired_publish(0, topic_name, contents, mqtt::any(), qos::at_most_once, retain);
     }
 
     /**
@@ -942,7 +942,7 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper An object to allow callers to extend the lifetime of anything until this message is sent
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
@@ -953,10 +953,10 @@ public:
     packet_id_t publish_at_least_once(
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         bool retain = false) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_publish_at_least_once(packet_id, topic_name, contents, life_keeper, retain);
+        acquired_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain);
         return packet_id;
     }
 
@@ -988,7 +988,7 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper An object to allow callers to extend the lifetime of anything until this message is sent
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
@@ -999,10 +999,10 @@ public:
     packet_id_t publish_exactly_once(
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         bool retain = false) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_publish_exactly_once(packet_id, topic_name, contents, life_keeper, retain);
+        acquired_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain);
         return packet_id;
     }
 
@@ -1038,7 +1038,7 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param func A object that stays alive until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -1051,12 +1051,12 @@ public:
     packet_id_t publish(
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_publish(packet_id, topic_name, contents, life_keeper, qos, retain);
+        acquired_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain);
         return packet_id;
     }
 
@@ -1273,7 +1273,7 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param func A object that stays alive until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
@@ -1285,10 +1285,10 @@ public:
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         bool retain = false) {
         if (register_packet_id(packet_id)) {
-            acquired_publish_at_least_once(packet_id, topic_name, contents, life_keeper, retain);
+            acquired_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain);
             return true;
         }
         return false;
@@ -1329,7 +1329,7 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param func A object that stays alive until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
@@ -1341,10 +1341,10 @@ public:
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         bool retain = false) {
         if (register_packet_id(packet_id)) {
-            acquired_publish_exactly_once(packet_id, topic_name, contents, life_keeper, retain);
+            acquired_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain);
             return true;
         }
         return false;
@@ -1389,7 +1389,7 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper An object to allow callers to extend the lifetime of anything until this message is sent
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -1403,12 +1403,12 @@ public:
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_publish(packet_id, topic_name, contents, life_keeper, qos, retain);
+            acquired_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain);
             return true;
         }
         return false;
@@ -1453,7 +1453,7 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param func A object that stays alive until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -1467,12 +1467,12 @@ public:
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_publish_dup(packet_id, topic_name, contents, life_keeper, qos, retain);
+            acquired_publish_dup(packet_id, topic_name, contents, std::move(life_keeper), qos, retain);
             return true;
         }
         return false;
@@ -1686,21 +1686,24 @@ public:
      */
     void acquired_publish_at_least_once(
         packet_id_t packet_id,
-        std::string const& topic_name,
-        std::string const& contents,
+        std::string topic_name,
+        std::string contents,
         bool retain = false) {
 
-        auto sp_topic_name = std::make_shared<std::string>(topic_name);
-        auto sp_contents = std::make_shared<std::string>(contents);
+        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+
+        auto topicBuf = as::buffer(*sp_topic_name);
+        auto contentsBuf = as::buffer(*sp_contents);
 
         send_publish(
-            as::buffer(*sp_topic_name),
+            topicBuf,
             qos::at_least_once,
             retain,
             false,
             packet_id,
-            as::buffer(*sp_contents),
-            [sp_topic_name, sp_contents] {}
+            contentsBuf,
+            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
 
@@ -1713,7 +1716,7 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param func A object that stays alive until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
@@ -1723,7 +1726,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         bool retain = false) {
 
         send_publish(
@@ -1733,7 +1736,7 @@ public:
             false,
             packet_id,
             contents,
-            life_keeper
+            std::move(life_keeper)
         );
     }
 
@@ -1753,21 +1756,24 @@ public:
      */
     void acquired_publish_exactly_once(
         packet_id_t packet_id,
-        std::string const& topic_name,
-        std::string const& contents,
+        std::string topic_name,
+        std::string contents,
         bool retain = false) {
 
-        auto sp_topic_name = std::make_shared<std::string>(topic_name);
-        auto sp_contents = std::make_shared<std::string>(contents);
+        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+
+        auto topicBuf = as::buffer(*sp_topic_name);
+        auto contentsBuf = as::buffer(*sp_contents);
 
         send_publish(
-            as::buffer(*sp_topic_name),
+            topicBuf,
             qos::exactly_once,
             retain,
             false,
             packet_id,
-            as::buffer(*sp_contents),
-            [sp_topic_name, sp_contents] {}
+            contentsBuf,
+            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
 
@@ -1780,7 +1786,7 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param func A object that stays alive until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
@@ -1788,9 +1794,9 @@ public:
      */
     void acquired_publish_exactly_once(
         packet_id_t packet_id,
-        as::const_buffer const& topic_name,
-        as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        as::const_buffer topic_name,
+        as::const_buffer contents,
+        mqtt::any life_keeper,
         bool retain = false) {
 
         send_publish(
@@ -1800,7 +1806,7 @@ public:
             false,
             packet_id,
             contents,
-            life_keeper
+            std::move(life_keeper)
         );
     }
 
@@ -1823,23 +1829,27 @@ public:
      */
     void acquired_publish(
         packet_id_t packet_id,
-        std::string const& topic_name,
-        std::string const& contents,
+        std::string topic_name,
+        std::string contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
-        auto sp_topic_name = std::make_shared<std::string>(topic_name);
-        auto sp_contents = std::make_shared<std::string>(contents);
+
+        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+
+        auto topicBuf = as::buffer(*sp_topic_name);
+        auto contentsBuf = as::buffer(*sp_contents);
 
         send_publish(
-            as::buffer(*sp_topic_name),
+            topicBuf,
             qos,
             retain,
             false,
             packet_id,
-            as::buffer(*sp_contents),
-            [sp_topic_name, sp_contents] {}
+            contentsBuf,
+            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
 
@@ -1853,7 +1863,7 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param func A object that stays alive until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -1863,9 +1873,9 @@ public:
      */
     void acquired_publish(
         packet_id_t packet_id,
-        as::const_buffer const& topic_name,
-        as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        as::const_buffer topic_name,
+        as::const_buffer contents,
+        mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
@@ -1878,7 +1888,7 @@ public:
             false,
             packet_id,
             contents,
-            life_keeper
+            std::move(life_keeper)
         );
     }
 
@@ -1908,17 +1918,20 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
-        auto sp_topic_name = std::make_shared<std::string>(topic_name);
-        auto sp_contents = std::make_shared<std::string>(contents);
+        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+
+        auto topicBuf = as::buffer(*sp_topic_name);
+        auto contentsBuf = as::buffer(*sp_contents);
 
         send_publish(
-            as::buffer(*sp_topic_name),
+            topicBuf,
             qos,
             retain,
             true,
             packet_id,
-            as::buffer(*sp_contents),
-            [sp_topic_name, sp_contents] {}
+            contentsBuf,
+            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
 
@@ -1932,7 +1945,7 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param func A object that stays alive until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -1944,7 +1957,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
@@ -1957,7 +1970,7 @@ public:
             true,
             packet_id,
             contents,
-            life_keeper
+            std::move(life_keeper)
         );
     }
 
@@ -2280,7 +2293,7 @@ public:
         as::const_buffer const& contents,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
-        acquired_async_publish(0, topic_name, contents, [] {}, qos::at_most_once, retain, func);
+        acquired_async_publish(0, topic_name, contents, mqtt::any(), qos::at_most_once, retain, func);
     }
 
     /**
@@ -2318,18 +2331,18 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func A object that stays alive until the async operation is finished.
      * @return packet_id
      * packet_id is automatically generated.
      */
     packet_id_t async_publish_at_least_once(
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_at_least_once(packet_id, topic_name, contents, life_keeper, retain, func);
+        acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, func);
         return packet_id;
     }
 
@@ -2368,18 +2381,18 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func A object that stays alive until the async operation is finished.
      * @return packet_id
      * packet_id is automatically generated.
      */
     packet_id_t async_publish_exactly_once(
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_exactly_once(packet_id, topic_name, contents, life_keeper, retain, func);
+        acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, func);
         return packet_id;
     }
 
@@ -2424,20 +2437,20 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func A object that stays alive until the async operation is finished.
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
     packet_id_t async_publish(
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, topic_name, contents, life_keeper, qos, retain, func);
+        acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, func);
         return packet_id;
     }
 
@@ -2746,7 +2759,7 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func A object that stays alive until the async operation is finished.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -2754,11 +2767,11 @@ public:
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_at_least_once(packet_id, topic_name, contents, life_keeper, retain, func);
+            acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, func);
             return true;
         }
         return false;
@@ -2806,7 +2819,7 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func A object that stays alive until the async operation is finished.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -2814,11 +2827,11 @@ public:
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_exactly_once(packet_id, topic_name, contents, life_keeper, retain, func);
+            acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, func);
             return true;
         }
         return false;
@@ -2872,7 +2885,7 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func A object that stays alive until the async operation is finished.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -2880,13 +2893,13 @@ public:
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, topic_name, contents, life_keeper, qos, retain, func);
+            acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, func);
             return true;
         }
         return false;
@@ -2940,7 +2953,7 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func A object that stays alive until the async operation is finished.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -2948,13 +2961,13 @@ public:
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, topic_name, contents, life_keeper, qos, retain, func);
+            acquired_async_publish_dup(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, func);
             return true;
         }
         return false;
@@ -3237,23 +3250,26 @@ public:
      */
     void acquired_async_publish_at_least_once(
         packet_id_t packet_id,
-        std::string const& topic_name,
-        std::string const& contents,
+        std::string topic_name,
+        std::string contents,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
 
-        auto sp_topic_name = std::make_shared<std::string>(topic_name);
-        auto sp_contents = std::make_shared<std::string>(contents);
+        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+
+        auto topicBuf = as::buffer(*sp_topic_name);
+        auto contentsBuf = as::buffer(*sp_contents);
 
         async_send_publish(
-            as::buffer(*sp_topic_name),
+            topicBuf,
             qos::at_least_once,
             retain,
             false,
             packet_id,
-            as::buffer(*sp_contents),
+            contentsBuf,
             func,
-            [sp_topic_name, sp_contents] {}
+            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
 
@@ -3273,13 +3289,13 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func A object that stays alive until the async operation is finished.
      */
     void acquired_async_publish_at_least_once(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
 
@@ -3291,7 +3307,7 @@ public:
             packet_id,
             contents,
             func,
-            life_keeper
+            std::move(life_keeper)
         );
     }
 
@@ -3312,23 +3328,26 @@ public:
      */
     void acquired_async_publish_exactly_once(
         packet_id_t packet_id,
-        std::string const& topic_name,
-        std::string const& contents,
+        std::string topic_name,
+        std::string contents,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
 
-        auto sp_topic_name = std::make_shared<std::string>(topic_name);
-        auto sp_contents = std::make_shared<std::string>(contents);
+        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+
+        auto topicBuf = as::buffer(*sp_topic_name);
+        auto contentsBuf = as::buffer(*sp_contents);
 
         async_send_publish(
-            as::buffer(*sp_topic_name),
+            topicBuf,
             qos::exactly_once,
             retain,
             false,
             packet_id,
-            as::buffer(*sp_contents),
+            contentsBuf,
             func,
-            [sp_topic_name, sp_contents] {}
+            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
 
@@ -3346,13 +3365,13 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func A object that stays alive until the async operation is finished.
      */
     void acquired_async_publish_exactly_once(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
 
@@ -3364,7 +3383,7 @@ public:
             packet_id,
             contents,
             func,
-            life_keeper
+            std::move(life_keeper)
         );
     }
 
@@ -3388,26 +3407,29 @@ public:
      */
     void acquired_async_publish(
         packet_id_t packet_id,
-        std::string const& topic_name,
-        std::string const& contents,
+        std::string topic_name,
+        std::string contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
-        auto sp_topic_name = std::make_shared<std::string>(topic_name);
-        auto sp_contents = std::make_shared<std::string>(contents);
+        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+
+        auto topicBuf = as::buffer(*sp_topic_name);
+        auto contentsBuf = as::buffer(*sp_contents);
 
         async_send_publish(
-            as::buffer(*sp_topic_name),
+            topicBuf,
             qos,
             retain,
             false,
             packet_id,
-            as::buffer(*sp_contents),
+            contentsBuf,
             func,
-            [sp_topic_name, sp_contents] {}
+            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
 
@@ -3428,13 +3450,13 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func A object that stays alive until the async operation is finished.
      */
     void acquired_async_publish(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
@@ -3449,7 +3471,7 @@ public:
             packet_id,
             contents,
             func,
-            life_keeper
+            std::move(life_keeper)
         );
     }
 
@@ -3473,26 +3495,29 @@ public:
      */
     void acquired_async_publish_dup(
         packet_id_t packet_id,
-        std::string const& topic_name,
-        std::string const& contents,
+        std::string topic_name,
+        std::string contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
-        auto sp_topic_name = std::make_shared<std::string>(topic_name);
-        auto sp_contents = std::make_shared<std::string>(contents);
+        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+
+        auto topicBuf = as::buffer(*sp_topic_name);
+        auto contentsBuf = as::buffer(*sp_contents);
 
         async_send_publish(
-            as::buffer(*sp_topic_name),
+            topicBuf,
             qos,
             retain,
             true,
             packet_id,
-            as::buffer(*sp_contents),
+            contentsBuf,
             func,
-            [sp_topic_name, sp_contents] {}
+            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
 
@@ -3513,13 +3538,13 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func A object that stays alive until the async operation is finished.
      */
     void acquired_async_publish_dup(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
-        life_keeper_t const& life_keeper,
+        mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t const& func = async_handler_t()) {
@@ -3534,7 +3559,7 @@ public:
             packet_id,
             contents,
             func,
-            life_keeper
+            std::move(life_keeper)
         );
     }
 
@@ -3611,12 +3636,11 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
 
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-
         params.reserve(1);
+
         async_send_subscribe(
             params,
-            life_keepers,
+            mqtt::any(),
             packet_id,
             topic_name,
             qos,
@@ -3645,12 +3669,11 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos::at_least_once || qos::exactly_once);
 
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-
         params.reserve(1);
+
         async_send_subscribe(
             params,
-            life_keepers,
+            mqtt::any(),
             packet_id,
             topic_name,
             qos,
@@ -3687,7 +3710,7 @@ public:
         }
         async_send_subscribe(
             cb_params,
-            life_keepers,
+            std::move(life_keepers),
             packet_id,
             func
         );
@@ -3707,12 +3730,9 @@ public:
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
         async_handler_t const& func = async_handler_t()) {
-
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-
         async_send_subscribe(
             params,
-            life_keepers,
+            mqtt::any(),
             packet_id,
             func
         );
@@ -3789,7 +3809,7 @@ public:
 
         async_send_unsubscribe(
             cb_params,
-            life_keepers,
+            std::move(life_keepers),
             packet_id,
             func
         );
@@ -3810,11 +3830,9 @@ public:
         packet_id_t packet_id,
         std::vector<as::const_buffer> const& params,
         async_handler_t const& func = async_handler_t()) {
-
-        std::vector<std::shared_ptr<std::string>> life_keepers;
         async_send_unsubscribe(
             params,
-            life_keepers,
+            mqtt::any(),
             packet_id,
             func
         );
@@ -4127,9 +4145,9 @@ public:
      * @brief Restore serialized publish message.
      *        This function should be called before connect.
      * @param msg         publish message.
-     * @param life_keeper the function that keeps the msg lifetime.
+     * @param life_keeper An object to allow callers to extend the lifetime of anything until this message is sent
      */
-    void restore_serialized_message(basic_publish_message<PacketIdBytes> msg, life_keeper_t life_keeper) {
+    void restore_serialized_message(basic_publish_message<PacketIdBytes> msg, mqtt::any life_keeper) {
         auto packet_id = msg.packet_id();
         auto qos = msg.qos();
         LockGuard<Mutex> lck (store_mtx_);
@@ -4157,8 +4175,7 @@ public:
             auto ret = store_.emplace(
                 packet_id,
                 control_packet_type::pubcomp,
-                std::move(msg),
-                []{}
+                std::move(msg)
             );
             BOOST_ASSERT(ret.second);
         }
@@ -4241,14 +4258,13 @@ public:
 
 protected:
     void async_read_control_packet_type(async_handler_t const& func) {
-        auto self = this->shared_from_this();
         async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            [this, self, func](
+            [self = this->shared_from_this(), func](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred){
-                if (handle_close_or_error(ec)) {
+                if (self->handle_close_or_error(ec)) {
                     if (func) func(ec);
                     return;
                 }
@@ -4256,7 +4272,7 @@ protected:
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     return;
                 }
-                handle_control_packet_type(func);
+                self->handle_control_packet_type(func);
             }
         );
     }
@@ -4412,12 +4428,9 @@ private:
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
 
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-        life_keepers.reserve((sizeof...(args) + 2) / 2);
-
         async_send_subscribe(
             params,
-            life_keepers,
+            mqtt::any(),
             packet_id,
             topic_name,
             qos,
@@ -4440,11 +4453,9 @@ private:
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
 
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-
         async_send_subscribe(
             params,
-            life_keepers,
+            mqtt::any(),
             packet_id,
             topic_name,
             qos,
@@ -4467,12 +4478,9 @@ private:
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
 
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-        life_keepers.reserve((sizeof...(args) + 2) / 2);
-
         async_send_subscribe(
             params,
-            life_keepers,
+            mqtt::any(),
             packet_id,
             topic_name,
             qos,
@@ -4496,11 +4504,9 @@ private:
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
 
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-
         async_send_subscribe(
             params,
-            life_keepers,
+            mqtt::any(),
             packet_id,
             topic_name,
             qos,
@@ -4524,12 +4530,9 @@ private:
         std::vector<as::const_buffer> params;
         params.reserve(sizeof...(args));
 
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-        life_keepers.reserve(sizeof...(args));
-
         async_send_unsubscribe(
             params,
-            life_keepers,
+            mqtt::any(),
             packet_id,
             topic_name,
             std::forward<Args>(args)...
@@ -4551,11 +4554,9 @@ private:
         std::vector<as::const_buffer> params;
         params.reserve(sizeof...(args));
 
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-
         async_send_unsubscribe(
             params,
-            life_keepers,
+            mqtt::any(),
             packet_id,
             topic_name,
             std::forward<Args>(args)...
@@ -4577,12 +4578,9 @@ private:
         std::vector<as::const_buffer> params;
         params.reserve(sizeof...(args) + 1);
 
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-        life_keepers.reserve(sizeof...(args) + 1);
-
         async_send_unsubscribe(
             params,
-            life_keepers,
+            mqtt::any(),
             packet_id,
             topic_name,
             std::forward<Args>(args)...,
@@ -4605,11 +4603,9 @@ private:
         std::vector<as::const_buffer> params;
         params.reserve(sizeof...(args) + 1);
 
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-
         async_send_unsubscribe(
             params,
-            life_keepers,
+            mqtt::any(),
             packet_id,
             topic_name,
             std::forward<Args>(args)...,
@@ -4657,12 +4653,12 @@ private:
             return buf_;
         }
 
-        std::tuple<char*, std::size_t> finalize(std::uint8_t fixed_header) {
+        std::pair<char*, std::size_t> finalize(std::uint8_t fixed_header) {
             auto rb = remaining_bytes(buf_->size() - payload_position_);
             std::size_t start_position = payload_position_ - rb.size() - 1;
             (*buf_)[start_position] = fixed_header;
             buf_->replace(start_position + 1, rb.size(), rb);
-            return std::make_tuple(
+            return std::make_pair(
                 &(*buf_)[start_position],
                 buf_->size() - start_position);
         }
@@ -4676,12 +4672,11 @@ private:
             packet_id_t id,
             std::uint8_t type,
             basic_store_message_variant<PacketIdBytes> smv,
-            life_keeper_t life_keeper)
-            :
-            packet_id_(id),
-            expected_control_packet_type_(type),
-            smv_(std::move(smv)),
-            life_keeper_(life_keeper) {}
+            mqtt::any life_keeper = mqtt::any())
+            : packet_id_(id)
+            , expected_control_packet_type_(type)
+            , smv_(std::move(smv))
+            , life_keeper_(std::move(life_keeper)) {}
         packet_id_t packet_id() const { return packet_id_; }
         std::uint8_t expected_control_packet_type() const { return expected_control_packet_type_; }
         basic_message_variant<PacketIdBytes> message() const {
@@ -4691,7 +4686,7 @@ private:
         packet_id_t packet_id_;
         std::uint8_t expected_control_packet_type_;
         basic_store_message_variant<PacketIdBytes> smv_;
-        life_keeper_t life_keeper_;
+        mqtt::any life_keeper_;
     };
 
     struct tag_packet_id {};
@@ -4731,23 +4726,22 @@ private:
         fixed_header_ = static_cast<std::uint8_t>(buf_);
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
-        auto self = this->shared_from_this();
         async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            [this, self, func](
+            [self = this->shared_from_this(), func](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred){
-                if (handle_close_or_error(ec)) {
+                if (self->handle_close_or_error(ec)) {
                     if (func) func(ec);
                     return;
                 }
                 if (bytes_transferred != 1) {
-                    handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                    self->handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     return;
                 }
-                handle_remaining_length(func);
+                self->handle_remaining_length(func);
             }
         );
     }
@@ -4760,24 +4754,23 @@ private:
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return;
         }
-        auto self = this->shared_from_this();
         if (buf_ & 0b10000000) {
             async_read(
                 *socket_,
                 as::buffer(&buf_, 1),
-                [this, self, func](
+                [self = this->shared_from_this(), func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
-                    if (handle_close_or_error(ec)) {
+                    if (self->handle_close_or_error(ec)) {
                         if (func) func(ec);
                         return;
                     }
                     if (bytes_transferred != 1) {
-                        handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                        self->handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
-                    handle_remaining_length(func);
+                    self->handle_remaining_length(func);
                 }
             );
         }
@@ -4826,25 +4819,25 @@ private:
             async_read(
                 *socket_,
                 as::buffer(payload_),
-                [this, self, func](
+                [self = this->shared_from_this(), func](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
                     auto g = unique_scope_guard(
-                        [this]
+                        [&self]
                         {
-                            payload_.clear();
+                            self->payload_.clear();
                         }
                     );
-                    if (handle_close_or_error(ec)) {
+                    if (self->handle_close_or_error(ec)) {
                         if (func) func(ec);
                         return;
                     }
-                    if (bytes_transferred != remaining_length_) {
-                        handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                    if (bytes_transferred != self->remaining_length_) {
+                        self->handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
-                    handle_payload(func);
+                    self->handle_payload(func);
                 }
             );
         }
@@ -5475,13 +5468,7 @@ private:
         bool dup,
         packet_id_t packet_id,
         as::const_buffer const& payload,
-        life_keeper_t life_keeper) {
-
-        auto g = shared_scope_guard(
-            [MQTT_CAPTURE_MOVE(life_keeper)] {
-                if (life_keeper) life_keeper();
-            }
-        );
+        mqtt::any life_keeper) {
 
         auto msg =
             basic_publish_message<PacketIdBytes>(
@@ -5503,7 +5490,7 @@ private:
                     qos == qos::at_least_once ? control_packet_type::puback
                                               : control_packet_type::pubrec,
                     store_msg,
-                    [g] {}
+                    std::move(life_keeper)
                 );
                 BOOST_ASSERT(ret.second);
             }
@@ -5536,8 +5523,7 @@ private:
             auto ret = store_.emplace(
                 packet_id,
                 control_packet_type::pubcomp,
-                msg,
-                [] {}
+                msg
             );
             BOOST_ASSERT(ret.second);
         }
@@ -5551,7 +5537,6 @@ private:
     }
 
     void store_pubrel(packet_id_t packet_id) {
-
         auto msg = basic_pubrel_message<PacketIdBytes>(packet_id);
 
         {
@@ -5559,8 +5544,7 @@ private:
             auto ret = store_.emplace(
                 packet_id,
                 control_packet_type::pubcomp,
-                msg,
-                [] {}
+                msg
             );
             BOOST_ASSERT(ret.second);
             if (h_serialize_pubrel_) {
@@ -5701,13 +5685,7 @@ private:
         packet_id_t packet_id,
         as::const_buffer const& payload,
         async_handler_t const& func,
-        life_keeper_t life_keeper) {
-
-        auto g = shared_scope_guard(
-            [MQTT_CAPTURE_MOVE(life_keeper)] {
-                if (life_keeper) life_keeper();
-            }
-        );
+        mqtt::any life_keeper) {
 
         auto msg =
             basic_publish_message<PacketIdBytes>(
@@ -5729,7 +5707,7 @@ private:
                     qos == qos::at_least_once ? control_packet_type::puback
                                               : control_packet_type::pubrec,
                     store_msg,
-                    [g] {}
+                    life_keeper
                 );
                 BOOST_ASSERT(ret.second);
             }
@@ -5740,21 +5718,20 @@ private:
         }
 
         do_async_write(
-            msg,
-            [g, func](boost::system::error_code const& ec) {
+            std::move(msg),
+            [MQTT_CAPTURE_MOVE(life_keeper), func](boost::system::error_code const& ec) {
                 if (func) func(ec);
             }
         );
     }
 
-    void async_send_puback(packet_id_t packet_id, async_handler_t const& func) {
-        auto self = this->shared_from_this();
+    void async_send_puback(packet_id_t packet_id, async_handler_t func) {
         do_async_write(
             basic_puback_message<PacketIdBytes>(packet_id),
-            [this, self, packet_id, func]
+            [self = this->shared_from_this(), packet_id, MQTT_CAPTURE_MOVE(func)]
             (boost::system::error_code const& ec){
                 if (func) func(ec);
-                if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
+                if (self->h_pub_res_sent_) self->h_pub_res_sent_(packet_id);
             }
         );
     }
@@ -5779,8 +5756,7 @@ private:
             auto ret = store_.emplace(
                 packet_id,
                 control_packet_type::pubcomp,
-                msg,
-                [] {});
+                msg);
             BOOST_ASSERT(ret.second);
         }
 
@@ -5790,14 +5766,13 @@ private:
         do_async_write(msg, func);
     }
 
-    void async_send_pubcomp(packet_id_t packet_id, async_handler_t const& func) {
-        auto self = this->shared_from_this();
+    void async_send_pubcomp(packet_id_t packet_id, async_handler_t func) {
         do_async_write(
             basic_pubcomp_message<PacketIdBytes>(packet_id),
-            [this, self, packet_id, func]
+            [self = this->shared_from_this(), packet_id, MQTT_CAPTURE_MOVE(func)]
             (boost::system::error_code const& ec){
                 if (func) func(ec);
-                if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
+                if (self->h_pub_res_sent_) self->h_pub_res_sent_(packet_id);
             }
         );
     }
@@ -5805,39 +5780,36 @@ private:
     template <typename... Args>
     void async_send_subscribe(
         std::vector<std::tuple<as::const_buffer, std::uint8_t>>& params,
-        std::vector<std::shared_ptr<std::string>>& life_keepers,
+        mqtt::any life_keepers,
         packet_id_t packet_id,
         as::const_buffer topic_name,
         std::uint8_t qos,
         Args&&... args) {
-
         params.emplace_back(std::move(topic_name), qos);
-        async_send_subscribe(params, life_keepers, packet_id, std::forward<Args>(args)...);
+        async_send_subscribe(params, std::move(life_keepers), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void async_send_subscribe(
         std::vector<std::tuple<as::const_buffer, std::uint8_t>>& params,
-        std::vector<std::shared_ptr<std::string>>& life_keepers,
+        mqtt::any life_keepers,
         packet_id_t packet_id,
-        std::string const& topic_name,
+        std::string topic_name,
         std::uint8_t qos,
         Args&&... args) {
-
-        life_keepers.emplace_back(std::make_shared<std::string>(topic_name));
-        params.emplace_back(as::buffer(*life_keepers.back()), qos);
-        async_send_subscribe(params, life_keepers, packet_id, std::forward<Args>(args)...);
+        auto pTopic = std::make_shared<std::string>(std::move(topic_name));
+        params.emplace_back(as::buffer(*pTopic), qos);
+        async_send_subscribe(params, std::make_pair(std::move(life_keepers), std::move(pTopic)), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_subscribe(
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
-        std::vector<std::shared_ptr<std::string>> const& life_keepers,
+        mqtt::any life_keepers,
         packet_id_t packet_id,
-        async_handler_t const& func) {
-
+        async_handler_t func) {
         do_async_write(
             basic_subscribe_message<PacketIdBytes>(params, packet_id),
-            [life_keepers, func]
+            [MQTT_CAPTURE_MOVE(life_keepers), MQTT_CAPTURE_MOVE(func)]
             (boost::system::error_code const& ec) {
                 if (func) func(ec);
             }
@@ -5848,7 +5820,8 @@ private:
     void async_send_suback(
         std::vector<std::uint8_t>& params,
         packet_id_t packet_id,
-        std::uint8_t qos, Args&&... args) {
+        std::uint8_t qos,
+            Args&&... args) {
         params.push_back(qos);
         async_send_suback(params, packet_id, std::forward<Args>(args)...);
     }
@@ -5863,38 +5836,37 @@ private:
     template <typename... Args>
     void async_send_unsubscribe(
         std::vector<as::const_buffer>& params,
-        std::vector<std::shared_ptr<std::string>>& life_keepers,
+        mqtt::any life_keepers,
         packet_id_t packet_id,
         as::const_buffer topic_name,
         Args&&... args) {
         params.emplace_back(std::move(topic_name));
-        async_send_unsubscribe(params, life_keepers, packet_id, std::forward<Args>(args)...);
+        async_send_unsubscribe(params, std::move(life_keepers), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void async_send_unsubscribe(
         std::vector<as::const_buffer>& params,
-        std::vector<std::shared_ptr<std::string>>& life_keepers,
+        mqtt::any life_keepers,
         packet_id_t packet_id,
-        std::string const& topic_name,
+        std::string topic_name,
         Args&&... args) {
-
-        life_keepers.emplace_back(std::make_shared<std::string>(topic_name));
-        params.emplace_back(as::buffer(*life_keepers.back()));
-        async_send_unsubscribe(params, life_keepers, packet_id, std::forward<Args>(args)...);
+        auto pTopic = std::make_shared<std::string>(std::move(topic_name));
+        params.emplace_back(as::buffer(*pTopic));
+        async_send_unsubscribe(params, std::make_pair(std::move(life_keepers), std::move(pTopic)), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_unsubscribe(
         std::vector<as::const_buffer> const& params,
-        std::vector<std::shared_ptr<std::string>> const& life_keepers,
+        mqtt::any life_keepers,
         packet_id_t packet_id,
-        async_handler_t const& func) {
+        async_handler_t func) {
         do_async_write(
             basic_unsubscribe_message<PacketIdBytes>(
                 params,
                 packet_id
             ),
-            [life_keepers, func]
+            [MQTT_CAPTURE_MOVE(life_keepers), MQTT_CAPTURE_MOVE(func)]
             (boost::system::error_code const& ec) {
                 if (func) func(ec);
             }
@@ -5925,8 +5897,8 @@ private:
         async_packet(
             basic_message_variant<PacketIdBytes> mv,
             async_handler_t h = async_handler_t())
-            :
-            mv_(std::move(mv)), handler_(std::move(h)) {}
+            : mv_(std::move(mv))
+            , handler_(std::move(h)) {}
         basic_message_variant<PacketIdBytes> const& message() const {
             return mv_;
         }
@@ -5940,20 +5912,20 @@ private:
         async_handler_t handler_;
     };
 
-    void do_async_write(basic_message_variant<PacketIdBytes> mv, async_handler_t const& func) {
+    void do_async_write(basic_message_variant<PacketIdBytes> mv, async_handler_t func) {
         // Move this job to the socket's strand so that it can be queued without mutexes.
         socket_->post(
-            [this, self = this->shared_from_this(), MQTT_CAPTURE_MOVE(mv), func]
+            [self = this->shared_from_this(), MQTT_CAPTURE_MOVE(mv), MQTT_CAPTURE_MOVE(func)]
             () {
-                if (!connected_) {
+                if (!self->connected_) {
                     // offline async publish is successfully finished, because there's nothing to do.
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                     return;
                 }
-                queue_.emplace_back(std::move(mv), func);
+                self->queue_.emplace_back(std::move(mv), func);
                 // Only need to start async writes if there was nothing in the queue before the above item.
-                if (queue_.size() > 1) return;
-                do_async_write();
+                if (self->queue_.size() > 1) return;
+                self->do_async_write();
             }
         );
     }
@@ -6061,13 +6033,13 @@ private:
             handlers.emplace_back(elem.handler());
         }
 
-        auto self = this->shared_from_this();
         if (h_pre_send_) h_pre_send_();
+
         async_write(
             *socket_,
             buf,
             write_completion_handler(
-                std::move(self),
+                this->shared_from_this(),
                 [MQTT_CAPTURE_MOVE(handlers)]
                 (boost::system::error_code const& ec) {
                     for (auto const& h : handlers) {
