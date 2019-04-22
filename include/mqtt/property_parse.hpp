@@ -23,7 +23,7 @@ mqtt::optional<property_variant> parse_one(It& begin, It end) {
     if (begin == end) return mqtt::nullopt;
     try {
         auto it = begin;
-        switch (static_cast<std::uint8_t>(*it++)) {
+        switch (static_cast<property::id>(*it++)) {
         case id::payload_format_indicator: {
             if (it + 1 > end) return mqtt::nullopt;
             auto p = payload_format_indicator(it, it + 1);

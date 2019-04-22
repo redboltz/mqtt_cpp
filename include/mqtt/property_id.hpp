@@ -15,37 +15,35 @@ namespace v5 {
 
 namespace property {
 
-namespace id {
-
-constexpr std::uint8_t const payload_format_indicator          =  1;
-constexpr std::uint8_t const message_expiry_interval           =  2;
-constexpr std::uint8_t const content_type                      =  3;
-constexpr std::uint8_t const response_topic                    =  8;
-constexpr std::uint8_t const correlation_data                  =  9;
-constexpr std::uint8_t const subscription_identifier           = 11;
-constexpr std::uint8_t const session_expiry_interval           = 17;
-constexpr std::uint8_t const assigned_client_identifier        = 18;
-constexpr std::uint8_t const server_keep_alive                 = 19;
-constexpr std::uint8_t const authentication_method             = 21;
-constexpr std::uint8_t const authentication_data               = 22;
-constexpr std::uint8_t const request_problem_information       = 23;
-constexpr std::uint8_t const will_delay_interval               = 24;
-constexpr std::uint8_t const request_response_information      = 25;
-constexpr std::uint8_t const response_information              = 26;
-constexpr std::uint8_t const server_reference                  = 28;
-constexpr std::uint8_t const reason_string                     = 31;
-constexpr std::uint8_t const receive_maximum                   = 33;
-constexpr std::uint8_t const topic_alias_maximum               = 34;
-constexpr std::uint8_t const topic_alias                       = 35;
-constexpr std::uint8_t const maximum_qos                       = 36;
-constexpr std::uint8_t const retain_available                  = 37;
-constexpr std::uint8_t const user_property                     = 38;
-constexpr std::uint8_t const maximum_packet_size               = 39;
-constexpr std::uint8_t const wildcard_subscription_available   = 40;
-constexpr std::uint8_t const subscription_identifier_available = 41;
-constexpr std::uint8_t const shared_subscription_available     = 42;
-
-} // namespace id
+enum class id {
+    payload_format_indicator          =  1,
+    message_expiry_interval           =  2,
+    content_type                      =  3,
+    response_topic                    =  8,
+    correlation_data                  =  9,
+    subscription_identifier           = 11,
+    session_expiry_interval           = 17,
+    assigned_client_identifier        = 18,
+    server_keep_alive                 = 19,
+    authentication_method             = 21,
+    authentication_data               = 22,
+    request_problem_information       = 23,
+    will_delay_interval               = 24,
+    request_response_information      = 25,
+    response_information              = 26,
+    server_reference                  = 28,
+    reason_string                     = 31,
+    receive_maximum                   = 33,
+    topic_alias_maximum               = 34,
+    topic_alias                       = 35,
+    maximum_qos                       = 36,
+    retain_available                  = 37,
+    user_property                     = 38,
+    maximum_packet_size               = 39,
+    wildcard_subscription_available   = 40,
+    subscription_identifier_available = 41,
+    shared_subscription_available     = 42,
+};
 
 } // namespace property
 

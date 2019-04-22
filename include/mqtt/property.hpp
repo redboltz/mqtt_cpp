@@ -39,15 +39,15 @@ namespace detail {
 
 template <std::size_t N>
 struct n_bytes_property {
-    explicit n_bytes_property(std::uint8_t id)
-        :id_(static_cast<char>(id)) {}
+    explicit n_bytes_property(property::id id)
+        :id_(id) {}
 
     template <typename It>
-    n_bytes_property(std::uint8_t id, It b, It e)
-        :id_(static_cast<char>(id)), buf_(b, e) {}
+    n_bytes_property(property::id id, It b, It e)
+        :id_(id), buf_(b, e) {}
 
-    n_bytes_property(std::uint8_t id, std::initializer_list<char> il)
-        :id_(static_cast<char>(id)), buf_(std::move(il)) {}
+    n_bytes_property(property::id id, std::initializer_list<char> il)
+        :id_(id), buf_(std::move(il)) {}
 
     /**
      * @brief Add const buffer sequence into the given buffer.
@@ -67,7 +67,7 @@ struct n_bytes_property {
     template <typename It>
     void fill(It b, It e) const {
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
-        *b++ = id_;
+        *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         std::copy(buf_.begin(), buf_.end(), b);
     }
 
@@ -87,13 +87,13 @@ struct n_bytes_property {
         return 2;
     }
 
-    char const id_;
+    property::id id_;
     boost::container::static_vector<char, N> buf_;
 };
 
 struct binary_property {
-    binary_property(std::uint8_t id, string_view sv)
-        :id_(static_cast<char>(id)),
+    binary_property(property::id id, string_view sv)
+        :id_(id),
          length_{MQTT_16BITNUM_TO_BYTE_SEQ(sv.size())},
          buf_(sv.begin(), sv.end()) {
              if (sv.size() > 0xffff) throw property_length_error();
@@ -118,7 +118,7 @@ struct binary_property {
     template <typename It>
     void fill(It b, It e) const {
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
-        *b++ = id_;
+        *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         std::copy(length_.begin(), length_.end(), b);
         b += static_cast<typename It::difference_type>(length_.size());
         std::copy(buf_.begin(), buf_.end(), b);
@@ -144,14 +144,14 @@ struct binary_property {
         return buf_;
     }
 
-    char const id_;
+    property::id id_;
     boost::container::static_vector<char, 2> length_;
     std::string buf_;
 };
 
 struct binary_property_ref {
-    binary_property_ref(std::uint8_t id, string_view sv)
-        :id_(static_cast<char>(id)),
+    binary_property_ref(property::id id, string_view sv)
+        :id_(id),
          length_{MQTT_16BITNUM_TO_BYTE_SEQ(sv.size())},
          buf_(sv.data(), sv.size()) {
              if (sv.size() > 0xffff) throw property_length_error();
@@ -176,7 +176,7 @@ struct binary_property_ref {
     template <typename It>
     void fill(It b, It e) const {
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
-        *b++ = id_;
+        *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         std::copy(length_.begin(), length_.end(), b);
         b += static_cast<typename It::difference_type>(length_.size());
         std::copy(get_pointer(buf_), get_pointer(buf_) + get_size(buf_), b);
@@ -202,13 +202,13 @@ struct binary_property_ref {
         return string_view(get_pointer(buf_), get_size(buf_));
     }
 
-    char const id_;
+    property::id id_;
     boost::container::static_vector<char, 2> length_;
     as::const_buffer buf_;
 };
 
 struct string_property : binary_property {
-    string_property(std::uint8_t id, string_view sv)
+    string_property(property::id id, string_view sv)
         :binary_property(id, sv) {
         auto r = utf8string::validate_contents(sv);
         if (r != utf8string::validation::well_formed) throw utf8string_contents_error(r);
@@ -216,7 +216,7 @@ struct string_property : binary_property {
 };
 
 struct string_property_ref : binary_property_ref {
-    string_property_ref(std::uint8_t id, string_view sv)
+    string_property_ref(property::id id, string_view sv)
         :binary_property_ref(id, sv) {
         auto r = utf8string::validate_contents(sv);
         if (r != utf8string::validation::well_formed) throw utf8string_contents_error(r);
@@ -224,8 +224,8 @@ struct string_property_ref : binary_property_ref {
 };
 
 struct variable_property {
-    variable_property(std::uint8_t id, std::size_t value)
-        :id_(static_cast<char>(id))  {
+    variable_property(property::id id, std::size_t value)
+        :id_(id)  {
         variable_push(value_, value);
     }
 
@@ -247,7 +247,7 @@ struct variable_property {
     template <typename It>
     void fill(It b, It e) const {
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
-        *b++ = id_;
+        *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         std::copy(value_.begin(), value_.end(), b);
     }
 
@@ -271,7 +271,7 @@ struct variable_property {
         return std::get<0>(variable_length(value_));
     }
 
-    char const id_;
+    property::id id_;
     boost::container::static_vector<char, 4> value_;
 };
 
@@ -605,7 +605,7 @@ public:
     void fill(It b, It e) const {
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
 
-        *b++ = id_;
+        *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         {
             std::copy(key_.len.begin(), key_.len.end(), b);
             b += static_cast<typename It::difference_type>(key_.len.size());
@@ -655,7 +655,7 @@ public:
     }
 
 private:
-    char const id_ = id::user_property;
+    property::id id_ = id::user_property;
     len_str key_;
     len_str val_;
 };
@@ -698,7 +698,7 @@ public:
     void fill(It b, It e) const {
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
 
-        *b++ = id_;
+        *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         {
             std::copy(key_.len.begin(), key_.len.end(), b);
             b += static_cast<typename It::difference_type>(key_.len.size());
@@ -748,7 +748,7 @@ public:
     }
 
 private:
-    char const id_ = id::user_property;
+    property::id id_ = id::user_property;
     len_str key_;
     len_str val_;
 };
