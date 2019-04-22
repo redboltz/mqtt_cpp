@@ -75,7 +75,7 @@ public:
     /**
      * @brief Constructor for client
      */
-    endpoint(std::uint8_t version = protocol_version::undetermined)
+    endpoint(protocol_version version = protocol_version::undetermined)
         :h_mqtt_message_processed_(
              [this]
              (async_handler_t const& func) {
@@ -89,7 +89,7 @@ public:
      * @brief Constructor for server.
      *        socket should have already been connected with another endpoint.
      */
-    explicit endpoint(std::unique_ptr<Socket> socket, std::uint8_t version = protocol_version::undetermined)
+    explicit endpoint(std::unique_ptr<Socket> socket, protocol_version version = protocol_version::undetermined)
         :socket_(std::move(socket))
         ,connected_(true)
         ,h_mqtt_message_processed_(
@@ -6767,7 +6767,7 @@ public:
         max_queue_send_size_ = size;
     }
 
-    std::uint8_t protocol_version() const {
+    protocol_version get_protocol_version() const {
         return version_;
     }
 
@@ -7526,7 +7526,7 @@ private:
             return false;
         }
 
-        auto version = static_cast<std::uint8_t>(payload_[i++]);
+        auto version = static_cast<protocol_version>(payload_[i++]);
         if (version != protocol_version::v3_1_1 && version != protocol_version::v5) {
             if (func) {
                 func(boost::system::errc::make_error_code(boost::system::errc::protocol_not_supported));
@@ -9983,7 +9983,7 @@ private:
     std::size_t max_queue_send_count_{1};
     std::size_t max_queue_send_size_{0};
     mqtt_message_processed_handler h_mqtt_message_processed_;
-    std::uint8_t version_{protocol_version::undetermined};
+    protocol_version version_{protocol_version::undetermined};
 };
 
 } // namespace mqtt

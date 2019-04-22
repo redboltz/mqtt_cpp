@@ -396,7 +396,7 @@ private:
         std::uint16_t /*keep_alive*/,
         std::vector<mqtt::v5::property_variant> props
     ) {
-        if (ep.protocol_version() == mqtt::protocol_version::v5 && h_connect_props_) h_connect_props_(props);
+        if (ep.get_protocol_version() == mqtt::protocol_version::v5 && h_connect_props_) h_connect_props_(props);
         // If it's a not a clean session, but no client id
         // is provided, we would have no way to map this
         // connection's session to a new connection later.
@@ -473,7 +473,7 @@ private:
             is_retain,
             std::move(props));
 
-        switch (ep.protocol_version()) {
+        switch (ep.get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             switch (qos) {
             case mqtt::qos::at_least_once:
@@ -528,7 +528,7 @@ private:
             // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
             subs_.emplace(std::make_shared<std::string>(topic), ep.shared_from_this(), qos);
         }
-        switch (ep.protocol_version()) {
+        switch (ep.get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             // Acknowledge the subscriptions, and the registered QOS settings
             ep.suback(packet_id, res);
@@ -571,7 +571,7 @@ private:
             subs_.erase(topic);
         }
 
-        switch (ep.protocol_version()) {
+        switch (ep.get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             ep.unsuback(packet_id);
             break;
@@ -614,7 +614,7 @@ private:
         mqtt::visit(
             mqtt::make_lambda_visitor<void>(
                 [&](auto& con) {
-                    switch (ep.protocol_version()) {
+                    switch (ep.get_protocol_version()) {
                     case mqtt::protocol_version::v3_1_1:
                         con->connack(
                             !clean_session && it != sessions_.end(),

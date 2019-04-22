@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]

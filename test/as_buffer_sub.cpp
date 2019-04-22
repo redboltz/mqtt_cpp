@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]
@@ -227,7 +227,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]
@@ -341,7 +341,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]
@@ -446,7 +446,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]
@@ -561,7 +561,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]

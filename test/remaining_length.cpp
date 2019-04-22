@@ -14,7 +14,7 @@ BOOST_AUTO_TEST_SUITE(test_remaining_length)
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
-        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
+        if (c->get_protocol_version() != mqtt::protocol_version::v3_1_1) return;
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         std::string test_contents;
@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
-        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
+        if (c->get_protocol_version() != mqtt::protocol_version::v3_1_1) return;
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         std::string test_contents;
@@ -230,7 +230,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
-        if (c->protocol_version() != mqtt::protocol_version::v3_1_1) return;
+        if (c->get_protocol_version() != mqtt::protocol_version::v3_1_1) return;
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         std::string test_contents;

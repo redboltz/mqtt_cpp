@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_sub]
@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                 BOOST_TEST(*recv_packet_id == packet_id);
             });
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_sub]
@@ -477,7 +477,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                 BOOST_TEST(*recv_packet_id == packet_id);
             });
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_sub]
@@ -686,7 +686,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_sub]
@@ -892,7 +892,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_sub]

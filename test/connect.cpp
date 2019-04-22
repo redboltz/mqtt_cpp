@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_CASE( connect ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE( connect_no_strand ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]
@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk]
@@ -215,7 +215,7 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
         };
 
         boost::asio::deadline_timer tim(ios);
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &tim]
@@ -316,7 +316,7 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
             cont("h_close2"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&first, &chk, &c]
@@ -390,7 +390,7 @@ BOOST_AUTO_TEST_CASE( nocid ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]
@@ -446,7 +446,7 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
             cont("h_error"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk]
@@ -514,7 +514,7 @@ BOOST_AUTO_TEST_CASE( noclean ) {
         };
 
         int connect = 0;
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &connect, &c]
@@ -625,7 +625,7 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
             cont("h_error"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &s]
@@ -685,7 +685,7 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &s]
@@ -745,7 +745,7 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
             cont("h_error"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &s]
@@ -805,7 +805,7 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &s]
@@ -855,7 +855,7 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
 
 BOOST_AUTO_TEST_CASE( connect_prop ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& b) {
-        if (c->protocol_version() != mqtt::protocol_version::v5) return;
+        if (c->get_protocol_version() != mqtt::protocol_version::v5) return;
 
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -973,7 +973,7 @@ BOOST_AUTO_TEST_CASE( connect_prop ) {
 
 BOOST_AUTO_TEST_CASE( connack_prop ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& b) {
-        if (c->protocol_version() != mqtt::protocol_version::v5) return;
+        if (c->get_protocol_version() != mqtt::protocol_version::v5) return;
 
         c->set_client_id("cid1");
         c->set_clean_session(true);

@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_sub]
@@ -226,7 +226,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                 BOOST_TEST(*recv_packet_id == packet_id);
             });
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_sub]
@@ -417,7 +417,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                 BOOST_TEST(*recv_packet_id == packet_id);
             });
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_sub]
@@ -597,7 +597,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_sub]
@@ -772,7 +772,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
             cont("h_close"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_sub]
@@ -933,7 +933,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
 
 BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
-        if (c->protocol_version() != mqtt::protocol_version::v5) return;
+        if (c->get_protocol_version() != mqtt::protocol_version::v5) return;
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
@@ -1104,7 +1104,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
 
 BOOST_AUTO_TEST_CASE( puback_props ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& b) {
-        if (c->protocol_version() != mqtt::protocol_version::v5) return;
+        if (c->get_protocol_version() != mqtt::protocol_version::v5) return;
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
@@ -1266,7 +1266,7 @@ BOOST_AUTO_TEST_CASE( puback_props ) {
 
 BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& b) {
-        if (c->protocol_version() != mqtt::protocol_version::v5) return;
+        if (c->get_protocol_version() != mqtt::protocol_version::v5) return;
 
         // client               broker
         //       publish ------>

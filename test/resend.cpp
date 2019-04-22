@@ -107,7 +107,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             }
         );
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_pub]
@@ -247,7 +247,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             cont("h_close2"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_pub]
@@ -450,7 +450,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             }
         );
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_pub]
@@ -610,7 +610,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
             cont("h_close2"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, & pid_pub]
@@ -789,7 +789,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             cont("h_close2"),
         };
 
-        switch (c->protocol_version()) {
+        switch (c->get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_pub1, &pid_pub2]

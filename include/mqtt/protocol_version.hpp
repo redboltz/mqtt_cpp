@@ -11,13 +11,11 @@
 
 namespace mqtt {
 
-namespace protocol_version {
-
-constexpr std::uint8_t const undetermined  = 0;
-constexpr std::uint8_t const v3_1_1        = 4;
-constexpr std::uint8_t const v5            = 5;
-
-} // namespace protocol_version
+enum class protocol_version {
+    undetermined  = 0,
+    v3_1_1        = 4,
+    v5            = 5,
+};
 
 } // namespace mqtt
 
