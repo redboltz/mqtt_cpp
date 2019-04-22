@@ -1368,7 +1368,7 @@ public:
         serialize_pubrel_handler h_pubrel,
         serialize_remove_handler h_remove) {
         h_serialize_publish_ =
-            [MQTT_CAPTURE_MOVE(h_publish)]
+            [h_publish = std::move(h_publish)]
             (basic_publish_message<PacketIdBytes> msg) {
                 if (h_publish) {
                     auto buf = continuous_buffer<PacketIdBytes>(msg);
@@ -1376,7 +1376,7 @@ public:
                 }
             };
         h_serialize_pubrel_ =
-            [MQTT_CAPTURE_MOVE(h_pubrel)]
+            [h_pubrel = std::move(h_pubrel)]
             (basic_pubrel_message<PacketIdBytes> msg) {
                 if (h_pubrel) {
                     auto buf = continuous_buffer<PacketIdBytes>(msg);
@@ -1397,7 +1397,7 @@ public:
         serialize_pubrel_handler h_pubrel,
         serialize_remove_handler h_remove) {
         h_serialize_v5_publish_ =
-            [MQTT_CAPTURE_MOVE(h_publish)]
+            [h_publish = std::move(h_publish)]
             (v5::basic_publish_message<PacketIdBytes> msg) {
                 if (h_publish) {
                     auto buf = continuous_buffer<PacketIdBytes>(msg);
@@ -1405,7 +1405,7 @@ public:
                 }
             };
         h_serialize_v5_pubrel_ =
-            [MQTT_CAPTURE_MOVE(h_pubrel)]
+            [h_pubrel = std::move(h_pubrel)]
             (v5::basic_pubrel_message<PacketIdBytes> msg) {
                 if (h_pubrel) {
                     auto buf = continuous_buffer<PacketIdBytes>(msg);
@@ -9197,7 +9197,7 @@ private:
 
                 do_async_write(
                     std::move(msg),
-                    [MQTT_CAPTURE_MOVE(life_keeper), func](boost::system::error_code const& ec) {
+                    [life_keeper = std::move(life_keeper), func](boost::system::error_code const& ec) {
                         if (func) func(ec);
                     }
                 );
@@ -9360,7 +9360,7 @@ private:
                 auto self = this->shared_from_this();
                 do_async_write(
                     std::move(msg),
-                    [this, self, packet_id, MQTT_CAPTURE_MOVE(func)]
+                    [this, self, packet_id, func = std::move(func)]
                     (boost::system::error_code const& ec){
                         if (func) func(ec);
                         if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
@@ -9420,7 +9420,7 @@ private:
         case protocol_version::v3_1_1:
             do_async_write(
                 v3_1_1::basic_subscribe_message<PacketIdBytes>(std::move(params), packet_id),
-                [MQTT_CAPTURE_MOVE(life_keepers), MQTT_CAPTURE_MOVE(func)]
+                [life_keepers = std::move(life_keepers), func = std::move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -9429,7 +9429,7 @@ private:
         case protocol_version::v5:
             do_async_write(
                 v5::basic_subscribe_message<PacketIdBytes>(std::move(params), packet_id, {}),
-                [MQTT_CAPTURE_MOVE(life_keepers), MQTT_CAPTURE_MOVE(func)]
+                [life_keepers = std::move(life_keepers), func = std::move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -9452,7 +9452,7 @@ private:
         case protocol_version::v3_1_1:
             do_async_write(
                 v3_1_1::basic_subscribe_message<PacketIdBytes>(std::move(params), packet_id),
-                [MQTT_CAPTURE_MOVE(life_keepers), MQTT_CAPTURE_MOVE(func)]
+                [life_keepers = std::move(life_keepers), func = std::move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -9461,7 +9461,7 @@ private:
         case protocol_version::v5:
             do_async_write(
                 v5::basic_subscribe_message<PacketIdBytes>(std::move(params), packet_id, std::move(props)),
-                [MQTT_CAPTURE_MOVE(life_keepers), MQTT_CAPTURE_MOVE(func)]
+                [life_keepers = std::move(life_keepers), func = std::move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -9543,7 +9543,7 @@ private:
                     std::move(params),
                     packet_id
                 ),
-                [MQTT_CAPTURE_MOVE(life_keepers), MQTT_CAPTURE_MOVE(func)]
+                [life_keepers = std::move(life_keepers), func = std::move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -9556,7 +9556,7 @@ private:
                     packet_id,
                     {}
                 ),
-                [MQTT_CAPTURE_MOVE(life_keepers), MQTT_CAPTURE_MOVE(func)]
+                [life_keepers = std::move(life_keepers), func = std::move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -9582,7 +9582,7 @@ private:
                     std::move(params),
                     packet_id
                 ),
-                [MQTT_CAPTURE_MOVE(life_keepers), MQTT_CAPTURE_MOVE(func)]
+                [life_keepers = std::move(life_keepers), func = std::move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -9595,7 +9595,7 @@ private:
                     packet_id,
                     std::move(props)
                 ),
-                [MQTT_CAPTURE_MOVE(life_keepers), MQTT_CAPTURE_MOVE(func)]
+                [life_keepers = std::move(life_keepers), func = std::move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -9764,7 +9764,7 @@ private:
     void do_async_write(basic_message_variant<PacketIdBytes> mv, async_handler_t func) {
         // Move this job to the socket's strand so that it can be queued without mutexes.
         socket_->post(
-            [self = this->shared_from_this(), MQTT_CAPTURE_MOVE(mv), MQTT_CAPTURE_MOVE(func)]
+            [self = this->shared_from_this(), mv = std::move(mv), func = std::move(func)]
             () {
                 if (!self->connected_) {
                     // offline async publish is successfully finished, because there's nothing to do.
@@ -9889,7 +9889,7 @@ private:
             buf,
             write_completion_handler(
                 this->shared_from_this(),
-                [MQTT_CAPTURE_MOVE(handlers)]
+                [handlers = std::move(handlers)]
                 (boost::system::error_code const& ec) {
                     for (auto const& h : handlers) {
                         if (h) h(ec);

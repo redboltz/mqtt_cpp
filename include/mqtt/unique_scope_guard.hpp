@@ -10,13 +10,11 @@
 #include <memory>
 #include <utility>
 
-#include <mqtt/utility.hpp>
-
 namespace mqtt {
 
 template <typename Proc>
 inline auto unique_scope_guard(Proc&& proc) {
-    auto deleter = [MQTT_CAPTURE_FORWARD(Proc, proc)](void*) mutable { std::forward<Proc>(proc)(); };
+    auto deleter = [proc = std::forward<Proc>(proc)](void*) mutable { std::forward<Proc>(proc)(); };
     return std::unique_ptr<void, decltype(deleter)>(&deleter, std::move(deleter));
 }
 
