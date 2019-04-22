@@ -759,7 +759,7 @@ make_client(as::io_service& ios, std::string host, std::string port, std::uint8_
     using client_t = client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -785,7 +785,7 @@ make_client_no_strand(as::io_service& ios, std::string host, std::string port, s
     using client_t = client<tcp_endpoint<as::ip::tcp::socket, null_strand>>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -813,7 +813,7 @@ make_client_ws(as::io_service& ios, std::string host, std::string port, std::str
     using client_t = client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -838,7 +838,7 @@ make_client_no_strand_ws(as::io_service& ios, std::string host, std::string port
     using client_t = client<ws_endpoint<as::ip::tcp::socket, null_strand>>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -867,7 +867,7 @@ make_tls_client(as::io_service& ios, std::string host, std::string port, std::ui
     using client_t = client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -893,7 +893,7 @@ make_tls_client_no_strand(as::io_service& ios, std::string host, std::string por
     using client_t = client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -921,7 +921,7 @@ make_tls_client_ws(as::io_service& ios, std::string host, std::string port, std:
     using client_t = client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -946,7 +946,7 @@ make_tls_client_no_strand_ws(as::io_service& ios, std::string host, std::string 
     using client_t = client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -978,7 +978,7 @@ make_client_32(as::io_service& ios, std::string host, std::string port, std::uin
     using client_t = client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -1004,7 +1004,7 @@ make_client_no_strand_32(as::io_service& ios, std::string host, std::string port
     using client_t = client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -1032,7 +1032,7 @@ make_client_ws_32(as::io_service& ios, std::string host, std::string port, std::
     using client_t = client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -1057,7 +1057,7 @@ make_client_no_strand_ws_32(as::io_service& ios, std::string host, std::string p
     using client_t = client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -1086,7 +1086,7 @@ make_tls_client_32(as::io_service& ios, std::string host, std::string port, std:
     using client_t = client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -1112,7 +1112,7 @@ make_tls_client_no_strand_32(as::io_service& ios, std::string host, std::string 
     using client_t = client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -1140,7 +1140,7 @@ make_tls_client_ws_32(as::io_service& ios, std::string host, std::string port, s
     using client_t = client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -1165,7 +1165,7 @@ make_tls_client_no_strand_ws_32(as::io_service& ios, std::string host, std::stri
     using client_t = client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>;
     return std::make_shared<client_t>(
         client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,

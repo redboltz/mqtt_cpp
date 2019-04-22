@@ -275,7 +275,7 @@ make_sync_client(as::io_service& ios, std::string host, std::string port, std::u
     using sync_client_t = sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -301,7 +301,7 @@ make_sync_client_no_strand(as::io_service& ios, std::string host, std::string po
     using sync_client_t = sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -329,7 +329,7 @@ make_sync_client_ws(as::io_service& ios, std::string host, std::string port, std
     using sync_client_t = sync_client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -354,7 +354,7 @@ make_sync_client_no_strand_ws(as::io_service& ios, std::string host, std::string
     using sync_client_t = sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -383,7 +383,7 @@ make_tls_sync_client(as::io_service& ios, std::string host, std::string port, st
     using sync_client_t = sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -409,7 +409,7 @@ make_tls_sync_client_no_strand(as::io_service& ios, std::string host, std::strin
     using sync_client_t = sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -437,7 +437,7 @@ make_tls_sync_client_ws(as::io_service& ios, std::string host, std::string port,
     using sync_client_t = sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -462,7 +462,7 @@ make_tls_sync_client_no_strand_ws(as::io_service& ios, std::string host, std::st
     using sync_client_t = sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -494,7 +494,7 @@ make_sync_client_32(as::io_service& ios, std::string host, std::string port, std
     using sync_client_t = sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -520,7 +520,7 @@ make_sync_client_no_strand_32(as::io_service& ios, std::string host, std::string
     using sync_client_t = sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -548,7 +548,7 @@ make_sync_client_ws_32(as::io_service& ios, std::string host, std::string port, 
     using sync_client_t = sync_client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -573,7 +573,7 @@ make_sync_client_no_strand_ws_32(as::io_service& ios, std::string host, std::str
     using sync_client_t = sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         false,
@@ -602,7 +602,7 @@ make_tls_sync_client_32(as::io_service& ios, std::string host, std::string port,
     using sync_client_t = sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -628,7 +628,7 @@ make_tls_sync_client_no_strand_32(as::io_service& ios, std::string host, std::st
     using sync_client_t = sync_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -656,7 +656,7 @@ make_tls_sync_client_ws_32(as::io_service& ios, std::string host, std::string po
     using sync_client_t = sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
@@ -681,7 +681,7 @@ make_tls_sync_client_no_strand_ws_32(as::io_service& ios, std::string host, std:
     using sync_client_t = sync_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>;
     return std::make_shared<sync_client_t>(
         sync_client_t::constructor_access(),
-        std::ref(ios),
+        ios,
         std::move(host),
         std::move(port),
         true,
