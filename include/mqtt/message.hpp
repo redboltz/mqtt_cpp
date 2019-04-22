@@ -406,7 +406,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -602,7 +605,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -801,7 +807,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -895,7 +904,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -999,7 +1011,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**

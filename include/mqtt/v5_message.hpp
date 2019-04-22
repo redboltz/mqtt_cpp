@@ -290,7 +290,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -473,7 +476,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -706,7 +712,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -938,7 +947,10 @@ struct basic_puback_message {
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -1087,7 +1099,10 @@ struct basic_pubrec_message {
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -1305,7 +1320,10 @@ struct basic_pubrel_message {
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -1463,7 +1481,10 @@ struct basic_pubcomp_message {
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -1632,7 +1653,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -1778,7 +1802,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -1937,7 +1964,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -2080,7 +2110,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -2190,7 +2223,10 @@ struct disconnect_message {
             property_length_buf_.push_back(e);
         }
         if (reason_code) {
-            remaining_length_ = 1 + property_length_buf_.size() + property_length_;
+            remaining_length_ =
+                1 +                           // reason code
+                property_length_buf_.size() +
+                property_length_;
         }
         auto rb = remaining_bytes(remaining_length_);
         for (auto e : rb) {
@@ -2226,7 +2262,10 @@ struct disconnect_message {
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -2325,7 +2364,10 @@ struct auth_message {
             property_length_buf_.push_back(e);
         }
         if (reason_code) {
-            remaining_length_ = 1 + property_length_buf_.size() + property_length_;
+            remaining_length_ =
+                1 +                           // reason code
+                property_length_buf_.size() +
+                property_length_;
         }
         auto rb = remaining_bytes(remaining_length_);
         for (auto e : rb) {
@@ -2362,7 +2404,10 @@ struct auth_message {
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
