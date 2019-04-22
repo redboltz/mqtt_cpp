@@ -10,8 +10,6 @@
 
 #include <mqtt_client_cpp.hpp>
 
-#include <boost/lexical_cast.hpp>
-
 int main(int argc, char** argv) {
     if (argc != 4) {
         std::cout << argv[0] << " host port cacert_file" << std::endl;
@@ -21,7 +19,7 @@ int main(int argc, char** argv) {
     boost::asio::io_service ios;
 
     std::string host = argv[1];
-    std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[2]);
+    auto port = argv[2];
     std::string cacert = argv[3];
 
     std::uint16_t pid_sub1;
