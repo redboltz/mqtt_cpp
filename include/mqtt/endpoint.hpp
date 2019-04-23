@@ -79,8 +79,8 @@ public:
     endpoint(protocol_version version = protocol_version::undetermined)
         :h_mqtt_message_processed_(
              [this]
-             (async_handler_t const& func) {
-                 async_read_control_packet_type(func);
+             (async_handler_t func) {
+                 async_read_control_packet_type(std::move(func));
              }
          ),
          version_(version)
@@ -95,8 +95,8 @@ public:
         ,connected_(true)
         ,h_mqtt_message_processed_(
              [this]
-             (async_handler_t const& func) {
-                 async_read_control_packet_type(func);
+             (async_handler_t func) {
+                 async_read_control_packet_type(std::move(func));
              }
          ),
          version_(version)
@@ -733,7 +733,7 @@ public:
      * @param func A callback function that is called when async operation will finish.
      */
     using mqtt_message_processed_handler =
-        std::function<void(async_handler_t const& func)>;
+        std::function<void(async_handler_t func)>;
 
     endpoint(this_type const&) = delete;
     endpoint(this_type&&) = delete;
@@ -1530,8 +1530,8 @@ public:
      * @param func finish handler that is called when the session is finished
      *
      */
-    void start_session(async_handler_t const& func = async_handler_t()) {
-        async_read_control_packet_type(func);
+    void start_session(async_handler_t func = async_handler_t()) {
+        async_read_control_packet_type(std::move(func));
     }
 
     // Blocking APIs
@@ -3340,9 +3340,9 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        acquired_async_publish(0, topic_name, contents, qos::at_most_once, retain, func);
+        acquired_async_publish(0, topic_name, contents, qos::at_most_once, retain, std::move(func));
     }
 
     /**
@@ -3366,9 +3366,9 @@ public:
         std::string const& contents,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        acquired_async_publish(0, topic_name, contents, qos::at_most_once, retain, std::move(props), func);
+        acquired_async_publish(0, topic_name, contents, qos::at_most_once, retain, std::move(props), std::move(func));
     }
 
     /**
@@ -3389,9 +3389,9 @@ public:
         as::const_buffer const& topic_name,
         as::const_buffer const& contents,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        acquired_async_publish(0, topic_name, contents, mqtt::any(), qos::at_most_once, retain, func);
+        acquired_async_publish(0, topic_name, contents, mqtt::any(), qos::at_most_once, retain, std::move(func));
     }
 
     /**
@@ -3417,9 +3417,9 @@ public:
         as::const_buffer const& contents,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        acquired_async_publish(0, topic_name, contents, mqtt::any(), qos::at_most_once, retain, std::move(props), func);
+        acquired_async_publish(0, topic_name, contents, mqtt::any(), qos::at_most_once, retain, std::move(props), std::move(func));
     }
 
     /**
@@ -3440,10 +3440,10 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_at_least_once(packet_id, topic_name, contents, retain, func);
+        acquired_async_publish_at_least_once(packet_id, topic_name, contents, retain, std::move(func));
         return packet_id;
     }
 
@@ -3470,10 +3470,10 @@ public:
         std::string const& contents,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_at_least_once(packet_id, topic_name, contents, retain, std::move(props), func);
+        acquired_async_publish_at_least_once(packet_id, topic_name, contents, retain, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -3497,10 +3497,10 @@ public:
         as::const_buffer const& contents,
         mqtt::any life_keeper,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, func);
+        acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(func));
         return packet_id;
     }
 
@@ -3529,10 +3529,10 @@ public:
         mqtt::any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props), func);
+        acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -3554,10 +3554,10 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_exactly_once(packet_id, topic_name, contents, retain, func);
+        acquired_async_publish_exactly_once(packet_id, topic_name, contents, retain, std::move(func));
         return packet_id;
     }
 
@@ -3584,10 +3584,10 @@ public:
         std::string const& contents,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_exactly_once(packet_id, topic_name, contents, retain, std::move(props), func);
+        acquired_async_publish_exactly_once(packet_id, topic_name, contents, retain, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -3611,10 +3611,10 @@ public:
         as::const_buffer const& contents,
         mqtt::any life_keeper,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, func);
+        acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(func));
         return packet_id;
     }
 
@@ -3643,10 +3643,10 @@ public:
         mqtt::any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props), func);
+        acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -3671,11 +3671,11 @@ public:
         std::string const& contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, topic_name, contents, qos, retain, func);
+        acquired_async_publish(packet_id, topic_name, contents, qos, retain, std::move(func));
         return packet_id;
     }
 
@@ -3705,11 +3705,11 @@ public:
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, topic_name, contents, qos, retain, std::move(props), func);
+        acquired_async_publish(packet_id, topic_name, contents, qos, retain, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -3736,11 +3736,11 @@ public:
         mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, func);
+        acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(func));
         return packet_id;
     }
 
@@ -3772,11 +3772,11 @@ public:
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props), func);
+        acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -3859,10 +3859,10 @@ public:
     packet_id_t async_subscribe(
         std::string const& topic_name,
         std::uint8_t option,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, option, func);
+        acquired_async_subscribe(packet_id, topic_name, option, std::move(func));
         return packet_id;
     }
 
@@ -3889,10 +3889,10 @@ public:
         std::string const& topic_name,
         std::uint8_t option,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, option, std::move(props), func);
+        acquired_async_subscribe(packet_id, topic_name, option, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -3913,10 +3913,10 @@ public:
     packet_id_t async_subscribe(
         as::const_buffer const& topic_name,
         std::uint8_t option,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, option, func);
+        acquired_async_subscribe(packet_id, topic_name, option, std::move(func));
         return packet_id;
     }
 
@@ -3942,10 +3942,10 @@ public:
         as::const_buffer const& topic_name,
         std::uint8_t option,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, option, std::move(props), func);
+        acquired_async_subscribe(packet_id, topic_name, option, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -3963,10 +3963,10 @@ public:
      */
     packet_id_t async_subscribe(
         std::vector<std::tuple<std::string, std::uint8_t>> const& params,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, params, func);
+        acquired_async_subscribe(packet_id, params, std::move(func));
         return packet_id;
     }
 
@@ -3989,10 +3989,10 @@ public:
     packet_id_t async_subscribe(
         std::vector<std::tuple<std::string, std::uint8_t>> const& params,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, params, std::move(props), func);
+        acquired_async_subscribe(packet_id, params, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -4010,10 +4010,10 @@ public:
      */
     packet_id_t async_subscribe(
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, params, func);
+        acquired_async_subscribe(packet_id, params, std::move(func));
         return packet_id;
     }
 
@@ -4036,10 +4036,10 @@ public:
     packet_id_t async_subscribe(
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, params, std::move(props), func);
+        acquired_async_subscribe(packet_id, params, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -4107,10 +4107,10 @@ public:
      */
     packet_id_t async_unsubscribe(
         std::string const& topic_name,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, topic_name, func);
+        acquired_async_unsubscribe(packet_id, topic_name, std::move(func));
         return packet_id;
     }
 
@@ -4131,10 +4131,10 @@ public:
     packet_id_t async_unsubscribe(
         std::string const& topic_name,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, topic_name, std::move(props), func);
+        acquired_async_unsubscribe(packet_id, topic_name, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -4150,10 +4150,10 @@ public:
      */
     packet_id_t async_unsubscribe(
         as::const_buffer const& topic_name,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, topic_name, func);
+        acquired_async_unsubscribe(packet_id, topic_name, std::move(func));
         return packet_id;
     }
 
@@ -4174,10 +4174,10 @@ public:
     packet_id_t async_unsubscribe(
         as::const_buffer const& topic_name,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, topic_name, std::move(props), func);
+        acquired_async_unsubscribe(packet_id, topic_name, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -4193,10 +4193,10 @@ public:
      */
     packet_id_t async_unsubscribe(
         std::vector<std::string> const& params,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, params, func);
+        acquired_async_unsubscribe(packet_id, params, std::move(func));
         return packet_id;
     }
 
@@ -4217,10 +4217,10 @@ public:
     packet_id_t async_unsubscribe(
         std::vector<std::string> const& params,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, params, std::move(props), func);
+        acquired_async_unsubscribe(packet_id, params, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -4236,10 +4236,10 @@ public:
      */
     packet_id_t async_unsubscribe(
         std::vector<as::const_buffer> const& params,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, params, func);
+        acquired_async_unsubscribe(packet_id, params, std::move(func));
         return packet_id;
     }
 
@@ -4260,10 +4260,10 @@ public:
     packet_id_t async_unsubscribe(
         std::vector<as::const_buffer> const& params,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, params, std::move(props), func);
+        acquired_async_unsubscribe(packet_id, params, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -4275,11 +4275,11 @@ public:
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      */
     void async_disconnect(
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (connected_ && mqtt_connected_) {
             disconnect_requested_ = true;
-            async_send_disconnect(func);
+            async_send_disconnect(std::move(func));
         }
     }
 
@@ -4301,11 +4301,11 @@ public:
     void async_disconnect(
         std::uint8_t reason,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (connected_ && mqtt_connected_) {
             disconnect_requested_ = true;
-            async_send_disconnect(reason, std::move(props), func);
+            async_send_disconnect(reason, std::move(props), std::move(func));
         }
     }
 
@@ -4332,10 +4332,10 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_at_least_once(packet_id, topic_name, contents, retain, func);
+            acquired_async_publish_at_least_once(packet_id, topic_name, contents, retain, std::move(func));
             return true;
         }
         return false;
@@ -4367,10 +4367,10 @@ public:
         std::string const& contents,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_at_least_once(packet_id, topic_name, contents, retain, std::move(props), func);
+            acquired_async_publish_at_least_once(packet_id, topic_name, contents, retain, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -4399,10 +4399,10 @@ public:
         as::const_buffer const& contents,
         mqtt::any life_keeper,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, func);
+            acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(func));
             return true;
         }
         return false;
@@ -4436,10 +4436,10 @@ public:
         mqtt::any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props), func);
+            acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -4466,10 +4466,10 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_exactly_once(packet_id, topic_name, contents, retain, func);
+            acquired_async_publish_exactly_once(packet_id, topic_name, contents, retain, std::move(func));
             return true;
         }
         return false;
@@ -4501,10 +4501,10 @@ public:
         std::string const& contents,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_exactly_once(packet_id, topic_name, contents, retain, std::move(props), func);
+            acquired_async_publish_exactly_once(packet_id, topic_name, contents, retain, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -4533,10 +4533,10 @@ public:
         as::const_buffer const& contents,
         mqtt::any life_keeper,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, func);
+            acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(func));
             return true;
         }
         return false;
@@ -4570,10 +4570,10 @@ public:
         mqtt::any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props), func);
+            acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -4603,11 +4603,11 @@ public:
         std::string const& contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, topic_name, contents, qos, retain, func);
+            acquired_async_publish(packet_id, topic_name, contents, qos, retain, std::move(func));
             return true;
         }
         return false;
@@ -4642,11 +4642,11 @@ public:
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, topic_name, contents, qos, retain, std::move(props), func);
+            acquired_async_publish(packet_id, topic_name, contents, qos, retain, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -4678,11 +4678,11 @@ public:
         mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, func);
+            acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(func));
             return true;
         }
         return false;
@@ -4719,11 +4719,11 @@ public:
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props), func);
+            acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -4753,11 +4753,11 @@ public:
         std::string const& contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, topic_name, contents, qos, retain, func);
+            acquired_async_publish_dup(packet_id, topic_name, contents, qos, retain, std::move(func));
             return true;
         }
         return false;
@@ -4792,11 +4792,11 @@ public:
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, topic_name, contents, qos, retain, std::move(props), func);
+            acquired_async_publish_dup(packet_id, topic_name, contents, qos, retain, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -4828,11 +4828,11 @@ public:
         mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, func);
+            acquired_async_publish_dup(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(func));
             return true;
         }
         return false;
@@ -4869,11 +4869,11 @@ public:
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props), func);
+            acquired_async_publish_dup(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -4971,10 +4971,10 @@ public:
         packet_id_t packet_id,
         std::string const& topic_name,
         std::uint8_t option,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, option, func);
+            acquired_async_subscribe(packet_id, topic_name, option, std::move(func));
             return true;
         }
         return false;
@@ -5005,10 +5005,10 @@ public:
         std::string const& topic_name,
         std::uint8_t option,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, option, std::move(props), func);
+            acquired_async_subscribe(packet_id, topic_name, option, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -5034,10 +5034,10 @@ public:
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         std::uint8_t option,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, option, func);
+            acquired_async_subscribe(packet_id, topic_name, option, std::move(func));
             return true;
         }
         return false;
@@ -5068,10 +5068,10 @@ public:
         as::const_buffer const& topic_name,
         std::uint8_t option,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, option, std::move(props), func);
+            acquired_async_subscribe(packet_id, topic_name, option, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -5093,10 +5093,10 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<std::string, std::uint8_t>> const& params,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, params, func);
+            acquired_async_subscribe(packet_id, params, std::move(func));
             return true;
         }
         return false;
@@ -5123,10 +5123,10 @@ public:
         packet_id_t packet_id,
         std::vector<std::tuple<std::string, std::uint8_t>> const& params,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, params, std::move(props), func);
+            acquired_async_subscribe(packet_id, params, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -5148,10 +5148,10 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, params, func);
+            acquired_async_subscribe(packet_id, params, std::move(func));
             return true;
         }
         return false;
@@ -5178,10 +5178,10 @@ public:
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, params, std::move(props), func);
+            acquired_async_subscribe(packet_id, params, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -5264,10 +5264,10 @@ public:
     bool async_unsubscribe(
         packet_id_t packet_id,
         std::vector<std::string> const& params,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, params, func);
+            acquired_async_unsubscribe(packet_id, params, std::move(func));
             return true;
         }
         return false;
@@ -5293,10 +5293,10 @@ public:
         packet_id_t packet_id,
         std::vector<std::string> const& params,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, params, std::move(props), func);
+            acquired_async_unsubscribe(packet_id, params, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -5317,10 +5317,10 @@ public:
     bool async_unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> const& params,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, params, func);
+            acquired_async_unsubscribe(packet_id, params, std::move(func));
             return true;
         }
         return false;
@@ -5346,10 +5346,10 @@ public:
         packet_id_t packet_id,
         std::vector<as::const_buffer> const& params,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, params, std::move(props), func);
+            acquired_async_unsubscribe(packet_id, params, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -5377,7 +5377,7 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         auto sp_topic_name = std::make_shared<std::string>(topic_name);
@@ -5391,7 +5391,7 @@ public:
             packet_id,
             {},
             as::buffer(*sp_contents),
-            func,
+            std::move(func),
             [sp_topic_name, sp_contents] {}
         );
     }
@@ -5421,7 +5421,7 @@ public:
         std::string const& contents,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         auto sp_topic_name = std::make_shared<std::string>(topic_name);
@@ -5435,7 +5435,7 @@ public:
             packet_id,
             std::move(props),
             as::buffer(*sp_contents),
-            func,
+            std::move(func),
             [sp_topic_name, sp_contents] {}
         );
     }
@@ -5464,7 +5464,7 @@ public:
         as::const_buffer const& contents,
         mqtt::any life_keeper,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         async_send_publish(
@@ -5475,7 +5475,7 @@ public:
             packet_id,
             {},
             contents,
-            func,
+            std::move(func),
             std::move(life_keeper)
         );
     }
@@ -5509,7 +5509,7 @@ public:
         mqtt::any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         async_send_publish(
@@ -5520,7 +5520,7 @@ public:
             packet_id,
             std::move(props),
             contents,
-            func,
+            std::move(func),
             std::move(life_keeper)
         );
     }
@@ -5545,7 +5545,7 @@ public:
         std::string const& topic_name,
         std::string const& contents,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         auto sp_topic_name = std::make_shared<std::string>(topic_name);
@@ -5559,7 +5559,7 @@ public:
             packet_id,
             {},
             as::buffer(*sp_contents),
-            func,
+            std::move(func),
             [sp_topic_name, sp_contents] {}
         );
     }
@@ -5589,7 +5589,7 @@ public:
         std::string contents,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
@@ -5606,7 +5606,7 @@ public:
             std::move(props),
             packet_id,
             contents_buf,
-            func,
+            std::move(func),
             std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
@@ -5633,7 +5633,7 @@ public:
         as::const_buffer const& contents,
         mqtt::any life_keeper,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         async_send_publish(
@@ -5644,7 +5644,7 @@ public:
             packet_id,
             {},
             contents,
-            func,
+            std::move(func),
             std::move(life_keeper)
         );
     }
@@ -5676,7 +5676,7 @@ public:
         mqtt::any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         async_send_publish(
@@ -5687,7 +5687,7 @@ public:
             packet_id,
             std::move(props),
             contents,
-            func,
+            std::move(func),
             std::move(life_keeper)
         );
     }
@@ -5716,7 +5716,7 @@ public:
         std::string contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
@@ -5735,7 +5735,7 @@ public:
             packet_id,
             {},
             contents_buf,
-            func,
+            std::move(func),
             std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
@@ -5769,7 +5769,7 @@ public:
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
@@ -5788,7 +5788,7 @@ public:
             packet_id,
             std::move(props),
             contents_buf,
-            func,
+            std::move(func),
             std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
@@ -5819,7 +5819,7 @@ public:
         mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
@@ -5832,7 +5832,7 @@ public:
             packet_id,
             {},
             contents,
-            func,
+            std::move(func),
             life_keeper
         );
     }
@@ -5868,7 +5868,7 @@ public:
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
@@ -5881,7 +5881,7 @@ public:
             packet_id,
             std::move(props),
             contents,
-            func,
+            std::move(func),
             std::move(life_keeper)
         );
     }
@@ -5910,7 +5910,7 @@ public:
         std::string contents,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
@@ -5926,7 +5926,7 @@ public:
             packet_id,
             {},
             as::buffer(*sp_contents),
-            func,
+            std::move(func),
             [sp_topic_name, sp_contents] {}
         );
     }
@@ -5960,7 +5960,7 @@ public:
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
@@ -5979,7 +5979,7 @@ public:
             packet_id,
             std::move(props),
             contents_buf,
-            func,
+            std::move(func),
             std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
@@ -6010,7 +6010,7 @@ public:
         mqtt::any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
@@ -6023,7 +6023,7 @@ public:
             packet_id,
             {},
             contents,
-            func,
+            std::move(func),
             life_keeper
         );
     }
@@ -6059,7 +6059,7 @@ public:
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
@@ -6072,7 +6072,7 @@ public:
             packet_id,
             std::move(props),
             contents,
-            func,
+            std::move(func),
             std::move(life_keeper)
         );
     }
@@ -6161,7 +6161,7 @@ public:
         packet_id_t packet_id,
         std::string const& topic_name,
         std::uint8_t options,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
@@ -6174,7 +6174,7 @@ public:
             packet_id,
             topic_name,
             options,
-            func
+            std::move(func)
         );
     }
 
@@ -6202,7 +6202,7 @@ public:
         std::string const& topic_name,
         std::uint8_t option,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
@@ -6216,7 +6216,7 @@ public:
             topic_name,
             option,
             std::move(props),
-            func
+            std::move(func)
         );
     }
 
@@ -6239,7 +6239,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
         std::uint8_t option,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
@@ -6251,7 +6251,7 @@ public:
             packet_id,
             topic_name,
             option,
-            func
+            std::move(func)
         );
     }
 
@@ -6279,7 +6279,7 @@ public:
         as::const_buffer const& topic_name,
         std::uint8_t option,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
@@ -6292,7 +6292,7 @@ public:
             topic_name,
             option,
             std::move(props),
-            func
+            std::move(func)
         );
     }
 
@@ -6312,7 +6312,7 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<std::string, std::uint8_t>> params,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> cb_params;
@@ -6331,7 +6331,7 @@ public:
             std::move(cb_params),
             std::move(life_keepers),
             packet_id,
-            func
+            std::move(func)
         );
     }
 
@@ -6356,7 +6356,7 @@ public:
         packet_id_t packet_id,
         std::vector<std::tuple<std::string, std::uint8_t>> params,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> cb_params;
@@ -6376,7 +6376,7 @@ public:
             life_keepers,
             packet_id,
             std::move(props),
-            func
+            std::move(func)
         );
     }
 
@@ -6393,7 +6393,7 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         std::vector<std::shared_ptr<std::string>> life_keepers;
@@ -6402,7 +6402,7 @@ public:
             std::move(params),
             life_keepers,
             packet_id,
-            func
+            std::move(func)
         );
     }
 
@@ -6423,7 +6423,7 @@ public:
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         std::vector<std::shared_ptr<std::string>> life_keepers;
@@ -6433,7 +6433,7 @@ public:
             life_keepers,
             packet_id,
             std::move(props),
-            func
+            std::move(func)
         );
     }
 
@@ -6501,7 +6501,7 @@ public:
     void acquired_async_unsubscribe(
         packet_id_t packet_id,
         std::vector<std::string> params,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         std::vector<as::const_buffer> cb_params;
@@ -6519,7 +6519,7 @@ public:
             std::move(cb_params),
             std::move(life_keepers),
             packet_id,
-            func
+            std::move(func)
         );
     }
 
@@ -6542,7 +6542,7 @@ public:
         packet_id_t packet_id,
         std::vector<std::string> params,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         std::vector<as::const_buffer> cb_params;
@@ -6561,7 +6561,7 @@ public:
             life_keepers,
             packet_id,
             std::move(props),
-            func
+            std::move(func)
         );
     }
 
@@ -6579,7 +6579,7 @@ public:
     void acquired_async_unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         std::vector<std::shared_ptr<std::string>> life_keepers;
@@ -6587,7 +6587,7 @@ public:
             std::move(params),
             life_keepers,
             packet_id,
-            func
+            std::move(func)
         );
     }
 
@@ -6610,7 +6610,7 @@ public:
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
 
         std::vector<std::shared_ptr<std::string>> life_keepers;
@@ -6619,7 +6619,7 @@ public:
             life_keepers,
             packet_id,
             std::move(props),
-            func
+            std::move(func)
         );
     }
 
@@ -6628,8 +6628,8 @@ public:
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901195
      */
-    void async_pingreq(async_handler_t const& func = async_handler_t()) {
-        if (connected_ && mqtt_connected_) async_send_pingreq(func);
+    void async_pingreq(async_handler_t func = async_handler_t()) {
+        if (connected_ && mqtt_connected_) async_send_pingreq(std::move(func));
     }
 
     /**
@@ -6637,8 +6637,8 @@ public:
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901200
      */
-    void async_pingresp(async_handler_t const& func = async_handler_t()) {
-        async_send_pingresp(func);
+    void async_pingresp(async_handler_t func = async_handler_t()) {
+        async_send_pingresp(std::move(func));
     }
 
     /**
@@ -6657,8 +6657,8 @@ public:
     void async_auth(
         mqtt::optional<std::uint8_t> reason_code = mqtt::nullopt,
         std::vector<v5::property_variant> props = {},
-        async_handler_t const& func = async_handler_t()) {
-        async_send_auth(reason_code, std::move(props), func);
+        async_handler_t func = async_handler_t()) {
+        async_send_auth(reason_code, std::move(props), std::move(func));
     }
 
     /**
@@ -6672,10 +6672,10 @@ public:
      */
     void async_connect(
         std::uint16_t keep_alive_sec,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         connect_requested_ = true;
-        async_send_connect(keep_alive_sec, {}, func);
+        async_send_connect(keep_alive_sec, {}, std::move(func));
     }
 
     /**
@@ -6694,10 +6694,10 @@ public:
     void async_connect(
         std::uint16_t keep_alive_sec,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         connect_requested_ = true;
-        async_send_connect(keep_alive_sec, std::move(props), func);
+        async_send_connect(keep_alive_sec, std::move(props), std::move(func));
     }
 
     /**
@@ -6710,9 +6710,9 @@ public:
     void async_connack(
         bool session_present,
         std::uint8_t reason_code,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_connack(session_present, reason_code, {}, func);
+        async_send_connack(session_present, reason_code, {}, std::move(func));
     }
 
     /**
@@ -6730,9 +6730,9 @@ public:
         bool session_present,
         std::uint8_t reason_code,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_connack(session_present, reason_code, std::move(props), func);
+        async_send_connack(session_present, reason_code, std::move(props), std::move(func));
     }
 
     /**
@@ -6743,9 +6743,9 @@ public:
      */
     void async_puback(
         packet_id_t packet_id,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_puback(packet_id, mqtt::nullopt, {}, func);
+        async_send_puback(packet_id, mqtt::nullopt, {}, std::move(func));
     }
 
     /**
@@ -6766,9 +6766,9 @@ public:
         packet_id_t packet_id,
         std::uint8_t reason_code,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_puback(packet_id, reason_code, std::move(props), func);
+        async_send_puback(packet_id, reason_code, std::move(props), std::move(func));
     }
 
     /**
@@ -6779,9 +6779,9 @@ public:
      */
     void async_pubrec(
         packet_id_t packet_id,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrec(packet_id, mqtt::nullopt, {}, func);
+        async_send_pubrec(packet_id, mqtt::nullopt, {}, std::move(func));
     }
 
     /**
@@ -6802,9 +6802,9 @@ public:
         packet_id_t packet_id,
         std::uint8_t reason_code,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrec(packet_id, reason_code, std::move(props), func);
+        async_send_pubrec(packet_id, reason_code, std::move(props), std::move(func));
     }
 
     /**
@@ -6815,9 +6815,9 @@ public:
      */
     void async_pubrel(
         packet_id_t packet_id,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrel(packet_id, mqtt::nullopt, {}, func);
+        async_send_pubrel(packet_id, mqtt::nullopt, {}, std::move(func));
     }
 
     /**
@@ -6838,9 +6838,9 @@ public:
         packet_id_t packet_id,
         std::uint8_t reason_code,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrel(packet_id, reason_code, std::move(props), func);
+        async_send_pubrel(packet_id, reason_code, std::move(props), std::move(func));
     }
 
     /**
@@ -6851,9 +6851,9 @@ public:
      */
     void async_pubcomp(
         packet_id_t packet_id,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_pubcomp(packet_id, mqtt::nullopt, {}, func);
+        async_send_pubcomp(packet_id, mqtt::nullopt, {}, std::move(func));
     }
 
     /**
@@ -6874,9 +6874,9 @@ public:
         packet_id_t packet_id,
         std::uint8_t reason_code,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_pubcomp(packet_id, reason_code, std::move(props), func);
+        async_send_pubcomp(packet_id, reason_code, std::move(props), std::move(func));
     }
 
     /**
@@ -6916,10 +6916,10 @@ public:
     void async_suback(
         packet_id_t packet_id,
         std::uint8_t reason,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         std::vector<std::uint8_t> params;
-        async_send_suback(params, packet_id, reason, {}, func);
+        async_send_suback(params, packet_id, reason, {}, std::move(func));
     }
 
     /**
@@ -6940,10 +6940,10 @@ public:
         packet_id_t packet_id,
         std::uint8_t reason,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         std::vector<std::uint8_t> params;
-        async_send_suback(params, packet_id, reason, std::move(props), func);
+        async_send_suback(params, packet_id, reason, std::move(props), std::move(func));
     }
 
     /**
@@ -6959,9 +6959,9 @@ public:
     void async_suback(
         packet_id_t packet_id,
         std::vector<std::uint8_t> reasons,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_suback(std::move(reasons), packet_id, {}, func);
+        async_send_suback(std::move(reasons), packet_id, {}, std::move(func));
     }
 
     /**
@@ -6982,9 +6982,9 @@ public:
         packet_id_t packet_id,
         std::vector<std::uint8_t> reasons,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_suback(std::move(reasons), packet_id, std::move(props), func);
+        async_send_suback(std::move(reasons), packet_id, std::move(props), std::move(func));
     }
 
     /**
@@ -7024,10 +7024,10 @@ public:
     void async_unsuback(
         packet_id_t packet_id,
         std::uint8_t reason,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         std::vector<std::uint8_t> params;
-        async_send_unsuback(params, packet_id, reason, func);
+        async_send_unsuback(params, packet_id, reason, std::move(func));
     }
 
     /**
@@ -7048,10 +7048,10 @@ public:
         packet_id_t packet_id,
         std::uint8_t reason,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
         std::vector<std::uint8_t> params;
-        async_send_unsuback(params, packet_id, reason, std::move(props), func);
+        async_send_unsuback(params, packet_id, reason, std::move(props), std::move(func));
     }
 
     /**
@@ -7067,9 +7067,9 @@ public:
     void async_unsuback(
         packet_id_t packet_id,
         std::vector<std::uint8_t> reasons,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_unsuback(std::move(reasons), packet_id, {}, func);
+        async_send_unsuback(std::move(reasons), packet_id, {}, std::move(func));
     }
 
     /**
@@ -7090,9 +7090,9 @@ public:
         packet_id_t packet_id,
         std::vector<std::uint8_t> reasons,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()
+        async_handler_t func = async_handler_t()
     ) {
-        async_send_unsuback(std::move(reasons), packet_id, std::move(props), func);
+        async_send_unsuback(std::move(reasons), packet_id, std::move(props), std::move(func));
     }
 
     /**
@@ -7103,8 +7103,8 @@ public:
      */
     void async_unsuback(
         packet_id_t packet_id,
-        async_handler_t const& func = async_handler_t()) {
-        async_send_unsuback(packet_id, func);
+        async_handler_t func = async_handler_t()) {
+        async_send_unsuback(packet_id, std::move(func));
     }
 
     /**
@@ -7399,8 +7399,8 @@ public:
         else {
             h_mqtt_message_processed_ =
                 [this]
-                (async_handler_t const& func) {
-                async_read_control_packet_type(func);
+                (async_handler_t func) {
+                    async_read_control_packet_type(std::move(func));
             };
         }
     }
@@ -7410,8 +7410,8 @@ public:
      *        If you call this function, you need to set manual receive mode
      *        using set_auto_next_read(false);
      */
-    void async_read_next_message(async_handler_t const& func) {
-        async_read_control_packet_type(func);
+    void async_read_next_message(async_handler_t func) {
+        async_read_control_packet_type(std::move(func));
     }
 
      /**
@@ -7451,11 +7451,11 @@ public:
     }
 
 protected:
-    void async_read_control_packet_type(async_handler_t const& func) {
+    void async_read_control_packet_type(async_handler_t func) {
         async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            [self = this->shared_from_this(), func](
+            [self = this->shared_from_this(), func = std::move(func)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred){
                 if (self->handle_close_or_error(ec)) {
@@ -7466,7 +7466,7 @@ protected:
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     return;
                 }
-                self->handle_control_packet_type(func);
+                self->handle_control_packet_type(std::move(func));
             }
         );
     }
@@ -7956,14 +7956,14 @@ private:
         >
     >;
 
-    void handle_control_packet_type(async_handler_t const& func) {
+    void handle_control_packet_type(async_handler_t func) {
         fixed_header_ = static_cast<std::uint8_t>(buf_);
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
         async_read(
             *socket_,
             as::buffer(&buf_, 1),
-            [self = this->shared_from_this(), func](
+            [self = this->shared_from_this(), func = std::move(func)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred){
                 if (self->handle_close_or_error(ec)) {
@@ -7975,12 +7975,12 @@ private:
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     return;
                 }
-                self->handle_remaining_length(func);
+                self->handle_remaining_length(std::move(func));
             }
         );
     }
 
-    void handle_remaining_length(async_handler_t const& func) {
+    void handle_remaining_length(async_handler_t func) {
         remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
         remaining_length_multiplier_ *= 128;
         if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) {
@@ -7992,7 +7992,7 @@ private:
             async_read(
                 *socket_,
                 as::buffer(&buf_, 1),
-                [self = this->shared_from_this(), func](
+                [self = this->shared_from_this(), func = std::move(func)](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
                     if (self->handle_close_or_error(ec)) {
@@ -8004,7 +8004,7 @@ private:
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
-                    self->handle_remaining_length(func);
+                    self->handle_remaining_length(std::move(func));
                 }
             );
         }
@@ -8085,7 +8085,7 @@ private:
             async_read(
                 *socket_,
                 as::buffer(payload_),
-                [self = this->shared_from_this(), func](
+                [self = this->shared_from_this(), func = std::move(func)](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
                     auto g = unique_scope_guard(
@@ -8103,13 +8103,13 @@ private:
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
-                    self->handle_payload(func);
+                    self->handle_payload(std::move(func));
                 }
             );
         }
     }
 
-    void handle_payload(async_handler_t const& func) {
+    void handle_payload(async_handler_t func) {
         auto control_packet_type = get_control_packet_type(fixed_header_);
         bool ret = false;
         switch (control_packet_type) {
@@ -8185,7 +8185,7 @@ private:
             break;
         }
         if (ret) {
-            h_mqtt_message_processed_(func);
+            h_mqtt_message_processed_(std::move(func));
         }
         else if (func) {
             func(boost::system::errc::make_error_code(boost::system::errc::success));
@@ -9774,7 +9774,7 @@ private:
     void async_send_connect(
         std::uint16_t keep_alive_sec,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func) {
+        async_handler_t func) {
 
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -9787,7 +9787,7 @@ private:
                     user_name_,
                     password_
                 ),
-                func
+                std::move(func)
             );
             break;
         case protocol_version::v5:
@@ -9801,7 +9801,7 @@ private:
                     password_,
                     std::move(props)
                 ),
-                func
+                std::move(func)
             );
             break;
         default:
@@ -9814,7 +9814,7 @@ private:
         bool session_present,
         std::uint8_t reason_code,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func
+        async_handler_t func
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -9823,7 +9823,7 @@ private:
                     session_present,
                     reason_code
                 ),
-                func
+                std::move(func)
             );
             break;
         case protocol_version::v5:
@@ -9833,7 +9833,7 @@ private:
                     reason_code,
                     std::move(props)
                 ),
-                func
+                std::move(func)
             );
             break;
         default:
@@ -9850,7 +9850,7 @@ private:
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
         as::const_buffer const& payload,
-        async_handler_t const& func,
+        async_handler_t func,
         mqtt::any life_keeper) {
 
         auto do_async_send_publish =
@@ -9875,7 +9875,7 @@ private:
 
                 do_async_write(
                     std::move(msg),
-                    [life_keeper = std::move(life_keeper), func](boost::system::error_code const& ec) {
+                    [life_keeper = std::move(life_keeper), func = std::move(func)](boost::system::error_code const& ec) {
                         if (func) func(ec);
                     }
                 );
@@ -9919,7 +9919,7 @@ private:
         packet_id_t packet_id,
         mqtt::optional<std::uint8_t> reason,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func
+        async_handler_t func
     ) {
 
         auto impl =
@@ -9927,7 +9927,7 @@ private:
                 auto self = this->shared_from_this();
                 do_async_write(
                     std::move(msg),
-                    [this, self, packet_id, func]
+                    [this, self, packet_id, func = std::move(func)]
                     (boost::system::error_code const& ec){
                         if (func) func(ec);
                         if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
@@ -9956,19 +9956,19 @@ private:
         packet_id_t packet_id,
         mqtt::optional<std::uint8_t> reason,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func
+        async_handler_t func
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
                 v3_1_1::basic_pubrec_message<PacketIdBytes>(packet_id),
-                func
+                std::move(func)
             );
             break;
         case protocol_version::v5:
             do_async_write(
                 v5::basic_pubrec_message<PacketIdBytes>(packet_id, reason, std::move(props)),
-                func
+                std::move(func)
             );
             break;
         default:
@@ -9981,7 +9981,7 @@ private:
         packet_id_t packet_id,
         mqtt::optional<std::uint8_t> reason,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func
+        async_handler_t func
     ) {
 
         auto msg = basic_pubrel_message<PacketIdBytes>(packet_id);
@@ -10005,7 +10005,7 @@ private:
                 if (serialize) {
                     serialize(msg);
                 }
-                do_async_write(std::move(msg), func);
+                do_async_write(std::move(msg), std::move(func));
             };
 
         switch (version_) {
@@ -10165,17 +10165,17 @@ private:
         std::vector<std::uint8_t>&& params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func
+        async_handler_t func
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
-                v3_1_1::basic_suback_message<PacketIdBytes>(std::move(params), packet_id), func
+                v3_1_1::basic_suback_message<PacketIdBytes>(std::move(params), packet_id), std::move(func)
             );
             break;
         case protocol_version::v5:
             do_async_write(
-                v5::basic_suback_message<PacketIdBytes>(std::move(params), packet_id, std::move(props)), func
+                v5::basic_suback_message<PacketIdBytes>(std::move(params), packet_id, std::move(props)), std::move(func)
             );
             break;
         default:
@@ -10286,11 +10286,11 @@ private:
     }
 
     void async_send_unsuback(
-        packet_id_t packet_id, async_handler_t const& func) {
+        packet_id_t packet_id, async_handler_t func) {
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
-                v3_1_1::basic_unsuback_message<PacketIdBytes>(packet_id), func
+                v3_1_1::basic_unsuback_message<PacketIdBytes>(packet_id), std::move(func)
             );
             break;
         case protocol_version::v5:
@@ -10315,7 +10315,7 @@ private:
         std::vector<std::uint8_t>&& params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func
+        async_handler_t func
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -10328,7 +10328,7 @@ private:
                     packet_id,
                     std::move(props)
                 ),
-                func
+                std::move(func)
             );
             break;
         default:
@@ -10337,13 +10337,13 @@ private:
         }
     }
 
-    void async_send_pingreq(async_handler_t const& func) {
+    void async_send_pingreq(async_handler_t func) {
         switch (version_) {
         case protocol_version::v3_1_1:
-            do_async_write(v3_1_1::pingreq_message(), func);
+            do_async_write(v3_1_1::pingreq_message(), std::move(func));
             break;
         case protocol_version::v5:
-            do_async_write(v5::pingreq_message(), func);
+            do_async_write(v5::pingreq_message(), std::move(func));
             break;
         default:
             BOOST_ASSERT(false);
@@ -10351,13 +10351,13 @@ private:
         }
     }
 
-    void async_send_pingresp(async_handler_t const& func) {
+    void async_send_pingresp(async_handler_t func) {
         switch (version_) {
         case protocol_version::v3_1_1:
-            do_async_write(v3_1_1::pingresp_message(), func);
+            do_async_write(v3_1_1::pingresp_message(), std::move(func));
             break;
         case protocol_version::v5:
-            do_async_write(v5::pingresp_message(), func);
+            do_async_write(v5::pingresp_message(), std::move(func));
             break;
         default:
             BOOST_ASSERT(false);
@@ -10368,14 +10368,14 @@ private:
     void async_send_auth(
         std::uint8_t reason,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func
+        async_handler_t func
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
             BOOST_ASSERT(false);
             break;
         case protocol_version::v5:
-            do_async_write(v5::auth_message(reason, std::move(props)), func);
+            do_async_write(v5::auth_message(reason, std::move(props)), std::move(func));
             break;
         default:
             BOOST_ASSERT(false);
@@ -10384,14 +10384,14 @@ private:
     }
 
     void async_send_disconnect(
-        async_handler_t const& func
+        async_handler_t func
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
-            do_async_write(v3_1_1::disconnect_message(), func);
+            do_async_write(v3_1_1::disconnect_message(), std::move(func));
             break;
         case protocol_version::v5:
-            do_async_write(v5::disconnect_message(mqtt::nullopt, {}), func);
+            do_async_write(v5::disconnect_message(mqtt::nullopt, {}), std::move(func));
             break;
         default:
             BOOST_ASSERT(false);
@@ -10402,14 +10402,14 @@ private:
     void async_send_disconnect(
         std::uint8_t reason,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func
+        async_handler_t func
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
-            do_async_write(v3_1_1::disconnect_message(), func);
+            do_async_write(v3_1_1::disconnect_message(), std::move(func));
             break;
         case protocol_version::v5:
-            do_async_write(v5::disconnect_message(reason, std::move(props)), func);
+            do_async_write(v5::disconnect_message(reason, std::move(props)), std::move(func));
             break;
         default:
             BOOST_ASSERT(false);
@@ -10449,7 +10449,7 @@ private:
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                     return;
                 }
-                self->queue_.emplace_back(std::move(mv), func);
+                self->queue_.emplace_back(std::move(mv), std::move(func));
                 // Only need to start async writes if there was nothing in the queue before the above item.
                 if (self->queue_.size() > 1) return;
                 self->do_async_write();

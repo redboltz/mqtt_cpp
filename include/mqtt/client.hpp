@@ -357,8 +357,8 @@ public:
      * Before calling connect(), call set_xxx member functions to configure the connection.
      * @param func finish handler that is called when the session is finished
      */
-    void connect(async_handler_t const& func = async_handler_t()) {
-        connect(std::vector<v5::property_variant>{}, func);
+    void connect(async_handler_t func = async_handler_t()) {
+        connect(std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -369,7 +369,7 @@ public:
      *        3.1.2.11 CONNECT Properties
      * @param func finish handler that is called when the session is finished
      */
-    void connect(std::vector<v5::property_variant> props, async_handler_t const& func = async_handler_t()) {
+    void connect(std::vector<v5::property_variant> props, async_handler_t func = async_handler_t()) {
         as::ip::tcp::resolver r(ios_);
 #if BOOST_VERSION < 106600
         as::ip::tcp::resolver::query q(host_, port_);
@@ -381,7 +381,7 @@ public:
         auto end = eps.end();
 #endif // BOOST_VERSION < 106600
         setup_socket(base::socket());
-        connect_impl(*base::socket(), it, end, std::move(props), func);
+        connect_impl(*base::socket(), it, end, std::move(props), std::move(func));
     }
 
     /**
@@ -391,8 +391,8 @@ public:
      *               You can configure the socket prior to connect.
      * @param func finish handler that is called when the session is finished
      */
-    void connect(std::unique_ptr<Socket>&& socket, async_handler_t const& func = async_handler_t()) {
-        connect(std::move(socket), std::vector<v5::property_variant>{}, func);
+    void connect(std::unique_ptr<Socket>&& socket, async_handler_t func = async_handler_t()) {
+        connect(std::move(socket), std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -405,7 +405,7 @@ public:
      *        3.1.2.11 CONNECT Properties
      * @param func finish handler that is called when the session is finished
      */
-    void connect(std::unique_ptr<Socket>&& socket, std::vector<v5::property_variant> props, async_handler_t const& func = async_handler_t()) {
+    void connect(std::unique_ptr<Socket>&& socket, std::vector<v5::property_variant> props, async_handler_t func = async_handler_t()) {
         as::ip::tcp::resolver r(ios_);
 #if BOOST_VERSION < 106600
         as::ip::tcp::resolver::query q(host_, port_);
@@ -417,7 +417,7 @@ public:
         auto end = eps.end();
 #endif // BOOST_VERSION < 106600
         base::socket() = std::move(socket);
-        connect_impl(*base::socket(), it, end, std::move(props), func);
+        connect_impl(*base::socket(), it, end, std::move(props), std::move(func));
     }
 
     /**
@@ -494,7 +494,7 @@ public:
      */
     void async_disconnect(
         boost::posix_time::time_duration const& timeout,
-        async_handler_t const& func = async_handler_t()) {
+        async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
@@ -508,7 +508,7 @@ public:
                     }
                 }
             );
-            base::async_disconnect(func);
+            base::async_disconnect(std::move(func));
         }
     }
 
@@ -533,7 +533,7 @@ public:
         boost::posix_time::time_duration const& timeout,
         mqtt::optional<std::uint8_t> reason_code,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()) {
+        async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
@@ -547,7 +547,7 @@ public:
                     }
                 }
             );
-            base::async_disconnect(func, reason_code, std::move(props));
+            base::async_disconnect(reason_code, std::move(props), std::move(func));
         }
     }
 
@@ -560,10 +560,10 @@ public:
      * @param func A callback function that is called when async operation will finish.
      */
     void async_disconnect(
-        async_handler_t const& func = async_handler_t()) {
+        async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
-            base::async_disconnect(func);
+            base::async_disconnect(std::move(func));
         }
     }
 
@@ -586,10 +586,10 @@ public:
     void async_disconnect(
         mqtt::optional<std::uint8_t> reason_code,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func = async_handler_t()) {
+        async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
-            base::async_disconnect(func, reason_code, std::move(props));
+            base::async_disconnect(reason_code, std::move(props), std::move(func));
         }
     }
 
@@ -697,8 +697,8 @@ private:
     void handshake_socket(
         tcp_endpoint<as::ip::tcp::socket, Strand>&,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func) {
-        base::async_read_control_packet_type(func);
+        async_handler_t func) {
+        base::async_read_control_packet_type(std::move(func));
         base::connect(keep_alive_sec_, std::move(props));
     }
 
@@ -707,15 +707,15 @@ private:
     void handshake_socket(
         ws_endpoint<as::ip::tcp::socket, Strand>& socket,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func) {
+        async_handler_t func) {
         auto self = this->shared_from_this();
         socket.async_handshake(
             host_,
             path_,
-            [this, self, func, props = std::move(props)]
+            [this, self, func = std::move(func), props = std::move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
-                base::async_read_control_packet_type(func);
+                base::async_read_control_packet_type(std::move(func));
                 base::connect(keep_alive_sec_, std::move(props));
             });
     }
@@ -727,14 +727,14 @@ private:
     void handshake_socket(
         tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func) {
+        async_handler_t func) {
         auto self = this->shared_from_this();
         socket.async_handshake(
             as::ssl::stream_base::client,
-            [this, self, func, props = std::move(props)]
+            [this, self, func = std::move(func), props = std::move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
-                base::async_read_control_packet_type(func);
+                base::async_read_control_packet_type(std::move(func));
                 base::connect(keep_alive_sec_, std::move(props));
             });
     }
@@ -744,20 +744,20 @@ private:
     void handshake_socket(
         ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         std::vector<v5::property_variant> props,
-        async_handler_t const& func) {
+        async_handler_t func) {
         auto self = this->shared_from_this();
         socket.next_layer().async_handshake(
             as::ssl::stream_base::client,
-            [this, self, func, &socket, props = std::move(props)]
+            [this, self, func = std::move(func), &socket, props = std::move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 socket.async_handshake(
                     host_,
                     path_,
-                    [this, self, func, props = std::move(props)]
+                    [this, self, func = std::move(func), props = std::move(props)]
                     (boost::system::error_code const& ec) mutable {
                         if (base::handle_close_or_error(ec)) return;
-                        base::async_read_control_packet_type(func);
+                        base::async_read_control_packet_type(std::move(func));
                         base::connect(keep_alive_sec_, std::move(props));
                     });
             });
@@ -767,11 +767,11 @@ private:
 #endif // defined(MQTT_NO_TLS)
 
     template <typename Iterator>
-    void connect_impl(Socket& socket, Iterator it, Iterator end, std::vector<v5::property_variant> props, async_handler_t const& func) {
+    void connect_impl(Socket& socket, Iterator it, Iterator end, std::vector<v5::property_variant> props, async_handler_t func) {
         auto self = this->shared_from_this();
         as::async_connect(
             socket.lowest_layer(), it, end,
-            [this, self, &socket, func, props = std::move(props)]
+            [this, self, &socket, func = std::move(func), props = std::move(props)]
             (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
                 base::set_close_handler([this](){ handle_close(); });
                 base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
@@ -790,7 +790,7 @@ private:
                     }
                 }
                 if (base::handle_close_or_error(ec)) return;
-                handshake_socket(socket, std::move(props), func);
+                handshake_socket(socket, std::move(props), std::move(func));
             });
     }
 
