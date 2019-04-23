@@ -853,7 +853,7 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
     do_combi_test_async(test);
 }
 
-BOOST_AUTO_TEST_CASE( connect_prop ) {
+BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& b) {
         if (c->get_protocol_version() != mqtt::protocol_version::v5) return;
 
@@ -868,7 +868,7 @@ BOOST_AUTO_TEST_CASE( connect_prop ) {
             cont("h_close"),
         };
 
-        std::vector<mqtt::v5::property_variant> ps {
+        std::vector<mqtt::v5::property_variant> con_ps {
             mqtt::v5::property::session_expiry_interval(0x12345678UL),
             mqtt::v5::property::receive_maximum(0x1234U),
             mqtt::v5::property::maximum_packet_size(0x12345678UL),
@@ -881,10 +881,20 @@ BOOST_AUTO_TEST_CASE( connect_prop ) {
             mqtt::v5::property::authentication_data("test authentication data")
         };
 
-        std::size_t user_prop_count = 0;
+        std::size_t con_user_prop_count = 0;
+
+        std::vector<mqtt::v5::property_variant> discon_ps {
+            mqtt::v5::property::session_expiry_interval(0x12345678UL),
+            mqtt::v5::property::reason_string("test reason string"),
+            mqtt::v5::property::user_property("key1", "val1"),
+            mqtt::v5::property::user_property("key2", "val2"),
+            mqtt::v5::property::server_reference("test server reference"),
+        };
+
+        std::size_t discon_user_prop_count = 0;
 
         b.set_connect_props_handler(
-            [&user_prop_count, size = ps.size()] (std::vector<mqtt::v5::property_variant> const& props) {
+            [&con_user_prop_count, size = con_ps.size()] (std::vector<mqtt::v5::property_variant> const& props) {
                 BOOST_TEST(size == props.size());
                 for (auto const& p : props) {
                     mqtt::visit(
@@ -908,7 +918,7 @@ BOOST_AUTO_TEST_CASE( connect_prop ) {
                                 BOOST_TEST(t.val() == false);
                             },
                             [&](mqtt::v5::property::user_property_ref const& t) {
-                                switch (user_prop_count++) {
+                                switch (con_user_prop_count++) {
                                 case 0:
                                     BOOST_TEST(t.key() == "key1");
                                     BOOST_TEST(t.val() == "val1");
@@ -938,15 +948,55 @@ BOOST_AUTO_TEST_CASE( connect_prop ) {
             }
         );
 
+        b.set_disconnect_props_handler(
+            [&discon_user_prop_count, size = discon_ps.size()] (std::vector<mqtt::v5::property_variant> const& props) {
+                BOOST_TEST(size == props.size());
+                for (auto const& p : props) {
+                    mqtt::visit(
+                        mqtt::make_lambda_visitor<void>(
+                            [&](mqtt::v5::property::session_expiry_interval const& t) {
+                                BOOST_TEST(t.val() == 0x12345678UL);
+                            },
+                            [&](mqtt::v5::property::reason_string_ref const& t) {
+                                BOOST_TEST(t.val() == "test reason string");
+                            },
+                            [&](mqtt::v5::property::user_property_ref const& t) {
+                                switch (discon_user_prop_count++) {
+                                case 0:
+                                    BOOST_TEST(t.key() == "key1");
+                                    BOOST_TEST(t.val() == "val1");
+                                    break;
+                                case 1:
+                                    BOOST_TEST(t.key() == "key2");
+                                    BOOST_TEST(t.val() == "val2");
+                                    break;
+                                default:
+                                    BOOST_TEST(false);
+                                    break;
+                                }
+                            },
+                            [&](mqtt::v5::property::server_reference_ref const& t) {
+                                BOOST_TEST(t.val() == "test server reference");
+                            },
+                            [&](auto&& ...) {
+                                BOOST_TEST(false);
+                            }
+                        ),
+                        p
+                    );
+                }
+            }
+        );
+
         c->set_v5_connack_handler(
-            [&chk, &c]
+            [&chk, &c, discon_ps = std::move(discon_ps)]
             (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
                 MQTT_CHK("h_connack");
                 BOOST_TEST(c->connected() == true);
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
 
-                c->disconnect();
+                c->disconnect(mqtt::v5::reason_code::success, std::move(discon_ps));
                 BOOST_TEST(c->connected() == true);
                 return true;
             });
@@ -963,7 +1013,7 @@ BOOST_AUTO_TEST_CASE( connect_prop ) {
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
-        c->connect(std::move(ps));
+        c->connect(std::move(con_ps));
         BOOST_TEST(c->connected() == false);
         ios.run();
         BOOST_TEST(chk.all());

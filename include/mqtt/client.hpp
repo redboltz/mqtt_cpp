@@ -427,8 +427,20 @@ public:
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
      * @param timeout after timeout elapsed, force_disconnect() is automatically called.
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
      */
-    void disconnect(boost::posix_time::time_duration const& timeout) {
+    void disconnect(
+        boost::posix_time::time_duration const& timeout,
+        mqtt::optional<std::uint8_t> reason_code = mqtt::nullopt,
+        std::vector<v5::property_variant> props = {}
+    ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
@@ -442,7 +454,7 @@ public:
                     }
                 }
             );
-            base::disconnect();
+            base::disconnect(reason_code, std::move(props));
         }
     }
 
@@ -452,11 +464,22 @@ public:
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
      */
-    void disconnect() {
+    void disconnect(
+        mqtt::optional<std::uint8_t> reason_code = mqtt::nullopt,
+        std::vector<v5::property_variant> props = {}
+    ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
-            base::disconnect();
+            base::disconnect(reason_code, std::move(props));
         }
     }
 
@@ -495,12 +518,78 @@ public:
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
+     * @param timeout after timeout elapsed, force_disconnect() is automatically called.
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
      * @param func A callback function that is called when async operation will finish.
      */
-    void async_disconnect(async_handler_t const& func = async_handler_t()) {
+    void async_disconnect(
+        boost::posix_time::time_duration const& timeout,
+        mqtt::optional<std::uint8_t> reason_code,
+        std::vector<v5::property_variant> props,
+        async_handler_t const& func = async_handler_t()) {
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (base::connected()) {
+            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+            tim_close_.expires_from_now(timeout);
+            tim_close_.async_wait(
+                [wp](boost::system::error_code const& ec) {
+                    if (auto sp = wp.lock()) {
+                        if (!ec) {
+                            sp->force_disconnect();
+                        }
+                    }
+                }
+            );
+            base::async_disconnect(func, reason_code, std::move(props));
+        }
+    }
+
+    /**
+     * @brief Disconnect
+     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
+     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
+     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
+     * @param func A callback function that is called when async operation will finish.
+     */
+    void async_disconnect(
+        async_handler_t const& func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
             base::async_disconnect(func);
+        }
+    }
+
+    /**
+     * @brief Disconnect
+     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
+     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
+     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
+     * @param func A callback function that is called when async operation will finish.
+     */
+    void async_disconnect(
+        mqtt::optional<std::uint8_t> reason_code,
+        std::vector<v5::property_variant> props,
+        async_handler_t const& func = async_handler_t()) {
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (base::connected()) {
+            base::async_disconnect(func, reason_code, std::move(props));
         }
     }
 

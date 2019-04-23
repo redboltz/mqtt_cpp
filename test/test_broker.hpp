@@ -161,7 +161,8 @@ public:
         );
         ep.set_v5_disconnect_handler(
             [&]
-            (std::uint8_t /*reason_code*/, std::vector<mqtt::v5::property_variant> /*props*/) {
+            (std::uint8_t /*reason_code*/, std::vector<mqtt::v5::property_variant> props) {
+                if (h_disconnect_props_) h_disconnect_props_(std::move(props));
                 return
                     disconnect_handler(std::forward<Endpoint>(ep));
             }
@@ -350,6 +351,10 @@ public:
 
     void set_connect_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
         h_connect_props_ = std::move(h);
+    }
+
+    void set_disconnect_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+        h_disconnect_props_ = std::move(h);
     }
 
     void set_publish_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
@@ -978,6 +983,7 @@ private:
     std::vector<mqtt::v5::property_variant> pubrel_props_;
     std::vector<mqtt::v5::property_variant> pubcomp_props_;
     std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_connect_props_;
+    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_disconnect_props_;
     std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_publish_props_;
     std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_puback_props_;
     std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_pubrec_props_;
