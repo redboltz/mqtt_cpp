@@ -2955,7 +2955,7 @@ public:
     ) {
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> cb_params;
         cb_params.reserve(params.size());
-        for (auto&& e : params) {
+        for (auto const& e : params) {
             cb_params.emplace_back(as::buffer(std::get<0>(e)), std::get<1>(e));
         }
         send_subscribe(std::move(cb_params), packet_id, std::move(props));
