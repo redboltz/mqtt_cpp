@@ -11,6 +11,8 @@
 
 #include <boost/assert.hpp>
 
+#include <mqtt/qos.hpp>
+
 namespace mqtt {
 
 namespace publish {
@@ -38,7 +40,7 @@ constexpr void set_dup(std::uint8_t& fixed_header, bool dup) {
 
 inline
 constexpr void set_qos(std::uint8_t& fixed_header, std::uint8_t qos) {
-    BOOST_ASSERT(qos <= 2);
+    BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
     fixed_header |= static_cast<std::uint8_t>(qos << 1);
 }
 
