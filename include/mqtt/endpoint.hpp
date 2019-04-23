@@ -55,6 +55,7 @@
 #include <mqtt/property_parse.hpp>
 #include <mqtt/protocol_version.hpp>
 #include <mqtt/reason_code.hpp>
+#include <mqtt/subscribe.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -180,7 +181,6 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using connack_handler = std::function<bool(bool session_present, std::uint8_t return_code)>;
-
     /**
      * @brief Publish handler
      * @param fixed_header
@@ -1546,6 +1546,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      */
     void publish_at_most_once(
         std::string const& topic_name,
@@ -1565,6 +1569,10 @@ public:
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      *        3.3.1.3 RETAIN
      */
     void publish_at_most_once(
@@ -1586,6 +1594,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -1611,6 +1623,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -1636,6 +1652,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -1661,6 +1681,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -1688,6 +1712,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
@@ -1717,6 +1745,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
@@ -1738,10 +1770,15 @@ public:
      * @brief Subscribe
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param args
-     *        args should be zero or more pairs of topic_name and qos.
+     *        args should be zero or more pairs of topic_name and option.
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -1750,10 +1787,14 @@ public:
     template <typename... Args>
     packet_id_t subscribe(
         std::string const& topic_name,
-        std::uint8_t qos, Args&&... args) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        std::uint8_t option, Args&&... args) {
+        BOOST_ASSERT(
+            subscribe::get_qos(option) == qos::at_most_once ||
+            subscribe::get_qos(option) == qos::at_least_once ||
+            subscribe::get_qos(option) == qos::exactly_once
+        );
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
+        acquired_subscribe(packet_id, topic_name, option, std::forward<Args>(args)...);
         return packet_id;
     }
 
@@ -1761,10 +1802,15 @@ public:
      * @brief Subscribe
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param args
-     *        args should be zero or more pairs of topic_name and qos.
+     *        args should be zero or more pairs of topic_name and option.
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -1773,16 +1819,26 @@ public:
     template <typename... Args>
     packet_id_t subscribe(
         as::const_buffer const& topic_name,
-        std::uint8_t qos, Args&&... args) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        std::uint8_t option, Args&&... args) {
+        BOOST_ASSERT(
+            subscribe::get_qos(option) == qos::at_most_once ||
+            subscribe::get_qos(option) == qos::at_least_once ||
+            subscribe::get_qos(option) == qos::exactly_once
+        );
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, topic_name, qos, std::forward<Args>(args)...);
+        acquired_subscribe(packet_id, topic_name, option, std::forward<Args>(args)...);
         return packet_id;
     }
 
     /**
      * @brief Subscribe
-     * @param params a vector of the topic_filter and qos pair.
+     * @param params a vector of the topic_filter and option pair.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -1799,7 +1855,13 @@ public:
 
     /**
      * @brief Subscribe
-     * @param params a vector of the topic_filter and qos pair.
+     * @param params a vector of the topic_filter and option pair.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -1820,6 +1882,9 @@ public:
      *        A topic name to subscribe
      * @param args
      *        args should be zero or more topics
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -1840,6 +1905,9 @@ public:
      *        A topic name to subscribe
      * @param args
      *        args should be zero or more topics
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -1857,6 +1925,10 @@ public:
     /**
      * @brief Unsubscribe
      * @param params a collection of topic_filter.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -1874,6 +1946,10 @@ public:
     /**
      * @brief Unsubscribe
      * @param params a collection of topic_filter.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -1894,6 +1970,14 @@ public:
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
      */
     void disconnect(
         mqtt::optional<std::uint8_t> reason = mqtt::nullopt,
@@ -1931,6 +2015,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -1961,6 +2049,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -1991,6 +2083,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -2021,6 +2117,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -2053,6 +2153,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -2087,6 +2191,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -2121,6 +2229,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -2155,6 +2267,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -2185,6 +2301,9 @@ public:
      *        mqtt::qos
      * @param args
      *        args should be zero or more pairs of topic_name and qos.
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -2213,6 +2332,9 @@ public:
      *        mqtt::qos
      * @param args
      *        args should be zero or more pairs of topic_name and qos.
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -2236,6 +2358,10 @@ public:
      * @param packet_id
      *        packet identifier
      * @param params a vector of the topic_filter and qos pair.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -2258,6 +2384,10 @@ public:
      * @param packet_id
      *        packet identifier
      * @param params a vector of the topic_filter and qos pair.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -2283,6 +2413,9 @@ public:
      *        A topic name to subscribe
      * @param args
      *        args should be zero or more topics
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -2308,6 +2441,9 @@ public:
      *        A topic name to subscribe
      * @param args
      *        args should be zero or more topics
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -2330,6 +2466,10 @@ public:
      * @param packet_id
      *        packet identifier
      * @param params a collection of topic_filter
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -2352,6 +2492,10 @@ public:
      * @param packet_id
      *        packet identifier
      * @param params a collection of topic_filter
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -2384,6 +2528,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      */
     void acquired_publish_at_least_once(
         packet_id_t packet_id,
@@ -2425,6 +2573,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      */
     void acquired_publish_at_least_once(
         packet_id_t packet_id,
@@ -2460,6 +2612,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      */
     void acquired_publish_exactly_once(
         packet_id_t packet_id,
@@ -2501,6 +2657,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      */
     void acquired_publish_exactly_once(
         packet_id_t packet_id,
@@ -2539,6 +2699,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      */
     void acquired_publish(
         packet_id_t packet_id,
@@ -2586,6 +2750,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      */
     void acquired_publish(
         packet_id_t packet_id,
@@ -2627,6 +2795,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      */
     void acquired_publish_dup(
         packet_id_t packet_id,
@@ -2674,6 +2846,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      */
     void acquired_publish_dup(
         packet_id_t packet_id,
@@ -2710,6 +2886,11 @@ public:
      *        mqtt::qos
      * @param args
      *        args should be zero or more pairs of topic_name and qos.
+     * @param args
+     *        args should be zero or more pairs of topic_name and qos.
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
@@ -2735,6 +2916,11 @@ public:
      *        mqtt::qos
      * @param args
      *        args should be zero or more pairs of topic_name and qos.
+     * @param args
+     *        args should be zero or more pairs of topic_name and qos.
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
@@ -2755,6 +2941,10 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params a vector of the topic_filter and qos pair.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
@@ -2777,6 +2967,10 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params a vector of the topic_filter and qos pair.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
@@ -2797,6 +2991,9 @@ public:
      *        A topic name to subscribe
      * @param args
      *        args should be zero or more topics
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
@@ -2819,6 +3016,9 @@ public:
      *        A topic name to subscribe
      * @param args
      *        args should be zero or more topics
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
@@ -2838,6 +3038,10 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params a collection of topic_filter
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
@@ -2861,6 +3065,10 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params a collection of topic_filter
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
@@ -2891,6 +3099,14 @@ public:
     /**
      * @brief Send auth packet.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718086
+     * @param reason_code
+     *        AUTH Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901220<BR>
+     *        3.15.2.1 Authenticate Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901221<BR>
+     *        3.15.2.2 AUTH Properties
      */
     void auth(
         mqtt::optional<std::uint8_t> reason_code = mqtt::nullopt,
@@ -2903,6 +3119,14 @@ public:
      * @brief Send connect packet.
      * @param keep_alive_sec See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349238
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
+     * @param keep_alive_sec
+     *        Keep Alive<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
+     *        3.1.2.10 Keep Alive
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
      */
     void connect(
         std::uint16_t keep_alive_sec,
@@ -2915,7 +3139,11 @@ public:
     /**
      * @brief Send connack packet. This function is for broker.
      * @param session_present See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349255
-     * @param return_code See connect_return_code.hpp and https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349256
+     * @param reason_code See reason_code.hpp and https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349256
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901080<BR>
+     *        3.2.2.3 CONNACK Properties
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718033
      */
     void connack(
@@ -2929,7 +3157,14 @@ public:
     /**
      * @brief Send puback packet.
      * @param packet_id packet id corresponding to publish
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
+     * @param reason_code
+     *        PUBACK Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901124<BR>
+     *        3.4.2.1 PUBACK Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901125<BR>
+     *        3.4.2.2 PUBACK Properties
      */
     void puback(
         packet_id_t packet_id,
@@ -2942,7 +3177,14 @@ public:
     /**
      * @brief Send pubrec packet.
      * @param packet_id packet id corresponding to publish
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718048
+     * @param reason_code
+     *        PUBREC Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901134<BR>
+     *        3.5.2.1 PUBREC Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901135<BR>
+     *        3.5.2.2 PUBREC Properties
      */
     void pubrec(
         packet_id_t packet_id,
@@ -2955,7 +3197,14 @@ public:
     /**
      * @brief Send pubrel packet.
      * @param packet_id packet id corresponding to publish
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718053
+     * @param reason_code
+     *        PUBREL Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901144<BR>
+     *        3.6.2.1 PUBREL Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901145<BR>
+     *        3.6.2.2 PUBREL Properties
      */
     void pubrel(
         packet_id_t packet_id,
@@ -2968,7 +3217,14 @@ public:
     /**
      * @brief Send pubcomp packet.
      * @param packet_id packet id corresponding to publish
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718058
+     * @param reason_code
+     *        PUBCOMP Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901154<BR>
+     *        3.7.2.1 PUBCOMP Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901155<BR>
+     *        3.7.2.2 PUBCOMP Properties
      */
     void pubcomp(
         packet_id_t packet_id,
@@ -2981,9 +3237,14 @@ public:
     /**
      * @brief Send suback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qos adjusted qos
-     * @param args additional qos
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
+     * @param reason
+     *        reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
+     *        3.9.3 SUBACK Payload
+     * @param args additional reason_code
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
+     *        3.9.2.1 SUBACK Properties
      */
     template <typename... Args>
     void suback(
@@ -2996,8 +3257,14 @@ public:
     /**
      * @brief Send suback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qoss a collection of adjusted qos
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
+     * @param reasons
+     *        a collection of reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
+     *        3.9.3 SUBACK Payload
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
+     *        3.9.2.1 SUBACK Properties
      */
     void suback(
         packet_id_t packet_id,
@@ -3010,8 +3277,6 @@ public:
     /**
      * @brief Send unsuback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qoss a collection of adjusted qos
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     void unsuback(
         packet_id_t packet_id
@@ -3022,9 +3287,14 @@ public:
     /**
      * @brief Send unsuback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qos adjusted qos
-     * @param args additional qos
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
+     * @param reason
+     *        reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
+     *        3.11.3 UNSUBACK Payload
+     * @param args additional reason_code
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
+     *        3.11.2.1 UNSUBACK Properties
      */
     template <typename... Args>
     void unsuback(
@@ -3037,8 +3307,14 @@ public:
     /**
      * @brief Send unsuback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qoss a collection of adjusted qos
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
+     * @param reasons
+     *        a collection of reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
+     *        3.11.3 UNSUBACK Payload
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
+     *        3.11.2.1 UNSUBACK Properties
      */
     void unsuback(
         packet_id_t packet_id,
@@ -3079,6 +3355,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      */
     void async_publish_at_most_once(
@@ -3126,6 +3406,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      */
     void async_publish_at_most_once(
@@ -3173,6 +3457,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id
      * packet_id is automatically generated.
@@ -3227,6 +3515,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id
      * packet_id is automatically generated.
@@ -3279,6 +3571,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id
      * packet_id is automatically generated.
@@ -3333,6 +3629,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id
      * packet_id is automatically generated.
@@ -3391,6 +3691,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
@@ -3453,6 +3757,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
@@ -3476,11 +3784,17 @@ public:
      * @brief Subscribe
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param args
-     *        args should be some pairs of topic_name and qos to subscribe, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     *        The format of args is `[topic_name, option, topicname, option, ...,][props,][func]`<BR>
+     *        args should be zero or more pairs of topic_name and option.
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -3489,11 +3803,11 @@ public:
     template <typename Arg0, typename... Args>
     packet_id_t async_subscribe(
         std::string const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         Arg0&& arg0,
         Args&&... args) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, options, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+        acquired_async_subscribe(packet_id, topic_name, option, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
         return packet_id;
     }
 
@@ -3501,11 +3815,17 @@ public:
      * @brief Subscribe
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param args
-     *        args should be some pairs of topic_name and qos to subscribe, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     *        The format of args is `[topic_name, option, topicname, option, ...,][props,][func]`<BR>
+     *        args should be zero or more pairs of topic_name and option.
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -3514,11 +3834,11 @@ public:
     template <typename Arg0, typename... Args>
     packet_id_t async_subscribe(
         as::const_buffer const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         Arg0&& arg0,
         Args&&... args) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, options, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+        acquired_async_subscribe(packet_id, topic_name, option, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
         return packet_id;
     }
 
@@ -3526,8 +3846,10 @@ public:
      * @brief Subscribe
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
@@ -3536,11 +3858,11 @@ public:
      */
     packet_id_t async_subscribe(
         std::string const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         async_handler_t const& func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, options, func);
+        acquired_async_subscribe(packet_id, topic_name, option, func);
         return packet_id;
     }
 
@@ -3548,22 +3870,29 @@ public:
      * @brief Subscribe
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
+
     packet_id_t async_subscribe(
         std::string const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         std::vector<v5::property_variant> props,
         async_handler_t const& func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, options, std::move(props), func);
+        acquired_async_subscribe(packet_id, topic_name, option, std::move(props), func);
         return packet_id;
     }
 
@@ -3571,8 +3900,10 @@ public:
      * @brief Subscribe
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
@@ -3581,11 +3912,11 @@ public:
      */
     packet_id_t async_subscribe(
         as::const_buffer const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         async_handler_t const& func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, options, func);
+        acquired_async_subscribe(packet_id, topic_name, option, func);
         return packet_id;
     }
 
@@ -3593,8 +3924,14 @@ public:
      * @brief Subscribe
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
@@ -3603,18 +3940,21 @@ public:
      */
     packet_id_t async_subscribe(
         as::const_buffer const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         std::vector<v5::property_variant> props,
         async_handler_t const& func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, options, std::move(props), func);
+        acquired_async_subscribe(packet_id, topic_name, option, std::move(props), func);
         return packet_id;
     }
 
     /**
      * @brief Subscribe
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params
+     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
@@ -3632,8 +3972,15 @@ public:
 
     /**
      * @brief Subscribe
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params
+     * A collection of the pair of topic_name and option to subscribe.<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param func A callback function that is called when async operation will finish.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -3651,7 +3998,10 @@ public:
 
     /**
      * @brief Subscribe
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params
+     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
@@ -3669,7 +4019,14 @@ public:
 
     /**
      * @brief Subscribe
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params
+     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
@@ -3691,8 +4048,12 @@ public:
      * @param topic_name
      *        A topic name to unsubscribe
      * @param args
+     *        The format of args is `[topic_name, topicname, ... , ][props,][func]`<BR>
      *        args should be some topic_names to unsubscribe, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -3713,8 +4074,12 @@ public:
      * @param topic_name
      *        A topic name to unsubscribe
      * @param args
+     *        The format of args is `[topic_name, topicname, ... , ][props,][func]`<BR>
      *        args should be some topic_names to unsubscribe, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -3753,6 +4118,10 @@ public:
      * @brief Unsubscribe
      * @param topic_name
      *        A topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
@@ -3792,6 +4161,10 @@ public:
      * @brief Unsubscribe
      * @param topic_name
      *        A topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
@@ -3831,6 +4204,10 @@ public:
      * @brief Unsubscribe
      * @param params
      *        A collection of the topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
@@ -3870,6 +4247,10 @@ public:
      * @brief Unsubscribe
      * @param params
      *        A collection of the topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
@@ -3892,7 +4273,6 @@ public:
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
      */
     void async_disconnect(
         async_handler_t const& func = async_handler_t()
@@ -3905,11 +4285,18 @@ public:
 
     /**
      * @brief Disconnect
+     * @param reason
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
      * @param func A callback function that is called when async operation will finish.
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
      */
     void async_disconnect(
         std::uint8_t reason,
@@ -3966,6 +4353,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
@@ -4030,6 +4421,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
@@ -4092,6 +4487,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
@@ -4156,6 +4555,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
@@ -4224,6 +4627,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
@@ -4296,6 +4703,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
@@ -4366,6 +4777,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
@@ -4438,6 +4853,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
@@ -4466,10 +4885,17 @@ public:
      *        packet identifier
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param args
-     *        args should be zero or more pairs of topic_name and qos.
+     *        The format of args is `[topic_name, option, topicname, option, ...,][props,][func]`<BR>
+     *        args should be zero or more pairs of topic_name and option.
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -4479,11 +4905,11 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         Arg0&& arg0,
         Args&&... args) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, options, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+            acquired_async_subscribe(packet_id, topic_name, option, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
             return true;
         }
         return false;
@@ -4495,10 +4921,17 @@ public:
      *        packet identifier
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param args
-     *        args should be zero or more pairs of topic_name and qos.
+     *        The format of args is `[topic_name, option, topicname, option, ...,][props,][func]`<BR>
+     *        args should be zero or more pairs of topic_name and option.
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -4508,11 +4941,11 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         Arg0&& arg0,
         Args&&... args) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, options, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+            acquired_async_subscribe(packet_id, topic_name, option, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
             return true;
         }
         return false;
@@ -4524,8 +4957,10 @@ public:
      *        packet identifier
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
@@ -4535,11 +4970,11 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         async_handler_t const& func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, options, func);
+            acquired_async_subscribe(packet_id, topic_name, option, func);
             return true;
         }
         return false;
@@ -4551,8 +4986,14 @@ public:
      *        packet identifier
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
@@ -4562,12 +5003,12 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         std::vector<v5::property_variant> props,
         async_handler_t const& func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, options, std::move(props), func);
+            acquired_async_subscribe(packet_id, topic_name, option, std::move(props), func);
             return true;
         }
         return false;
@@ -4579,8 +5020,10 @@ public:
      *        packet identifier
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
@@ -4590,11 +5033,11 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         async_handler_t const& func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, options, func);
+            acquired_async_subscribe(packet_id, topic_name, option, func);
             return true;
         }
         return false;
@@ -4606,8 +5049,14 @@ public:
      *        packet identifier
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
@@ -4617,12 +5066,12 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         std::vector<v5::property_variant> props,
         async_handler_t const& func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, options, std::move(props), func);
+            acquired_async_subscribe(packet_id, topic_name, option, std::move(props), func);
             return true;
         }
         return false;
@@ -4632,7 +5081,9 @@ public:
      * @brief Subscribe
      * @param packet_id
      *        packet identifier
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params A collection of the pair of topic_name and option to subscribe.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
@@ -4655,7 +5106,13 @@ public:
      * @brief Subscribe
      * @param packet_id
      *        packet identifier
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params A collection of the pair of topic_name and option to subscribe.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
@@ -4679,7 +5136,9 @@ public:
      * @brief Subscribe
      * @param packet_id
      *        packet identifier
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params A collection of the pair of topic_name and option to subscribe.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
@@ -4702,7 +5161,13 @@ public:
      * @brief Subscribe
      * @param packet_id
      *        packet identifier
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params A collection of the pair of topic_name and option to subscribe.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
@@ -4729,8 +5194,12 @@ public:
      * @param topic_name
      *        A topic name to subscribe
      * @param args
+     *        The format of args is `[topic_name, topicname, ... , ][props,][func]`<BR>
      *        args should be some topic_names to unsubscribe, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -4756,8 +5225,12 @@ public:
      * @param topic_name
      *        A topic name to subscribe
      * @param args
+     *        The format of args is `[topic_name, topicname, ... , ][props,][func]`<BR>
      *        args should be some topic_names to unsubscribe, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -4806,6 +5279,10 @@ public:
      *        packet identifier
      * @param params
      *        A collection of the topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
@@ -4855,6 +5332,10 @@ public:
      *        packet identifier
      * @param params
      *        A collection of the topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
@@ -4928,6 +5409,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      */
     void acquired_async_publish_at_least_once(
@@ -5011,6 +5496,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      */
     void acquired_async_publish_at_least_once(
@@ -5088,6 +5577,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      */
     void acquired_async_publish_exactly_once(
@@ -5170,6 +5663,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      */
     void acquired_async_publish_exactly_once(
@@ -5259,6 +5756,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      */
     void acquired_async_publish(
@@ -5353,6 +5854,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      */
     void acquired_async_publish(
@@ -5442,6 +5947,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      */
     void acquired_async_publish_dup(
@@ -5536,6 +6045,10 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func A callback function that is called when async operation will finish.
      */
     void acquired_async_publish_dup(
@@ -5571,22 +6084,27 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param args
-     *        args should be some pairs of topic_name and qos to subscribe, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     *        The format of args is `[topic_name, option, topicname, option, ...,][props,][func]`<BR>
+     *        args should be zero or more pairs of topic_name and option.
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
     template <typename Arg0, typename... Args>
     void acquired_async_subscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         Arg0&& arg0,
         Args&&... args) {
-        acquired_async_subscribe_imp(packet_id, topic_name, options, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+        acquired_async_subscribe_imp(packet_id, topic_name, option, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
     }
 
     /**
@@ -5596,22 +6114,27 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param args
-     *        args should be some pairs of topic_name and qos to subscribe, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     *        The format of args is `[topic_name, option, topicname, option, ...,][props,][func]`<BR>
+     *        args should be zero or more pairs of topic_name and option.
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
     template <typename Arg0, typename... Args>
     void acquired_async_subscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         Arg0&& arg0,
         Args&&... args) {
-        acquired_async_subscribe_imp(packet_id, topic_name, options, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+        acquired_async_subscribe_imp(packet_id, topic_name, option, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
     }
 
     /**
@@ -5619,10 +6142,17 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param args
+     *        The format of args is `[topic_name, option, topicname, option, ...,][props,][func]`<BR>
+     *        args should be zero or more pairs of topic_name and option.
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * @param func A callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
@@ -5655,8 +6185,14 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
@@ -5664,7 +6200,7 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         std::string const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         std::vector<v5::property_variant> props,
         async_handler_t const& func = async_handler_t()
     ) {
@@ -5678,7 +6214,7 @@ public:
             life_keepers,
             packet_id,
             topic_name,
-            options,
+            option,
             std::move(props),
             func
         );
@@ -5691,8 +6227,10 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param func A callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
@@ -5700,7 +6238,7 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         async_handler_t const& func = async_handler_t()
     ) {
 
@@ -5712,7 +6250,7 @@ public:
             mqtt::any(),
             packet_id,
             topic_name,
-            options,
+            option,
             func
         );
     }
@@ -5724,8 +6262,14 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param topic_name
      *        A topic name to subscribe
-     * @param qos
-     *        mqtt::qos
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
@@ -5733,7 +6277,7 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         as::const_buffer const& topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         std::vector<v5::property_variant> props,
         async_handler_t const& func = async_handler_t()
     ) {
@@ -5746,7 +6290,7 @@ public:
             mqtt::any(),
             packet_id,
             topic_name,
-            options,
+            option,
             std::move(props),
             func
         );
@@ -5757,7 +6301,10 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params
+     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param func A callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
@@ -5793,7 +6340,14 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params
+     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
@@ -5857,7 +6411,10 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params
+     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param func A callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
@@ -5887,10 +6444,14 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param topic_name topic_name
      * @param args
-     *        args should be some topic_names, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     *        The format of args is `[topic_name, topicname, ... , ][props,][func]`<BR>
+     *        args should be some topic_names to unsubscribe, <BR>
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     template <typename Arg0, typename... Args>
     void acquired_async_unsubscribe(
@@ -5908,10 +6469,14 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param topic_name topic_name
      * @param args
-     *        args should be some topic_names, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     *        The format of args is `[topic_name, topicname, ... , ][props,][func]`<BR>
+     *        args should be some topic_names to unsubscribe, <BR>
+     *        You can set props optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     *        You can set a callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     template <typename Arg0, typename... Args>
     void acquired_async_unsubscribe(
@@ -5965,6 +6530,10 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param params
      *        A collection of the topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
@@ -6029,6 +6598,10 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param params
      *        A collection of the topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @param func A callback function that is called when async operation will finish.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
@@ -6070,6 +6643,14 @@ public:
 
     /**
      * @brief Send auth packet.
+     * @param reason_code
+     *        AUTH Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901220<BR>
+     *        3.15.2.1 Authenticate Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901221<BR>
+     *        3.15.2.2 AUTH Properties
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718086
      */
@@ -6082,7 +6663,10 @@ public:
 
     /**
      * @brief Send connect packet.
-     * @param keep_alive_sec See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349238
+     * @param keep_alive_sec
+     *        Keep Alive<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
+     *        3.1.2.10 Keep Alive
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
      */
@@ -6096,7 +6680,14 @@ public:
 
     /**
      * @brief Send connect packet.
-     * @param keep_alive_sec See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349238
+     * @param keep_alive_sec
+     *        Keep Alive<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
+     *        3.1.2.10 Keep Alive
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
      */
@@ -6128,6 +6719,10 @@ public:
      * @brief Send connack packet. This function is for broker.
      * @param session_present See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349255
      * @param return_code See connect_return_code.hpp and https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349256
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901080<BR>
+     *        3.2.2.3 CONNACK Properties
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718033
      */
@@ -6156,6 +6751,14 @@ public:
     /**
      * @brief Send puback packet.
      * @param packet_id packet id corresponding to publish
+     * @param reason_code
+     *        PUBACK Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901124<BR>
+     *        3.4.2.1 PUBACK Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901125<BR>
+     *        3.4.2.2 PUBACK Properties
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
@@ -6184,6 +6787,14 @@ public:
     /**
      * @brief Send pubrec packet.
      * @param packet_id packet id corresponding to publish
+     * @param reason_code
+     *        PUBREC Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901134<BR>
+     *        3.5.2.1 PUBREC Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901135<BR>
+     *        3.5.2.2 PUBREC Properties
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
@@ -6212,6 +6823,14 @@ public:
     /**
      * @brief Send pubrel packet.
      * @param packet_id packet id corresponding to publish
+     * @param reason_code
+     *        PUBREL Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901144<BR>
+     *        3.6.2.1 PUBREL Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901145<BR>
+     *        3.6.2.2 PUBREL Properties
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
@@ -6240,6 +6859,14 @@ public:
     /**
      * @brief Send pubcomp packet.
      * @param packet_id packet id corresponding to publish
+     * @param reason_code
+     *        PUBCOMP Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901154<BR>
+     *        3.7.2.1 PUBCOMP Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901155<BR>
+     *        3.7.2.2 PUBCOMP Properties
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
@@ -6255,10 +6882,16 @@ public:
     /**
      * @brief Send suback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qos qos
-     * @param args
-     *        args should be some qos corresponding to subscribe, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     * @param reason
+     *        reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
+     *        3.9.3 SUBACK Payload
+     * @param args additional reason_code
+     *        The format of args is `[option, option, ...,][props,][func]`<BR>
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
+     *        3.9.2.1 SUBACK Properties
+     *        You can set a callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     template <typename Arg0, typename... Args>
@@ -6273,7 +6906,10 @@ public:
     /**
      * @brief Send suback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qos adjusted qos
+     * @param reason
+     *        reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
+     *        3.9.3 SUBACK Payload
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
@@ -6289,7 +6925,14 @@ public:
     /**
      * @brief Send suback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qos adjusted qos
+     * @param reason
+     *        reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
+     *        3.9.3 SUBACK Payload
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
+     *        3.9.2.1 SUBACK Properties
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
@@ -6306,7 +6949,10 @@ public:
     /**
      * @brief Send suback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qoss a collection of adjusted qos
+     * @param reason
+     *        a collection of reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
+     *        3.9.3 SUBACK Payload
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
@@ -6321,7 +6967,14 @@ public:
     /**
      * @brief Send suback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qoss a collection of adjusted qos
+     * @param reason
+     *        a collection of reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
+     *        3.9.3 SUBACK Payload
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
+     *        3.9.2.1 SUBACK Properties
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
@@ -6337,10 +6990,16 @@ public:
     /**
      * @brief Send unsuback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qos qos
+     * @param reason
+     *        reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
+     *        3.11.3 UNSUBACK Payload
      * @param args
-     *        args should be some qos corresponding to subscribe, <BR>
-     *        and the last one is a callback function that is called when async operation will finish.
+     *        The format of args is `[option, option, ...,][props,][func]`<BR>
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
+     *        3.11.2.1 UNSUBACK Properties
+     *        You can set a callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     template <typename Arg0, typename... Args>
@@ -6355,7 +7014,10 @@ public:
     /**
      * @brief Send unsuback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qos adjusted qos
+     * @param reason
+     *        reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
+     *        3.11.3 UNSUBACK Payload
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
@@ -6371,7 +7033,14 @@ public:
     /**
      * @brief Send unsuback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qos adjusted qos
+     * @param reason
+     *        reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
+     *        3.11.3 UNSUBACK Payload
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
+     *        3.11.2.1 UNSUBACK Properties
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
@@ -6388,7 +7057,10 @@ public:
     /**
      * @brief Send unsuback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qoss a collection of adjusted qos
+     * @param reasons
+     *        a collection of reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
+     *        3.11.3 UNSUBACK Payload
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
@@ -6403,7 +7075,14 @@ public:
     /**
      * @brief Send unsuback packet. This function is for broker.
      * @param packet_id packet id corresponding to subscribe
-     * @param qoss a collection of adjusted qos
+     * @param reasons
+     *        a collection of reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
+     *        3.11.3 UNSUBACK Payload
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
+     *        3.11.2.1 UNSUBACK Properties
      * @param func A callback function that is called when async operation will finish.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
@@ -7744,7 +8423,6 @@ private:
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return false;
         }
-
         if (static_cast<std::uint8_t>(payload_[1]) == connect_return_code::accepted) {
             if (clean_session_) {
                 LockGuard<Mutex> lck (store_mtx_);
@@ -9134,7 +9812,7 @@ private:
 
     void async_send_connack(
         bool session_present,
-        std::uint8_t return_code,
+        std::uint8_t reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t const& func
     ) {
@@ -9143,7 +9821,7 @@ private:
             do_async_write(
                 v3_1_1::connack_message(
                     session_present,
-                    return_code
+                    reason_code
                 ),
                 func
             );
@@ -9152,7 +9830,7 @@ private:
             do_async_write(
                 v5::connack_message(
                     session_present,
-                    return_code,
+                    reason_code,
                     std::move(props)
                 ),
                 func

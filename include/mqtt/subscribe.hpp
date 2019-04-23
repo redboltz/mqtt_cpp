@@ -9,7 +9,7 @@
 
 #include <cstdint>
 
-#include <boost/asssert.hpp>
+#include <boost/assert.hpp>
 
 namespace mqtt {
 

@@ -365,6 +365,8 @@ public:
      * @brief Connect to a broker
      * Before calling connect(), call set_xxx member functions to configure the connection.
      * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
      * @param func finish handler that is called when the session is finished
      */
     void connect(std::vector<v5::property_variant> props, async_handler_t const& func = async_handler_t()) {
@@ -399,6 +401,8 @@ public:
      * @param socket The library uses the socket instead of internal generation.
      *               You can configure the socket prior to connect.
      * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
      * @param func finish handler that is called when the session is finished
      */
     void connect(std::unique_ptr<Socket>&& socket, std::vector<v5::property_variant> props, async_handler_t const& func = async_handler_t()) {
