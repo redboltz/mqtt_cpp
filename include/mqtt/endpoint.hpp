@@ -5389,7 +5389,7 @@ public:
             retain,
             false,
             packet_id,
-            {},
+            std::vector<v5::property_variant>{},
             as::buffer(*sp_contents),
             std::move(func),
             [sp_topic_name, sp_contents] {}
@@ -5473,7 +5473,7 @@ public:
             retain,
             false,
             packet_id,
-            {},
+            std::vector<v5::property_variant>{},
             contents,
             std::move(func),
             std::move(life_keeper)
@@ -5557,7 +5557,7 @@ public:
             retain,
             false,
             packet_id,
-            {},
+            std::vector<v5::property_variant>{},
             as::buffer(*sp_contents),
             std::move(func),
             [sp_topic_name, sp_contents] {}
@@ -5642,7 +5642,7 @@ public:
             retain,
             false,
             packet_id,
-            {},
+            std::vector<v5::property_variant>{},
             contents,
             std::move(func),
             std::move(life_keeper)
@@ -5733,7 +5733,7 @@ public:
             retain,
             false,
             packet_id,
-            {},
+            std::vector<v5::property_variant>{},
             contents_buf,
             std::move(func),
             std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
@@ -5830,7 +5830,7 @@ public:
             retain,
             false,
             packet_id,
-            {},
+            std::vector<v5::property_variant>{},
             contents,
             std::move(func),
             life_keeper
@@ -5924,7 +5924,7 @@ public:
             retain,
             true,
             packet_id,
-            {},
+            std::vector<v5::property_variant>{},
             as::buffer(*sp_contents),
             std::move(func),
             [sp_topic_name, sp_contents] {}
@@ -6021,7 +6021,7 @@ public:
             retain,
             true,
             packet_id,
-            {},
+            std::vector<v5::property_variant>{},
             contents,
             std::move(func),
             life_keeper
@@ -6675,7 +6675,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         connect_requested_ = true;
-        async_send_connect(keep_alive_sec, {}, std::move(func));
+        async_send_connect(keep_alive_sec, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -6712,7 +6712,7 @@ public:
         std::uint8_t reason_code,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_connack(session_present, reason_code, {}, std::move(func));
+        async_send_connack(session_present, reason_code, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -6745,7 +6745,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_puback(packet_id, mqtt::nullopt, {}, std::move(func));
+        async_send_puback(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -6781,7 +6781,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrec(packet_id, mqtt::nullopt, {}, std::move(func));
+        async_send_pubrec(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -6817,7 +6817,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrel(packet_id, mqtt::nullopt, {}, std::move(func));
+        async_send_pubrel(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -6853,7 +6853,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubcomp(packet_id, mqtt::nullopt, {}, std::move(func));
+        async_send_pubcomp(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -6919,7 +6919,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         std::vector<std::uint8_t> params;
-        async_send_suback(params, packet_id, reason, {}, std::move(func));
+        async_send_suback(params, packet_id, reason, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -6961,7 +6961,7 @@ public:
         std::vector<std::uint8_t> reasons,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_suback(std::move(reasons), packet_id, {}, std::move(func));
+        async_send_suback(std::move(reasons), packet_id, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -7069,7 +7069,7 @@ public:
         std::vector<std::uint8_t> reasons,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_unsuback(std::move(reasons), packet_id, {}, std::move(func));
+        async_send_unsuback(std::move(reasons), packet_id, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -8563,7 +8563,7 @@ private:
                         if (connected_) send_puback(*packet_id);
                     },
                     [this, &packet_id, &func] {
-                        if (connected_) async_send_puback(*packet_id, mqtt::nullopt, {}, func);
+                        if (connected_) async_send_puback(*packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, func);
                     }
                 );
             };
@@ -8589,7 +8589,7 @@ private:
                         if (connected_) send_pubrec(*packet_id);
                     },
                     [this, &packet_id, &func] {
-                        if (connected_) async_send_pubrec(*packet_id, mqtt::nullopt, {}, func);
+                        if (connected_) async_send_pubrec(*packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, func);
                     }
                 );
             };
@@ -8725,7 +8725,7 @@ private:
                     else store_pubrel(packet_id);
                 },
                 [this, &packet_id, &func] {
-                    if (connected_) async_send_pubrel(packet_id, mqtt::nullopt, {}, func);
+                    if (connected_) async_send_pubrel(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, func);
                     else store_pubrel(packet_id);
                 }
             );
@@ -8794,7 +8794,7 @@ private:
                     if (connected_) send_pubcomp(packet_id);
                 },
                 [this, &packet_id, &func] {
-                    if (connected_) async_send_pubcomp(packet_id, mqtt::nullopt, {}, func);
+                    if (connected_) async_send_pubcomp(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, func);
                 }
             );
         };
