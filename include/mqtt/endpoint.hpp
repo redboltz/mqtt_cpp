@@ -8654,8 +8654,8 @@ private:
         }
 
         packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data() + 0,
-            payload_.data() + 0 + sizeof(packet_id_t)
+            payload_.data(),
+            payload_.data() + sizeof(packet_id_t)
         );
         {
             LockGuard<Mutex> lck (store_mtx_);
@@ -8707,8 +8707,8 @@ private:
         }
 
         packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data() + 0,
-            payload_.data() + 0 + sizeof(packet_id_t)
+            payload_.data(),
+            payload_.data() + sizeof(packet_id_t)
         );
         {
             LockGuard<Mutex> lck (store_mtx_);
@@ -8785,8 +8785,8 @@ private:
         }
 
         packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data() + 0,
-            payload_.data() + 0 + sizeof(packet_id_t)
+            payload_.data(),
+            payload_.data() + sizeof(packet_id_t)
         );
         auto res = [this, &packet_id, &func] {
             auto_pub_response(
@@ -8853,8 +8853,8 @@ private:
         }
 
         packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data() + 0,
-            payload_.data() + 0 + sizeof(packet_id_t)
+            payload_.data(),
+            payload_.data() + sizeof(packet_id_t)
         );
         {
             LockGuard<Mutex> lck (store_mtx_);
@@ -8905,8 +8905,8 @@ private:
             return false;
         }
         packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data() + 0,
-            payload_.data() + 0 + sizeof(packet_id_t)
+            payload_.data(),
+            payload_.data() + sizeof(packet_id_t)
         );
         i += sizeof(packet_id_t);
 
@@ -9010,8 +9010,8 @@ private:
             return false;
         }
         packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data() + 0,
-            payload_.data() + 0 + sizeof(packet_id_t)
+            payload_.data(),
+            payload_.data() + sizeof(packet_id_t)
         );
         i += sizeof(packet_id_t);
         {
@@ -9072,8 +9072,8 @@ private:
             return false;
         }
         packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data() + 0,
-            payload_.data() + 0 + sizeof(packet_id_t)
+            payload_.data(),
+            payload_.data() + sizeof(packet_id_t)
         );
         i += sizeof(packet_id_t);
 
@@ -9135,8 +9135,8 @@ private:
             return false;
         }
         packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data() + 0,
-            payload_.data() + 0 + sizeof(packet_id_t)
+            payload_.data(),
+            payload_.data() + sizeof(packet_id_t)
         );
         i += sizeof(packet_id_t);
 
