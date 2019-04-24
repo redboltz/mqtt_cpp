@@ -8,13 +8,12 @@
 #include <iomanip>
 #include <set>
 
+#include <mqtt_server_cpp.hpp>
+
 #include <boost/lexical_cast.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/member.hpp>
-
-#include <mqtt_server_cpp.hpp>
-#include <mqtt/optional.hpp>
 
 namespace mi = boost::multi_index;
 

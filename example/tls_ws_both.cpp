@@ -10,10 +10,9 @@
 #include <iomanip>
 #include <map>
 
-#include <boost/lexical_cast.hpp>
-
 #include <mqtt_client_cpp.hpp>
-#include <mqtt/optional.hpp>
+
+#include <boost/lexical_cast.hpp>
 
 template <typename Client, typename Disconnect>
 void client_proc(
@@ -330,7 +329,7 @@ int main(int argc, char** argv) {
     auto s = mqtt::server_tls_ws<>(
         boost::asio::ip::tcp::endpoint(
             boost::asio::ip::tcp::v4(),
-            boost::lexical_cast<std::uint16_t>(argv[1])
+            port
         ),
         std::move(ctx),
         ios

@@ -10,10 +10,9 @@
 #include <iomanip>
 #include <map>
 
-#include <boost/lexical_cast.hpp>
-
 #include <mqtt_client_cpp.hpp>
-#include <mqtt/optional.hpp>
+
+#include <boost/lexical_cast.hpp>
 
 template <typename Client, typename Disconnect>
 void client_proc(

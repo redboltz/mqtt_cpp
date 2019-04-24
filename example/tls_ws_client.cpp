@@ -8,10 +8,7 @@
 #include <iomanip>
 #include <map>
 
-#include <boost/lexical_cast.hpp>
-
 #include <mqtt_client_cpp.hpp>
-#include <mqtt/optional.hpp>
 
 int main(int argc, char** argv) {
     if (argc != 4) {
@@ -22,7 +19,7 @@ int main(int argc, char** argv) {
     boost::asio::io_service ios;
 
     std::string host = argv[1];
-    std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[2]);
+    auto port = boost::lexical_cast<std::uint16_t>(argv[2]);
     std::string cacert = argv[3];
 
     std::uint16_t pid_sub1;

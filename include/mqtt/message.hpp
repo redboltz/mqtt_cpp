@@ -13,7 +13,6 @@
 #include <algorithm>
 
 #include <boost/asio/buffer.hpp>
-#include <boost/optional.hpp>
 #include <boost/container/static_vector.hpp>
 
 #include <mqtt/two_byte_util.hpp>
@@ -31,21 +30,16 @@
 #include <mqtt/packet_id_type.hpp>
 #include <mqtt/optional.hpp>
 #include <mqtt/string_view.hpp>
+#include <mqtt/property.hpp>
+#include <mqtt/string_check.hpp>
 
 namespace mqtt {
 
 namespace as = boost::asio;
 
-namespace detail {
+inline namespace v3_1_1 {
 
-inline void utf8string_check(string_view str) {
-    if (!utf8string::is_valid_length(str)) throw utf8string_length_error();
-    auto r = utf8string::validate_contents(str);
-    if (r != utf8string::validation::well_formed) {
-        throw utf8string_contents_error(r);
-    }
-}
-
+namespace detail_v3_1_1 {
 
 class header_only_message {
 public:
@@ -163,11 +157,11 @@ private:
     boost::container::static_vector<char, 2 + PacketIdBytes> message_;
 };
 
-} // namespace detail
+} // namespace detail_v3_1_1
 
 template <std::size_t PacketIdBytes>
-struct basic_puback_message : detail::basic_header_packet_id_message<PacketIdBytes> {
-    using base = detail::basic_header_packet_id_message<PacketIdBytes>;
+struct basic_puback_message : detail_v3_1_1::basic_header_packet_id_message<PacketIdBytes> {
+    using base = detail_v3_1_1::basic_header_packet_id_message<PacketIdBytes>;
     basic_puback_message(typename packet_id_type<PacketIdBytes>::type packet_id)
         : base(control_packet_type::puback, 0b0000, packet_id)
     {}
@@ -176,8 +170,8 @@ struct basic_puback_message : detail::basic_header_packet_id_message<PacketIdByt
 using puback_message = basic_puback_message<2>;
 
 template <std::size_t PacketIdBytes>
-struct basic_pubrec_message : detail::basic_header_packet_id_message<PacketIdBytes> {
-    using base = detail::basic_header_packet_id_message<PacketIdBytes>;
+struct basic_pubrec_message : detail_v3_1_1::basic_header_packet_id_message<PacketIdBytes> {
+    using base = detail_v3_1_1::basic_header_packet_id_message<PacketIdBytes>;
     basic_pubrec_message(typename packet_id_type<PacketIdBytes>::type packet_id)
         : base(control_packet_type::pubrec, 0b0000, packet_id)
     {}
@@ -186,8 +180,8 @@ struct basic_pubrec_message : detail::basic_header_packet_id_message<PacketIdByt
 using pubrec_message = basic_pubrec_message<2>;
 
 template <std::size_t PacketIdBytes>
-struct basic_pubrel_message : detail::basic_header_packet_id_message<PacketIdBytes> {
-    using base = detail::basic_header_packet_id_message<PacketIdBytes>;
+struct basic_pubrel_message : detail_v3_1_1::basic_header_packet_id_message<PacketIdBytes> {
+    using base = detail_v3_1_1::basic_header_packet_id_message<PacketIdBytes>;
     basic_pubrel_message(typename packet_id_type<PacketIdBytes>::type packet_id)
         : base(control_packet_type::pubrel, 0b0010, packet_id)
     {
@@ -212,38 +206,38 @@ using pubrel_message = basic_pubrel_message<2>;
 using pubrel_32_message = basic_pubrel_message<4>;
 
 template <std::size_t PacketIdBytes>
-struct basic_pubcomp_message : detail::basic_header_packet_id_message<PacketIdBytes> {
+struct basic_pubcomp_message : detail_v3_1_1::basic_header_packet_id_message<PacketIdBytes> {
     basic_pubcomp_message(typename packet_id_type<PacketIdBytes>::type packet_id)
-        : detail::basic_header_packet_id_message<PacketIdBytes>(control_packet_type::pubcomp, 0b0000, packet_id)
+        : detail_v3_1_1::basic_header_packet_id_message<PacketIdBytes>(control_packet_type::pubcomp, 0b0000, packet_id)
     {}
 };
 
 using pubcomp_message = basic_pubcomp_message<2>;
 
 template <std::size_t PacketIdBytes>
-struct basic_unsuback_message : detail::basic_header_packet_id_message<PacketIdBytes> {
+struct basic_unsuback_message : detail_v3_1_1::basic_header_packet_id_message<PacketIdBytes> {
     basic_unsuback_message(typename packet_id_type<PacketIdBytes>::type packet_id)
-        : detail::basic_header_packet_id_message<PacketIdBytes>(control_packet_type::unsuback, 0b0000, packet_id)
+        : detail_v3_1_1::basic_header_packet_id_message<PacketIdBytes>(control_packet_type::unsuback, 0b0000, packet_id)
     {}
 };
 
 using unsuback_message = basic_unsuback_message<2>;
 
-struct pingreq_message : detail::header_only_message {
+struct pingreq_message : detail_v3_1_1::header_only_message {
     pingreq_message()
-        : detail::header_only_message(control_packet_type::pingreq, 0b0000)
+        : detail_v3_1_1::header_only_message(control_packet_type::pingreq, 0b0000)
     {}
 };
 
-struct pingresp_message : detail::header_only_message {
+struct pingresp_message : detail_v3_1_1::header_only_message {
     pingresp_message()
-        : detail::header_only_message(control_packet_type::pingresp, 0b0000)
+        : detail_v3_1_1::header_only_message(control_packet_type::pingresp, 0b0000)
     {}
 };
 
-struct disconnect_message : detail::header_only_message {
+struct disconnect_message : detail_v3_1_1::header_only_message {
     disconnect_message()
-        : detail::header_only_message(control_packet_type::disconnect, 0b0000)
+        : detail_v3_1_1::header_only_message(control_packet_type::disconnect, 0b0000)
     {}
 };
 
@@ -326,10 +320,10 @@ public:
           client_id_length_buf_{ MQTT_16BITNUM_TO_BYTE_SEQ(client_id.size()) },
           keep_alive_buf_ { MQTT_16BITNUM_TO_BYTE_SEQ(keep_alive_sec ) }
     {
-        detail::utf8string_check(client_id);
+        utf8string_check(client_id);
         if (clean_session) connect_flags_ |= connect_flags::clean_session;
         if (user_name) {
-            detail::utf8string_check(user_name.value());
+            utf8string_check(user_name.value());
             connect_flags_ |= connect_flags::user_name_flag;
             user_name_ = as::buffer(user_name.value());
             add_uint16_t_to_buf(user_name_length_buf_, static_cast<std::uint16_t>(get_size(user_name_)));
@@ -348,7 +342,7 @@ public:
             if (w.value().retain()) connect_flags_ |= connect_flags::will_retain;
             connect_flags::set_will_qos(connect_flags_, w.value().qos());
 
-            detail::utf8string_check(w.value().topic());
+            utf8string_check(w.value().topic());
             will_topic_name_ = as::buffer(w.value().topic());
             add_uint16_t_to_buf(
                 will_topic_name_length_buf_,
@@ -412,7 +406,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -476,7 +473,7 @@ public:
     }
 
 private:
-    char fixed_header_;
+    std::uint8_t fixed_header_;
     char connect_flags_;
 
     std::size_t remaining_length_;
@@ -516,7 +513,7 @@ public:
           payload_(payload),
           remaining_length_(publish_remaining_length(topic_name, qos, payload))
     {
-        detail::utf8string_check(string_view(get_pointer(topic_name), get_size(topic_name)));
+        utf8string_check(string_view(get_pointer(topic_name), get_size(topic_name)));
         publish::set_qos(fixed_header_, qos);
         publish::set_retain(fixed_header_, retain);
         publish::set_dup(fixed_header_, dup);
@@ -539,8 +536,8 @@ public:
         auto qos = publish::get_qos(fixed_header_);
         ++b;
 
-        if (b + 4 >= e) throw remaining_length_error();
-        auto len_consumed = remaining_length(b, b + 4);
+        if (b >= e) throw remaining_length_error();
+        auto len_consumed = remaining_length(b, e);
         remaining_length_ = std::get<0>(len_consumed);
         auto consumed = static_cast<std::string::difference_type>(std::get<1>(len_consumed));
 
@@ -553,7 +550,7 @@ public:
         b += 2;
 
         if (b + topic_name_length >= e) throw remaining_length_error();
-        detail::utf8string_check(string_view(&*b, topic_name_length));
+        utf8string_check(string_view(&*b, topic_name_length));
         topic_name_ = as::buffer(&*b, topic_name_length);
         b += topic_name_length;
 
@@ -608,7 +605,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -753,16 +753,16 @@ private:
 
 public:
     basic_subscribe_message(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
+        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
         typename packet_id_type<PacketIdBytes>::type packet_id
     )
-        : fixed_header_(static_cast<char>(static_cast<char>(make_fixed_header(control_packet_type::subscribe, 0b0010)))),
+        : fixed_header_(make_fixed_header(control_packet_type::subscribe, 0b0010)),
           remaining_length_(PacketIdBytes)
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
         for (auto const& e : params) {
             auto const& topic_name = std::get<0>(e);
-            detail::utf8string_check(string_view(get_pointer(topic_name), get_size(topic_name)));
+            utf8string_check(string_view(get_pointer(topic_name), get_size(topic_name)));
 
             auto qos = std::get<1>(e);
             entries_.emplace_back(topic_name, qos);
@@ -793,7 +793,7 @@ public:
         ret.emplace_back(as::buffer(packet_id_.data(), packet_id_.size()));
 
         for (auto const& e : entries_) {
-            detail::utf8string_check(string_view(get_pointer(e.topic_name), get_size(e.topic_name)));
+            utf8string_check(string_view(get_pointer(e.topic_name), get_size(e.topic_name)));
             ret.emplace_back(as::buffer(e.topic_name_length_buf.data(), e.topic_name_length_buf.size()));
             ret.emplace_back(e.topic_name);
             ret.emplace_back(as::buffer(&e.qos, 1));
@@ -807,7 +807,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -849,7 +852,7 @@ public:
     }
 
 private:
-    char fixed_header_;
+    std::uint8_t fixed_header_;
     std::vector<entry> entries_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
     std::size_t remaining_length_;
@@ -862,10 +865,10 @@ template <std::size_t PacketIdBytes>
 class basic_suback_message {
 public:
     basic_suback_message(
-        std::vector<std::uint8_t> const& params,
+        std::vector<std::uint8_t> params,
         typename packet_id_type<PacketIdBytes>::type packet_id
     )
-        : fixed_header_(static_cast<char>(static_cast<char>(make_fixed_header(control_packet_type::suback, 0b0000)))),
+        : fixed_header_(make_fixed_header(control_packet_type::suback, 0b0000)),
           remaining_length_(params.size() + PacketIdBytes)
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
@@ -901,7 +904,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -933,7 +939,7 @@ public:
     }
 
 private:
-    char fixed_header_;
+    std::uint8_t fixed_header_;
     std::string entries_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
     std::size_t remaining_length_;
@@ -960,12 +966,12 @@ public:
         std::vector<as::const_buffer> const& params,
         typename packet_id_type<PacketIdBytes>::type packet_id
     )
-        : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::unsubscribe, 0b0010))),
+        : fixed_header_(make_fixed_header(control_packet_type::unsubscribe, 0b0010)),
           remaining_length_(PacketIdBytes)
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
         for (auto const& e : params) {
-            detail::utf8string_check(string_view(get_pointer(e), get_size(e)));
+            utf8string_check(string_view(get_pointer(e), get_size(e)));
             entries_.emplace_back(e);
             remaining_length_ +=
                 2 +          // topic name length
@@ -992,7 +998,7 @@ public:
         ret.emplace_back(as::buffer(packet_id_.data(), packet_id_.size()));
 
         for (auto const& e : entries_) {
-            detail::utf8string_check(string_view(get_pointer(e.topic_name), get_size(e.topic_name)));
+            utf8string_check(string_view(get_pointer(e.topic_name), get_size(e.topic_name)));
             ret.emplace_back(as::buffer(e.topic_name_length_buf.data(), e.topic_name_length_buf.size()));
             ret.emplace_back(e.topic_name);
         }
@@ -1005,7 +1011,10 @@ public:
      * @return whole size
      */
     std::size_t size() const {
-        return 1 + remaining_length_buf_.size() + remaining_length_;
+        return
+            1 +                            // fixed header
+            remaining_length_buf_.size() +
+            remaining_length_;
     }
 
     /**
@@ -1045,12 +1054,14 @@ public:
     }
 
 private:
-    char fixed_header_;
+    std::uint8_t fixed_header_;
     std::vector<entry> entries_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 };
+
+} // inline namespace v3_1_1
 
 } // namespace mqtt
 
