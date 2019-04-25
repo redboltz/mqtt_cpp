@@ -1629,7 +1629,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper An object to allow callers to extend the lifetime of anything until this message is sent
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -1695,7 +1696,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper An object to allow callers to extend the lifetime of anything until this message is sent
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -1774,7 +1776,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param func A object that stays alive until the async operation is finished.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -1980,7 +1983,7 @@ public:
     /**
      * @brief Unsubscribe
      * @param topic_name
-     *        A topic name to subscribe
+     *        A topic name to unsubscribe
      * @param args
      *        args should be zero or more topics
      *        You can set props as the last argument optionally.
@@ -2001,7 +2004,7 @@ public:
     /**
      * @brief Unsubscribe
      * @param topic_name
-     *        A topic name to subscribe
+     *        A topic name to unsubscribe
      * @param args
      *        args should be zero or more topics
      *        You can set props as the last argument optionally.
@@ -2102,7 +2105,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param func A object that stays alive until the async operation is finished.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2172,7 +2176,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param func A object that stays alive until the async operation is finished.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2245,7 +2250,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper An object to allow callers to extend the lifetime of anything until this message is sent
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -2322,7 +2328,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param func A object that stays alive until the async operation is finished.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -2644,7 +2651,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param func A object that stays alive until the async operation is finished.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2728,7 +2736,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param func A object that stays alive until the async operation is finished.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2819,7 +2828,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param func A object that stays alive until the async operation is finished.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -2859,7 +2869,7 @@ public:
      * @brief Publish as dup with already acquired packet identifier
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
+     *        The ownership of the packet_id moves to the library.
      *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
      * @param topic_name
      *        A topic name to publish
@@ -2915,7 +2925,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param func A object that stays alive until the async operation is finished.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -2962,8 +2973,7 @@ public:
      *        mqtt::qos
      * @param args
      *        args should be zero or more pairs of topic_name and qos.
-     * @param args
-     *        args should be zero or more pairs of topic_name and qos.
+     *
      *        You can set props as the last argument optionally.
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
@@ -2990,8 +3000,6 @@ public:
      *        A topic name to subscribe
      * @param qos
      *        mqtt::qos
-     * @param args
-     *        args should be zero or more pairs of topic_name and qos.
      * @param args
      *        args should be zero or more pairs of topic_name and qos.
      *        You can set props as the last argument optionally.
@@ -3410,7 +3418,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void async_publish_at_most_once(
         std::string topic_name,
@@ -3435,7 +3444,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void async_publish_at_most_once(
         std::string topic_name,
@@ -3459,7 +3469,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void async_publish_at_most_once(
         as::const_buffer topic_name,
@@ -3486,7 +3497,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void async_publish_at_most_once(
         as::const_buffer topic_name,
@@ -3508,7 +3520,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -3537,7 +3550,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -3559,12 +3573,14 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A object that stays alive until the async operation is finished.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -3586,7 +3602,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -3595,7 +3612,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -3622,7 +3640,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -3651,7 +3670,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -3673,12 +3693,14 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A object that stays alive until the async operation is finished.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -3700,7 +3722,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -3709,7 +3732,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id
      * packet_id is automatically generated.
      */
@@ -3738,7 +3762,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
@@ -3771,7 +3796,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
@@ -3795,14 +3821,16 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A object that stays alive until the async operation is finished.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
@@ -3826,7 +3854,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -3837,7 +3866,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
@@ -3926,7 +3956,8 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -3954,7 +3985,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -3980,7 +4012,8 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4008,7 +4041,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4031,7 +4065,8 @@ public:
      *        A collection of the pair of topic_name and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4052,7 +4087,8 @@ public:
      * A collection of the pair of topic_name and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
@@ -4078,7 +4114,8 @@ public:
      *        A collection of the pair of topic_name and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4103,7 +4140,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4175,7 +4213,8 @@ public:
      * @brief Unsubscribe
      * @param topic_name
      *        A topic name to unsubscribe
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4198,7 +4237,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4218,7 +4258,8 @@ public:
      * @brief Unsubscribe
      * @param topic_name
      *        A topic name to unsubscribe
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4241,7 +4282,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4261,7 +4303,8 @@ public:
      * @brief Unsubscribe
      * @param params
      *        A collection of the topic name to unsubscribe
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4284,7 +4327,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4304,7 +4348,8 @@ public:
      * @brief Unsubscribe
      * @param params
      *        A collection of the topic name to unsubscribe
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4327,7 +4372,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -4345,7 +4391,8 @@ public:
 
     /**
      * @brief Disconnect
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
@@ -4369,7 +4416,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
      *        3.14.2.2 DISCONNECT Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
@@ -4399,7 +4447,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -4433,7 +4482,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -4460,12 +4510,14 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -4492,7 +4544,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4501,7 +4554,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -4533,7 +4587,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -4567,7 +4622,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -4594,12 +4650,14 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A object that stays alive until the async operation is finished.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -4626,7 +4684,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4635,7 +4694,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
@@ -4669,7 +4729,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A object that stays alive until the async operation is finished.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -4707,7 +4768,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -4736,14 +4798,15 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A object that stays alive until the async operation is finished.
+     * @param life_keeper A object that stays alive until the async operation is finished.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -4772,7 +4835,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -4783,7 +4847,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -4819,7 +4884,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -4857,7 +4923,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -4886,14 +4953,15 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A object that stays alive until the async operation is finished.
+     * @param life_keeper A object that stays alive until the async operation is finished.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -4922,7 +4990,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -4933,7 +5002,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -5037,7 +5107,8 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -5070,7 +5141,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -5100,7 +5172,8 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -5133,7 +5206,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -5160,7 +5234,8 @@ public:
      * @param params A collection of the pair of topic_name and option to subscribe.
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -5189,7 +5264,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -5215,7 +5291,8 @@ public:
      * @param params A collection of the pair of topic_name and option to subscribe.
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -5244,7 +5321,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -5331,7 +5409,8 @@ public:
      *        packet identifier
      * @param params
      *        A collection of the topic name to unsubscribe
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -5354,12 +5433,13 @@ public:
      * @param packet_id
      *        packet identifier
      * @param params
-     *        A collection of the topic name to unsubscribe
+     *        A collection of the topic names to unsubscribe
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -5383,8 +5463,9 @@ public:
      * @param packet_id
      *        packet identifier
      * @param params
-     *        A collection of the topic name to unsubscribe
-     * @param func A callback function that is called when async operation will finish.
+     *        A collection of the topic names to unsubscribe
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -5412,7 +5493,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -5446,7 +5528,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish_at_least_once(
         packet_id_t packet_id,
@@ -5489,7 +5572,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish_at_least_once(
         packet_id_t packet_id,
@@ -5526,13 +5610,13 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        The function for keeping topic_name and contents life.
-     *        It is usually a lambda expression that captures shared_ptr of topic_name and contents.
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish_at_least_once(
         packet_id_t packet_id,
@@ -5566,8 +5650,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        The function for keeping topic_name and contents life.
-     *        It is usually a lambda expression that captures shared_ptr of topic_name and contents.
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -5576,7 +5659,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish_at_least_once(
         packet_id_t packet_id,
@@ -5614,7 +5698,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish_exactly_once(
         packet_id_t packet_id,
@@ -5657,7 +5742,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish_exactly_once(
         packet_id_t packet_id,
@@ -5696,12 +5782,14 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A object that stays alive until the async operation is finished.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish_exactly_once(
         packet_id_t packet_id,
@@ -5734,7 +5822,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -5743,7 +5832,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish_exactly_once(
         packet_id_t packet_id,
@@ -5784,7 +5874,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A object that stays alive until the async operation is finished.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish(
         packet_id_t packet_id,
@@ -5836,7 +5927,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish(
         packet_id_t packet_id,
@@ -5879,14 +5971,16 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A object that stays alive until the async operation is finished.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish(
         packet_id_t packet_id,
@@ -5923,7 +6017,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -5934,7 +6029,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish(
         packet_id_t packet_id,
@@ -5978,7 +6074,8 @@ public:
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish_dup(
         packet_id_t packet_id,
@@ -6027,7 +6124,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish_dup(
         packet_id_t packet_id,
@@ -6070,14 +6168,15 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
-     * @param func A object that stays alive until the async operation is finished.
+     * @param life_keeper A object that stays alive until the async operation is finished.
      */
     void acquired_async_publish_dup(
         packet_id_t packet_id,
@@ -6114,7 +6213,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper the function that is keeping topic_name and contents lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        mqtt::qos
      * @param retain
@@ -6125,7 +6225,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      */
     void acquired_async_publish_dup(
         packet_id_t packet_id,
@@ -6228,8 +6329,8 @@ public:
      *        You can set props optionally.
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     *        You can set a callback function that is called when async operation will finish.
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
@@ -6269,7 +6370,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
@@ -6307,7 +6409,8 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
@@ -6346,7 +6449,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
@@ -6381,7 +6485,8 @@ public:
      *        A collection of the pair of topic_name and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
@@ -6424,7 +6529,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
@@ -6462,7 +6568,8 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params A collection of the pair of topic_name and qos to subscribe.
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
@@ -6491,7 +6598,8 @@ public:
      *        A collection of the pair of topic_name and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
@@ -6570,7 +6678,8 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param params
      *        A collection of the topic name to unsubscribe
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
@@ -6610,7 +6719,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
@@ -6648,7 +6758,8 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param params
      *        A collection of the topic name to unsubscribe
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
@@ -6678,7 +6789,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
@@ -6701,7 +6813,8 @@ public:
 
     /**
      * @brief Send pingreq packet.
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901195
      */
     void async_pingreq(async_handler_t func = async_handler_t()) {
@@ -6710,7 +6823,8 @@ public:
 
     /**
      * @brief Send pingresp packet. This function is for broker.
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901200
      */
     void async_pingresp(async_handler_t func = async_handler_t()) {
@@ -6727,7 +6841,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901221<BR>
      *        3.15.2.2 AUTH Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718086
      */
     void async_auth(
@@ -6743,7 +6858,8 @@ public:
      *        Keep Alive<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
      *        3.1.2.10 Keep Alive
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
      */
     void async_connect(
@@ -6764,7 +6880,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
      */
     void async_connect(
@@ -6780,7 +6897,8 @@ public:
      * @brief Send connack packet. This function is for broker.
      * @param session_present See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349255
      * @param return_code See connect_return_code.hpp and https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349256
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718033
      */
     void async_connack(
@@ -6799,7 +6917,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901080<BR>
      *        3.2.2.3 CONNACK Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718033
      */
     void async_connack(
@@ -6814,7 +6933,8 @@ public:
     /**
      * @brief Send puback packet.
      * @param packet_id packet id corresponding to publish
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
     void async_puback(
@@ -6835,7 +6955,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901125<BR>
      *        3.4.2.2 PUBACK Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
     void async_puback(
@@ -6850,7 +6971,8 @@ public:
     /**
      * @brief Send pubrec packet.
      * @param packet_id packet id corresponding to publish
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
     void async_pubrec(
@@ -6871,7 +6993,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901135<BR>
      *        3.5.2.2 PUBREC Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
     void async_pubrec(
@@ -6886,7 +7009,8 @@ public:
     /**
      * @brief Send pubrel packet.
      * @param packet_id packet id corresponding to publish
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
     void async_pubrel(
@@ -6907,7 +7031,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901145<BR>
      *        3.6.2.2 PUBREL Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
     void async_pubrel(
@@ -6922,7 +7047,8 @@ public:
     /**
      * @brief Send pubcomp packet.
      * @param packet_id packet id corresponding to publish
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
     void async_pubcomp(
@@ -6943,7 +7069,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901155<BR>
      *        3.7.2.2 PUBCOMP Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
     void async_pubcomp(
@@ -6986,7 +7113,8 @@ public:
      *        reason_code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
      *        3.9.3 SUBACK Payload
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     void async_suback(
@@ -7009,7 +7137,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
      *        3.9.2.1 SUBACK Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     void async_suback(
@@ -7029,7 +7158,8 @@ public:
      *        a collection of reason_code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
      *        3.9.3 SUBACK Payload
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     void async_suback(
@@ -7051,7 +7181,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
      *        3.9.2.1 SUBACK Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     void async_suback(
@@ -7094,7 +7225,8 @@ public:
      *        reason_code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
      *        3.11.3 UNSUBACK Payload
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     void async_unsuback(
@@ -7117,7 +7249,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
      *        3.11.2.1 UNSUBACK Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     void async_unsuback(
@@ -7137,7 +7270,8 @@ public:
      *        a collection of reason_code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
      *        3.11.3 UNSUBACK Payload
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     void async_unsuback(
@@ -7159,7 +7293,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
      *        3.11.2.1 UNSUBACK Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     void async_unsuback(
@@ -7173,8 +7308,10 @@ public:
 
     /**
      * @brief Send ununsuback packet. This function is for broker.
-     * @param packet_id packet id corresponding to unsubscribe
-     * @param func A callback function that is called when async operation will finish.
+     * @param packet_id
+     *        packet id corresponding to unsubscribe
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718077
      */
     void async_unsuback(
@@ -7343,7 +7480,8 @@ public:
      * @brief Restore serialized publish message.
      *        This function should be called before connect.
      * @param msg         publish message.
-     * @param life_keeper An object to allow callers to extend the lifetime of anything until this message is sent
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the stored message is sent.
      */
     void restore_serialized_message(basic_publish_message<PacketIdBytes> msg, mqtt::any life_keeper) {
         auto packet_id = msg.packet_id();
@@ -7410,7 +7548,8 @@ public:
      * @brief Restore serialized publish message.
      *        This function shouold be called before connect.
      * @param msg         publish message.
-     * @param life_keeper the function that keeps the msg lifetime.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the stored message is sent.
      */
     void restore_v5_serialized_message(v5::basic_publish_message<PacketIdBytes> msg, mqtt::any life_keeper) {
         auto packet_id = msg.packet_id();
