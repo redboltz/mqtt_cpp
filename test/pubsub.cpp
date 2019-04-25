@@ -223,7 +223,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                     pid_sub = c->subscribe(
-                        std::vector<std::tuple<std::string, std::uint8_t>> {
+                        std::vector<std::tuple<mqtt::string_view, std::uint8_t>> {
                             std::make_tuple("topic1", mqtt::qos::at_most_once)
                         }
                     );
@@ -236,7 +236,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
                     pid_unsub = c->unsubscribe(
-                        std::vector<std::string> {"topic1"});
+                        std::vector<mqtt::string_view> {"topic1"});
                     return true;
                 });
             c->set_pubrec_handler(
@@ -293,7 +293,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                     pid_sub = c->subscribe(
-                        std::vector<std::tuple<std::string, std::uint8_t>> {
+                        std::vector<std::tuple<mqtt::string_view, std::uint8_t>> {
                             std::make_tuple("topic1", mqtt::qos::at_most_once)
                         }
                     );
@@ -306,7 +306,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
                     pid_unsub = c->unsubscribe(
-                        std::vector<std::string> {"topic1"});
+                        std::vector<mqtt::string_view> {"topic1"});
                     return true;
                 });
             c->set_v5_pubrec_handler(

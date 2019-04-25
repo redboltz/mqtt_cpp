@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    std::vector<std::tuple<std::string, std::uint8_t>> v;
+                    std::vector<std::tuple<mqtt::string_view, std::uint8_t>> v;
                     v.emplace_back("topic1", mqtt::qos::at_most_once);
                     v.emplace_back("topic2", mqtt::qos::exactly_once);
                     c->subscribe(v);
@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                 [&chk, &c]
                 (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
                     MQTT_CHK("h_suback");
-                    std::vector<std::string> v
+                    std::vector<mqtt::string_view> v
                         {
                          "topic1",
                          "topic2",
@@ -252,7 +252,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    std::vector<std::tuple<std::string, std::uint8_t>> v;
+                    std::vector<std::tuple<mqtt::string_view, std::uint8_t>> v;
                     v.emplace_back("topic1", mqtt::qos::at_most_once);
                     v.emplace_back("topic2", mqtt::qos::exactly_once);
                     c->subscribe(v);
@@ -262,7 +262,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                 [&chk, &c]
                 (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_suback");
-                    std::vector<std::string> v
+                    std::vector<mqtt::string_view> v
                         {
                          "topic1",
                          "topic2",
