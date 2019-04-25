@@ -8155,6 +8155,17 @@ private:
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return;
             }
+            /*
+             * Note that this call to resize will never shrink the vector's allocated memory
+             * The standard guarentees that iterators to items that are still valid with the
+             * new size will remain valid. There are only two ways to provide that guarantee
+             * - Ensure that unused memory is only freed with calls to the memory allocator
+             *   that will reclaim the unused memory, and not move items to a new buffer.
+             * - Ensure that calls to resize only call the memory allocator when growing.
+             * Testing by redboltz shows that the second possibility is the case for at least
+             * one implementation of the standard library, and it's unlikely that there would
+             * be a difference in this behavior between implementations.
+             */
             payload_.resize(remaining_length_);
             if (remaining_length_ == 0) {
                 handle_payload(func);
