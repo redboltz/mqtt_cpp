@@ -2623,7 +2623,7 @@ public:
         auto topic_buf    = as::buffer(*sp_topic_name);
         auto contents_buf = as::buffer(*sp_contents);
 
-        send_publish_keep_lifetime(
+        send_publish(
             topic_buf,
             qos::at_least_once,
             retain,
@@ -2663,7 +2663,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
 
-        send_publish_keep_lifetime(
+        send_publish(
             topic_name,
             qos::at_least_once,
             retain,
@@ -2707,7 +2707,7 @@ public:
         auto topic_buf    = as::buffer(*sp_topic_name);
         auto contents_buf = as::buffer(*sp_contents);
 
-        send_publish_keep_lifetime(
+        send_publish(
             topic_buf,
             qos::exactly_once,
             retain,
@@ -2747,7 +2747,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
 
-        send_publish_keep_lifetime(
+        send_publish(
             topic_name,
             qos::exactly_once,
             retain,
@@ -2797,7 +2797,7 @@ public:
         auto topic_buf    = as::buffer(*sp_topic_name);
         auto contents_buf = as::buffer(*sp_contents);
 
-        send_publish_keep_lifetime(
+        send_publish(
             topic_buf,
             qos,
             retain,
@@ -2843,7 +2843,7 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
-        send_publish_keep_lifetime(
+        send_publish(
             topic_name,
             qos,
             retain,
@@ -2893,7 +2893,7 @@ public:
         auto topic_buf    = as::buffer(*sp_topic_name);
         auto contents_buf = as::buffer(*sp_contents);
 
-        send_publish_keep_lifetime(
+        send_publish(
             topic_buf,
             qos,
             retain,
@@ -2939,7 +2939,7 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
-        send_publish_keep_lifetime(
+        send_publish(
             topic_name,
             qos,
             retain,
@@ -7705,7 +7705,8 @@ private:
     acquired_async_subscribe_imp(
         packet_id_t packet_id,
         std::string topic_name,
-        std::uint8_t qos, Args&&... args) {
+        std::uint8_t qos,
+        Args&&... args) {
 
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
@@ -7730,7 +7731,8 @@ private:
     acquired_async_subscribe_imp(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t qos, Args&&... args) {
+        std::uint8_t qos,
+        Args&&... args) {
 
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
@@ -7754,7 +7756,7 @@ private:
     >::type
     acquired_async_subscribe_imp(
         packet_id_t packet_id,
-        mqtt::string_view topic_name,
+        std::string topic_name,
         std::uint8_t qos,
         Args&&... args) {
 
@@ -7906,9 +7908,9 @@ private:
     >::type
     async_suback_imp(
         packet_id_t packet_id,
-        std::uint8_t qos, Args&&... args) {
-        std::vector<std::uint8_t> params;
-        async_send_suback(params, packet_id, qos, std::forward<Args>(args)...);
+        std::uint8_t qos,
+        Args&&... args) {
+        async_send_suback(std::vector<std::uint8_t>(), packet_id, qos, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -7920,9 +7922,8 @@ private:
     >::type
     async_suback_imp(
         packet_id_t packet_id,
-        std::uint8_t qos, Args&&... args) {
-        std::vector<std::uint8_t> params;
-        async_send_suback(std::move(params), packet_id, qos, std::forward<Args>(args)..., async_handler_t());
+        Args&&... qos) {
+        async_send_suback(std::vector<std::uint8_t>({qos...}), packet_id, async_handler_t());
     }
 
     template <typename... Args>
@@ -7934,9 +7935,9 @@ private:
     >::type
     async_unsuback_imp(
         packet_id_t packet_id,
-        std::uint8_t qos, Args&&... args) {
-        std::vector<std::uint8_t> params;
-        async_send_unsuback(std::move(params), packet_id, qos, std::forward<Args>(args)...);
+        std::uint8_t qos,
+        Args&&... args) {
+        async_send_unsuback(std::vector<std::uint8_t>(), packet_id, qos, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -7948,9 +7949,8 @@ private:
     >::type
     async_unsuback_imp(
         packet_id_t packet_id,
-        std::uint8_t qos, Args&&... args) {
-        std::vector<std::uint8_t> params;
-        async_send_unsuback(std::move(params), packet_id, qos, std::forward<Args>(args)..., async_handler_t());
+        Args&&... qos) {
+        async_send_unsuback(std::vector<std::uint8_t>({qos...}), packet_id, async_handler_t());
     }
 
     class send_buffer {
@@ -9415,7 +9415,7 @@ private:
         }
     }
 
-    void send_publish_keep_lifetime(
+    void send_publish(
         as::const_buffer topic_name,
         std::uint8_t qos,
         bool retain,
@@ -9483,47 +9483,6 @@ private:
                     payload
                 ),
                 h_serialize_v5_publish_
-            );
-            break;
-        default:
-            BOOST_ASSERT(false);
-            break;
-        }
-    }
-
-    void send_publish_no_lifetime(
-        as::const_buffer topic_name,
-        std::uint8_t qos,
-        bool retain,
-        bool dup,
-        packet_id_t packet_id,
-        std::vector<v5::property_variant> props,
-        as::const_buffer payload) {
-
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            do_sync_write(
-                v3_1_1::basic_publish_message<PacketIdBytes>(
-                    topic_name,
-                    qos,
-                    retain,
-                    dup,
-                    packet_id,
-                    payload
-                )
-            );
-            break;
-        case protocol_version::v5:
-            do_sync_write(
-                v5::basic_publish_message<PacketIdBytes>(
-                    topic_name,
-                    qos,
-                    retain,
-                    dup,
-                    packet_id,
-                    std::move(props),
-                    payload
-                )
             );
             break;
         default:
@@ -9688,8 +9647,9 @@ private:
         std::vector<std::tuple<as::const_buffer, std::uint8_t>>&& params,
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t qos, Args&&... args) {
-        params.emplace_back(std::move(topic_name), qos);
+        std::uint8_t qos,
+        Args&&... args) {
+        params.emplace_back(topic_name, qos);
         send_subscribe(std::move(params), packet_id, std::forward<Args>(args)...);
     }
 
@@ -9698,7 +9658,8 @@ private:
         std::vector<std::tuple<as::const_buffer, std::uint8_t>>&& params,
         packet_id_t packet_id,
         mqtt::string_view topic_name,
-        std::uint8_t qos, Args&&... args) {
+        std::uint8_t qos,
+        Args&&... args) {
         params.emplace_back(as::buffer(topic_name.data(), topic_name.size()), qos);
         send_subscribe(std::move(params), packet_id, std::forward<Args>(args)...);
     }
@@ -9708,6 +9669,14 @@ private:
         packet_id_t packet_id,
         std::vector<v5::property_variant> props = {}
     ) {
+        for(auto const& p : params)
+        {
+            BOOST_ASSERT(
+                subscribe::get_qos(std::get<1>(p)) == qos::at_most_once ||
+                subscribe::get_qos(std::get<1>(p)) == qos::at_least_once ||
+                subscribe::get_qos(std::get<1>(p)) == qos::exactly_once
+            );
+        }
         switch (version_) {
         case protocol_version::v3_1_1:
             do_sync_write(v3_1_1::basic_subscribe_message<PacketIdBytes>(std::move(params), packet_id));
@@ -9807,7 +9776,8 @@ private:
     void send_unsuback(
         std::vector<std::uint8_t>&& params,
         packet_id_t packet_id,
-        std::uint8_t reason, Args&&... args) {
+        std::uint8_t reason,
+        Args&&... args) {
         params.push_back(reason);
         send_suback(std::move(params), packet_id, std::forward<Args>(args)...);
     }
