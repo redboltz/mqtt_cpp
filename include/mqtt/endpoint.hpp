@@ -10722,8 +10722,6 @@ private:
 
 private:
     std::unique_ptr<Socket> socket_;
-    std::string host_;
-    std::string port_;
     std::atomic<bool> connected_{false};
     std::atomic<bool> mqtt_connected_{false};
     std::string client_id_;
