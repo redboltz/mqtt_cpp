@@ -775,7 +775,7 @@ private:
         if (it == idx.end()) return;
 
         auto cs = ep.clean_session();
-        auto client_id = ep.client_id();
+        auto client_id = it->cid;
 
         {   // will processing
             auto it = will_.find(spep);

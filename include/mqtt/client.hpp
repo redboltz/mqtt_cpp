@@ -239,6 +239,79 @@ public:
 #endif // defined(MQTT_USE_WS)
 #endif // !defined(MQTT_NO_TLS)
 
+    /**
+     * @brief Set client id.
+     * @param id client id
+     *
+     * This function should be called before calling connect().<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
+     * 3.1.3.1 Client Identifier
+     */
+    void set_client_id(std::string id) {
+        client_id_ = std::move(id);
+    }
+
+    /**
+     * @brief Set clean session.
+     * @param cs clean session
+     *
+     * This function should be called before calling connect().<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349231<BR>
+     * 3.1.2.4 Clean Session<BR>
+     * After constructing a endpoint, the clean session is set to false.
+     */
+    void set_clean_session(bool cs) {
+        base::clean_session_ = cs;
+    }
+
+    /**
+     * @brief Set clean start.
+     * @param cs clean start
+     *
+     * This function should be called before calling connect().<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901039<BR>
+     * 3.1.2.4 Clean Start<BR>
+     * After constructing a endpoint, the clean start is set to false.
+     */
+    void set_clean_start(bool cs) {
+        set_clean_session(cs);
+    }
+
+    /**
+     * @brief Set username.
+     * @param name username
+     *
+     * This function should be called before calling connect().<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
+     * 3.1.3.5 User Name
+     */
+    void set_user_name(std::string name) {
+        user_name_ = std::move(name);
+    }
+
+    /**
+     * @brief Set password.
+     * @param password password
+     *
+     * This function should be called before calling connect().<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901072<BR>
+     * 3.1.3.6 Password
+     */
+    void set_password(std::string password) {
+        password_ = std::move(password);
+    }
+
+    /**
+     * @brief Set will.
+     * @param w will
+     *
+     * This function should be called before calling connect().<BR>
+     * 'will' would be send when endpoint is disconnected without calling disconnect().
+     */
+    void set_will(will w) {
+        will_ = std::move(w);
+    }
+
 #if !defined(MQTT_NO_TLS)
     /**
      * @brief Call boost::asio::context::set_default_verify_paths
@@ -699,7 +772,7 @@ private:
         std::vector<v5::property_variant> props,
         async_handler_t func) {
         base::async_read_control_packet_type(std::move(func));
-        base::connect(keep_alive_sec_, std::move(props));
+        base::connect(client_id_, user_name_, password_, will_, keep_alive_sec_, std::move(props));
     }
 
 #if defined(MQTT_USE_WS)
@@ -716,7 +789,7 @@ private:
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 base::async_read_control_packet_type(std::move(func));
-                base::connect(keep_alive_sec_, std::move(props));
+                base::connect(client_id_, user_name_, password_, will_, keep_alive_sec_, std::move(props));
             });
     }
 #endif // defined(MQTT_USE_WS)
@@ -735,7 +808,7 @@ private:
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 base::async_read_control_packet_type(std::move(func));
-                base::connect(keep_alive_sec_, std::move(props));
+                base::connect(client_id_, user_name_, password_, will_, keep_alive_sec_, std::move(props));
             });
     }
 
@@ -758,7 +831,7 @@ private:
                     (boost::system::error_code const& ec) mutable {
                         if (base::handle_close_or_error(ec)) return;
                         base::async_read_control_packet_type(std::move(func));
-                        base::connect(keep_alive_sec_, std::move(props));
+                        base::connect(client_id_, user_name_, password_, will_, keep_alive_sec_, std::move(props));
                     });
             });
     }
@@ -837,6 +910,10 @@ private:
     bool tls_;
     std::uint16_t keep_alive_sec_{0};
     std::size_t ping_duration_ms_{0};
+    std::string client_id_;
+    mqtt::optional<will> will_;
+    mqtt::optional<std::string> user_name_;
+    mqtt::optional<std::string> password_;
 #if !defined(MQTT_NO_TLS)
     as::ssl::context ctx_{as::ssl::context::tlsv12};
 #endif // !defined(MQTT_NO_TLS)

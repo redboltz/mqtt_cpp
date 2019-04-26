@@ -741,42 +741,6 @@ public:
     endpoint& operator=(this_type&&) = delete;
 
     /**
-     * @brief Set client id.
-     * @param id client id
-     *
-     * This function should be called before calling connect().<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
-     * 3.1.3.1 Client Identifier
-     */
-    void set_client_id(std::string id) {
-        client_id_ = std::move(id);
-    }
-
-    /**
-     * @brief Get client id.
-     *
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
-     * 3.1.3.1 Client Identifier
-     * @return client id
-     */
-    std::string const& client_id() const {
-        return client_id_;
-    }
-
-    /**
-     * @brief Set clean session.
-     * @param cs clean session
-     *
-     * This function should be called before calling connect().<BR>
-     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349231<BR>
-     * 3.1.2.4 Clean Session<BR>
-     * After constructing a endpoint, the clean session is set to false.
-     */
-    void set_clean_session(bool cs) {
-        clean_session_ = cs;
-    }
-
-    /**
      * @brief Get clean session.
      *
      * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349231<BR>
@@ -789,19 +753,6 @@ public:
     }
 
     /**
-     * @brief Set clean start.
-     * @param cs clean start
-     *
-     * This function should be called before calling connect().<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901039<BR>
-     * 3.1.2.4 Clean Start<BR>
-     * After constructing a endpoint, the clean start is set to false.
-     */
-    void set_clean_start(bool cs) {
-        set_clean_session(cs);
-    }
-
-    /**
      * @brief Get clean start.
      *
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901039<BR>
@@ -811,40 +762,6 @@ public:
      */
     bool clean_start() const {
         return clean_session();
-    }
-    /**
-     * @brief Set username.
-     * @param name username
-     *
-     * This function should be called before calling connect().<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
-     * 3.1.3.5 User Name
-     */
-    void set_user_name(std::string name) {
-        user_name_ = std::move(name);
-    }
-
-    /**
-     * @brief Set password.
-     * @param password password
-     *
-     * This function should be called before calling connect().<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901072<BR>
-     * 3.1.3.6 Password
-     */
-    void set_password(std::string password) {
-        password_ = std::move(password);
-    }
-
-    /**
-     * @brief Set will.
-     * @param w will
-     *
-     * This function should be called before calling connect().<BR>
-     * 'will' would be send when endpoint is disconnected without calling disconnect().
-     */
-    void set_will(will w) {
-        will_ = std::move(w);
     }
 
     /**
@@ -3193,8 +3110,25 @@ public:
 
     /**
      * @brief Send connect packet.
-     * @param keep_alive_sec See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349238
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
+     * @param client_id
+     *        The client id to use for this connection<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
+     *        3.1.3.1 Client Identifier (ClientID)
+     * @param user_name
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
+     *        3.1.3.5 User Name
+     * @param password
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901072<BR>
+     *        3.1.3.6 Password
+     * @param w
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc479576982<BR>
+     *        3.1.2.5 Will Flag
+     * @param clean_session
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901039<BR>
+     *        3.1.2.4 Clean Start<BR>
+     * @param keep_alive_sec
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349238
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
      * @param keep_alive_sec
      *        Keep Alive<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
@@ -3205,11 +3139,15 @@ public:
      *        3.1.2.11 CONNECT Properties
      */
     void connect(
+        std::string const& client_id,
+        mqtt::optional<std::string> const& user_name,
+        mqtt::optional<std::string> const& password,
+        mqtt::optional<will> const& w,
         std::uint16_t keep_alive_sec,
         std::vector<v5::property_variant> props = {}
     ) {
         connect_requested_ = true;
-        send_connect(keep_alive_sec, std::move(props));
+        send_connect(client_id, user_name, password, w, keep_alive_sec, std::move(props));
     }
 
     /**
@@ -6736,9 +6674,21 @@ public:
         async_handler_t func = async_handler_t()) {
         async_send_auth(reason_code, std::move(props), std::move(func));
     }
-
     /**
      * @brief Send connect packet.
+     * @param client_id
+     *        The client id to use for this connection<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
+     *        3.1.3.1 Client Identifier (ClientID)
+     * @param user_name
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
+     *        3.1.3.5 User Name
+     * @param password
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901072<BR>
+     *        3.1.3.6 Password
+     * @param w
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc479576982<BR>
+     *        3.1.2.5 Will Flag
      * @param keep_alive_sec
      *        Keep Alive<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
@@ -6747,15 +6697,37 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
      */
     void async_connect(
+        std::string const& client_id,
+        mqtt::optional<std::string> const& user_name,
+        mqtt::optional<std::string> const& password,
+        mqtt::optional<will> const& w,
         std::uint16_t keep_alive_sec,
         async_handler_t func = async_handler_t()
     ) {
-        connect_requested_ = true;
-        async_send_connect(keep_alive_sec, std::vector<v5::property_variant>{}, std::move(func));
+        async_connect(client_id,
+                      user_name,
+                      password,
+                      w,
+                      keep_alive_sec,
+                      std::vector<v5::property_variant>{},
+                      std::move(func));
     }
 
     /**
      * @brief Send connect packet.
+     * @param client_id
+     *        The client id to use for this connection<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
+     *        3.1.3.1 Client Identifier (ClientID)
+     * @param user_name
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
+     *        3.1.3.5 User Name
+     * @param password
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901072<BR>
+     *        3.1.3.6 Password
+     * @param w
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc479576982<BR>
+     *        3.1.2.5 Will Flag
      * @param keep_alive_sec
      *        Keep Alive<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
@@ -6768,14 +6740,23 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
      */
     void async_connect(
+        std::string const& client_id,
+        mqtt::optional<std::string> const& user_name,
+        mqtt::optional<std::string> const& password,
+        mqtt::optional<will> const& w,
         std::uint16_t keep_alive_sec,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
         connect_requested_ = true;
-        async_send_connect(keep_alive_sec, std::move(props), std::move(func));
+        async_send_connect(client_id,
+                           user_name,
+                           password,
+                           w,
+                           keep_alive_sec,
+                           std::move(props),
+                           std::move(func));
     }
-
     /**
      * @brief Send connack packet. This function is for broker.
      * @param session_present See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349255
@@ -7599,60 +7580,6 @@ protected:
     }
 
 private:
-    std::size_t connect_remaining_length() const {
-        std::size_t remaining_length = 10; // variable header
-        if (user_name_) {
-            remaining_length += 2 + user_name_.value().size();
-        }
-        if (password_) {
-            remaining_length += 2 + password_.value().size();
-        }
-        remaining_length += 2 + client_id_.size();
-        if (will_) {
-            remaining_length += 2 + will_.value().topic().size();
-            remaining_length += 2 + will_.value().message().size();
-        }
-        return remaining_length;
-    }
-
-    static std::size_t publish_remaining_length(
-        as::const_buffer topic_name,
-        std::uint8_t qos,
-        as::const_buffer payload) {
-        return
-            2                      // topic name length
-            + get_size(topic_name) // topic name
-            + get_size(payload)    // payload
-            + [&] {
-                  if (qos == qos::at_least_once || qos == qos::exactly_once) {
-                      return PacketIdBytes;
-                  }
-                  else {
-                      return 0;
-                  }
-              }();
-    }
-
-    static std::size_t subscribe_remaining_length(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params
-    ) {
-        std::size_t remaining_length = PacketIdBytes;
-        for (auto const& e : params) {
-            remaining_length += 2 + get_size(std::get<0>(e)) + 1;
-        }
-        return remaining_length;
-    }
-
-    static std::size_t unsubscribe_remaining_length(
-        std::vector<as::const_buffer> const& params
-    ) {
-        std::size_t remaining_length = PacketIdBytes;
-        for (auto const& e : params) {
-            remaining_length += 2 + get_size(e);
-        }
-        return remaining_length;
-    }
-
     template <typename T>
     void shutdown_from_client(T& socket) {
         boost::system::error_code ec;
@@ -8312,10 +8239,9 @@ private:
             return false;
         }
 
-        char byte8 = payload_[i++];
+        const char byte8 = payload_[i++];
 
-        std::uint16_t keep_alive;
-        keep_alive = make_uint16_t(payload_[i], payload_[i + 1]); // index is checked at *1
+        const std::uint16_t keep_alive = make_uint16_t(payload_[i], payload_[i + 1]); // index is checked at *1
         i += 2;
 
         std::vector<v5::property_variant> props;
@@ -8337,8 +8263,7 @@ private:
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return false;
         }
-        std::uint16_t client_id_length;
-        client_id_length = make_uint16_t(payload_[i], payload_[i + 1]);
+        const std::uint16_t client_id_length = make_uint16_t(payload_[i], payload_[i + 1]);
         i += 2;
 
         if (remaining_length_ < i + client_id_length) {
@@ -8350,7 +8275,6 @@ private:
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
             return false;
         }
-        client_id_ = std::move(client_id);
         i += client_id_length;
 
         clean_session_ = connect_flags::has_clean_session(byte8);
@@ -8376,8 +8300,7 @@ private:
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
-            std::uint16_t topic_name_length;
-            topic_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
+            const std::uint16_t topic_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
 
             if (remaining_length_ < i + topic_name_length) {
@@ -8396,8 +8319,7 @@ private:
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
-            std::uint16_t will_message_length;
-            will_message_length = make_uint16_t(payload_[i], payload_[i + 1]);
+            std::uint16_t will_message_length = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
 
             if (remaining_length_ < i + will_message_length) {
@@ -8420,8 +8342,7 @@ private:
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
-            std::uint16_t user_name_length;
-            user_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
+            const std::uint16_t user_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
 
             if (remaining_length_ < i + user_name_length) {
@@ -8443,8 +8364,7 @@ private:
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
-            std::uint16_t password_length;
-            password_length = make_uint16_t(payload_[i], payload_[i + 1]);
+            const std::uint16_t password_length = make_uint16_t(payload_[i], payload_[i + 1]);
             i += 2;
 
             if (remaining_length_ < i + password_length) {
@@ -8466,7 +8386,7 @@ private:
         case protocol_version::v3_1_1:
             if (h_connect_) {
                 if (h_connect_(
-                        client_id_,
+                        client_id,
                         user_name,
                         password,
                         std::move(w),
@@ -8481,7 +8401,7 @@ private:
         case protocol_version::v5:
             if (h_v5_connect_) {
                 if (h_v5_connect_(
-                        client_id_,
+                        client_id,
                         user_name,
                         password,
                         std::move(w),
@@ -9351,6 +9271,10 @@ private:
 
     // Blocking senders.
     void send_connect(
+        std::string const& client_id,
+        mqtt::optional<std::string> const& user_name,
+        mqtt::optional<std::string> const& password,
+        mqtt::optional<will> const& w,
         std::uint16_t keep_alive_sec,
         std::vector<v5::property_variant> props
     ) {
@@ -9359,11 +9283,11 @@ private:
             do_sync_write(
                 v3_1_1::connect_message(
                     keep_alive_sec,
-                    client_id_,
+                    client_id,
                     clean_session_,
-                    will_,
-                    user_name_,
-                    password_
+                    w,
+                    user_name,
+                    password
                 )
             );
             break;
@@ -9371,11 +9295,11 @@ private:
             do_sync_write(
                 v5::connect_message(
                     keep_alive_sec,
-                    client_id_,
+                    client_id,
                     clean_session_,
-                    will_,
-                    user_name_,
-                    password_,
+                    w,
+                    user_name,
+                    password,
                     std::move(props)
                 )
             );
@@ -9904,20 +9828,27 @@ private:
 
     // Non blocking (async) senders
     void async_send_connect(
+        std::string const& client_id,
+        mqtt::optional<std::string> const& user_name,
+        mqtt::optional<std::string> const& password,
+        mqtt::optional<will> const& w,
+        bool clean_session,
         std::uint16_t keep_alive_sec,
         std::vector<v5::property_variant> props,
         async_handler_t func) {
+
+        clean_session_ = clean_session;
 
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
                 v3_1_1::connect_message(
                     keep_alive_sec,
-                    client_id_,
+                    client_id,
                     clean_session_,
-                    will_,
-                    user_name_,
-                    password_
+                    w,
+                    user_name,
+                    password
                 ),
                 std::move(func)
             );
@@ -9926,11 +9857,11 @@ private:
             do_async_write(
                 v5::connect_message(
                     keep_alive_sec,
-                    client_id_,
+                    client_id,
                     clean_session_,
-                    will_,
-                    user_name_,
-                    password_,
+                    w,
+                    user_name,
+                    password,
                     std::move(props)
                 ),
                 std::move(func)
@@ -10720,15 +10651,16 @@ private:
             );
     }
 
+protected:
+    bool clean_session_{false};
+
 private:
     std::unique_ptr<Socket> socket_;
     std::string host_;
     std::string port_;
     std::atomic<bool> connected_{false};
     std::atomic<bool> mqtt_connected_{false};
-    std::string client_id_;
-    bool clean_session_{false};
-    mqtt::optional<will> will_;
+
     char buf_;
     std::uint8_t fixed_header_;
     std::size_t remaining_length_multiplier_;
@@ -10779,8 +10711,6 @@ private:
     serialize_remove_handler h_serialize_remove_;
     pre_send_handler h_pre_send_;
     is_valid_length_handler h_is_valid_length_;
-    mqtt::optional<std::string> user_name_;
-    mqtt::optional<std::string> password_;
     Mutex store_mtx_;
     mi_store store_;
     std::set<packet_id_t> qos2_publish_handled_;
