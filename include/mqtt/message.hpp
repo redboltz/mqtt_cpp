@@ -297,7 +297,7 @@ class connect_message {
 public:
     connect_message(
         std::uint16_t keep_alive_sec,
-        std::string const& client_id,
+        mqtt::string_view client_id,
         bool clean_session,
         mqtt::optional<will> const& w,
         mqtt::optional<std::string> const& user_name,
@@ -316,7 +316,7 @@ public:
               client_id.size()        // client id
           ),
           protocol_name_and_level_ { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x04 },
-          client_id_(as::buffer(client_id)),
+          client_id_(as::buffer(client_id.data(), client_id.size())),
           client_id_length_buf_{ num_to_2bytes(static_cast<std::uint16_t>(client_id.size())) },
           keep_alive_buf_ { num_to_2bytes(static_cast<std::uint16_t>(keep_alive_sec )) }
     {

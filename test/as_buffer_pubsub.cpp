@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_most_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_most_once);
                     return true;
                 });
             c->set_puback_handler(
@@ -69,10 +69,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
-                    c->publish_at_most_once(
-                        as::buffer(std::string("topic1")),
-                        as::buffer(std::string("topic1_contents"))
-                    );
+                    c->publish_at_most_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_unsuback_handler(
@@ -87,8 +84,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 [&chk, &c, &pid_unsub]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents) {
+                 mqtt::string_view topic,
+                 mqtt::string_view contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
@@ -96,7 +93,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_CHECK(!packet_id);
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             break;
@@ -107,7 +104,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_most_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_most_once);
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -135,10 +132,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_0);
-                    c->publish_at_most_once(
-                        as::buffer(std::string("topic1")),
-                        as::buffer(std::string("topic1_contents"))
-                    );
+                    c->publish_at_most_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -155,8 +149,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 [&chk, &c, &pid_unsub]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents,
+                 mqtt::string_view topic,
+                 mqtt::string_view contents,
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
@@ -165,7 +159,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_CHECK(!packet_id);
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             break;
@@ -229,19 +223,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(
-                        std::vector<std::tuple<as::const_buffer, std::uint8_t>> {
-                            std::make_tuple(
-#if defined (_MSC_VER) && (_MSC_VER <= 1921)
-                                // workaround for https://developercommunity.visualstudio.com/content/problem/334025/problem-with-lifetime-of-some-specific-temporary-c.html
-                                as::buffer("topic1", sizeof("topic1") - 1),
-#else
-                                as::buffer(std::string("topic1")),
-#endif
-                                mqtt::qos::at_most_once
-                            )
-                        }
-                    );
+                    pid_sub = c->subscribe(std::vector<std::tuple<mqtt::string_view, std::uint8_t>>{ { "topic1", mqtt::qos::at_most_once } });
                     return true;
                 });
             c->set_puback_handler(
@@ -250,13 +232,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
-                    pid_unsub = c->unsubscribe(
-#if defined (_MSC_VER) && (_MSC_VER <= 1921)
-                        // workaround for https://developercommunity.visualstudio.com/content/problem/334025/problem-with-lifetime-of-some-specific-temporary-c.html
-                        std::vector<as::const_buffer> { as::buffer("topic1", sizeof("topic1") - 1) });
-#else
-                        std::vector<as::const_buffer> { as::buffer(std::string("topic1")) });
-#endif
+                    pid_unsub = c->unsubscribe(std::vector<mqtt::string_view>{ "topic1" });
                     return true;
                 });
             c->set_pubrec_handler(
@@ -278,13 +254,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->publish_at_least_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {}
-                    );
+                    pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_unsuback_handler(
@@ -299,8 +269,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                 [&chk]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents) {
+                 mqtt::string_view topic,
+                 mqtt::string_view contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
@@ -318,19 +288,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(
-                        std::vector<std::tuple<as::const_buffer, std::uint8_t>> {
-                            std::make_tuple(
-#if defined (_MSC_VER) && (_MSC_VER <= 1921)
-                                // workaround for https://developercommunity.visualstudio.com/content/problem/334025/problem-with-lifetime-of-some-specific-temporary-c.html
-                                as::buffer("topic1", sizeof("topic1") - 1),
-#else
-                                as::buffer(std::string("topic1")),
-#endif
-                                mqtt::qos::at_most_once
-                            )
-                                }
-                    );
+                    pid_sub = c->subscribe(std::vector<std::tuple<mqtt::string_view, std::uint8_t>>{ { "topic1", mqtt::qos::at_most_once } });
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -339,13 +297,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
-                    pid_unsub = c->unsubscribe(
-#if defined (_MSC_VER) && (_MSC_VER <= 1921)
-                        // workaround for https://developercommunity.visualstudio.com/content/problem/334025/problem-with-lifetime-of-some-specific-temporary-c.html
-                        std::vector<as::const_buffer> { as::buffer("topic1", strlen("topic1") - 1) });
-#else
-                        std::vector<as::const_buffer> { as::buffer(std::string("topic1")) });
-#endif
+                    pid_unsub = c->unsubscribe(std::vector<mqtt::string_view>{ "topic1" });
                     return true;
                 });
             c->set_v5_pubrec_handler(
@@ -367,13 +319,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_0);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->publish_at_least_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {}
-                    );
+                    pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -390,8 +336,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                 [&chk]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents,
+                 mqtt::string_view topic,
+                 mqtt::string_view contents,
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
@@ -465,7 +411,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_most_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_most_once);
                     return true;
                 });
             c->set_puback_handler(
@@ -487,7 +433,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             c->set_suback_handler(
@@ -497,13 +443,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                     BOOST_TEST(packet_id == 1);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->publish_exactly_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {}
-                    );
+                    pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_unsuback_handler(
@@ -518,8 +458,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                 [&chk]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents) {
+                 mqtt::string_view topic,
+                 mqtt::string_view contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
@@ -537,7 +477,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_most_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_most_once);
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -559,7 +499,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             c->set_v5_suback_handler(
@@ -569,13 +509,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                     BOOST_TEST(packet_id == 1);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_0);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->publish_exactly_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {}
-                    );
+                    pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -592,8 +526,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                 [&chk]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents,
+                 mqtt::string_view topic,
+                 mqtt::string_view contents,
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
@@ -661,7 +595,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_least_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_least_once);
                     return true;
                 });
             c->set_puback_handler(
@@ -689,10 +623,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
-                    c->publish_at_most_once(
-                        as::buffer(std::string("topic1")),
-                        as::buffer(std::string("topic1_contents"))
-                    );
+                    c->publish_at_most_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_unsuback_handler(
@@ -707,8 +638,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                 [&chk, &c, &pid_unsub]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents) {
+                 mqtt::string_view topic,
+                 mqtt::string_view contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
@@ -716,7 +647,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     BOOST_CHECK(!packet_id);
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             break;
@@ -727,7 +658,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_least_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_least_once);
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -755,10 +686,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_1);
-                    c->publish_at_most_once(
-                        as::buffer(std::string("topic1")),
-                        as::buffer(std::string("topic1_contents"))
-                    );
+                    c->publish_at_most_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -775,8 +703,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                 [&chk, &c, &pid_unsub]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents,
+                 mqtt::string_view topic,
+                 mqtt::string_view contents,
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
@@ -785,7 +713,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     BOOST_CHECK(!packet_id);
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             break;
@@ -859,7 +787,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_least_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_least_once);
                     return true;
                 });
             c->set_puback_handler(
@@ -868,7 +796,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             c->set_pubrec_handler(
@@ -890,13 +818,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->publish_at_least_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {}
-                    );
+                    pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_unsuback_handler(
@@ -911,8 +833,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                 [&chk, &recv_packet_id]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents) {
+                 mqtt::string_view topic,
+                 mqtt::string_view contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_least_once);
@@ -931,7 +853,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_least_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_least_once);
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -940,7 +862,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             c->set_v5_pubrec_handler(
@@ -962,13 +884,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_1);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->publish_at_least_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {}
-                    );
+                    pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -985,8 +901,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                 [&chk, &recv_packet_id]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents,
+                 mqtt::string_view topic,
+                 mqtt::string_view contents,
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
@@ -1065,7 +981,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_least_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_least_once);
                     return true;
                 });
             c->set_puback_handler(
@@ -1087,7 +1003,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             c->set_suback_handler(
@@ -1097,13 +1013,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->publish_exactly_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {}
-                    );
+                    pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_unsuback_handler(
@@ -1118,8 +1028,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                 [&chk, &recv_packet_id]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents) {
+                 mqtt::string_view topic,
+                 mqtt::string_view contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_least_once);
@@ -1138,7 +1048,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_least_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_least_once);
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -1160,7 +1070,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             c->set_v5_suback_handler(
@@ -1170,13 +1080,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_1);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->publish_exactly_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {}
-                    );
+                    pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -1193,8 +1097,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                 [&chk, &recv_packet_id]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents,
+                 mqtt::string_view topic,
+                 mqtt::string_view contents,
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
@@ -1259,7 +1163,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::exactly_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::exactly_once);
                     return true;
                 });
             c->set_puback_handler(
@@ -1287,10 +1191,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::exactly_once);
-                    c->publish_at_most_once(
-                        as::buffer(std::string("topic1")),
-                        as::buffer(std::string("topic1_contents"))
-                    );
+                    c->publish_at_most_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_unsuback_handler(
@@ -1305,8 +1206,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                 [&chk, &c, &pid_unsub]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents) {
+                 mqtt::string_view topic,
+                 mqtt::string_view contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
@@ -1314,7 +1215,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     BOOST_CHECK(!packet_id);
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             break;
@@ -1325,7 +1226,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::exactly_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::exactly_once);
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -1353,10 +1254,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_2);
-                    c->publish_at_most_once(
-                        as::buffer(std::string("topic1")),
-                        as::buffer(std::string("topic1_contents"))
-                    );
+                    c->publish_at_most_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -1373,8 +1271,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                 [&chk, &c, &pid_unsub]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents,
+                 mqtt::string_view topic,
+                 mqtt::string_view contents,
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
@@ -1383,7 +1281,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     BOOST_CHECK(!packet_id);
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             break;
@@ -1457,7 +1355,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::exactly_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::exactly_once);
                     return true;
                 });
             c->set_puback_handler(
@@ -1466,7 +1364,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             c->set_pubrec_handler(
@@ -1488,13 +1386,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::exactly_once);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->publish_at_least_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {}
-                    );
+                    pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_unsuback_handler(
@@ -1509,8 +1401,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                 [&chk, &recv_packet_id]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents) {
+                 mqtt::string_view topic,
+                 mqtt::string_view contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_least_once);
@@ -1529,7 +1421,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::exactly_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::exactly_once);
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -1538,7 +1430,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             c->set_v5_pubrec_handler(
@@ -1560,13 +1452,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_2);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->publish_at_least_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {}
-                    );
+                    pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -1583,8 +1469,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                 [&chk, &recv_packet_id]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents,
+                 mqtt::string_view topic,
+                 mqtt::string_view contents,
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
@@ -1663,7 +1549,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::exactly_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::exactly_once);
                     return true;
                 });
             c->set_puback_handler(
@@ -1685,7 +1571,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             c->set_suback_handler(
@@ -1695,13 +1581,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::exactly_once);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->publish_exactly_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {}
-                    );
+                    pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_unsuback_handler(
@@ -1716,8 +1596,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                 [&chk, &recv_packet_id]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents) {
+                 mqtt::string_view topic,
+                 mqtt::string_view contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::exactly_once);
@@ -1736,7 +1616,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::exactly_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::exactly_once);
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -1758,7 +1638,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             c->set_v5_suback_handler(
@@ -1768,13 +1648,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_2);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->publish_exactly_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {}
-                    );
+                    pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -1791,8 +1665,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                 [&chk, &recv_packet_id]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents,
+                 mqtt::string_view topic,
+                 mqtt::string_view contents,
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
@@ -1857,7 +1731,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_most_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_most_once);
                     return true;
                 });
             c->set_puback_handler(
@@ -1885,14 +1759,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    c->publish(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {},
-                        mqtt::qos::at_most_once
-                    );
+                    c->publish("topic1", "topic1_contents", mqtt::qos::at_most_once);
                     return true;
                 });
             c->set_unsuback_handler(
@@ -1907,8 +1774,8 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                 [&chk, &c, &pid_unsub]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents) {
+                 mqtt::string_view topic,
+                 mqtt::string_view contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
@@ -1916,7 +1783,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     BOOST_CHECK(!packet_id);
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             break;
@@ -1927,7 +1794,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_most_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_most_once);
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -1955,14 +1822,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_0);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    c->publish(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        [topic1, contents] {},
-                        mqtt::qos::at_most_once
-                    );
+                    c->publish("topic1", "topic1_contents", mqtt::qos::at_most_once);
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -1979,8 +1839,8 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                 [&chk, &c, &pid_unsub]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents,
+                 mqtt::string_view topic,
+                 mqtt::string_view contents,
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
@@ -1989,7 +1849,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     BOOST_CHECK(!packet_id);
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             break;
@@ -2046,7 +1906,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_least_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_least_once);
                     return true;
                 });
             c->set_puback_handler(
@@ -2054,7 +1914,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                 (packet_id_t packet_id) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == 1);
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             c->set_pubrec_handler(
@@ -2076,16 +1936,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    auto ret =
-                        c->publish_dup(
-                            1,
-                            as::buffer(*topic1),
-                            as::buffer(*contents),
-                            [topic1, contents] {},
-                            mqtt::qos::at_least_once
-                        );
+                    auto ret = c->publish_dup(1, "topic1", "topic1_contents", mqtt::qos::at_least_once);
                     BOOST_TEST(ret == true);
                     return true;
                 });
@@ -2101,8 +1952,8 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                 [&chk]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents) {
+                 mqtt::string_view topic,
+                 mqtt::string_view contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false); // not propagated
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_least_once);
@@ -2120,7 +1971,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    pid_sub = c->subscribe(as::buffer(std::string("topic1")), mqtt::qos::at_least_once);
+                    pid_sub = c->subscribe("topic1", mqtt::qos::at_least_once);
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -2128,7 +1979,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                 (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == 1);
-                    pid_unsub = c->unsubscribe(as::buffer(std::string("topic1")));
+                    pid_unsub = c->unsubscribe("topic1");
                     return true;
                 });
             c->set_v5_pubrec_handler(
@@ -2150,16 +2001,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_1);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
-                    auto ret =
-                        c->publish_dup(
-                            1,
-                            as::buffer(*topic1),
-                            as::buffer(*contents),
-                            [topic1, contents] {},
-                            mqtt::qos::at_least_once
-                        );
+                    auto ret = c->publish_dup(1, "topic1", "topic1_contents", mqtt::qos::at_least_once);
                     BOOST_TEST(ret == true);
                     return true;
                 });
@@ -2177,8 +2019,8 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                 [&chk]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents,
+                 mqtt::string_view topic,
+                 mqtt::string_view contents,
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(mqtt::publish::is_dup(header) == false); // not propagated

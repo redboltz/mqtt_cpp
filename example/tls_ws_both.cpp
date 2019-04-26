@@ -96,8 +96,8 @@ void client_proc(
         [&]
         (std::uint8_t header,
          mqtt::optional<packet_id_t> packet_id,
-         std::string topic_name,
-         std::string contents){
+         mqtt::string_view topic_name,
+         mqtt::string_view contents){
             std::cout << "[client] publish received. "
                       << "dup: " << std::boolalpha << mqtt::publish::is_dup(header)
                       << " pos: " << mqtt::qos::to_str(mqtt::publish::get_qos(header))
@@ -126,8 +126,8 @@ using con_sp_t = std::shared_ptr<con_t>;
 using con_wp_t = std::weak_ptr<con_t>;
 
 struct sub_con {
-    sub_con(std::string const& topic, con_sp_t const& con, std::uint8_t qos)
-        :topic(topic), con(con), qos(qos) {}
+    sub_con(std::string topic, con_sp_t con, std::uint8_t qos)
+        :topic(std::move(topic)), con(std::move(con)), qos(qos) {}
     std::string topic;
     con_sp_t con;
     std::uint8_t qos;
@@ -196,9 +196,9 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
             // set MQTT level handlers
             ep.set_connect_handler(
                 [&]
-                (std::string const& client_id,
-                 mqtt::optional<std::string> const& username,
-                 mqtt::optional<std::string> const& password,
+                (mqtt::string_view client_id,
+                 mqtt::optional<mqtt::string_view> username,
+                 mqtt::optional<mqtt::string_view> password,
                  mqtt::optional<mqtt::will>,
                  bool clean_session,
                  std::uint16_t keep_alive) {
@@ -246,8 +246,8 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 [&]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic_name,
-                 std::string contents){
+                 mqtt::string_view topic_name,
+                 mqtt::string_view contents){
                     std::uint8_t qos = mqtt::publish::get_qos(header);
                     bool retain = mqtt::publish::is_retain(header);
                     std::cout << "[server] publish received."
@@ -259,11 +259,11 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     std::cout << "[server] topic_name: " << topic_name << std::endl;
                     std::cout << "[server] contents: " << contents << std::endl;
                     auto const& idx = subs.get<tag_topic>();
-                    auto r = idx.equal_range(topic_name);
+                    auto r = idx.equal_range(std::string(topic_name));
                     for (; r.first != r.second; ++r.first) {
                         r.first->con->publish(
-                            topic_name,
-                            contents,
+                            std::string(topic_name),
+                            std::string(contents),
                             std::min(r.first->qos, qos),
                             retain
                         );
@@ -273,16 +273,16 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
             ep.set_subscribe_handler(
                 [&]
                 (packet_id_t packet_id,
-                 std::vector<std::tuple<std::string, std::uint8_t>> entries) {
-                    std::cout << "[server] subscribe received. packet_id: " << packet_id << std::endl;
+                 std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries) {
+                    std::cout << "[server]subscribe received. packet_id: " << packet_id << std::endl;
                     std::vector<std::uint8_t> res;
                     res.reserve(entries.size());
                     for (auto const& e : entries) {
-                        std::string const& topic = std::get<0>(e);
+                        mqtt::string_view topic = std::get<0>(e);
                         std::uint8_t qos = std::get<1>(e);
                         std::cout << "[server] topic: " << topic  << " qos: " << static_cast<int>(qos) << std::endl;
                         res.emplace_back(qos);
-                        subs.emplace(topic, ep.shared_from_this(), qos);
+                        subs.emplace(std::string(topic), ep.shared_from_this(), qos);
                     }
                     ep.suback(packet_id, res);
                     return true;
@@ -291,10 +291,10 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
             ep.set_unsubscribe_handler(
                 [&]
                 (packet_id_t packet_id,
-                 std::vector<std::string> topics) {
-                    std::cout << "[server] unsubscribe received. packet_id: " << packet_id << std::endl;
+                 std::vector<mqtt::string_view> topics) {
+                    std::cout << "[server]unsubscribe received. packet_id: " << packet_id << std::endl;
                     for (auto const& topic : topics) {
-                        subs.erase(topic);
+                        subs.erase(std::string(topic));
                     }
                     ep.unsuback(packet_id);
                     return true;

@@ -110,8 +110,8 @@ int main(int argc, char** argv) {
         [&]
         (std::uint8_t header,
          mqtt::optional<packet_id_t> packet_id,
-         std::string topic_name,
-         std::string contents){
+         mqtt::string_view topic_name,
+         mqtt::string_view contents){
             std::cout << "publish received. "
                       << "dup: " << std::boolalpha << mqtt::publish::is_dup(header)
                       << " pos: " << mqtt::qos::to_str(mqtt::publish::get_qos(header))
