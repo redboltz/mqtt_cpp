@@ -119,7 +119,7 @@ public:
              std::uint16_t keep_alive) {
                 return
                     connect_handler(
-                        ep,
+                        std::forward<Endpoint>(ep),
                         client_id,
                         username,
                         password,
@@ -141,7 +141,7 @@ public:
              std::vector<mqtt::v5::property_variant> props) {
                 return
                     connect_handler(
-                        ep,
+                        std::forward<Endpoint>(ep),
                         client_id,
                         username,
                         password,
@@ -556,7 +556,7 @@ private:
                 ep.publish(
                     as::buffer(*it->topic),
                     as::buffer(*it->contents),
-                    [t = it->topic, c = it->contents] {},
+                    std::make_pair(it->topic, it->contents),
                     std::min(it->qos, qos),
                     true,
                     it->props);
@@ -671,7 +671,7 @@ private:
                             con->publish(
                                 as::buffer(*d.topic),
                                 as::buffer(*d.contents),
-                                [t = d.topic, c = d.contents] {},
+                                std::make_pair(d.topic, d.contents),
                                 d.qos,
                                 true
                             );
@@ -719,7 +719,7 @@ private:
                             con->publish(
                                 as::buffer(*topic),
                                 as::buffer(*contents),
-                                [topic, contents] {},
+                                std::make_pair(topic, contents),
                                 std::min(r.first->qos, qos),
                                 false,
                                 props
@@ -744,18 +744,45 @@ private:
                 );
             }
         }
-        // If the message is marked as being retained, then we
-        // keep it in case a new subscription is added that matches
-        // this topic.
-        // TODO: Shouldn't an empty contents (regardless of the retain flag)
-        //       result in removing the retain message?
+        /*
+         * If the message is marked as being retained, then we
+         * keep it in case a new subscription is added that matches
+         * this topic.
+         *
+         * @note: The MQTT standard 3.3.1.3 RETAIN makes it clear that
+         *        retained messages are global based on the topic, and
+         *        are not scoped by the client id. So any client may
+         *        publish a retained message on any topic, and the most
+         *        recently published retained message on a particular
+         *        topic is the message that is stored on the server.
+         *
+         * @note: The standard doesn't make it clear that publishing
+         *        a message with zero length, but the retain flag not
+         *        set, does not result in any existing retained message
+         *        being removed. However, internet searching indicates
+         *        that most brokers have opted to keep retained messages
+         *        when receiving contents of zero bytes, unless the so
+         *        received message has the retain flag set, in which case
+         *        the retained message is removed.
+         */
         if (is_retain) {
             if (contents->empty()) {
                 retains_.erase(*topic);
             }
             else {
-                retains_.erase(*topic);
-                retains_.emplace(topic, contents, std::move(props), qos);
+                auto it = retains_.find(*topic);
+                if(it == retains_.end()) {
+                    retains_.emplace_hint(it, topic, contents, std::move(props), qos);
+                }
+                else {
+                    retains_.modify(it,
+                                    [&](retain& val)
+                                    {
+                                        val.qos = qos;
+                                        val.props = std::move(props);
+                                        val.contents = contents;
+                                    });
+                }
             }
         }
     }
