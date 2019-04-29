@@ -639,8 +639,7 @@ public:
 protected:
     client(as::io_service& ios,
            std::string host,
-           std::string port,
-           bool tls
+           std::string port
 #if defined(MQTT_USE_WS)
            ,
            std::string path = "/"
@@ -653,8 +652,7 @@ protected:
          tim_ping_(ios_),
          tim_close_(ios_),
          host_(std::move(host)),
-         port_(std::move(port)),
-         tls_(tls)
+         port_(std::move(port))
 #if defined(MQTT_USE_WS)
          ,
          path_(std::move(path))
@@ -834,7 +832,6 @@ private:
     as::deadline_timer tim_close_;
     std::string host_;
     std::string port_;
-    bool tls_;
     std::uint16_t keep_alive_sec_{0};
     std::size_t ping_duration_ms_{0};
 #if !defined(MQTT_NO_TLS)
@@ -855,7 +852,6 @@ make_client(as::io_service& ios, std::string host, std::string port, protocol_ve
         ios,
         std::move(host),
         std::move(port),
-        false,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -881,7 +877,6 @@ make_client_no_strand(as::io_service& ios, std::string host, std::string port, p
         ios,
         std::move(host),
         std::move(port),
-        false,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -909,7 +904,6 @@ make_client_ws(as::io_service& ios, std::string host, std::string port, std::str
         ios,
         std::move(host),
         std::move(port),
-        false,
         std::move(path),
         version
     );
@@ -934,7 +928,6 @@ make_client_no_strand_ws(as::io_service& ios, std::string host, std::string port
         ios,
         std::move(host),
         std::move(port),
-        false,
         std::move(path),
         version
     );
@@ -963,7 +956,6 @@ make_tls_client(as::io_service& ios, std::string host, std::string port, protoco
         ios,
         std::move(host),
         std::move(port),
-        true,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -989,7 +981,6 @@ make_tls_client_no_strand(as::io_service& ios, std::string host, std::string por
         ios,
         std::move(host),
         std::move(port),
-        true,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -1017,7 +1008,6 @@ make_tls_client_ws(as::io_service& ios, std::string host, std::string port, std:
         ios,
         std::move(host),
         std::move(port),
-        true,
         std::move(path),
         version
     );
@@ -1042,7 +1032,6 @@ make_tls_client_no_strand_ws(as::io_service& ios, std::string host, std::string 
         ios,
         std::move(host),
         std::move(port),
-        true,
         std::move(path),
         version
     );
@@ -1074,7 +1063,6 @@ make_client_32(as::io_service& ios, std::string host, std::string port, protocol
         ios,
         std::move(host),
         std::move(port),
-        false,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -1100,7 +1088,6 @@ make_client_no_strand_32(as::io_service& ios, std::string host, std::string port
         ios,
         std::move(host),
         std::move(port),
-        false,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -1128,7 +1115,6 @@ make_client_ws_32(as::io_service& ios, std::string host, std::string port, std::
         ios,
         std::move(host),
         std::move(port),
-        false,
         std::move(path),
         version
     );
@@ -1153,7 +1139,6 @@ make_client_no_strand_ws_32(as::io_service& ios, std::string host, std::string p
         ios,
         std::move(host),
         std::move(port),
-        false,
         std::move(path),
         version
     );
@@ -1182,7 +1167,6 @@ make_tls_client_32(as::io_service& ios, std::string host, std::string port, prot
         ios,
         std::move(host),
         std::move(port),
-        true,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -1208,7 +1192,6 @@ make_tls_client_no_strand_32(as::io_service& ios, std::string host, std::string 
         ios,
         std::move(host),
         std::move(port),
-        true,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -1236,7 +1219,6 @@ make_tls_client_ws_32(as::io_service& ios, std::string host, std::string port, s
         ios,
         std::move(host),
         std::move(port),
-        true,
         std::move(path),
         version
     );
@@ -1261,7 +1243,6 @@ make_tls_client_no_strand_ws_32(as::io_service& ios, std::string host, std::stri
         ios,
         std::move(host),
         std::move(port),
-        true,
         std::move(path),
         version
     );

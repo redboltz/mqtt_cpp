@@ -251,15 +251,14 @@ protected:
     sync_client(
         as::io_service& ios,
         std::string host,
-        std::string port,
-        bool tls
+        std::string port
 #if defined(MQTT_USE_WS)
         ,
         std::string path = "/"
 #endif // defined(MQTT_USE_WS)
         ,
         protocol_version version = protocol_version::v3_1_1
-    ):base(ios, std::move(host), std::move(port), tls
+    ):base(ios, std::move(host), std::move(port)
 #if defined(MQTT_USE_WS)
            , std::move(path)
 #endif // defined(MQTT_USE_WS)
@@ -278,7 +277,6 @@ make_sync_client(as::io_service& ios, std::string host, std::string port, protoc
         ios,
         std::move(host),
         std::move(port),
-        false,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -304,7 +302,6 @@ make_sync_client_no_strand(as::io_service& ios, std::string host, std::string po
         ios,
         std::move(host),
         std::move(port),
-        false,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -332,7 +329,6 @@ make_sync_client_ws(as::io_service& ios, std::string host, std::string port, std
         ios,
         std::move(host),
         std::move(port),
-        false,
         std::move(path),
         version
     );
@@ -357,7 +353,6 @@ make_sync_client_no_strand_ws(as::io_service& ios, std::string host, std::string
         ios,
         std::move(host),
         std::move(port),
-        false,
         std::move(path),
         version
     );
@@ -386,7 +381,6 @@ make_tls_sync_client(as::io_service& ios, std::string host, std::string port, pr
         ios,
         std::move(host),
         std::move(port),
-        true,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -412,7 +406,6 @@ make_tls_sync_client_no_strand(as::io_service& ios, std::string host, std::strin
         ios,
         std::move(host),
         std::move(port),
-        true,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -440,7 +433,6 @@ make_tls_sync_client_ws(as::io_service& ios, std::string host, std::string port,
         ios,
         std::move(host),
         std::move(port),
-        true,
         std::move(path),
         version
     );
@@ -465,7 +457,6 @@ make_tls_sync_client_no_strand_ws(as::io_service& ios, std::string host, std::st
         ios,
         std::move(host),
         std::move(port),
-        true,
         std::move(path),
         version
     );
@@ -497,7 +488,6 @@ make_sync_client_32(as::io_service& ios, std::string host, std::string port, pro
         ios,
         std::move(host),
         std::move(port),
-        false,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -523,7 +513,6 @@ make_sync_client_no_strand_32(as::io_service& ios, std::string host, std::string
         ios,
         std::move(host),
         std::move(port),
-        false,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -551,7 +540,6 @@ make_sync_client_ws_32(as::io_service& ios, std::string host, std::string port, 
         ios,
         std::move(host),
         std::move(port),
-        false,
         std::move(path),
         version
     );
@@ -576,7 +564,6 @@ make_sync_client_no_strand_ws_32(as::io_service& ios, std::string host, std::str
         ios,
         std::move(host),
         std::move(port),
-        false,
         std::move(path),
         version
     );
@@ -605,7 +592,6 @@ make_tls_sync_client_32(as::io_service& ios, std::string host, std::string port,
         ios,
         std::move(host),
         std::move(port),
-        true,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -631,7 +617,6 @@ make_tls_sync_client_no_strand_32(as::io_service& ios, std::string host, std::st
         ios,
         std::move(host),
         std::move(port),
-        true,
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -659,7 +644,6 @@ make_tls_sync_client_ws_32(as::io_service& ios, std::string host, std::string po
         ios,
         std::move(host),
         std::move(port),
-        true,
         std::move(path),
         version
     );
@@ -684,7 +668,6 @@ make_tls_sync_client_no_strand_ws_32(as::io_service& ios, std::string host, std:
         ios,
         std::move(host),
         std::move(port),
-        true,
         std::move(path),
         version
     );
