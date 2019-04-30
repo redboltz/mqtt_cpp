@@ -9987,24 +9987,25 @@ private:
 
         auto do_async_send_publish =
             [&](auto msg, auto const& serialize_publish) {
-                auto store_msg = msg;
-                store_msg.set_dup(true);
-                {
-                    LockGuard<Mutex> lck (store_mtx_);
-                    auto ret = store_.emplace(
-                        packet_id,
-                        qos == qos::at_least_once ? control_packet_type::puback
-                                                  : control_packet_type::pubrec,
-                        store_msg,
-                        life_keeper
-                    );
-                    BOOST_ASSERT(ret.second);
-                }
+                if (qos == qos::at_least_once || qos == qos::exactly_once) {
+                    auto store_msg = msg;
+                    store_msg.set_dup(true);
+                    {
+                        LockGuard<Mutex> lck (store_mtx_);
+                        auto ret = store_.emplace(
+                            packet_id,
+                            qos == qos::at_least_once ? control_packet_type::puback
+                                                      : control_packet_type::pubrec,
+                            store_msg,
+                            life_keeper
+                        );
+                        BOOST_ASSERT(ret.second);
+                    }
 
-                if (serialize_publish) {
-                    serialize_publish(store_msg);
+                    if (serialize_publish) {
+                        serialize_publish(store_msg);
+                    }
                 }
-
                 do_async_write(
                     std::move(msg),
                     [life_keeper = std::move(life_keeper), func = std::move(func)](boost::system::error_code const& ec) {
