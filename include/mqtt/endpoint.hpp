@@ -7738,60 +7738,6 @@ protected:
     }
 
 private:
-    std::size_t connect_remaining_length() const {
-        std::size_t remaining_length = 10; // variable header
-        if (user_name_) {
-            remaining_length += 2 + user_name_.value().size();
-        }
-        if (password_) {
-            remaining_length += 2 + password_.value().size();
-        }
-        remaining_length += 2 + client_id_.size();
-        if (will_) {
-            remaining_length += 2 + will_.value().topic().size();
-            remaining_length += 2 + will_.value().message().size();
-        }
-        return remaining_length;
-    }
-
-    static std::size_t publish_remaining_length(
-        as::const_buffer topic_name,
-        std::uint8_t qos,
-        as::const_buffer payload) {
-        return
-            2                      // topic name length
-            + get_size(topic_name) // topic name
-            + get_size(payload)    // payload
-            + [&] {
-                  if (qos == qos::at_least_once || qos == qos::exactly_once) {
-                      return PacketIdBytes;
-                  }
-                  else {
-                      return 0;
-                  }
-              }();
-    }
-
-    static std::size_t subscribe_remaining_length(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params
-    ) {
-        std::size_t remaining_length = PacketIdBytes;
-        for (auto const& e : params) {
-            remaining_length += 2 + get_size(std::get<0>(e)) + 1;
-        }
-        return remaining_length;
-    }
-
-    static std::size_t unsubscribe_remaining_length(
-        std::vector<as::const_buffer> const& params
-    ) {
-        std::size_t remaining_length = PacketIdBytes;
-        for (auto const& e : params) {
-            remaining_length += 2 + get_size(e);
-        }
-        return remaining_length;
-    }
-
     template <typename T>
     void shutdown_from_client(T& socket) {
         boost::system::error_code ec;
