@@ -100,12 +100,12 @@ public:
         ep.set_close_handler(
             [&]
             (){
-                close_proc(std::forward<Endpoint>(ep), true);
+                close_proc(ep, true);
             });
         ep.set_error_handler(
             [&]
             (boost::system::error_code const& /*ec*/){
-                close_proc(std::forward<Endpoint>(ep), true);
+                close_proc(ep, true);
             });
 
         // set MQTT level handlers
@@ -119,7 +119,7 @@ public:
              std::uint16_t keep_alive) {
                 return
                     connect_handler(
-                        std::forward<Endpoint>(ep),
+                        ep,
                         client_id,
                         username,
                         password,
@@ -141,7 +141,7 @@ public:
              std::vector<mqtt::v5::property_variant> props) {
                 return
                     connect_handler(
-                        std::forward<Endpoint>(ep),
+                        ep,
                         client_id,
                         username,
                         password,
@@ -156,7 +156,7 @@ public:
             [&]
             (){
                 return
-                    disconnect_handler(std::forward<Endpoint>(ep));
+                    disconnect_handler(ep);
             }
         );
         ep.set_v5_disconnect_handler(
@@ -164,7 +164,7 @@ public:
             (std::uint8_t /*reason_code*/, std::vector<mqtt::v5::property_variant> props) {
                 if (h_disconnect_props_) h_disconnect_props_(std::move(props));
                 return
-                    disconnect_handler(std::forward<Endpoint>(ep));
+                    disconnect_handler(ep);
             }
         );
         ep.set_puback_handler(
@@ -226,7 +226,7 @@ public:
              mqtt::string_view topic_name,
              mqtt::string_view contents){
                 return publish_handler(
-                    std::forward<Endpoint>(ep),
+                    ep,
                     header,
                     packet_id,
                     topic_name,
@@ -244,7 +244,7 @@ public:
             ) {
                 if (h_publish_props_) h_publish_props_(props);
                 return publish_handler(
-                    std::forward<Endpoint>(ep),
+                    ep,
                     header,
                     packet_id,
                     topic_name,
@@ -257,7 +257,7 @@ public:
             (typename Endpoint::packet_id_t packet_id,
              std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries) {
                 return subscribe_handler(
-                    std::forward<Endpoint>(ep),
+                    ep,
                     packet_id,
                     std::move(entries),
                     {}
@@ -271,7 +271,7 @@ public:
              std::vector<mqtt::v5::property_variant> props
             ) {
                 return subscribe_handler(
-                    std::forward<Endpoint>(ep),
+                    ep,
                     packet_id,
                     std::move(entries),
                     std::move(props)
@@ -283,7 +283,7 @@ public:
             (typename Endpoint::packet_id_t packet_id,
              std::vector<mqtt::string_view> topics) {
                 return unsubscribe_handler(
-                    std::forward<Endpoint>(ep),
+                    ep,
                     packet_id,
                     std::move(topics),
                     {}
@@ -297,7 +297,7 @@ public:
              std::vector<mqtt::v5::property_variant> props
             ) {
                 return unsubscribe_handler(
-                    std::forward<Endpoint>(ep),
+                    ep,
                     packet_id,
                     std::move(topics),
                     std::move(props)
@@ -390,9 +390,26 @@ public:
     }
 
 private:
+    /**
+     * @brief connect_proc Process an incoming CONNECT packet
+     *
+     * This is called by the connect_handler function, which is registered
+     * on mqtt connections where the raw transport (tcp / tls / websocket / etc)
+     * is established, but the CONNECT message has not been sent / received by
+     * the mqtt client on the other end of the connection.
+     *
+     * When the CONNECT message is received, this function is called after some
+     * basic pre-connection logic, to setup the record keeping that this broker
+     * class needs to handle the connection and process subscriptions and publishing.
+     *
+     * @param clean_session - if the clean-session flag is set on the CONNECT message.
+     * @param spep - mqtt::varient of shared pointers to underlying connection type.
+     * @param client_id - the id that the client wants to use
+     * @param will - the last-will-and-testiment of the connection, if any.
+     */
     template <typename Endpoint>
     bool connect_handler(
-        Endpoint&& ep,
+        Endpoint& ep,
         mqtt::string_view client_id,
         mqtt::optional<mqtt::string_view> const& /*username*/,
         mqtt::optional<mqtt::string_view> const& /*password*/,
@@ -402,45 +419,173 @@ private:
         std::vector<mqtt::v5::property_variant> props
     ) {
         if (ep.get_protocol_version() == mqtt::protocol_version::v5 && h_connect_props_) h_connect_props_(props);
-        // If it's a not a clean session, but no client id
-        // is provided, we would have no way to map this
-        // connection's session to a new connection later.
-        // so the connection must be rejected.
+
+        // If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1 [MQTT-3.1.3-7].
+        // If it's a not a clean session, but no client id is provided, we would have no way to map this
+        // connection's session to a new connection later. So the connection must be rejected.
         if (client_id.empty() && !clean_session) {
             ep.connack(false, mqtt::connect_return_code::identifier_rejected);
             return false;
         }
-        auto spep = ep.shared_from_this();
-        auto emplace =
-            [&] {
-                return cons_.emplace(
-                    std::string(client_id),
-                    spep,
-                    [this, spep] () {
-                        // send will no keep
-                        spep->force_disconnect();
-                        close_proc(*spep, true);
-                    }
-                );
-            };
 
-        auto it_ret = emplace();
-        // if the connection that has the same client_id exists, then overwrite it
-        auto const& it = std::get<0>(it_ret);
-        auto const& emplaced = std::get<1>(it_ret);
-        if (!emplaced) {
-            it->before_overwrite();
-            auto it_ret = emplace();
-            // should be emplaced successfully because erased older one just before
-            BOOST_ASSERT(std::get<1>(it_ret));
+        auto spep = ep.shared_from_this();
+
+        // Find any sessions that have the same client_id
+        auto & act_sess_idx = active_sessions_.get<tag_client_id>();
+        auto act_sess_it = act_sess_idx.find(client_id);
+
+        auto & non_act_sess_idx = non_active_sessions_.get<tag_client_id>();
+        auto non_act_sess_it = non_act_sess_idx.find(client_id);
+
+        // It's a hard error for a client_id to have a session object
+        // in both the active and non active session containers.
+        BOOST_ASSERT((act_sess_idx.end() == act_sess_it) || (non_act_sess_idx.end() == non_act_sess_it));
+
+        // Reply to the connect message.
+        switch (ep.get_protocol_version()) {
+        case mqtt::protocol_version::v3_1_1:
+            ep.connack(
+                !clean_session && ((act_sess_idx.end() != act_sess_it) || (non_act_sess_idx.end() != non_act_sess_it)),
+                mqtt::connect_return_code::accepted
+            );
+            break;
+        case mqtt::protocol_version::v5:
+            ep.connack(
+                !clean_session && ((act_sess_idx.end() != act_sess_it) || (non_act_sess_idx.end() != non_act_sess_it)),
+                mqtt::v5::reason_code::success,
+                connack_props_
+            );
+            break;
+        default:
+            BOOST_ASSERT(false);
+            break;
         }
-        connect_proc(std::forward<Endpoint>(ep), clean_session, spep, client_id, std::move(will));
+
+        /**
+         * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Toc514345311
+         * 3.1.2.4 Clean Start
+         * If a CONNECT packet is received with Clean Start is set to 1, the Client and Server MUST
+         * discard any existing Session and start a new Session [MQTT-3.1.2-4]. Consequently,
+         *  the Session Present flag in CONNACK is always set to 0 if Clean Start is set to 1.
+         */
+        if(clean_session && (non_act_sess_it != non_act_sess_idx.end())) {
+            non_act_sess_idx.erase(non_act_sess_it);
+            BOOST_ASSERT(non_act_sess_idx.end() == non_act_sess_idx.find(client_id));
+
+            non_act_sess_it = non_act_sess_idx.end();
+        }
+
+        if(act_sess_it == act_sess_idx.end()) {
+            // If we have a saved session, we can transfer the state from it
+            // to the active_session container.
+            if(non_act_sess_it != non_act_sess_idx.end()) {
+                session_state state;
+                non_act_sess_idx.modify(non_act_sess_it, [&](session_state & val) { state = std::move(val); });
+                state.con = spep;
+                non_act_sess_idx.erase(non_act_sess_it);
+                BOOST_ASSERT(non_act_sess_idx.end() == non_act_sess_idx.find(client_id));
+
+                auto const& ret = active_sessions_.insert(std::move(state));
+                act_sess_it = ret.first;
+                BOOST_ASSERT(ret.second);
+                BOOST_ASSERT(*(act_sess_it->client_id) == client_id);
+                BOOST_ASSERT(act_sess_it == act_sess_idx.find(client_id));
+                BOOST_ASSERT(active_sessions_.project<tag_con>(act_sess_it) == active_sessions_.get<tag_con>().find(spep));
+            }
+            else {
+                std::shared_ptr<std::string> sp_clientId = std::make_shared<std::string>(client_id);
+                auto const& ret = active_sessions_.emplace(sp_clientId, spep, std::move(will));
+                act_sess_it = ret.first;
+                BOOST_ASSERT(ret.second);
+                BOOST_ASSERT(act_sess_it->client_id == sp_clientId);
+                BOOST_ASSERT(act_sess_it == act_sess_idx.find(client_id));
+            }
+        }
+        else {
+            // Disconnect the existing connection
+            mqtt::visit(
+                mqtt::make_lambda_visitor<void>(
+                    [&](auto& con) {
+                        // Completely cut this endpoint off from the broker!
+                        con->set_close_handler();
+                        con->set_error_handler();
+                        con->set_v5_connect_handler();
+                        con->set_v5_disconnect_handler();
+                        con->set_v5_puback_handler();
+                        con->set_v5_pubrec_handler();
+                        con->set_v5_pubrel_handler();
+                        con->set_v5_pubcomp_handler();
+                        con->set_v5_publish_handler();
+                        con->set_v5_subscribe_handler();
+                        con->set_v5_unsubscribe_handler();
+                        con->set_pingreq_handler();
+                        con->set_pingresp_handler();
+                        con->set_v5_auth_handler();
+
+                        // Force disconnect the client.
+                        // This shuts down the socket directly.
+                        con->force_disconnect();
+                    }),
+                    act_sess_it->con
+                );
+            // Replace it with the new connection
+            // Nothing more should need to be done
+            // ...
+            // But potentially we need to re-send
+            // messages marked as retain?
+            // TODO: Verify from standard.
+            {
+                auto & subs_idx = subs_.get<tag_con>();
+                {
+                    auto const& range = boost::make_iterator_range(subs_idx.equal_range(act_sess_it->con));
+                    for(auto it = range.begin(); it != range.end(); std::advance(it, 1)) {
+                        subs_idx.modify_key(it,
+                                            [&](con_sp_t & val) { val = spep; },
+                                            [&](con_sp_t&) { BOOST_ASSERT(false); });
+                    }
+                }
+                BOOST_ASSERT(subs_idx.count(act_sess_it->con) == 0);
+            }
+            active_sessions_.get<tag_con>().modify_key(active_sessions_.project<tag_con>(act_sess_it),
+                                                       [&](con_sp_t & val) { val = spep; },
+                                                       [&](con_sp_t&) { BOOST_ASSERT(false); });
+        }
+
+        if (clean_session) {
+            saved_subs_.get<tag_client_id>().erase(client_id);
+            BOOST_ASSERT(saved_subs_.get<tag_client_id>().count(client_id) == 0);
+        }
+        else {
+            // If it's not a clean session, then all of the
+            // saved subscriptions are moved to the new session
+            // object so they can be used immediately.
+            auto & idx = saved_subs_.get<tag_client_id>();
+            auto const& range = boost::make_iterator_range(idx.equal_range(client_id));
+            for(auto const& item : range) {
+                // Send the saved messages out on the wire.
+                for (auto & d : item.messages) {
+                    // But *only* for this connection
+                    // Not every connection in the broker.
+                    ep.publish(
+                        as::buffer(*(item.topic)),
+                        as::buffer(*d.contents),
+                        std::make_pair(item.topic, d.contents),
+                        std::min(item.qos, d.qos),
+                        true, // TODO: why is this 'retain'?
+                        *(d.props)
+                        );
+                }
+                subs_.emplace(item.topic, spep, item.qos);
+            }
+            idx.erase(range.begin(), range.end());
+            BOOST_ASSERT(idx.count(client_id) == 0);
+        }
         return true;
     }
 
     template <typename Endpoint>
     void disconnect_handler(
-        Endpoint&& ep
+        Endpoint& ep
     ) {
         if (delay_disconnect_) {
             std::weak_ptr<std::remove_reference_t<decltype(ep)>> wp(ep.shared_from_this());
@@ -462,7 +607,7 @@ private:
 
     template <typename Endpoint>
     bool publish_handler(
-        Endpoint&& ep,
+        Endpoint& ep,
         std::uint8_t header,
         mqtt::optional<typename Endpoint::packet_id_t> packet_id,
         mqtt::string_view topic_name,
@@ -513,7 +658,7 @@ private:
 
     template <typename Endpoint>
     bool subscribe_handler(
-        Endpoint&& ep,
+        Endpoint& ep,
         typename Endpoint::packet_id_t packet_id,
         std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries,
         std::vector<mqtt::v5::property_variant> props) {
@@ -567,15 +712,50 @@ private:
 
     template <typename Endpoint>
     bool unsubscribe_handler(
-        Endpoint&& ep,
+        Endpoint& ep,
         typename Endpoint::packet_id_t packet_id,
         std::vector<mqtt::string_view> topics,
         std::vector<mqtt::v5::property_variant> props) {
 
-        for (auto const& topic : topics) {
-            subs_.erase(std::string(topic));
-        }
+        auto spep = ep.shared_from_this();
 
+        // For each subscription that this connection has
+        // Compare against the list of topics, and remove
+        // the subscription if the topic is in the list.
+        {
+            auto & idx = subs_.get<tag_con>();
+            auto const& range = boost::make_iterator_range(idx.equal_range(spep));
+            for(auto it = range.begin(); it != range.end(); ) {
+                bool match = false;
+                for(auto const& topic : topics) {
+                    if(*(it->topic) == topic) {
+                        /*
+                         * Advance the iterator using the return from erase.
+                         * The returned it may be equal to the next topic in
+                         * the list, so we continue comparing. When the loop
+                         * finishes, however, we can't blindly advance the
+                         * iterator, because that might result in skipping
+                         * an iterator that hasn't been checked. Further, we
+                         * can't only rely on the inner loop to advance the
+                         * iterator because we might not have a match, and
+                         * thus would infinitely loop on the current iterator.
+                         */
+                        it = idx.erase(it);
+                        match = true;
+                        break;
+                    }
+                }
+                if( ! match)
+                {
+                    std::advance(it, 1);
+                }
+            }
+        }
+        for(auto const& item : boost::make_iterator_range( subs_.get<tag_con>().equal_range(spep))) {
+            for(auto const& topic : topics) {
+                BOOST_ASSERT(*(item.topic) != topic);
+            }
+        }
         switch (ep.get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
             ep.unsuback(packet_id);
@@ -589,102 +769,6 @@ private:
             break;
         }
         return true;
-    }
-
-    /**
-     * @brief connect_proc Process an incoming CONNECT packet
-     *
-     * This is called by the connect_handler function, which is registered
-     * on mqtt connections where the raw transport (tcp / tls / websocket / etc)
-     * is established, but the CONNECT message has not been sent / received by
-     * the mqtt client on the other end of the connection.
-     *
-     * When the CONNECT message is received, this function is called after some
-     * basic pre-connection logic, to setup the record keeping that this broker
-     * class needs to handle the connection and process subscriptions and publishing.
-     *
-     * @param clean_session - if the clean-session flag is set on the CONNECT message.
-     * @param spep - mqtt::varient of shared pointers to underlying connection type.
-     * @param client_id - the id that the client wants to use
-     * @param will - the last-will-and-testiment of the connection, if any.
-     */
-    template <typename Endpoint>
-    void connect_proc(
-        Endpoint&& ep,
-        bool clean_session,
-        con_sp_t const& spep,
-        mqtt::string_view client_id,
-        mqtt::optional<mqtt::will> will) {
-        auto it = sessions_.find(std::string(client_id));
-        mqtt::visit(
-            mqtt::make_lambda_visitor<void>(
-                [&](auto& con) {
-                    switch (ep.get_protocol_version()) {
-                    case mqtt::protocol_version::v3_1_1:
-                        con->connack(
-                            !clean_session && it != sessions_.end(),
-                            mqtt::connect_return_code::accepted
-                        );
-                        break;
-                    case mqtt::protocol_version::v5:
-                        con->connack(
-                            !clean_session && it != sessions_.end(),
-                            mqtt::v5::reason_code::success,
-                            connack_props_
-                        );
-                        break;
-                    default:
-                        BOOST_ASSERT(false);
-                        break;
-                    }
-                }
-            ),
-            spep
-        );
-        if (it != sessions_.end()) {
-            sessions_.erase(it);
-        }
-
-        if (clean_session) {
-            subsessions_.erase(std::string(client_id));
-        }
-        else {
-            // If it's not a clean session, then all of the
-            // saved subscriptions are moved to the new session
-            // object so they can be used immediately.
-            auto r = subsessions_.equal_range(std::string(client_id));
-            std::vector<session_data> data;
-            if (r.first != r.second) {
-                data = std::move(r.first->s->data);
-            }
-            while (r.first != r.second) {
-                subs_.emplace(r.first->topic, spep, r.first->qos);
-                r.first = subsessions_.erase(r.first);
-            }
-            // And, of course, any saved messages need to go out as well.
-            for (auto const& d : data) {
-                mqtt::visit(
-                    mqtt::make_lambda_visitor<void>(
-                        [&](auto& con) {
-                            // But *only* for this connection
-                            // Not every connection in the broker.
-                            con->publish(
-                                as::buffer(*d.topic),
-                                as::buffer(*d.contents),
-                                std::make_pair(d.topic, d.contents),
-                                d.qos,
-                                true
-                            );
-                        }
-                    ),
-                    spep
-                );
-            }
-        }
-        // save the last-will-and-testiment of this connection, if there is one.
-        if (will) {
-            will_.emplace(spep, std::move(will.value()));
-        }
     }
 
     /**
@@ -702,48 +786,58 @@ private:
         std::uint8_t qos,
         bool is_retain,
         std::vector<mqtt::v5::property_variant> props) {
-        {
-            // For each subscription registered for this topic
-            auto const& idx = subs_.get<tag_topic>();
-            auto r = idx.equal_range(*topic);
-            for (; r.first != r.second; ++r.first) {
-                mqtt::visit(
-                    mqtt::make_lambda_visitor<void>(
-                        [&](auto& con) {
-                            // publish the message to subscribers.
-                            // TODO: Probably this should be switched to async_publish?
-                            //       Given the async_client / sync_client seperation
-                            //       and the way they have different function names,
-                            //       it wouldn't be possible for test_broker.hpp to be
-                            //       used with some hypothetical "async_server" in the future.
-                            con->publish(
-                                as::buffer(*topic),
-                                as::buffer(*contents),
-                                std::make_pair(topic, contents),
-                                std::min(r.first->qos, qos),
-                                false,
-                                props
-                            );
-                        }
-                    ),
-                    r.first->con
-                );
-            }
+        // For each active subscription registered for this topic
+        for(auto const& sub : boost::make_iterator_range(subs_.get<tag_topic>().equal_range(*topic))) {
+            mqtt::visit(
+                mqtt::make_lambda_visitor<void>(
+                    [&](auto& con) {
+                        // publish the message to subscribers.
+                        // TODO: Probably this should be switched to async_publish?
+                        //       Given the async_client / sync_client seperation
+                        //       and the way they have different function names,
+                        //       it wouldn't be possible for test_broker.hpp to be
+                        //       used with some hypothetical "async_server" in the future.
+                        con->publish(
+                            as::buffer(*topic),
+                            as::buffer(*contents),
+                            std::make_pair(topic, contents),
+                            std::min(sub.qos, qos),
+                            false,
+                            props // TODO: Copying the properties vector for each subscription.
+                        );
+                    }
+                ),
+                sub.con
+            );
         }
+
         {
             // For each saved subscription, add this message to
             // the list to be sent out when a connection resumes
             // a lost session.
-            auto const& idx = subsessions_.get<tag_topic>();
-            auto r = idx.equal_range(*topic);
-            for (; r.first != r.second; ++r.first) {
-                r.first->s->data.emplace_back(
-                    topic,
-                    contents,
-                    std::min(r.first->qos, qos)
-                );
+            //
+            // TODO: This does not properly handle wildcards!
+            auto & idx = saved_subs_.get<tag_topic>();
+            auto range = boost::make_iterator_range(idx.equal_range(*topic));
+            if( ! range.empty()) {
+                auto sp_props = std::make_shared<std::vector<mqtt::v5::property_variant>>(props);
+                for(auto it = range.begin(); it != range.end(); std::advance(it, 1)) {
+                    idx.modify(it,
+                               [&](session_subscription & val)
+                               {
+                                   val.messages.emplace_back(
+                                       contents,
+                                       sp_props,
+                                       std::min(it->qos, qos));
+                               },
+                               [&](session_subscription&)
+                               {
+                                   BOOST_ASSERT(false);
+                               });
+                }
             }
         }
+
         /*
          * If the message is marked as being retained, then we
          * keep it in case a new subscription is added that matches
@@ -768,11 +862,15 @@ private:
         if (is_retain) {
             if (contents->empty()) {
                 retains_.erase(*topic);
+                BOOST_ASSERT(retains_.count(*topic) == 0);
             }
             else {
-                auto it = retains_.find(*topic);
+                auto const& it = retains_.find(*topic);
                 if(it == retains_.end()) {
-                    retains_.emplace_hint(it, topic, contents, std::move(props), qos);
+                    auto const& ret = retains_.emplace(topic, contents, std::move(props), qos);
+                    BOOST_ASSERT(ret.second);
+                    BOOST_ASSERT(ret.first->topic == topic);
+                    BOOST_ASSERT(ret.first->contents == contents);
                 }
                 else {
                     retains_.modify(it,
@@ -781,6 +879,10 @@ private:
                                         val.qos = qos;
                                         val.props = std::move(props);
                                         val.contents = contents;
+                                    },
+                                    [&](retain&)
+                                    {
+                                        BOOST_ASSERT(false);
                                     });
                 }
             }
@@ -795,78 +897,191 @@ private:
      */
     // TODO: Maybe change the name of this function.
     template <typename Endpoint>
-    void close_proc(Endpoint&& ep, bool send_will) {
+    void close_proc(Endpoint& ep, bool send_will) {
+        // Hold the lifetime of this endpoint until the function exits.
         auto spep = ep.shared_from_this();
-        auto& idx = cons_.get<tag_con>();
-        auto it = idx.find(spep);
-        if (it == idx.end()) return;
 
-        auto cs = ep.clean_session();
-        auto client_id = it->cid;
+        // Completely cut this endpoint off from the broker!
+        ep.set_close_handler();
+        ep.set_error_handler();
+        ep.set_v5_connect_handler();
+        ep.set_v5_disconnect_handler();
+        ep.set_v5_puback_handler();
+        ep.set_v5_pubrec_handler();
+        ep.set_v5_pubrel_handler();
+        ep.set_v5_pubcomp_handler();
+        ep.set_v5_publish_handler();
+        ep.set_v5_subscribe_handler();
+        ep.set_v5_unsubscribe_handler();
+        ep.set_pingreq_handler();
+        ep.set_pingresp_handler();
+        ep.set_v5_auth_handler();
 
-        {   // will processing
-            auto it = will_.find(spep);
-            if (it != will_.end()) {
-                if (send_will) {
-                    do_publish(
-                        std::make_shared<std::string>(std::move(it->will.topic())),
-                        std::make_shared<std::string>(std::move(it->will.message())),
-                        it->will.qos(),
-                        it->will.retain(),
-                        it->will.props());
-                }
-                will_.erase(it);
-            }
+        auto & act_sess_idx = active_sessions_.get<tag_con>();
+        auto act_sess_it = act_sess_idx.find(spep);
+
+        // It shouldn't be possible for this function to be called
+        // multiple times with the same endpoint, as we've severed
+        // this endpoint's connection with the broker above.
+        BOOST_ASSERT(act_sess_it != act_sess_idx.end());
+
+        std::shared_ptr<std::string> sp_client_id;
+        mqtt::optional<mqtt::will> will;
+        if(ep.clean_session() && (ep.get_protocol_version() == mqtt::protocol_version::v3_1_1)) {
+            sp_client_id = act_sess_it->client_id;
+            will = act_sess_it->will;
+            act_sess_idx.erase(act_sess_it);
+
+            BOOST_ASSERT(active_sessions_.get<tag_client_id>().count(*sp_client_id) == 0);
+            BOOST_ASSERT(active_sessions_.get<tag_client_id>().find(*sp_client_id) == active_sessions_.get<tag_client_id>().end());
+
+            BOOST_ASSERT(active_sessions_.get<tag_con>().count(spep) == 0);
+            BOOST_ASSERT(active_sessions_.get<tag_con>().find(spep) == active_sessions_.get<tag_con>().end());
+
+            BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().count(*sp_client_id) == 0);
+            BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().find(*sp_client_id) == non_active_sessions_.get<tag_client_id>().end());
+        }
+        else
+        {
+            session_state state = *act_sess_it;
+            sp_client_id = state.client_id;
+            will = state.will;
+
+            // TODO: Should yank out the messages from this connection object and store it in the session_state object??
+            mqtt::visit(
+                mqtt::make_lambda_visitor<void>(
+                    [&](auto& con) {
+                        con.reset(); // clear the shared pointer, so it doesn't stay alive after this funciton ends.
+                    }
+                ),
+                state.con
+            );
+
+            act_sess_idx.erase(act_sess_it);
+            BOOST_ASSERT(active_sessions_.get<tag_client_id>().count(*sp_client_id) == 0);
+            BOOST_ASSERT(active_sessions_.get<tag_client_id>().find(*sp_client_id) == active_sessions_.get<tag_client_id>().end());
+
+            BOOST_ASSERT(active_sessions_.get<tag_con>().count(spep) == 0);
+            BOOST_ASSERT(active_sessions_.get<tag_con>().find(spep) == active_sessions_.get<tag_con>().end());
+
+            BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().count(*sp_client_id) == 0);
+            BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().find(*sp_client_id) == non_active_sessions_.get<tag_client_id>().end());
+
+            auto const& ret = non_active_sessions_.insert(std::move(state));
+            BOOST_ASSERT(ret.second);
+            BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().count(*sp_client_id) == 1);
+            BOOST_ASSERT(ret.first->client_id == sp_client_id);
+            BOOST_ASSERT(ret.first == non_active_sessions_.get<tag_client_id>().find(*sp_client_id));
         }
 
-        // Remove the client from the clientid <-> connection map.
-        idx.erase(it);
-
+        // Before sending the will, either erase, or save, any subscriptions that
+        // match this connection. It's possible that none match, and that's fine.
         {
             auto& idx = subs_.get<tag_con>();
-            auto r = idx.equal_range(spep);
-            if (cs) {
+            auto const& range = boost::make_iterator_range(idx.equal_range(spep));
+            // In v3_1_1, we need to clear any subscriptions at the end of the session.
+            // In v5, we always save them, and clear them at the beginning of a session.
+            if (ep.clean_session() && (ep.get_protocol_version() == mqtt::protocol_version::v3_1_1)) {
                 // Remove all subscriptions for this clientid
-                idx.erase(r.first, r.second);
+                idx.erase(range.begin(), range.end());
             }
-            else {
+            else if( ! range.empty()) {
                 // Save all the subscriptions for this clientid for later.
-                sessions_.emplace(client_id);
-                auto s = std::make_shared<session>(client_id);
-                while (r.first != r.second) {
-                    subsessions_.emplace(r.first->topic, s, r.first->qos);
-                    r.first = idx.erase(r.first);
+                for(auto const& item : range) {
+                    auto const& ret = saved_subs_.emplace(sp_client_id,
+                                                          item.topic,
+                                                          item.qos);
+                    BOOST_ASSERT(ret.second);
+                    BOOST_ASSERT(ret.first == saved_subs_.find(*sp_client_id));
                 }
+                idx.erase(range.begin(), range.end());
             }
+            BOOST_ASSERT(idx.count(spep) == 0);
+        }
+
+        if(send_will && will) {
+            // TODO: This should be triggered by the will delay
+            // Not sent immediately.
+            do_publish(
+                std::make_shared<std::string>(will.value().topic()),
+                std::make_shared<std::string>(will.value().message()),
+                will.value().qos(),
+                will.value().retain(),
+                will.value().props());
         }
     }
 
 private:
-
-    struct tag_topic {};
     struct tag_con {};
+    struct tag_topic {};
     struct tag_client_id {};
 
-    // Mapping between clientid and underlying connection.
-    // Used as a basic sanity check on whether a particular clientid is currently connected.
-    struct cid_con {
-        cid_con(std::string cid, con_sp_t con, std::function<void()> before_overwrite)
-            :cid(std::move(cid)), con(std::move(con)), before_overwrite(std::move(before_overwrite)) {}
-        std::string cid;
+    /**
+     * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Session_State
+     *
+     * 4.1 Session State
+     * In order to implement QoS 1 and QoS 2 protocol flows the Client and Server need to associate state with the Client Identifier, this is referred to as the Session State. The Server also stores the subscriptions as part of the Session State.
+     * The session can continue across a sequence of Network Connections. It lasts as long as the latest Network Connection plus the Session Expiry Interval.
+     * The Session State in the Server consists of:
+     * · The existence of a Session, even if the rest of the Session State is empty.
+     * · The Clients subscriptions, including any Subscription Identifiers.
+     * · QoS 1 and QoS 2 messages which have been sent to the Client, but have not been completely acknowledged.
+     * · QoS 1 and QoS 2 messages pending transmission to the Client and OPTIONALLY QoS 0 messages pending transmission to the Client.
+     * · QoS 2 messages which have been received from the Client, but have not been completely acknowledged.
+     * · The Will Message and the Will Delay Interval
+     * · If the Session is currently not connected, the time at which the Session will end and Session State will be discarded.
+     *
+     * Retained messages do not form part of the Session State in the Server, they are not deleted as a result of a Session ending.
+     */
+    struct session_state {
+        // TODO: Currently not fully implemented...
+        session_state(std::shared_ptr<std::string> client_id, con_sp_t con, mqtt::optional<mqtt::will> will)
+            :client_id(std::move(client_id)), con(std::move(con)), will(std::move(will)) {}
+
+        session_state() = default;
+        session_state(session_state &&) = default;
+        session_state(session_state const&) = default;
+        session_state& operator=(session_state &&) = default;
+        session_state& operator=(session_state const&) = default;
+
+        mqtt::string_view get_client_id() const { return *client_id; }
+
+        std::shared_ptr<std::string> client_id;
         con_sp_t con;
-        std::function<void()> before_overwrite;
+
+        // TODO:
+        // Messages sent to client, but not acknowledged.
+        // Messages pending transmission to client
+        // messages received from client, but not acknowledged
+        mqtt::optional<mqtt::will> will;
+        mqtt::optional<boost::posix_time::time_duration> will_delay;
+        mqtt::optional<boost::posix_time::time_duration> session_expiry_interval;
     };
 
-    using mi_cid_con = mi::multi_index_container<
-        cid_con,
+    // The mi_active_sessions container holds the relevant data about an active connection with the broker.
+    // It can be queried either with the clientid, or with the shared pointer to the mqtt endpoint object
+    using mi_active_sessions = mi::multi_index_container<
+        session_state,
         mi::indexed_by<
             mi::ordered_unique<
                 mi::tag<tag_client_id>,
-                BOOST_MULTI_INDEX_MEMBER(cid_con, std::string, cid)
+                BOOST_MULTI_INDEX_CONST_MEM_FUN(session_state, mqtt::string_view, session_state::get_client_id)
             >,
             mi::ordered_unique<
                 mi::tag<tag_con>,
-                BOOST_MULTI_INDEX_MEMBER(cid_con, con_sp_t, con)
+                BOOST_MULTI_INDEX_MEMBER(session_state, con_sp_t, con)
+            >
+        >
+    >;
+
+    // The mi_active_sessions container holds the relevant data about an active connection with the broker.
+    // It can be queried either with the clientid, or with the shared pointer to the mqtt endpoint object
+    using mi_non_active_sessions = mi::multi_index_container<
+        session_state,
+        mi::indexed_by<
+            mi::ordered_unique<
+                mi::tag<tag_client_id>,
+                BOOST_MULTI_INDEX_CONST_MEM_FUN(session_state, mqtt::string_view, session_state::get_client_id)
             >
         >
     >;
@@ -878,7 +1093,7 @@ private:
             con_sp_t con,
             std::uint8_t qos)
             :topic(std::move(topic)), con(std::move(con)), qos(qos) {}
-        std::string const& get_topic() const {
+        mqtt::string_view get_topic() const {
             return *topic;
         }
         std::shared_ptr<std::string> topic;
@@ -890,17 +1105,28 @@ private:
         mi::indexed_by<
             mi::ordered_non_unique<
                 mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_CONST_MEM_FUN(sub_con, std::string const&, sub_con::get_topic)
+                BOOST_MULTI_INDEX_CONST_MEM_FUN(sub_con, mqtt::string_view, sub_con::get_topic)
             >,
             mi::ordered_non_unique<
                 mi::tag<tag_con>,
                 BOOST_MULTI_INDEX_MEMBER(sub_con, con_sp_t, con)
+            >,
+            // Don't allow the same connection object to have the same topic multiple times.
+            // Note that this index does not get used by any code in the broker
+            // other than to enforce the uniqueness constraints.
+            // Potentially this can be enabled only in debug builds.
+            mi::ordered_unique<
+                mi::composite_key<
+                    sub_con,
+                    BOOST_MULTI_INDEX_MEMBER(sub_con, con_sp_t, con),
+                    BOOST_MULTI_INDEX_CONST_MEM_FUN(sub_con, mqtt::string_view, sub_con::get_topic)
+                >
             >
         >
     >;
 
-    // A collection of topics that have been retained for
-    // clients that add a new subscription to the topic.
+    // A collection of topics that have been retained in
+    // case clients add a new subscription to the topic.
     struct retain {
         retain(
             std::shared_ptr<std::string> topic,
@@ -908,7 +1134,7 @@ private:
             std::vector<mqtt::v5::property_variant> props,
             std::uint8_t qos)
             :topic(std::move(topic)), contents(std::move(contents)), props(std::move(props)), qos(qos) {}
-        std::string const& get_topic() const {
+        mqtt::string_view get_topic() const {
             return *topic;
         }
         std::shared_ptr<std::string> topic;
@@ -921,74 +1147,69 @@ private:
         mi::indexed_by<
             mi::ordered_unique<
                 mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_CONST_MEM_FUN(retain, std::string const&, retain::get_topic)
+                BOOST_MULTI_INDEX_CONST_MEM_FUN(retain, mqtt::string_view, retain::get_topic)
             >
         >
     >;
 
-    // It's not clear what this does. Is it related to retained messages perhaps?
-    struct session_data {
-        session_data(
-            std::shared_ptr<std::string> topic,
+    // The saved_message structure holds messages that have been published on a
+    // topic that a not-currently-connected client is subscribed to.
+    // When a new connection is made with the client id for this saved data,
+    // these messages will be published to that client, and only that client.
+    struct saved_message {
+        saved_message(
             std::shared_ptr<std::string> contents,
+            std::shared_ptr<std::vector<mqtt::v5::property_variant>> props,
             std::uint8_t qos)
-            : topic(std::move(topic)), contents(std::move(contents)), qos(qos) {}
-        std::shared_ptr<std::string> topic;
+            : contents(std::move(contents)), props(std::move(props)), qos(qos) {}
         std::shared_ptr<std::string> contents;
+        std::shared_ptr<std::vector<mqtt::v5::property_variant>> props;
         std::uint8_t qos;
     };
-    struct session {
-        explicit session(std::string client_id)
-            :client_id(std::move(client_id)) {}
-        std::string client_id;
-        std::vector<session_data> data;
-    };
-    struct sub_session {
-        sub_session(
+
+    // Each instance of session_subscription describes a subscription that the associated client id has made
+    // and a collection of data associated with that subscription to be sent when the client reconnects.
+    struct session_subscription {
+        session_subscription(
+            std::shared_ptr<std::string> client_id,
             std::shared_ptr<std::string> topic,
-            std::shared_ptr<session> s,
             std::uint8_t qos)
-            :topic(std::move(topic)), s(std::move(s)), qos(qos) {}
-        std::string const& get_client_id() const {
-            return s->client_id;
+            :client_id(std::move(client_id)), topic(std::move(topic)), qos(qos) {}
+        mqtt::string_view get_client_id() const {
+            return *client_id;
         }
-        std::string const& get_topic() const {
+        mqtt::string_view get_topic() const {
             return *topic;
         }
+        std::shared_ptr<std::string> client_id;
         std::shared_ptr<std::string> topic;
-        std::shared_ptr<session> s;
+        std::vector<saved_message> messages;
         std::uint8_t qos;
     };
 
-    // TODO: It'd be nice to allow duplicate clientids and duplicate topics, while still disallowing identical [clientid, topic] pairings
-    // TODO: Unless that's allowed by the standard? Is it?
-    using mi_sub_session = mi::multi_index_container<
-        sub_session,
+    using mi_session_subscription = mi::multi_index_container<
+        session_subscription,
         mi::indexed_by<
+            // Allow multiple client id's for the same topic
             mi::ordered_non_unique<
                 mi::tag<tag_client_id>,
-                BOOST_MULTI_INDEX_CONST_MEM_FUN(sub_session, std::string const&, sub_session::get_client_id)
+                BOOST_MULTI_INDEX_CONST_MEM_FUN(session_subscription, mqtt::string_view, session_subscription::get_client_id)
             >,
+            // Allow multiple topics for the same client id
             mi::ordered_non_unique<
                 mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_CONST_MEM_FUN(sub_session, std::string const&, sub_session::get_topic)
-            >
-        >
-    >;
-
-    // Mapping between connections and last-will-and-testimates. If there is no will for a connection
-    // it won't be found in this container.
-    struct con_will {
-        con_will(con_sp_t con, mqtt::will will):con(std::move(con)), will(std::move(will)) {}
-        con_sp_t con;
-        mqtt::will will;
-    };
-    using mi_con_will = mi::multi_index_container<
-        con_will,
-        mi::indexed_by<
-            mi::ordered_non_unique<
-                mi::tag<tag_con>,
-                BOOST_MULTI_INDEX_MEMBER(con_will, con_sp_t, con)
+                BOOST_MULTI_INDEX_CONST_MEM_FUN(session_subscription, mqtt::string_view, session_subscription::get_topic)
+            >,
+            // Don't allow the same client id to have the same topic multiple times.
+            // Note that this index does not get used by any code in the broker
+            // other than to enforce the uniqueness constraints.
+            // Potentially this can be enabled only in debug builds.
+            mi::ordered_unique<
+                mi::composite_key<
+                    session_subscription,
+                    BOOST_MULTI_INDEX_CONST_MEM_FUN(session_subscription, mqtt::string_view, session_subscription::get_client_id),
+                    BOOST_MULTI_INDEX_CONST_MEM_FUN(session_subscription, mqtt::string_view, session_subscription::get_topic)
+                >
             >
         >
     >;
@@ -996,12 +1217,14 @@ private:
     as::io_service& ios_; ///< The boost asio context to run this broker on.
     as::deadline_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
     mqtt::optional<boost::posix_time::time_duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
-    mi_cid_con cons_; ///< Map of client id and connections
-    mi_sub_con subs_; ///< Map of subscriptions to client ids
-    std::set<std::string> sessions_; ///< A list of clientIDs ? TODO: It's not clear how this is different than cons_, 2 lines above.
-    mi_sub_session subsessions_; ///< TODO: It's not clear what this is for.
+
+    mi_active_sessions active_sessions_; ///< Map of active client id and connections
+    mi_non_active_sessions non_active_sessions_; ///< Storage for sessions not currently active. Indexed by client id.
+    mi_sub_con subs_; ///< Map of topic subscriptions to client ids
+    mi_session_subscription saved_subs_; ///< Topics and associated messages for clientids that are currently disconnected
     mi_retain retains_; ///< A list of messages retained so they can be sent to newly subscribed clients.
-    mi_con_will will_; ///< Map of last-wills and their associated connection objects.
+
+    // MQTTv5 members
     std::vector<mqtt::v5::property_variant> connack_props_;
     std::vector<mqtt::v5::property_variant> suback_props_;
     std::vector<mqtt::v5::property_variant> unsuback_props_;

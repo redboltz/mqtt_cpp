@@ -563,7 +563,13 @@ BOOST_AUTO_TEST_CASE( noclean ) {
                         break;
                     case 3:
                         MQTT_CHK("h_connack4");
-                        BOOST_TEST(sp == false);
+                        // If clean session is not provided, than there will be a session present
+                        // if there was ever a previous connection, even if clean session was provided
+                        // on the previous connection.
+                        // This is because MQTTv5 change the semantics of the flag to "clean start"
+                        // such that it only effects the start of the session.
+                        // Post Session cleanup is handled with a timer, not with the  clean session flag.
+                        BOOST_TEST(sp == true);
                         break;
                     }
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
