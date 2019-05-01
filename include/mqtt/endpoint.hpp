@@ -2587,7 +2587,7 @@ public:
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-
+        BOOST_ASSERT(packet_id != 0);
         send_publish(
             topic_name,
             qos::at_least_once,
@@ -2951,13 +2951,13 @@ public:
      */
     void acquired_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<std::string, std::uint8_t>> params,
+        std::vector<std::tuple<mqtt::string_view, std::uint8_t>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> cb_params;
         cb_params.reserve(params.size());
         for (auto const& e : params) {
-            cb_params.emplace_back(as::buffer(std::get<0>(e)), std::get<1>(e));
+            cb_params.emplace_back(as::buffer(std::get<0>(e).data(), std::get<0>(e).size()), std::get<1>(e));
         }
         send_subscribe(std::move(cb_params), packet_id, std::move(props));
     }
@@ -3271,9 +3271,10 @@ public:
     template <typename... Args>
     void suback(
         packet_id_t packet_id,
-        std::uint8_t reason, Args&&... args) {
+        Args&&... args) {
         std::vector<std::uint8_t> params;
-        send_suback(params, packet_id, reason, std::forward<Args>(args)...);
+        params.reserve(sizeof...(args));
+        send_suback(params, packet_id, std::forward<Args>(args)...);
     }
 
     /**
@@ -3321,7 +3322,8 @@ public:
     template <typename... Args>
     void unsuback(
         packet_id_t packet_id,
-        std::uint8_t reason, Args&&... args) {
+        std::uint8_t reason,
+        Args&&... args) {
         std::vector<std::uint8_t> params;
         send_unsuback(params, packet_id, reason, std::forward<Args>(args)...);
     }
@@ -6275,20 +6277,16 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         std::string topic_name,
-        std::uint8_t options,
+        std::uint8_t option,
         async_handler_t func = async_handler_t()
     ) {
+        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
+        auto topic_buf = as::buffer(*sp_topic_name);
 
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-
-        params.reserve(1);
         async_send_subscribe(
-            std::move(params),
-            life_keepers,
+            std::vector<std::tuple<as::const_buffer, std::uint8_t>>({std::make_tuple(topic_buf, option)}),
+            std::move(sp_topic_name),
             packet_id,
-            std::move(topic_name),
-            options,
             std::move(func)
         );
     }
@@ -6320,17 +6318,13 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
+        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
+        auto topic_buf = as::buffer(*sp_topic_name);
 
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-
-        params.reserve(1);
         async_send_subscribe(
-            std::move(params),
-            life_keepers,
+            std::vector<std::tuple<as::const_buffer, std::uint8_t>>({std::make_tuple(topic_buf, option)}),
+            std::move(sp_topic_name),
             packet_id,
-            std::move(topic_name),
-            option,
             std::move(props),
             std::move(func)
         );
@@ -6358,16 +6352,10 @@ public:
         std::uint8_t option,
         async_handler_t func = async_handler_t()
     ) {
-
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
-        params.reserve(1);
-
         async_send_subscribe(
-            std::move(params),
+            std::vector<std::tuple<as::const_buffer, std::uint8_t>>({std::make_tuple(topic_name, option)}),
             mqtt::any(),
             packet_id,
-            topic_name,
-            option,
             std::move(func)
         );
     }
@@ -6400,15 +6388,10 @@ public:
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
-        params.reserve(1);
-
         async_send_subscribe(
-            std::move(params),
+            std::vector<std::tuple<as::const_buffer, std::uint8_t>>({std::make_tuple(topic_name, option)}),
             mqtt::any(),
             packet_id,
-            topic_name,
-            option,
             std::move(props),
             std::move(func)
         );
@@ -6441,10 +6424,9 @@ public:
         life_keepers.reserve(params.size());
 
         for (auto&& e : params) {
-            life_keepers.emplace_back(std::make_shared<std::string>(std::move(std::get<0>(e))));
-            cb_params.emplace_back(
-                as::buffer(*life_keepers.back()),
-                std::get<1>(e));
+            auto sp_topic_name = std::make_shared<std::string>(std::move(std::get<0>(e)));
+            cb_params.emplace_back(as::buffer(*sp_topic_name), std::get<1>(e));
+            life_keepers.emplace_back(std::move(sp_topic_name));
         }
         async_send_subscribe(
             std::move(cb_params),
@@ -6486,10 +6468,9 @@ public:
         life_keepers.reserve(params.size());
 
         for (auto&& e : params) {
-            life_keepers.emplace_back(std::make_shared<std::string>(std::move(std::get<0>(e))));
-            cb_params.emplace_back(
-                as::buffer(*life_keepers.back()),
-                std::get<1>(e));
+            auto sp_topic_name = std::make_shared<std::string>(std::move(std::get<0>(e)));
+            cb_params.emplace_back(as::buffer(*sp_topic_name), std::get<1>(e));
+            life_keepers.emplace_back(std::move(sp_topic_name));
         }
         async_send_subscribe(
             std::move(cb_params),
@@ -6516,12 +6497,9 @@ public:
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
         async_handler_t func = async_handler_t()
     ) {
-
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-
         async_send_subscribe(
             std::move(params),
-            life_keepers,
+            mqtt::any(),
             packet_id,
             std::move(func)
         );
@@ -6547,12 +6525,9 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-
-        std::vector<std::shared_ptr<std::string>> life_keepers;
-
         async_send_subscribe(
             std::move(params),
-            life_keepers,
+            mqtt::any(),
             packet_id,
             std::move(props),
             std::move(func)
@@ -7103,8 +7078,7 @@ public:
         std::uint8_t reason,
         async_handler_t func = async_handler_t()
     ) {
-        std::vector<std::uint8_t> params;
-        async_send_suback(params, packet_id, reason, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_suback(std::vector<std::uint8_t>{}, packet_id, reason, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -7128,8 +7102,7 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        std::vector<std::uint8_t> params;
-        async_send_suback(params, packet_id, reason, std::move(props), std::move(func));
+        async_send_suback(std::vector<std::uint8_t>{}, packet_id, reason, std::move(props), std::move(func));
     }
 
     /**
@@ -7215,8 +7188,7 @@ public:
         std::uint8_t reason,
         async_handler_t func = async_handler_t()
     ) {
-        std::vector<std::uint8_t> params;
-        async_send_unsuback(params, packet_id, reason, std::move(func));
+        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, reason, std::move(func));
     }
 
     /**
@@ -7240,8 +7212,7 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        std::vector<std::uint8_t> params;
-        async_send_unsuback(params, packet_id, reason, std::move(props), std::move(func));
+        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, reason, std::move(props), std::move(func));
     }
 
     /**
