@@ -10172,7 +10172,24 @@ private:
                         control_packet_type::pubcomp,
                         msg
                     );
-                    BOOST_ASSERT(ret.second);
+                    // publish store is erased when pubrec is received.
+                    // pubrel store is erased when pubcomp is received.
+                    // If invalid client send pubrec twice with the same packet id,
+                    // then send corresponding pubrel twice is a possible client/server
+                    // implementation.
+                    // In this case, overwrite store_.
+                    if (!ret.second) {
+                        store_.modify(
+                            ret.first,
+                            [&] (auto& e) {
+                                e = store(
+                                    packet_id,
+                                    control_packet_type::pubcomp,
+                                    msg
+                                );
+                            }
+                        );
+                    }
                 }
 
                 if (serialize) {
