@@ -7476,7 +7476,23 @@ public:
                 std::move(msg),
                 std::move(life_keeper)
             );
-            BOOST_ASSERT(ret.second);
+            // When client want to restore serialized messages,
+            // endpoint might keep the message that has the same packet_id.
+            // In this case, overwrite store_.
+            if (!ret.second) {
+                store_.modify(
+                    ret.first,
+                    [&] (auto& e) {
+                        e = store(
+                            packet_id,
+                            qos == qos::at_least_once ? control_packet_type::puback
+                                                      : control_packet_type::pubrec,
+                            std::move(msg),
+                            std::move(life_keeper)
+                        );
+                    }
+                );
+            }
         }
     }
 
@@ -7494,7 +7510,21 @@ public:
                 control_packet_type::pubcomp,
                 std::move(msg)
             );
-            BOOST_ASSERT(ret.second);
+            // When client want to restore serialized messages,
+            // endpoint might keep the message that has the same packet_id.
+            // In this case, overwrite store_.
+            if (!ret.second) {
+                store_.modify(
+                    ret.first,
+                    [&] (auto& e) {
+                        e = store(
+                            packet_id,
+                            control_packet_type::pubcomp,
+                            std::move(msg)
+                        );
+                    }
+                );
+            }
         }
     }
 
@@ -7544,7 +7574,23 @@ public:
                 std::move(msg),
                 std::move(life_keeper)
             );
-            BOOST_ASSERT(ret.second);
+            // When client want to restore serialized messages,
+            // endpoint might keep the message that has the same packet_id.
+            // In this case, overwrite store_.
+            if (!ret.second) {
+                store_.modify(
+                    ret.first,
+                    [&] (auto& e) {
+                        e = store(
+                            packet_id,
+                            qos == qos::at_least_once ? control_packet_type::puback
+                                                      : control_packet_type::pubrec,
+                            std::move(msg),
+                            std::move(life_keeper)
+                        );
+                    }
+                );
+            }
         }
     }
 
@@ -7560,10 +7606,23 @@ public:
             auto ret = store_.emplace(
                 packet_id,
                 control_packet_type::pubcomp,
-                std::move(msg),
-                []{}
+                std::move(msg)
             );
-            BOOST_ASSERT(ret.second);
+            // When client want to restore serialized messages,
+            // endpoint might keep the message that has the same packet_id.
+            // In this case, overwrite store_.
+            if (!ret.second) {
+                store_.modify(
+                    ret.first,
+                    [&] (auto& e) {
+                        e = store(
+                            packet_id,
+                            control_packet_type::pubcomp,
+                            std::move(msg)
+                        );
+                    }
+                );
+            }
         }
     }
 
