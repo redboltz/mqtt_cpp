@@ -633,7 +633,7 @@ typename std::enable_if<
 restore_v5_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
         mqtt::v5::publish_message(packet.begin(), packet.end()),
-        []{}
+        boost::any()
     );
 }
 
@@ -645,7 +645,7 @@ typename std::enable_if<
 restore_v5_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
         mqtt::v5::publish_32_message(packet.begin(), packet.end()),
-        []{}
+        boost::any()
     );
 }
 
@@ -656,7 +656,8 @@ typename std::enable_if<
 >::type
 restore_v5_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
-        mqtt::v5::pubrel_message(packet.begin(), packet.end())
+        mqtt::v5::pubrel_message(packet.begin(), packet.end()),
+        boost::any()
     );
 }
 
@@ -667,7 +668,8 @@ typename std::enable_if<
 >::type
 restore_v5_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
-        mqtt::v5::pubrel_32_message(packet.begin(), packet.end())
+        mqtt::v5::pubrel_32_message(packet.begin(), packet.end()),
+        boost::any()
     );
 }
 

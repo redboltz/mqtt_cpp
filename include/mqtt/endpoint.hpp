@@ -7445,8 +7445,8 @@ public:
         auto fixed_header = static_cast<std::uint8_t>(*b);
         switch (get_control_packet_type(fixed_header)) {
         case control_packet_type::publish: {
-            auto sp = std::make_shared<basic_publish_message<PacketIdBytes>>(b, e);
-            restore_serialized_message(*sp, [sp] {});
+            auto sp = std::make_shared<std::string>(b, e);
+            restore_serialized_message(basic_publish_message<PacketIdBytes>(sp->begin(), sp->end()), sp);
         } break;
         case control_packet_type::pubrel: {
             restore_serialized_message(basic_pubrel_message<PacketIdBytes>(b, e));
@@ -7543,11 +7543,12 @@ public:
         auto fixed_header = static_cast<std::uint8_t>(*b);
         switch (get_control_packet_type(fixed_header)) {
         case control_packet_type::publish: {
-            auto sp = std::make_shared<v5::basic_publish_message<PacketIdBytes>>(b, e);
-            restore_v5_serialized_message(*sp, [sp] {});
+            auto sp = std::make_shared<std::string>(b, e);
+            restore_v5_serialized_message(v5::basic_publish_message<PacketIdBytes>(sp->begin(), sp->end()), sp);
         } break;
         case control_packet_type::pubrel: {
-            restore_v5_serialized_message(v5::basic_pubrel_message<PacketIdBytes>(b, e));
+            auto sp = std::make_shared<std::string>(b, e);
+            restore_v5_serialized_message(v5::basic_pubrel_message<PacketIdBytes>(sp->begin(), sp->end()), sp);
         } break;
         default:
             throw protocol_error();
@@ -7598,15 +7599,18 @@ public:
      * @brief Restore serialized pubrel message.
      *        This function shouold be called before connect.
      * @param msg pubrel message.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the stored message is sent.
      */
-    void restore_v5_serialized_message(v5::basic_pubrel_message<PacketIdBytes> msg) {
+    void restore_v5_serialized_message(v5::basic_pubrel_message<PacketIdBytes> msg, mqtt::any life_keeper) {
         auto packet_id = msg.packet_id();
         LockGuard<Mutex> lck (store_mtx_);
         if (packet_id_.insert(packet_id).second) {
             auto ret = store_.emplace(
                 packet_id,
                 control_packet_type::pubcomp,
-                std::move(msg)
+                std::move(msg),
+                std::move(life_keeper)
             );
             // When client want to restore serialized messages,
             // endpoint might keep the message that has the same packet_id.
