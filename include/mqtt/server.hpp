@@ -85,22 +85,17 @@ public:
         close_request_ = false;
         renew_socket();
 
-        auto post_error =
-            [&](boost::system::error_code const& ec) {
-                ios_accept_.post(
-                    [this, ec] {
-                        if (h_error_) h_error_(ec);
-                    }
-                );
-            };
-
         if (!acceptor_) {
             try {
                 acceptor_.emplace(ios_accept_, ep_);
                 config_(acceptor_.value());
             }
             catch (boost::system::system_error const& e) {
-                post_error(e.code());
+                ios_accept_.post(
+                    [this, ec = e.code()] {
+                        if (h_error_) h_error_(ec);
+                    }
+                );
                 return;
             }
         }
@@ -225,22 +220,17 @@ public:
         close_request_ = false;
         renew_socket();
 
-        auto post_error =
-            [&](boost::system::error_code const& ec) {
-                ios_accept_.post(
-                    [this, ec] {
-                        if (h_error_) h_error_(ec);
-                    }
-                );
-            };
-
         if (!acceptor_) {
             try {
                 acceptor_.emplace(ios_accept_, ep_);
                 config_(acceptor_.value());
             }
             catch (boost::system::system_error const& e) {
-                post_error(e.code());
+                ios_accept_.post(
+                    [this, ec = e.code()] {
+                        if (h_error_) h_error_(ec);
+                    }
+                );
                 return;
             }
         }
@@ -389,22 +379,17 @@ public:
         close_request_ = false;
         renew_socket();
 
-        auto post_error =
-            [&](boost::system::error_code const& ec) {
-                ios_accept_.post(
-                    [this, ec] {
-                        if (h_error_) h_error_(ec);
-                    }
-                );
-            };
-
         if (!acceptor_) {
             try {
                 acceptor_.emplace(ios_accept_, ep_);
                 config_(acceptor_.value());
             }
             catch (boost::system::system_error const& e) {
-                post_error(e.code());
+                ios_accept_.post(
+                    [this, ec = e.code()] {
+                        if (h_error_) h_error_(ec);
+                    }
+                );
                 return;
             }
         }
@@ -569,22 +554,17 @@ public:
         close_request_ = false;
         renew_socket();
 
-        auto post_error =
-            [&](boost::system::error_code const& ec) {
-                ios_accept_.post(
-                    [this, ec] {
-                        if (h_error_) h_error_(ec);
-                    }
-                );
-            };
-
         if (!acceptor_) {
             try {
                 acceptor_.emplace(ios_accept_, ep_);
                 config_(acceptor_.value());
             }
             catch (boost::system::system_error const& e) {
-                post_error(e.code());
+                ios_accept_.post(
+                    [this, ec = e.code()] {
+                        if (h_error_) h_error_(ec);
+                    }
+                );
                 return;
             }
         }
