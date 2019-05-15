@@ -4,34 +4,51 @@
 # (See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
 
-CMAKE_MINIMUM_REQUIRED (VERSION 2.8.6)
+CMAKE_MINIMUM_REQUIRED (VERSION 3.8.2)
 
-LIST (APPEND check_PROGRAMS
-     connect.cpp
-     pubsub.cpp
-     async_pubsub_1.cpp
-     async_pubsub_2.cpp
-     pubsub_no_strand.cpp
-     remaining_length.cpp
-     multi_sub.cpp
-     resend.cpp
-     resend_serialize.cpp
-     resend_serialize_ptr_size.cpp
-     offline.cpp
-     manual_publish.cpp
-     retain.cpp
-     will.cpp
-     length_check.cpp
-     sub.cpp
-     as_buffer_sub.cpp
-     as_buffer_pubsub.cpp
-     as_buffer_async_pubsub_1.cpp
-     as_buffer_async_pubsub_2.cpp
-     utf8string_validate.cpp
-)
+OPTION(MQTT_TEST_1 "Build test part1" ON)
+OPTION(MQTT_TEST_2 "Build test part2" ON)
+OPTION(MQTT_TEST_3 "Build test part3" ON)
+
+IF (MQTT_TEST_1)
+    LIST (APPEND check_PROGRAMS
+        connect.cpp
+        pubsub.cpp
+        async_pubsub_1.cpp
+        async_pubsub_2.cpp
+        pubsub_no_strand.cpp
+        remaining_length.cpp
+        multi_sub.cpp
+    )
+ENDIF ()
+
+IF (MQTT_TEST_2)
+    LIST (APPEND check_PROGRAMS
+        resend.cpp
+        resend_serialize.cpp
+        resend_serialize_ptr_size.cpp
+        offline.cpp
+        manual_publish.cpp
+        retain.cpp
+        will.cpp
+        length_check.cpp
+    )
+ENDIF ()
+
+IF (MQTT_TEST_3)
+    LIST (APPEND check_PROGRAMS
+        sub.cpp
+        as_buffer_sub.cpp
+        as_buffer_pubsub.cpp
+        as_buffer_async_pubsub_1.cpp
+        as_buffer_async_pubsub_2.cpp
+        utf8string_validate.cpp
+        packet_id.cpp
+    )
+ENDIF ()
 
 LIST (APPEND MQTT_LINK_LIBRARIES
-    ${Boost_TEST_EXEC_MONITOR_LIBRARY}
+    ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${CMAKE_THREAD_LIBS_INIT}
 )
@@ -41,6 +58,8 @@ IF (NOT MQTT_NO_TLS)
         ${CMAKE_DL_LIBS}
     )
 ENDIF ()
+
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_TEST_DYN_LINK")
 
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 

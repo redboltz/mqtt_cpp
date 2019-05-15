@@ -28,8 +28,9 @@ public:
          strand_(ios) {
     }
 
-    void close(boost::system::error_code& ec) {
-        tcp_.lowest_layer().close(ec);
+    template <typename... Args>
+    void close(Args&&... args) {
+        tcp_.lowest_layer().close(std::forward<Args>(args)...);
     }
 
     as::io_service& get_io_service() {
@@ -43,54 +44,45 @@ public:
         return tcp_.lowest_layer();
     }
 
-    template <typename T>
-    void set_option(T&& t) {
-        tcp_.set_option(std::forward<T>(t));
+    template <typename... Args>
+    void set_option(Args&& ... args) {
+        tcp_.set_option(std::forward<Args>(args)...);
     }
 
-    template <typename ConstBufferSequence, typename AcceptHandler>
-    void async_accept(
-        ConstBufferSequence const& buffers,
-        AcceptHandler&& handler) {
-        tcp_.async_accept(buffers, std::forward<AcceptHandler>(handler));
+    template <typename... Args>
+    void async_accept(Args&& ... args) {
+        tcp_.async_accept(std::forward<Args>(args)...);
     }
 
 #if !defined(MQTT_NO_TLS)
-    template<typename HandshakeType, typename HandshakeHandler>
-    void async_handshake(
-        HandshakeType type,
-        HandshakeHandler&& h) {
-        tcp_.async_handshake(type, std::forward<HandshakeHandler>(h));
+    template <typename... Args>
+    void async_handshake(Args&& ... args) {
+        tcp_.async_handshake(std::forward<Args>(args)...);
     }
 #endif // !defined(MQTT_NO_TLS)
 
     template <typename MutableBufferSequence, typename ReadHandler>
     void async_read(
-        MutableBufferSequence const& buffers,
+        MutableBufferSequence && buffers,
         ReadHandler&& handler) {
-        as::async_read(tcp_, buffers, strand_.wrap(std::forward<ReadHandler>(handler)));
+        as::async_read(
+            tcp_,
+            std::forward<MutableBufferSequence>(buffers),
+            strand_.wrap(std::forward<ReadHandler>(handler)));
     }
 
-    template <typename ConstBufferSequence>
-    std::size_t write(
-        ConstBufferSequence const& buffers) {
-        return as::write(tcp_, buffers);
-    }
-
-    template <typename ConstBufferSequence>
-    std::size_t write(
-        ConstBufferSequence const& buffers,
-        boost::system::error_code& ec) {
-        return as::write(tcp_, buffers, ec);
+    template <typename... Args>
+    std::size_t write(Args&& ... args) {
+        return as::write(tcp_, std::forward<Args>(args)...);
     }
 
     template <typename ConstBufferSequence, typename WriteHandler>
     void async_write(
-        ConstBufferSequence const& buffers,
+        ConstBufferSequence && buffers,
         WriteHandler&& handler) {
         as::async_write(
             tcp_,
-            buffers,
+            std::forward<ConstBufferSequence>(buffers),
             strand_.wrap(std::forward<WriteHandler>(handler))
         );
     }
@@ -108,32 +100,32 @@ private:
 template <typename Socket, typename Strand, typename MutableBufferSequence, typename ReadHandler>
 inline void async_read(
     tcp_endpoint<Socket, Strand>& ep,
-    MutableBufferSequence const& buffers,
+    MutableBufferSequence && buffers,
     ReadHandler&& handler) {
-    ep.async_read(buffers, std::forward<ReadHandler>(handler));
+    ep.async_read(std::forward<MutableBufferSequence>(buffers), std::forward<ReadHandler>(handler));
 }
 
 template <typename Socket, typename Strand, typename ConstBufferSequence>
 inline std::size_t write(
     tcp_endpoint<Socket, Strand>& ep,
-    ConstBufferSequence const& buffers) {
-    return ep.write(buffers);
+    ConstBufferSequence && buffers) {
+    return ep.write(std::forward<ConstBufferSequence>(buffers));
 }
 
 template <typename Socket, typename Strand, typename ConstBufferSequence>
 inline std::size_t write(
     tcp_endpoint<Socket, Strand>& ep,
-    ConstBufferSequence const& buffers,
+    ConstBufferSequence && buffers,
     boost::system::error_code& ec) {
-    return ep.write(buffers, ec);
+    return ep.write(std::forward<ConstBufferSequence>(buffers), ec);
 }
 
 template <typename Socket, typename Strand, typename ConstBufferSequence, typename WriteHandler>
 inline void async_write(
     tcp_endpoint<Socket, Strand>& ep,
-    ConstBufferSequence const& buffers,
+    ConstBufferSequence && buffers,
     WriteHandler&& handler) {
-    ep.async_write(buffers, std::forward<WriteHandler>(handler));
+    ep.async_write(std::forward<ConstBufferSequence>(buffers), std::forward<WriteHandler>(handler));
 }
 
 } // namespace mqtt

@@ -8,7 +8,6 @@
 #define MQTT_TEST_SETTINGS_HPP
 
 #include <string>
-#include <boost/test/unit_test.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>

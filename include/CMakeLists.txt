@@ -49,3 +49,31 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
   DESTINATION
     ${INSTALL_CONFIGDIR}
 )
+
+IF (MQTT_NO_TLS)
+    target_compile_definitions(${PROJECT_NAME} INTERFACE MQTT_NO_TLS)
+ENDIF ()
+
+IF (MQTT_USE_WS)
+    target_compile_definitions(${PROJECT_NAME} INTERFACE MQTT_USE_WS)
+ENDIF ()
+
+IF (MQTT_USE_STR_CHECK)
+    target_compile_definitions(${PROJECT_NAME} INTERFACE MQTT_USE_STR_CHECK)
+ENDIF ()
+
+IF (MQTT_STD_VARIANT)
+    target_compile_definitions(${PROJECT_NAME} INTERFACE MQTT_STD_VARIANT)
+ENDIF ()
+
+IF (MQTT_STD_OPTIONAL)
+    target_compile_definitions(${PROJECT_NAME} INTERFACE MQTT_STD_OPTIONAL)
+ENDIF ()
+
+IF (MQTT_STD_STRING_VIEW)
+    target_compile_definitions(${PROJECT_NAME} INTERFACE MQTT_STD_STRING_VIEW)
+ENDIF ()
+
+IF (MQTT_STD_ANY)
+    target_compile_definitions(${PROJECT_NAME} INTERFACE MQTT_STD_ANY)
+ENDIF ()

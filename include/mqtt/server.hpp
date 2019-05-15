@@ -4,6 +4,8 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
+#include <mqtt/variant.hpp> // should be top to configure variant limit
+
 #include <memory>
 #include <boost/asio.hpp>
 
@@ -27,11 +29,16 @@ namespace mqtt {
 
 namespace as = boost::asio;
 
-template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
+template <
+    typename Strand = as::io_service::strand,
+    typename Mutex = std::mutex,
+    template<typename...> class LockGuard = std::lock_guard,
+    std::size_t PacketIdBytes = 2
+>
 class server {
 public:
     using socket_t = tcp_endpoint<as::ip::tcp::socket, Strand>;
-    using endpoint_t = endpoint<socket_t, Mutex, LockGuard>;
+    using endpoint_t = endpoint<socket_t, Mutex, LockGuard, PacketIdBytes>;
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -46,11 +53,12 @@ public:
         as::io_service& ios_accept,
         as::io_service& ios_con,
         AcceptorConfig&& config)
-        : ios_accept_(ios_accept),
+        : ep_(std::forward<AsioEndpoint>(ep)),
+          ios_accept_(ios_accept),
           ios_con_(ios_con),
-          acceptor_(ios_accept_, std::forward<AsioEndpoint>(ep)),
-          close_request_(false) {
-        config(acceptor_);
+          acceptor_(as::ip::tcp::acceptor(ios_accept_, ep_)),
+          config_(std::forward<AcceptorConfig>(config)) {
+        config_(acceptor_.value());
     }
 
     template <typename AsioEndpoint>
@@ -74,15 +82,31 @@ public:
         : server(std::forward<AsioEndpoint>(ep), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
+        close_request_ = false;
         renew_socket();
+
+        if (!acceptor_) {
+            try {
+                acceptor_.emplace(ios_accept_, ep_);
+                config_(acceptor_.value());
+            }
+            catch (boost::system::system_error const& e) {
+                ios_accept_.post(
+                    [this, ec = e.code()] {
+                        if (h_error_) h_error_(ec);
+                    }
+                );
+                return;
+            }
+        }
         do_accept();
     }
 
-    unsigned short port() const { return acceptor_.local_endpoint().port(); }
+    unsigned short port() const { return acceptor_.value().local_endpoint().port(); }
 
     void close() {
         close_request_ = true;
-        acceptor_.close();
+        acceptor_.reset();
     }
 
     void set_accept_handler(accept_handler h = accept_handler()) {
@@ -104,11 +128,12 @@ private:
 
     void do_accept() {
         if (close_request_) return;
-        acceptor_.async_accept(
+        acceptor_.value().async_accept(
             socket_->lowest_layer(),
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
+                    acceptor_.reset();
                     if (h_error_) h_error_(ec);
                     return;
                 }
@@ -121,22 +146,29 @@ private:
     }
 
 private:
+    as::ip::tcp::endpoint ep_;
     as::io_service& ios_accept_;
     as::io_service& ios_con_;
-    as::ip::tcp::acceptor acceptor_;
+    mqtt::optional<as::ip::tcp::acceptor> acceptor_;
+    std::function<void(as::ip::tcp::acceptor&)> config_;
     std::unique_ptr<socket_t> socket_;
-    bool close_request_;
+    bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
 };
 
 #if !defined(MQTT_NO_TLS)
 
-template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
+template <
+    typename Strand = as::io_service::strand,
+    typename Mutex = std::mutex,
+    template<typename...> class LockGuard = std::lock_guard,
+    std::size_t PacketIdBytes = 2
+>
 class server_tls {
 public:
     using socket_t = tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
-    using endpoint_t = endpoint<socket_t, Mutex, LockGuard>;
+    using endpoint_t = endpoint<socket_t, Mutex, LockGuard, PacketIdBytes>;
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -152,12 +184,13 @@ public:
         as::io_service& ios_accept,
         as::io_service& ios_con,
         AcceptorConfig&& config)
-        : ios_accept_(ios_accept),
+        : ep_(std::forward<AsioEndpoint>(ep)),
+          ios_accept_(ios_accept),
           ios_con_(ios_con),
-          acceptor_(ios_accept_, std::forward<AsioEndpoint>(ep)),
-          close_request_(false),
+          acceptor_(as::ip::tcp::acceptor(ios_accept_, ep_)),
+          config_(std::forward<AcceptorConfig>(config)),
           ctx_(std::move(ctx)) {
-        config(acceptor_);
+        config_(acceptor_.value());
     }
 
     template <typename AsioEndpoint>
@@ -184,15 +217,31 @@ public:
         : server_tls(std::forward<AsioEndpoint>(ep), std::move(ctx), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
+        close_request_ = false;
         renew_socket();
+
+        if (!acceptor_) {
+            try {
+                acceptor_.emplace(ios_accept_, ep_);
+                config_(acceptor_.value());
+            }
+            catch (boost::system::system_error const& e) {
+                ios_accept_.post(
+                    [this, ec = e.code()] {
+                        if (h_error_) h_error_(ec);
+                    }
+                );
+                return;
+            }
+        }
         do_accept();
     }
 
-    unsigned short port() const { return acceptor_.local_endpoint().port(); }
+    unsigned short port() const { return acceptor_.value().local_endpoint().port(); }
 
     void close() {
         close_request_ = true;
-        acceptor_.close();
+        acceptor_.reset();
     }
 
     void set_accept_handler(accept_handler h = accept_handler()) {
@@ -214,11 +263,12 @@ private:
 
     void do_accept() {
         if (close_request_) return;
-        acceptor_.async_accept(
+        acceptor_.value().async_accept(
             socket_->lowest_layer(),
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
+                    acceptor_.reset();
                     if (h_error_) h_error_(ec);
                     return;
                 }
@@ -227,6 +277,7 @@ private:
                     [this]
                     (boost::system::error_code ec) {
                         if (ec) {
+                            acceptor_.reset();
                             if (h_error_) h_error_(ec);
                             return;
                         }
@@ -241,11 +292,13 @@ private:
     }
 
 private:
+    as::ip::tcp::endpoint ep_;
     as::io_service& ios_accept_;
     as::io_service& ios_con_;
-    as::ip::tcp::acceptor acceptor_;
+    mqtt::optional<as::ip::tcp::acceptor> acceptor_;
+    std::function<void(as::ip::tcp::acceptor&)> config_;
     std::unique_ptr<socket_t> socket_;
-    bool close_request_;
+    bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
     as::ssl::context ctx_;
@@ -270,11 +323,16 @@ private:
     std::string s_;
 };
 
-template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
+template <
+    typename Strand = as::io_service::strand,
+    typename Mutex = std::mutex,
+    template<typename...> class LockGuard = std::lock_guard,
+    std::size_t PacketIdBytes = 2
+>
 class server_ws {
 public:
     using socket_t = ws_endpoint<as::ip::tcp::socket, Strand>;
-    using endpoint_t = endpoint<socket_t, Mutex, LockGuard>;
+    using endpoint_t = endpoint<socket_t, Mutex, LockGuard, PacketIdBytes>;
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -289,11 +347,12 @@ public:
         as::io_service& ios_accept,
         as::io_service& ios_con,
         AcceptorConfig&& config)
-        : ios_accept_(ios_accept),
+        : ep_(std::forward<AsioEndpoint>(ep)),
+          ios_accept_(ios_accept),
           ios_con_(ios_con),
-          acceptor_(ios_accept_, std::forward<AsioEndpoint>(ep)),
-          close_request_(false) {
-        config(acceptor_);
+          acceptor_(as::ip::tcp::acceptor(ios_accept_, ep_)),
+          config_(std::forward<AcceptorConfig>(config)) {
+        config_(acceptor_.value());
     }
 
     template <typename AsioEndpoint>
@@ -317,15 +376,31 @@ public:
         : server_ws(std::forward<AsioEndpoint>(ep), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
+        close_request_ = false;
         renew_socket();
+
+        if (!acceptor_) {
+            try {
+                acceptor_.emplace(ios_accept_, ep_);
+                config_(acceptor_.value());
+            }
+            catch (boost::system::system_error const& e) {
+                ios_accept_.post(
+                    [this, ec = e.code()] {
+                        if (h_error_) h_error_(ec);
+                    }
+                );
+                return;
+            }
+        }
         do_accept();
     }
 
-    unsigned short port() const { return acceptor_.local_endpoint().port(); }
+    unsigned short port() const { return acceptor_.value().local_endpoint().port(); }
 
     void close() {
         close_request_ = true;
-        acceptor_.close();
+        acceptor_.reset();
     }
 
     void set_accept_handler(accept_handler h = accept_handler()) {
@@ -347,11 +422,12 @@ private:
 
     void do_accept() {
         if (close_request_) return;
-        acceptor_.async_accept(
+        acceptor_.value().async_accept(
             socket_->next_layer(),
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
+                    acceptor_.reset();
                     if (h_error_) h_error_(ec);
                     return;
                 }
@@ -364,10 +440,12 @@ private:
                     [this, sb, request]
                     (boost::system::error_code const& ec, std::size_t) {
                         if (ec) {
+                            acceptor_.reset();
                             if (h_error_) h_error_(ec);
                             return;
                         }
                         if (!boost::beast::websocket::is_upgrade(*request)) {
+                            acceptor_.reset();
                             if (h_error_) h_error_(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                             return;
                         }
@@ -383,6 +461,7 @@ private:
                             [this]
                             (boost::system::error_code const& ec) {
                                 if (ec) {
+                                    acceptor_.reset();
                                     if (h_error_) h_error_(ec);
                                     return;
                                 }
@@ -399,11 +478,13 @@ private:
     }
 
 private:
+    as::ip::tcp::endpoint ep_;
     as::io_service& ios_accept_;
     as::io_service& ios_con_;
-    as::ip::tcp::acceptor acceptor_;
+    mqtt::optional<as::ip::tcp::acceptor> acceptor_;
+    std::function<void(as::ip::tcp::acceptor&)> config_;
     std::unique_ptr<socket_t> socket_;
-    bool close_request_;
+    bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
 };
@@ -411,11 +492,16 @@ private:
 
 #if !defined(MQTT_NO_TLS)
 
-template <typename Strand = as::io_service::strand, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard>
+template <
+    typename Strand = as::io_service::strand,
+    typename Mutex = std::mutex,
+    template<typename...> class LockGuard = std::lock_guard,
+    std::size_t PacketIdBytes = 2
+>
 class server_tls_ws {
 public:
     using socket_t = mqtt::ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
-    using endpoint_t = endpoint<socket_t, Mutex, LockGuard>;
+    using endpoint_t = endpoint<socket_t, Mutex, LockGuard, PacketIdBytes>;
 
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
@@ -432,12 +518,13 @@ public:
         as::io_service& ios_accept,
         as::io_service& ios_con,
         AcceptorConfig&& config)
-        : ios_accept_(ios_accept),
+        : ep_(std::forward<AsioEndpoint>(ep)),
+          ios_accept_(ios_accept),
           ios_con_(ios_con),
-          acceptor_(ios_accept_, std::forward<AsioEndpoint>(ep)),
-          close_request_(false),
+          acceptor_(as::ip::tcp::acceptor(ios_accept_, ep_)),
+          config_(std::forward<AcceptorConfig>(config)),
           ctx_(std::move(ctx)) {
-        config(acceptor_);
+        config_(acceptor_.value());
     }
 
     template <typename AsioEndpoint>
@@ -464,15 +551,31 @@ public:
         : server_tls_ws(std::forward<AsioEndpoint>(ep), std::move(ctx), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
+        close_request_ = false;
         renew_socket();
+
+        if (!acceptor_) {
+            try {
+                acceptor_.emplace(ios_accept_, ep_);
+                config_(acceptor_.value());
+            }
+            catch (boost::system::system_error const& e) {
+                ios_accept_.post(
+                    [this, ec = e.code()] {
+                        if (h_error_) h_error_(ec);
+                    }
+                );
+                return;
+            }
+        }
         do_accept();
     }
 
-    unsigned short port() const { return acceptor_.local_endpoint().port(); }
+    unsigned short port() const { return acceptor_.value().local_endpoint().port(); }
 
     void close() {
         close_request_ = true;
-        acceptor_.close();
+        acceptor_.reset();
     }
 
     void set_accept_handler(accept_handler h = accept_handler()) {
@@ -494,11 +597,12 @@ private:
 
     void do_accept() {
         if (close_request_) return;
-        acceptor_.async_accept(
+        acceptor_.value().async_accept(
             socket_->next_layer().next_layer(),
             [this]
             (boost::system::error_code const& ec) {
                 if (ec) {
+                    acceptor_.reset();
                     if (h_error_) h_error_(ec);
                     return;
                 }
@@ -507,6 +611,7 @@ private:
                     [this]
                     (boost::system::error_code ec) {
                         if (ec) {
+                            acceptor_.reset();
                             if (h_error_) h_error_(ec);
                             return;
                         }
@@ -519,10 +624,12 @@ private:
                             [this, sb, request]
                             (boost::system::error_code const& ec, std::size_t) {
                                 if (ec) {
+                                    acceptor_.reset();
                                     if (h_error_) h_error_(ec);
                                     return;
                                 }
                                 if (!boost::beast::websocket::is_upgrade(*request)) {
+                                    acceptor_.reset();
                                     if (h_error_) h_error_(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                                     return;
                                 }
@@ -538,6 +645,7 @@ private:
                                     [this]
                                     (boost::system::error_code const& ec) {
                                         if (ec) {
+                                            acceptor_.reset();
                                             if (h_error_) h_error_(ec);
                                             return;
                                         }
@@ -556,11 +664,13 @@ private:
     }
 
 private:
+    as::ip::tcp::endpoint ep_;
     as::io_service& ios_accept_;
     as::io_service& ios_con_;
-    as::ip::tcp::acceptor acceptor_;
+    mqtt::optional<as::ip::tcp::acceptor> acceptor_;
+    std::function<void(as::ip::tcp::acceptor&)> config_;
     std::unique_ptr<socket_t> socket_;
-    bool close_request_;
+    bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
     as::ssl::context ctx_;

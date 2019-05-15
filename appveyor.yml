@@ -1,13 +1,14 @@
-version: 3.0.0.{build}
+version: 4.0.0.{build}
 
 image: Visual Studio 2017
 
 environment:
   matrix:
-    - flags: -DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON
-    - flags: -DMQTT_NO_TLS=ON  -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=OFF
-    - flags: -DMQTT_NO_TLS=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON
-    - flags: -DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON
+    - flags: -DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF  -DMQTT_USE_STR_CHECK=ON   -DMQTT_TEST_1=ON  -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF
+    - flags: -DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON   -DMQTT_USE_STR_CHECK=ON   -DMQTT_TEST_1=OFF -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DBUILD_EXAMPLES=OFF
+    - flags: -DMQTT_NO_TLS=ON  -DMQTT_USE_WS=ON   -DMQTT_USE_STR_CHECK=ON   -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=ON  -DBUILD_EXAMPLES=OFF
+    - flags: -DMQTT_NO_TLS=ON  -DMQTT_USE_WS=OFF  -DMQTT_USE_STR_CHECK=OFF  -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=ON
+    - flags: -DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF  -DMQTT_USE_STR_CHECK=ON   -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=ON
 
 install:
 - git submodule update --init --recursive
@@ -15,7 +16,7 @@ install:
 build_script:
 - md build
 - cd build
-- cmake %flags% -DBoost_NO_SYSTEM_PATHS=ON -DBOOST_ROOT="C:/Libraries/boost_1_64_0" -DBOOST_INCLUDEDIR="C:/Libraries/boost_1_64_0/include" -DBOOST_LIBRARYDIR="C:/Libraries/boost_1_64_0/lib32-msvc-14.1" -DCMAKE_CXX_FLAGS="/IC:\Libraries\boost_1_64_0\include /EHsc" -DBoost_LIBRARY_DIRS=C:\Libraries\boost_1_64_0\stage\lib -DCMAKE_EXE_LINKER_FLAGS=/LIBPATH:C:\Libraries\boost_1_64_0\lib32-msvc-14.1 -DOPENSSL_ROOT_DIR="C:\OpenSSL-Win32" -DOPENSSL_INCLUDE_DIR="C:\OpenSSL-Win32\include" -DMQTT_OPENSSL_INCLUDE_DIR="C:\OpenSSL-Win32\include" ..
+- cmake %flags% -DBoost_NO_SYSTEM_PATHS=ON -DBOOST_ROOT="C:/Libraries/boost_1_64_0" -DBOOST_INCLUDEDIR="C:/Libraries/boost_1_64_0/include" -DBOOST_LIBRARYDIR="C:/Libraries/boost_1_64_0/lib32-msvc-14.1" -DCMAKE_CXX_FLAGS="/IC:\Libraries\boost_1_64_0\include /EHsc -D_WIN32_WINNT=0x0501" -DBoost_LIBRARY_DIRS=C:\Libraries\boost_1_64_0\stage\lib -DCMAKE_EXE_LINKER_FLAGS=/LIBPATH:C:\Libraries\boost_1_64_0\lib32-msvc-14.1 -DOPENSSL_ROOT_DIR="C:\OpenSSL-Win32" -DOPENSSL_INCLUDE_DIR="C:\OpenSSL-Win32\include" -DMQTT_OPENSSL_INCLUDE_DIR="C:\OpenSSL-Win32\include" ..
 - cmake --build . --config Release
 
 test_script:

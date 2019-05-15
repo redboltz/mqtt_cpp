@@ -40,10 +40,10 @@ inline constexpr bool has_user_name_flag(char v) {
 }
 
 inline void set_will_qos(char& v, std::size_t qos) {
-    v |= (qos & 0b00000011) << 3;
+    v |= static_cast<char>((qos & 0b00000011) << 3);
 }
 
-inline constexpr char will_qos(char v) {
+inline constexpr std::uint8_t will_qos(char v) {
     return (v & 0b00011000) >> 3;
 }
 

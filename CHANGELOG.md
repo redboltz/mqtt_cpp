@@ -1,3 +1,24 @@
+## 3.1.0
+* Fixed inefficient passed by value. (#174)
+* Fixed unsugscribe message packet id position for continuours buffer. (#167)
+* Fixed subscribe message remaining length buffer size. (#165)
+* Added broker example. (#164)
+* Improved CI. (#161)
+* Added 32bit packet id support. It is out of MQTT spec. (#160, #163, #166, #168)
+* Added store assertion to detect internal logic error. (#157)
+* Fixed life keeper storing timing. (#156, #159)
+* Added getter for handlers. (#155)
+* Fixed async write callback. (#154)
+* Fixed ambiguous function call on C++17 visit call. (#153)
+* Improved packet id allocating algorithm. (#152, #162)
+* Removed throwing exception when error on close happens. (#151)
+* Added re-listen support after listining socket closed. (#150)
+* Fixed string_view definition (#146)
+* Added string (UTF-8) checking. It is disabled by default. Define MQTT_USE_STR_CHECK to enable it. (#142, #143)
+* Improved documents (#141, #131, #172, #173)
+* Improved build mechanisim (#140, #147, #148, #170)
+* Added custom next mqtt message read handler setting mechanism (#139)
+
 ## 3.0.0
 * << Breaking change >> mqtt_cpp requires full C++14 feature.
 * Added boost::asio::const_buffer interface. User can use it as topic name and contents(payload).

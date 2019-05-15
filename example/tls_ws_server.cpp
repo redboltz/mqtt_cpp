@@ -8,12 +8,12 @@
 #include <iomanip>
 #include <set>
 
+#include <mqtt_server_cpp.hpp>
+
 #include <boost/lexical_cast.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/member.hpp>
-
-#include <mqtt_server_cpp.hpp>
 
 namespace mi = boost::multi_index;
 
@@ -92,6 +92,7 @@ int main(int argc, char** argv) {
 
     s.set_accept_handler(
         [&](con_t& ep) {
+            using packet_id_t = typename std::remove_reference_t<decltype(ep)>::packet_id_t;
             std::cout << "accept" << std::endl;
             auto sp = ep.shared_from_this();
             ep.start_session(
@@ -119,14 +120,14 @@ int main(int argc, char** argv) {
             ep.set_connect_handler(
                 [&]
                 (std::string const& client_id,
-                 boost::optional<std::string> const& username,
-                 boost::optional<std::string> const& password,
-                 boost::optional<mqtt::will>,
+                 mqtt::optional<std::string> const& username,
+                 mqtt::optional<std::string> const& password,
+                 mqtt::optional<mqtt::will>,
                  bool clean_session,
                  std::uint16_t keep_alive) {
                     std::cout << "client_id    : " << client_id << std::endl;
-                    std::cout << "username     : " << (username ? username.get() : "none") << std::endl;
-                    std::cout << "password     : " << (password ? password.get() : "none") << std::endl;
+                    std::cout << "username     : " << (username ? username.value() : "none") << std::endl;
+                    std::cout << "password     : " << (password ? password.value() : "none") << std::endl;
                     std::cout << "clean_session: " << std::boolalpha << clean_session << std::endl;
                     std::cout << "keep_alive   : " << keep_alive << std::endl;
                     connections.insert(ep.shared_from_this());
@@ -142,32 +143,32 @@ int main(int argc, char** argv) {
                 });
             ep.set_puback_handler(
                 [&]
-                (std::uint16_t packet_id){
+                (packet_id_t packet_id){
                     std::cout << "puback received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_pubrec_handler(
                 [&]
-                (std::uint16_t packet_id){
+                (packet_id_t packet_id){
                     std::cout << "pubrec received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_pubrel_handler(
                 [&]
-                (std::uint16_t packet_id){
+                (packet_id_t packet_id){
                     std::cout << "pubrel received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_pubcomp_handler(
                 [&]
-                (std::uint16_t packet_id){
+                (packet_id_t packet_id){
                     std::cout << "pubcomp received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_publish_handler(
                 [&]
                 (std::uint8_t header,
-                 boost::optional<std::uint16_t> packet_id,
+                 mqtt::optional<packet_id_t> packet_id,
                  std::string topic_name,
                  std::string contents){
                     std::uint8_t qos = mqtt::publish::get_qos(header);
@@ -194,7 +195,7 @@ int main(int argc, char** argv) {
                 });
             ep.set_subscribe_handler(
                 [&]
-                (std::uint16_t packet_id,
+                (packet_id_t packet_id,
                  std::vector<std::tuple<std::string, std::uint8_t>> entries) {
                     std::cout << "subscribe received. packet_id: " << packet_id << std::endl;
                     std::vector<std::uint8_t> res;
@@ -212,7 +213,7 @@ int main(int argc, char** argv) {
             );
             ep.set_unsubscribe_handler(
                 [&]
-                (std::uint16_t packet_id,
+                (packet_id_t packet_id,
                  std::vector<std::string> topics) {
                     std::cout << "unsubscribe received. packet_id: " << packet_id << std::endl;
                     for (auto const& topic : topics) {

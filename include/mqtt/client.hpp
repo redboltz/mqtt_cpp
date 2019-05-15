@@ -7,21 +7,16 @@
 #if !defined(MQTT_CLIENT_HPP)
 #define MQTT_CLIENT_HPP
 
+#include <mqtt/variant.hpp> // should be top to configure variant limit
+
 #include <string>
 #include <vector>
 #include <functional>
-#include <set>
-#include <memory>
 
-#include <boost/optional.hpp>
+#include <mqtt/optional.hpp>
+
 #include <boost/lexical_cast.hpp>
 #include <boost/asio.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/sequenced_index.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/multi_index/member.hpp>
-#include <boost/multi_index/composite_key.hpp>
 
 #if !defined(MQTT_NO_TLS)
 #include <boost/asio/ssl.hpp>
@@ -41,22 +36,24 @@ namespace mqtt {
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
-template <typename Socket>
-class client : public endpoint<Socket> {
-    using this_type = client<Socket>;
-    using base = endpoint<Socket>;
+template <typename Socket, std::size_t PacketIdBytes = 2>
+class client : public endpoint<Socket, std::mutex, std::lock_guard, PacketIdBytes> {
+    using this_type = client<Socket, PacketIdBytes>;
+    using base = endpoint<Socket, std::mutex, std::lock_guard, PacketIdBytes>;
+protected:
+    struct constructor_access{};
 public:
     using async_handler_t = typename base::async_handler_t;
     using close_handler = typename base::close_handler;
     using error_handler = typename base::error_handler;
-    using connack_handler = typename base::connack_handler;
-    using puback_handler = typename base::puback_handler;
-    using pubrec_handler = typename base::pubrec_handler;
-    using pubcomp_handler = typename base::pubcomp_handler;
-    using publish_handler = typename base::publish_handler;
-    using suback_handler = typename base::suback_handler;
-    using unsuback_handler = typename base::unsuback_handler;
-    using pingresp_handler = typename base::pingresp_handler;
+
+    /**
+     * Constructor used by factory functions at the end of this file.
+     */
+    template<typename ... Args>
+    client(constructor_access, Args && ... args)
+     : client(std::forward<Args>(args)...)
+    { }
 
     /**
      * @brief Create no tls client with strand.
@@ -66,7 +63,7 @@ public:
      * @return client object
      */
     friend std::shared_ptr<client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>>>
-    make_client(as::io_service& ios, std::string host, std::string port);
+    make_client(as::io_service& ios, std::string host, std::string port, protocol_version version);
 
     /**
      * @brief Create no tls client without strand.
@@ -76,7 +73,7 @@ public:
      * @return client object
      */
     friend std::shared_ptr<client<tcp_endpoint<as::ip::tcp::socket, null_strand>>>
-    make_client_no_strand(as::io_service& ios, std::string host, std::string port);
+    make_client_no_strand(as::io_service& ios, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
     /**
@@ -89,7 +86,7 @@ public:
      *  strand is controlled by ws_endpoint, not endpoint, so client has null_strand template argument.
      */
     friend std::shared_ptr<client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>>>
-    make_client_ws(as::io_service& ios, std::string host, std::string port, std::string path);
+    make_client_ws(as::io_service& ios, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
      * @brief Create no tls websocket client without strand.
@@ -100,7 +97,7 @@ public:
      * @return client object
      */
     friend std::shared_ptr<client<ws_endpoint<as::ip::tcp::socket, null_strand>>>
-    make_client_no_strand_ws(as::io_service& ios, std::string host, std::string port, std::string path);
+    make_client_no_strand_ws(as::io_service& ios, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 
 #if !defined(MQTT_NO_TLS)
@@ -112,7 +109,7 @@ public:
      * @return client object
      */
     friend std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>>
-    make_tls_client(as::io_service& ios, std::string host, std::string port);
+    make_tls_client(as::io_service& ios, std::string host, std::string port, protocol_version version);
 
     /**
      * @brief Create tls client without strand.
@@ -122,7 +119,7 @@ public:
      * @return client object
      */
     friend std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>
-    make_tls_client_no_strand(as::io_service& ios, std::string host, std::string port);
+    make_tls_client_no_strand(as::io_service& ios, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
     /**
@@ -135,7 +132,7 @@ public:
      *  strand is controlled by ws_endpoint, not endpoint, so client has null_strand template argument.
      */
     friend std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>>
-    make_tls_client_ws(as::io_service& ios, std::string host, std::string port, std::string path);
+    make_tls_client_ws(as::io_service& ios, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
      * @brief Create no tls websocket client without strand.
@@ -146,9 +143,176 @@ public:
      * @return client object
      */
     friend std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>
-    make_tls_client_no_strand_ws(as::io_service& ios, std::string host, std::string port, std::string path);
+    make_tls_client_no_strand_ws(as::io_service& ios, std::string host, std::string port, std::string path, protocol_version version);
+#endif // defined(MQTT_USE_WS)
+#endif // !defined(MQTT_NO_TLS)
+
+    /**
+     * @brief Create no tls client with strand.
+     * @param ios io_service object.
+     * @param host hostname
+     * @param port port number
+     * @return client object
+     */
+    friend std::shared_ptr<client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>>
+    make_client_32(as::io_service& ios, std::string host, std::string port, protocol_version version);
+
+    /**
+     * @brief Create no tls client without strand.
+     * @param ios io_service object.
+     * @param host hostname
+     * @param port port number
+     * @return client object
+     */
+    friend std::shared_ptr<client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>>
+    make_client_no_strand_32(as::io_service& ios, std::string host, std::string port, protocol_version version);
+
+#if defined(MQTT_USE_WS)
+    /**
+     * @brief Create no tls websocket client with strand.
+     * @param ios io_service object.
+     * @param host hostname
+     * @param port port number
+     * @param path path string
+     * @return client object.
+     *  strand is controlled by ws_endpoint, not endpoint, so client has null_strand template argument.
+     */
+    friend std::shared_ptr<client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>>
+    make_client_ws_32(as::io_service& ios, std::string host, std::string port, std::string path, protocol_version version);
+
+    /**
+     * @brief Create no tls websocket client without strand.
+     * @param ios io_service object.
+     * @param host hostname
+     * @param port port number
+     * @param path path string
+     * @return client object
+     */
+    friend std::shared_ptr<client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>>
+    make_client_no_strand_ws_32(as::io_service& ios, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 
+#if !defined(MQTT_NO_TLS)
+    /**
+     * @brief Create tls client with strand.
+     * @param ios io_service object.
+     * @param host hostname
+     * @param port port number
+     * @return client object
+     */
+    friend std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>>
+    make_tls_client_32(as::io_service& ios, std::string host, std::string port, protocol_version version);
+
+    /**
+     * @brief Create tls client without strand.
+     * @param ios io_service object.
+     * @param host hostname
+     * @param port port number
+     * @return client object
+     */
+    friend std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>
+    make_tls_client_no_strand_32(as::io_service& ios, std::string host, std::string port, protocol_version version);
+
+#if defined(MQTT_USE_WS)
+    /**
+     * @brief Create no tls websocket client with strand.
+     * @param ios io_service object.
+     * @param host hostname
+     * @param port port number
+     * @param path path string
+     * @return client object.
+     *  strand is controlled by ws_endpoint, not endpoint, so client has null_strand template argument.
+     */
+    friend std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>>
+    make_tls_client_ws_32(as::io_service& ios, std::string host, std::string port, std::string path, protocol_version version);
+
+    /**
+     * @brief Create no tls websocket client without strand.
+     * @param ios io_service object.
+     * @param host hostname
+     * @param port port number
+     * @param path path string
+     * @return client object
+     */
+    friend std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>
+    make_tls_client_no_strand_ws_32(as::io_service& ios, std::string host, std::string port, std::string path, protocol_version version);
+#endif // defined(MQTT_USE_WS)
+#endif // !defined(MQTT_NO_TLS)
+
+    /**
+     * @brief Set client id.
+     * @param id client id
+     *
+     * This function should be called before calling connect().<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
+     * 3.1.3.1 Client Identifier
+     */
+    void set_client_id(std::string id) {
+        client_id_ = std::move(id);
+    }
+
+    /**
+     * @brief Set clean session.
+     * @param cs clean session
+     *
+     * This function should be called before calling connect().<BR>
+     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349231<BR>
+     * 3.1.2.4 Clean Session<BR>
+     * After constructing a endpoint, the clean session is set to false.
+     */
+    void set_clean_session(bool cs) {
+        base::clean_session_ = cs;
+    }
+
+    /**
+     * @brief Set clean start.
+     * @param cs clean start
+     *
+     * This function should be called before calling connect().<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901039<BR>
+     * 3.1.2.4 Clean Start<BR>
+     * After constructing a endpoint, the clean start is set to false.
+     */
+    void set_clean_start(bool cs) {
+        set_clean_session(cs);
+    }
+
+    /**
+     * @brief Set username.
+     * @param name username
+     *
+     * This function should be called before calling connect().<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
+     * 3.1.3.5 User Name
+     */
+    void set_user_name(std::string name) {
+        user_name_ = std::move(name);
+    }
+
+    /**
+     * @brief Set password.
+     * @param password password
+     *
+     * This function should be called before calling connect().<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901072<BR>
+     * 3.1.3.6 Password
+     */
+    void set_password(std::string password) {
+        password_ = std::move(password);
+    }
+
+    /**
+     * @brief Set will.
+     * @param w will
+     *
+     * This function should be called before calling connect().<BR>
+     * 'will' would be send when endpoint is disconnected without calling disconnect().
+     */
+    void set_will(will w) {
+        will_ = std::move(w);
+    }
+
+#if !defined(MQTT_NO_TLS)
     /**
      * @brief Call boost::asio::context::set_default_verify_paths
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_default_verify_paths.html
@@ -226,7 +390,7 @@ public:
 #endif // !defined(MQTT_NO_TLS)
 
     /**
-     * @brief Set a keep alive second and a pimg milli seconds.
+     * @brief Set a keep alive second and a ping milli seconds.
      * @param keep_alive_sec keep alive seconds
      * @param ping_ms ping sending interval
      *
@@ -237,7 +401,7 @@ public:
      * When the broker receives a ping packet, timeout timer is reset.
      * If the broker doesn't receive a ping packet within keep_alive_sec, the endpoint
      * is disconnected.<BR>
-     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718030<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464635115<BR>
      * 3.1.2.10 Keep Alive
      */
     void set_keep_alive_sec_ping_ms(std::uint16_t keep_alive_sec, std::size_t ping_ms) {
@@ -249,12 +413,12 @@ public:
     }
 
     /**
-     * @brief Set a keep alive second and a pimg milli seconds.
+     * @brief Set a keep alive second and a ping milli seconds.
      * @param keep_alive_sec keep alive seconds
      *
      * Call set_keep_alive_sec_ping_ms(keep_alive_sec, keep_alive_sec * 1000 / 2)<BR>
      * ping_ms is set to a half of keep_alive_sec.<BR>
-     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718030<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464635115<BR>
      * 3.1.2.10 Keep Alive
      */
     void set_keep_alive_sec(std::uint16_t keep_alive_sec) {
@@ -266,7 +430,19 @@ public:
      * Before calling connect(), call set_xxx member functions to configure the connection.
      * @param func finish handler that is called when the session is finished
      */
-    void connect(async_handler_t const& func = async_handler_t()) {
+    void connect(async_handler_t func = async_handler_t()) {
+        connect(std::vector<v5::property_variant>{}, std::move(func));
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
+     * @param func finish handler that is called when the session is finished
+     */
+    void connect(std::vector<v5::property_variant> props, async_handler_t func = async_handler_t()) {
         as::ip::tcp::resolver r(ios_);
 #if BOOST_VERSION < 106600
         as::ip::tcp::resolver::query q(host_, port_);
@@ -278,7 +454,7 @@ public:
         auto end = eps.end();
 #endif // BOOST_VERSION < 106600
         setup_socket(base::socket());
-        connect_impl(*base::socket(), it, end, func);
+        connect_impl(*base::socket(), it, end, std::move(props), std::move(func));
     }
 
     /**
@@ -288,7 +464,21 @@ public:
      *               You can configure the socket prior to connect.
      * @param func finish handler that is called when the session is finished
      */
-    void connect(std::unique_ptr<Socket>&& socket, async_handler_t const& func = async_handler_t()) {
+    void connect(std::unique_ptr<Socket>&& socket, async_handler_t func = async_handler_t()) {
+        connect(std::move(socket), std::vector<v5::property_variant>{}, std::move(func));
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param socket The library uses the socket instead of internal generation.
+     *               You can configure the socket prior to connect.
+     * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
+     * @param func finish handler that is called when the session is finished
+     */
+    void connect(std::unique_ptr<Socket>&& socket, std::vector<v5::property_variant> props, async_handler_t func = async_handler_t()) {
         as::ip::tcp::resolver r(ios_);
 #if BOOST_VERSION < 106600
         as::ip::tcp::resolver::query q(host_, port_);
@@ -300,7 +490,7 @@ public:
         auto end = eps.end();
 #endif // BOOST_VERSION < 106600
         base::socket() = std::move(socket);
-        connect_impl(*base::socket(), it, end, func);
+        connect_impl(*base::socket(), it, end, std::move(props), std::move(func));
     }
 
     /**
@@ -308,10 +498,22 @@ public:
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
-     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
      * @param timeout after timeout elapsed, force_disconnect() is automatically called.
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
      */
-    void disconnect(boost::posix_time::time_duration const& timeout) {
+    void disconnect(
+        boost::posix_time::time_duration const& timeout,
+        mqtt::optional<std::uint8_t> reason_code = mqtt::nullopt,
+        std::vector<v5::property_variant> props = {}
+    ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
@@ -325,7 +527,7 @@ public:
                     }
                 }
             );
-            base::disconnect();
+            base::disconnect(reason_code, std::move(props));
         }
     }
 
@@ -334,12 +536,23 @@ public:
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
-     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>.
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
      */
-    void disconnect() {
+    void disconnect(
+        mqtt::optional<std::uint8_t> reason_code = mqtt::nullopt,
+        std::vector<v5::property_variant> props = {}
+    ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
-            base::disconnect();
+            base::disconnect(reason_code, std::move(props));
         }
     }
 
@@ -348,13 +561,13 @@ public:
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
-     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
      * @param timeout after timeout elapsed, force_disconnect() is automatically called.
      * @param func A callback function that is called when async operation will finish.
      */
     void async_disconnect(
         boost::posix_time::time_duration const& timeout,
-        async_handler_t const& func = async_handler_t()) {
+        async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
@@ -368,7 +581,7 @@ public:
                     }
                 }
             );
-            base::async_disconnect(func);
+            base::async_disconnect(std::move(func));
         }
     }
 
@@ -377,13 +590,79 @@ public:
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
-     * See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
+     * @param timeout after timeout elapsed, force_disconnect() is automatically called.
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
      * @param func A callback function that is called when async operation will finish.
      */
-    void async_disconnect(async_handler_t const& func = async_handler_t()) {
+    void async_disconnect(
+        boost::posix_time::time_duration const& timeout,
+        mqtt::optional<std::uint8_t> reason_code,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
-            base::async_disconnect(func);
+            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+            tim_close_.expires_from_now(timeout);
+            tim_close_.async_wait(
+                [wp](boost::system::error_code const& ec) {
+                    if (auto sp = wp.lock()) {
+                        if (!ec) {
+                            sp->force_disconnect();
+                        }
+                    }
+                }
+            );
+            base::async_disconnect(reason_code, std::move(props), std::move(func));
+        }
+    }
+
+    /**
+     * @brief Disconnect
+     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
+     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
+     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
+     * @param func A callback function that is called when async operation will finish.
+     */
+    void async_disconnect(
+        async_handler_t func = async_handler_t()) {
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (base::connected()) {
+            base::async_disconnect(std::move(func));
+        }
+    }
+
+    /**
+     * @brief Disconnect
+     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
+     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
+     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
+     * @param func A callback function that is called when async operation will finish.
+     */
+    void async_disconnect(
+        mqtt::optional<std::uint8_t> reason_code,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()) {
+        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (base::connected()) {
+            base::async_disconnect(reason_code, std::move(props), std::move(func));
         }
     }
 
@@ -414,28 +693,39 @@ public:
         h_error_ = std::move(h);
     }
 
-private:
+    /**
+     * @brief Get close handler
+     * @return handler
+     */
+    close_handler get_close_handler() const {
+        return h_close_;
+    }
+
+    /**
+     * @brief Get error handler
+     * @return handler
+     */
+    error_handler get_error_handler() const {
+        return h_error_;
+    }
+
+protected:
     client(as::io_service& ios,
            std::string host,
-           std::string port,
-           bool tls
+           std::string port
 #if defined(MQTT_USE_WS)
            ,
            std::string path = "/"
 #endif // defined(MQTT_USE_WS)
+           ,
+           protocol_version version = protocol_version::v3_1_1
     )
-        :ios_(ios),
+        :base(version),
+         ios_(ios),
          tim_ping_(ios_),
          tim_close_(ios_),
          host_(std::move(host)),
-         port_(std::move(port)),
-         tls_(tls),
-         keep_alive_sec_(0),
-         ping_duration_ms_(0)
-#if !defined(MQTT_NO_TLS)
-         ,
-         ctx_(as::ssl::context::tlsv12)
-#endif // !defined(MQTT_NO_TLS)
+         port_(std::move(port))
 #if defined(MQTT_USE_WS)
          ,
          path_(std::move(path))
@@ -446,6 +736,7 @@ private:
 #endif // !defined(MQTT_NO_TLS)
     }
 
+private:
     template <typename Strand>
     void setup_socket(std::unique_ptr<tcp_endpoint<as::ip::tcp::socket, Strand>>& socket) {
         socket.reset(new Socket(ios_));
@@ -476,25 +767,27 @@ private:
     template <typename Strand>
     void handshake_socket(
         tcp_endpoint<as::ip::tcp::socket, Strand>&,
-        async_handler_t const& func) {
-        base::async_read_control_packet_type(func);
-        base::connect(keep_alive_sec_);
+        std::vector<v5::property_variant> props,
+        async_handler_t func) {
+        base::async_read_control_packet_type(std::move(func));
+        base::connect(client_id_, user_name_, password_, will_, keep_alive_sec_, std::move(props));
     }
 
 #if defined(MQTT_USE_WS)
     template <typename Strand>
     void handshake_socket(
         ws_endpoint<as::ip::tcp::socket, Strand>& socket,
-        async_handler_t const& func) {
+        std::vector<v5::property_variant> props,
+        async_handler_t func) {
         auto self = this->shared_from_this();
         socket.async_handshake(
             host_,
             path_,
-            [this, self, func]
+            [this, self, func = std::move(func), props = std::move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
-                base::async_read_control_packet_type(func);
-                base::connect(keep_alive_sec_);
+                base::async_read_control_packet_type(std::move(func));
+                base::connect(client_id_, user_name_, password_, will_, keep_alive_sec_, std::move(props));
             });
     }
 #endif // defined(MQTT_USE_WS)
@@ -504,15 +797,16 @@ private:
     template <typename Strand>
     void handshake_socket(
         tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
-        async_handler_t const& func) {
+        std::vector<v5::property_variant> props,
+        async_handler_t func) {
         auto self = this->shared_from_this();
         socket.async_handshake(
             as::ssl::stream_base::client,
-            [this, self, func]
+            [this, self, func = std::move(func), props = std::move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
-                base::async_read_control_packet_type(func);
-                base::connect(keep_alive_sec_);
+                base::async_read_control_packet_type(std::move(func));
+                base::connect(client_id_, user_name_, password_, will_, keep_alive_sec_, std::move(props));
             });
     }
 
@@ -520,21 +814,22 @@ private:
     template <typename Strand>
     void handshake_socket(
         ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
-        async_handler_t const& func) {
+        std::vector<v5::property_variant> props,
+        async_handler_t func) {
         auto self = this->shared_from_this();
         socket.next_layer().async_handshake(
             as::ssl::stream_base::client,
-            [this, self, func, &socket]
+            [this, self, func = std::move(func), &socket, props = std::move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 socket.async_handshake(
                     host_,
                     path_,
-                    [this, self, func]
+                    [this, self, func = std::move(func), props = std::move(props)]
                     (boost::system::error_code const& ec) mutable {
                         if (base::handle_close_or_error(ec)) return;
-                        base::async_read_control_packet_type(func);
-                        base::connect(keep_alive_sec_);
+                        base::async_read_control_packet_type(std::move(func));
+                        base::connect(client_id_, user_name_, password_, will_, keep_alive_sec_, std::move(props));
                     });
             });
     }
@@ -543,11 +838,11 @@ private:
 #endif // defined(MQTT_NO_TLS)
 
     template <typename Iterator>
-    void connect_impl(Socket& socket, Iterator it, Iterator end, async_handler_t const& func = async_handler_t()) {
+    void connect_impl(Socket& socket, Iterator it, Iterator end, std::vector<v5::property_variant> props, async_handler_t func) {
         auto self = this->shared_from_this();
         as::async_connect(
             socket.lowest_layer(), it, end,
-            [this, self, &socket, func]
+            [this, self, &socket, func = std::move(func), props = std::move(props)]
             (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
                 base::set_close_handler([this](){ handle_close(); });
                 base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
@@ -566,7 +861,7 @@ private:
                     }
                 }
                 if (base::handle_close_or_error(ec)) return;
-                handshake_socket(socket, func);
+                handshake_socket(socket, std::move(props), std::move(func));
             });
     }
 
@@ -610,11 +905,14 @@ private:
     as::deadline_timer tim_close_;
     std::string host_;
     std::string port_;
-    bool tls_;
-    std::uint16_t keep_alive_sec_;
-    std::size_t ping_duration_ms_;
+    std::uint16_t keep_alive_sec_{0};
+    std::size_t ping_duration_ms_{0};
+    std::string client_id_;
+    mqtt::optional<will> will_;
+    mqtt::optional<std::string> user_name_;
+    mqtt::optional<std::string> password_;
 #if !defined(MQTT_NO_TLS)
-    as::ssl::context ctx_;
+    as::ssl::context ctx_{as::ssl::context::tlsv12};
 #endif // !defined(MQTT_NO_TLS)
     close_handler h_close_;
     error_handler h_error_;
@@ -624,79 +922,103 @@ private:
 };
 
 inline std::shared_ptr<client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>>>
-make_client(as::io_service& ios, std::string host, std::string port) {
-    struct impl : client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls)
-        : client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>>(ios, std::move(host), std::move(port), tls) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false);
+make_client(as::io_service& ios, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+#if defined(MQTT_USE_WS)
+        "/",
+#endif // defined(MQTT_USE_WS)
+        version
+    );
 }
 
 inline std::shared_ptr<client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>>>
-make_client(as::io_service& ios, std::string host, std::uint16_t port) {
-    return make_client(ios, std::move(host), boost::lexical_cast<std::string>(port));
+make_client(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+    return make_client(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        version
+    );
 }
 
 inline std::shared_ptr<client<tcp_endpoint<as::ip::tcp::socket, null_strand>>>
-make_client_no_strand(as::io_service& ios, std::string host, std::string port) {
-    struct impl : client<tcp_endpoint<as::ip::tcp::socket, null_strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls)
-        : client<tcp_endpoint<as::ip::tcp::socket, null_strand>>(ios, std::move(host), std::move(port), tls) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false);
+make_client_no_strand(as::io_service& ios, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<tcp_endpoint<as::ip::tcp::socket, null_strand>>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+#if defined(MQTT_USE_WS)
+        "/",
+#endif // defined(MQTT_USE_WS)
+        version
+    );
 }
 
 inline std::shared_ptr<client<tcp_endpoint<as::ip::tcp::socket, null_strand>>>
-make_client_no_strand(as::io_service& ios, std::string host, std::uint16_t port) {
-    return make_client_no_strand(ios, std::move(host), boost::lexical_cast<std::string>(port));
+make_client_no_strand(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+    return make_client_no_strand(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        version
+    );
 }
 
 #if defined(MQTT_USE_WS)
 
 inline std::shared_ptr<client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>>>
-make_client_ws(as::io_service& ios, std::string host, std::string port, std::string path = "/") {
-    struct impl : client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls,
-             std::string path)
-            :
-            client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>>
-            (ios, std::move(host), std::move(port), tls, std::move(path)) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false, std::move(path));
+make_client_ws(as::io_service& ios, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+        std::move(path),
+        version
+    );
 }
 
 inline std::shared_ptr<client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>>>
-make_client_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/") {
-    return make_client_ws(ios, std::move(host), boost::lexical_cast<std::string>(port), std::move(path));
+make_client_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    return make_client_ws(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        std::move(path),
+        version
+    );
 }
 
 inline std::shared_ptr<client<ws_endpoint<as::ip::tcp::socket, null_strand>>>
-make_client_no_strand_ws(as::io_service& ios, std::string host, std::string port, std::string path = "/") {
-    struct impl : client<ws_endpoint<as::ip::tcp::socket, null_strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls,
-             std::string path)
-            :
-            client<ws_endpoint<as::ip::tcp::socket, null_strand>>
-            (ios, std::move(host), std::move(port), tls, std::move(path)) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), false, std::move(path));
+make_client_no_strand_ws(as::io_service& ios, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<ws_endpoint<as::ip::tcp::socket, null_strand>>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+        std::move(path),
+        version
+    );
 }
 
 inline std::shared_ptr<client<ws_endpoint<as::ip::tcp::socket, null_strand>>>
-make_client_no_strand_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/") {
-    return make_client_no_strand_ws(ios, std::move(host), boost::lexical_cast<std::string>(port), std::move(path));
+make_client_no_strand_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    return make_client_no_strand_ws(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        std::move(path),
+        version
+    );
 }
 
 #endif // defined(MQTT_USE_WS)
@@ -704,80 +1026,314 @@ make_client_no_strand_ws(as::io_service& ios, std::string host, std::uint16_t po
 #if !defined(MQTT_NO_TLS)
 
 inline std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>>
-make_tls_client(as::io_service& ios, std::string host, std::string port) {
-    struct impl : client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls)
-        : client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>(ios, std::move(host), std::move(port), tls) {}
-    };
-    return std::make_shared<impl>
-        (std::ref(ios), std::move(host), std::move(port), true);
+make_tls_client(as::io_service& ios, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+#if defined(MQTT_USE_WS)
+        "/",
+#endif // defined(MQTT_USE_WS)
+        version
+    );
 }
 
 inline std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>>
-make_tls_client(as::io_service& ios, std::string host, std::uint16_t port) {
-    return make_tls_client(ios, std::move(host), boost::lexical_cast<std::string>(port));
+make_tls_client(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+    return make_tls_client(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        version
+    );
 }
 
 inline std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>
-make_tls_client_no_strand(as::io_service& ios, std::string host, std::string port) {
-    struct impl : client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls)
-        : client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>(ios, std::move(host), std::move(port), tls) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), true);
+make_tls_client_no_strand(as::io_service& ios, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+#if defined(MQTT_USE_WS)
+        "/",
+#endif // defined(MQTT_USE_WS)
+        version
+    );
 }
 
 inline std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>
-make_tls_client_no_strand(as::io_service& ios, std::string host, std::uint16_t port) {
-    return make_tls_client_no_strand(ios, std::move(host), boost::lexical_cast<std::string>(port));
+make_tls_client_no_strand(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+    return make_tls_client_no_strand(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        version
+    );
 }
 
 #if defined(MQTT_USE_WS)
 
 inline std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>>
-make_tls_client_ws(as::io_service& ios, std::string host, std::string port, std::string path = "/") {
-    struct impl : client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls,
-             std::string path)
-            :
-            client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>
-            (ios, std::move(host), std::move(port), tls, std::move(path)) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), true, std::move(path));
+make_tls_client_ws(as::io_service& ios, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+        std::move(path),
+        version
+    );
 }
 
 inline std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>>>
-make_tls_client_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/") {
-    return make_tls_client_ws(ios, std::move(host), boost::lexical_cast<std::string>(port), std::move(path));
+make_tls_client_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    return make_tls_client_ws(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        std::move(path),
+        version
+    );
 }
 
 inline std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>
-make_tls_client_no_strand_ws(as::io_service& ios, std::string host, std::string port, std::string path = "/") {
-    struct impl : client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>> {
-        impl(as::io_service& ios,
-             std::string host,
-             std::string port,
-             bool tls,
-             std::string path)
-            :
-            client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>
-            (ios, std::move(host), std::move(port), tls, std::move(path)) {}
-    };
-    return std::make_shared<impl>(std::ref(ios), std::move(host), std::move(port), true, std::move(path));
+make_tls_client_no_strand_ws(as::io_service& ios, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+        std::move(path),
+        version
+    );
 }
 
 inline std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>
-make_tls_client_no_strand_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/") {
-    return make_tls_client_no_strand_ws(ios, std::move(host), boost::lexical_cast<std::string>(port), std::move(path));
+make_tls_client_no_strand_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    return make_tls_client_no_strand_ws(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        std::move(path),
+        version
+    );
+}
+
+#endif // defined(MQTT_USE_WS)
+
+#endif // !defined(MQTT_NO_TLS)
+
+
+// 32bit Packet Id (experimental)
+
+inline std::shared_ptr<client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>>
+make_client_32(as::io_service& ios, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+#if defined(MQTT_USE_WS)
+        "/",
+#endif // defined(MQTT_USE_WS)
+        version
+    );
+}
+
+inline std::shared_ptr<client<tcp_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>>
+make_client_32(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+    return make_client_32(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        version
+    );
+}
+
+inline std::shared_ptr<client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>>
+make_client_no_strand_32(as::io_service& ios, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+#if defined(MQTT_USE_WS)
+        "/",
+#endif // defined(MQTT_USE_WS)
+        version
+    );
+}
+
+inline std::shared_ptr<client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>>
+make_client_no_strand_32(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+    return make_client_no_strand_32(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        version
+    );
+}
+
+#if defined(MQTT_USE_WS)
+
+inline std::shared_ptr<client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>>
+make_client_ws_32(as::io_service& ios, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+        std::move(path),
+        version
+    );
+}
+
+inline std::shared_ptr<client<ws_endpoint<as::ip::tcp::socket, as::io_service::strand>, 4>>
+make_client_ws_32(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    return make_client_ws_32(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        std::move(path),
+        version
+    );
+}
+
+inline std::shared_ptr<client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>>
+make_client_no_strand_ws_32(as::io_service& ios, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+        std::move(path),
+        version
+    );
+}
+
+inline std::shared_ptr<client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>>
+make_client_no_strand_ws_32(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    return make_client_no_strand_ws_32(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        std::move(path),
+        version
+    );
+}
+
+#endif // defined(MQTT_USE_WS)
+
+#if !defined(MQTT_NO_TLS)
+
+inline std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>>
+make_tls_client_32(as::io_service& ios, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+#if defined(MQTT_USE_WS)
+        "/",
+#endif // defined(MQTT_USE_WS)
+        version
+    );
+}
+
+inline std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>>
+make_tls_client_32(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+    return make_tls_client_32(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        version
+    );
+}
+
+inline std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>
+make_tls_client_no_strand_32(as::io_service& ios, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+#if defined(MQTT_USE_WS)
+        "/",
+#endif // defined(MQTT_USE_WS)
+        version
+    );
+}
+
+inline std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>
+make_tls_client_no_strand_32(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+    return make_tls_client_no_strand_32(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        version
+    );
+}
+
+#if defined(MQTT_USE_WS)
+
+inline std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>>
+make_tls_client_ws_32(as::io_service& ios, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+        std::move(path),
+        version
+    );
+}
+
+inline std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_service::strand>, 4>>
+make_tls_client_ws_32(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    return make_tls_client_ws_32(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        std::move(path),
+        version
+    );
+}
+
+inline std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>
+make_tls_client_no_strand_ws_32(as::io_service& ios, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    using client_t = client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>;
+    return std::make_shared<client_t>(
+        client_t::constructor_access(),
+        ios,
+        std::move(host),
+        std::move(port),
+        std::move(path),
+        version
+    );
+}
+
+inline std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>
+make_tls_client_no_strand_ws_32(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+    return make_tls_client_no_strand_ws_32(
+        ios,
+        std::move(host),
+        std::to_string(port),
+        std::move(path),
+        version
+    );
 }
 
 #endif // defined(MQTT_USE_WS)

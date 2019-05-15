@@ -10,6 +10,7 @@
 #include <string>
 
 #include <mqtt/qos.hpp>
+#include <mqtt/property_variant.hpp>
 
 namespace mqtt {
 
@@ -31,11 +32,13 @@ public:
     will(std::string topic,
          std::string message,
          bool retain,
-         std::uint8_t qos)
+         std::uint8_t qos,
+         std::vector<v5::property_variant> props = {})
         :topic_(std::move(topic)),
          message_(std::move(message)),
          retain_(retain),
-         qos_(qos)
+         qos_(qos),
+         props_(std::move(props))
     {}
 
     /**
@@ -51,8 +54,9 @@ public:
      */
     will(std::string topic,
          std::string message,
-         bool retain = false)
-        :will(std::move(topic), std::move(message), retain, qos::at_most_once)
+         bool retain = false,
+         std::vector<v5::property_variant> props = {})
+        :will(std::move(topic), std::move(message), retain, qos::at_most_once, std::move(props))
     {}
 
     /**
@@ -66,8 +70,9 @@ public:
      */
     will(std::string topic,
          std::string message,
-         std::uint8_t qos)
-        :will(std::move(topic), std::move(message), false, qos)
+         std::uint8_t qos,
+         std::vector<v5::property_variant> props = {})
+        :will(std::move(topic), std::move(message), false, qos, std::move(props))
     {}
     std::string const& topic() const {
         return topic_;
@@ -87,11 +92,19 @@ public:
     std::uint8_t qos() const {
         return qos_;
     }
+    std::vector<v5::property_variant> const& props() const {
+        return props_;
+    }
+    std::vector<v5::property_variant>& props() {
+        return props_;
+    }
+
 private:
     std::string topic_;
     std::string message_;
     bool retain_ = false;
     std::uint8_t qos_ = 0;
+    std::vector<v5::property_variant> props_;
 };
 
 } // namespace mqtt

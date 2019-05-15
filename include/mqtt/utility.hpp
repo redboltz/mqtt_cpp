@@ -8,86 +8,12 @@
 #define MQTT_UTILITY_HPP
 
 #include <utility>
-
-#if __cplusplus >= 201402L
-#define MQTT_CAPTURE_FORWARD(T, v) v = std::forward<T>(v)
-#define MQTT_CAPTURE_MOVE(v) v = std::move(v)
-#else
-#define MQTT_CAPTURE_FORWARD(T, v) v
-#define MQTT_CAPTURE_MOVE(v) v
-#endif
+#include <memory>
 
 #if __cplusplus >= 201402L
 #define MQTT_DEPRECATED(msg) [[deprecated(msg)]]
 #else  // __cplusplus >= 201402L
 #define MQTT_DEPRECATED(msg)
 #endif // __cplusplus >= 201402L
-
-
-// string_view
-
-#if __cplusplus >= 201703L
-
-#include <string_view>
-
-namespace mqtt {
-
-using string_view = std::string_view;
-
-template<class CharT, class Traits = std::char_traits<CharT>>
-using basic_string_view = std::basic_string_view<CharT, Traits>;
-
-} // namespace mqtt
-
-#else  // __cplusplus >= 201703L
-
-#include <boost/version.hpp>
-
-#if !defined(MQTT_NO_BOOST_STRING_VIEW)
-
-#if BOOST_VERSION >= 106400
-
-#define MQTT_NO_BOOST_STRING_VIEW 0
-
-#else  // BOOST_VERSION >= 106400
-
-#define MQTT_NO_BOOST_STRING_VIEW 1
-
-#endif // BOOST_VERSION >= 106400
-
-#endif // !defined(MQTT_NO_BOOST_STRING_VIEW)
-
-
-#if MQTT_NO_BOOST_STRING_VIEW
-
-#include <boost/utility/string_ref.hpp>
-
-#else  // MQTT_NO_BOOST_STRING_VIEW
-
-#include <boost/utility/string_view.hpp>
-
-#endif // MQTT_NO_BOOST_STRING_VIEW
-
-namespace mqtt {
-
-#if MQTT_NO_BOOST_STRING_VIEW
-
-using string_view = boost::string_ref;
-
-template<class CharT, class Traits = std::char_traits<CharT> >
-using basic_string_view = boost::basic_string_ref<CharT, Traits>;
-
-#else //  MQTT_NO_BOOST_STRING_VIEW
-
-using string_view = boost::string_view;
-
-template<class CharT, class Traits = std::char_traits<CharT> >
-using basic_string_view = boost::basic_string_view<CharT, Traits>;
-
-#endif // MQTT_NO_BOOST_STRING_VIEW
-
-} // namespace mqtt
-
-#endif // __cplusplus >= 201703L
 
 #endif // MQTT_UTILITY_HPP

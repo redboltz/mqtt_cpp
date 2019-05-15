@@ -13,6 +13,20 @@
 
 #else  // defined(MQTT_STD_VARIANT)
 
+
+#if defined(BOOST_MPL_LIMIT_LIST_SIZE)
+
+#if BOOST_MPL_LIMIT_LIST_SIZE < 40
+#error BOOST_MPL_LIMIT_LIST_SIZE need to greator or equal to 40
+#endif // BOOST_MPL_LIMIT_LIST_SIZE < 40
+
+#else  // defined(BOOST_MPL_LIMIT_LIST_SIZE)
+
+#define BOOST_MPL_CFG_NO_PREPROCESSED_HEADERS
+#define BOOST_MPL_LIMIT_LIST_SIZE 40
+
+#endif // defined(BOOST_MPL_LIMIT_LIST_SIZE)
+
 #include <boost/variant.hpp>
 #include <boost/variant/apply_visitor.hpp>
 
@@ -22,22 +36,16 @@ namespace mqtt {
 
 #if defined(MQTT_STD_VARIANT)
 
-template <typename... Types>
-using variant = std::variant<Types...>;
+using std::variant;
 
-template <typename Visitor, typename... Variants>
-constexpr auto visit(Visitor&& vis, Variants&&... vars) {
-    return std::visit(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
-}
+using std::visit;
 
 #else  // defined(MQTT_STD_VARIANT)
 
-template <typename... Types>
-using variant = boost::variant<Types...>;
+using boost::variant;
 
 template <typename Visitor, typename... Variants>
-constexpr auto visit(Visitor&& vis, Variants&&... vars)
-    -> decltype(boost::apply_visitor(std::forward<Visitor>(vis), std::forward<Variants>(vars)...))
+constexpr decltype(auto) visit(Visitor&& vis, Variants&&... vars)
 {
     return boost::apply_visitor(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
 }

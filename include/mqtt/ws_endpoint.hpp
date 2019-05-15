@@ -14,6 +14,7 @@
 #include <boost/beast/websocket.hpp>
 
 #include <mqtt/utility.hpp>
+#include <mqtt/string_view.hpp>
 
 namespace mqtt {
 
@@ -74,10 +75,13 @@ public:
 
     template<typename HandshakeHandler>
     void async_handshake(
-        boost::string_view const& host,
-        boost::string_view const& resource,
+        string_view const& host,
+        string_view const& resource,
         HandshakeHandler&& h) {
-        ws_.async_handshake(host, resource, std::forward<HandshakeHandler>(h));
+        ws_.async_handshake(
+            boost::beast::string_view(host.data(), host.size()),
+            boost::beast::string_view(resource.data(), resource.size()),
+            std::forward<HandshakeHandler>(h));
     }
 
     template <typename MutableBufferSequence, typename ReadHandler>
@@ -99,10 +103,10 @@ public:
 
         beast_read_handler.reset(
             new beast_read_handler_t(
-                [this, req_size, buffers, MQTT_CAPTURE_FORWARD(ReadHandler, handler)]
+                [this, req_size, buffers, handler = std::forward<ReadHandler>(handler)]
                 (boost::system::error_code const& ec, std::shared_ptr<void> const& v) mutable {
                     if (ec) {
-                        handler(ec, 0);
+                        std::forward<ReadHandler>(handler)(ec, 0);
                         return;
                     }
                     if (!ws_.got_binary()) {
@@ -126,7 +130,7 @@ public:
                     }
                     as::buffer_copy(buffers, buffer_.data(), req_size);
                     buffer_.consume(req_size);
-                    handler(boost::system::errc::make_error_code(boost::system::errc::success), req_size);
+                    std::forward<ReadHandler>(handler)(boost::system::errc::make_error_code(boost::system::errc::success), req_size);
                 }
             )
         );

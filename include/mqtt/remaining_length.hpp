@@ -7,52 +7,26 @@
 #if !defined(MQTT_REMAINING_LENGTH_HPP)
 #define MQTT_REMAINING_LENGTH_HPP
 
-#include <string>
-#include <mqtt/exception.hpp>
+#include <mqtt/variable_length.hpp>
 
 namespace mqtt {
 
 inline std::string
 remaining_bytes(std::size_t size) {
-    if (size > 0xfffffff) throw remaining_length_error();
-    std::string bytes;
-    while (size > 127) {
-        bytes.push_back((size & 0b01111111) | 0b10000000);
-        size >>= 7;
-    }
-    bytes.push_back(size & 0b01111111);
+    auto bytes = variable_bytes(size);
+    if (bytes.empty()) throw remaining_length_error();
     return bytes;
 }
 
 inline std::tuple<std::size_t, std::size_t>
 remaining_length(std::string const& bytes) {
-    std::size_t len = 0;
-    std::size_t mul = 1;
-    std::size_t consumed = 0;
-    for (auto b : bytes) {
-        len += (b & 0b01111111) * mul;
-        mul *= 128;
-        ++consumed;
-        if (mul > 128 * 128 * 128 * 128) return std::make_tuple(0, 0);
-        if (!(b & 0b10000000)) break;
-    }
-    return std::make_tuple(len, consumed);
+    return variable_length(bytes);
 }
 
 template <typename Iterator>
 inline std::tuple<std::size_t, std::size_t>
 remaining_length(Iterator b, Iterator e) {
-    std::size_t len = 0;
-    std::size_t mul = 1;
-    std::size_t consumed = 0;
-    for (; b != e; ++b) {
-        len += (*b & 0b01111111) * mul;
-        mul *= 128;
-        ++consumed;
-        if (mul > 128 * 128 * 128 * 128) return std::make_tuple(0, 0);
-        if (!(*b & 0b10000000)) break;
-    }
-    return std::make_tuple(len, consumed);
+    return variable_length(b, e);
 }
 
 } // namespace mqtt

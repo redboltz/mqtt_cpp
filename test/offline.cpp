@@ -6,433 +6,546 @@
 
 #include "test_main.hpp"
 #include "combi_test.hpp"
+#include "checker.hpp"
 
 BOOST_AUTO_TEST_SUITE(test_offline)
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
         std::uint16_t pid_pub;
 
-        int order = 0;
 
-        std::vector<std::string> const expected = {
+        checker chk = {
+            cont("start"),
             // connect
-            "h_connack1",
+            cont("h_connack1"),
             // disconnect
-            "h_close1",
+            cont("h_close1"),
             // publish topic1 QoS1
             // connect
-            "h_connack2",
-            "h_puback",
+            cont("h_connack2"),
+            cont("h_puback"),
             // disconnect
-            "h_close2",
-            "finish",
+            cont("h_close2"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
-        c->set_connack_handler(
-            [&order, &current, &c]
-            (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                switch (order) {
-                case 0: // clean session
-                    BOOST_TEST(current() == "h_connack1");
-                    ++order;
-                    BOOST_TEST(sp == false);
+        switch (c->get_protocol_version()) {
+        case mqtt::protocol_version::v3_1_1:
+            c->set_connack_handler(
+                [&chk, &c]
+                (bool sp, std::uint8_t connack_return_code) {
+                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == false);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_puback_handler(
+                [&chk, &c, &pid_pub]
+                (packet_id_t packet_id) {
+                    MQTT_CHK("h_puback");
+                    BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
-                    break;
-                case 2:
-                    BOOST_TEST(current() == "h_connack2");
-                    ++order;
-                    BOOST_TEST(sp == false);
-                    break;
-                default:
-                    BOOST_CHECK(false);
-                    break;
-                }
-                return true;
-            });
+                    return true;
+                });
+            break;
+        case mqtt::protocol_version::v5:
+            c->set_v5_connack_handler(
+                [&chk, &c]
+                (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
+                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == false);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_v5_puback_handler(
+                [&chk, &c, &pid_pub]
+                (packet_id_t packet_id, std::uint8_t /*reason*/, std::vector<mqtt::v5::property_variant> /*props*/) {
+                    MQTT_CHK("h_puback");
+                    BOOST_TEST(packet_id == pid_pub);
+                    c->disconnect();
+                    return true;
+                });
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+
         c->set_close_handler(
-            [&order, &current, &c, &pid_pub, &s]
+            [&chk, &c, &pid_pub, &s]
             () {
-                switch (order) {
-                case 1:
-                    BOOST_TEST(current() == "h_close1");
-                    ++order;
-                    // offline publish
-                    pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
-                    c->set_clean_session(false);
-                    c->connect();
-                    break;
-                case 4:
-                    BOOST_TEST(current() == "h_close2");
-                    ++order;
-                    s.close();
-                    break;
-                default:
-                    BOOST_CHECK(false);
-                    break;
-                }
+                auto ret = chk.match(
+                    "h_connack1",
+                    [&] {
+                        MQTT_CHK("h_close1");
+                        // offline publish
+                        pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
+                        c->set_clean_session(false);
+                        c->connect();
+                    },
+                    "h_puback",
+                    [&] {
+                        MQTT_CHK("h_close2");
+                        s.close();
+                    }
+                );
+                BOOST_TEST(ret);
             });
         c->set_error_handler(
             []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
-        c->set_puback_handler(
-            [&order, &current, &c, &pid_pub]
-            (std::uint16_t packet_id) {
-                BOOST_TEST(current() == "h_puback");
-                ++order;
-                BOOST_TEST(packet_id == pid_pub);
-                c->disconnect();
-                return true;
-            });
+        MQTT_CHK("start");
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
         std::uint16_t pid_pub;
 
-        int order = 0;
 
-        std::vector<std::string> const expected = {
+        checker chk = {
+            cont("start"),
             // connect
-            "h_connack1",
+            cont("h_connack1"),
             // disconnect
-            "h_close1",
+            cont("h_close1"),
             // publish topic1 QoS2
             // connect
-            "h_connack2",
-            "h_pubrec",
-            "h_pubcomp",
+            cont("h_connack2"),
+            cont("h_pubrec"),
+            cont("h_pubcomp"),
             // disconnect
-            "h_close2",
-            "finish",
+            cont("h_close2"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
-        c->set_connack_handler(
-            [&order, &current, &c]
-            (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                switch (order) {
-                case 0: // clean session
-                    BOOST_TEST(current() == "h_connack1");
-                    ++order;
-                    BOOST_TEST(sp == false);
+        switch (c->get_protocol_version()) {
+        case mqtt::protocol_version::v3_1_1:
+            c->set_connack_handler(
+                [&chk, &c]
+                (bool sp, std::uint8_t connack_return_code) {
+                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == false);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_pubrec_handler(
+                [&chk, &pid_pub]
+                (packet_id_t packet_id) {
+                    MQTT_CHK("h_pubrec");
+                    BOOST_TEST(packet_id == pid_pub);
+                    return true;
+                });
+            c->set_pubcomp_handler(
+                [&chk, &c, &pid_pub]
+                (packet_id_t packet_id) {
+                    MQTT_CHK("h_pubcomp");
+                    BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
-                    break;
-                case 2:
-                    BOOST_TEST(current() == "h_connack2");
-                    ++order;
-                    BOOST_TEST(sp == false);
-                    break;
-                default:
-                    BOOST_CHECK(false);
-                    break;
-                }
-                return true;
-            });
+                    return true;
+                });
+            break;
+        case mqtt::protocol_version::v5:
+            c->set_v5_connack_handler(
+                [&chk, &c]
+                (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
+                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == false);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_v5_pubrec_handler(
+                [&chk, &pid_pub]
+                (packet_id_t packet_id, std::uint8_t /*reason*/, std::vector<mqtt::v5::property_variant> /*props*/) {
+                    MQTT_CHK("h_pubrec");
+                    BOOST_TEST(packet_id == pid_pub);
+                    return true;
+                });
+            c->set_v5_pubcomp_handler(
+                [&chk, &c, &pid_pub]
+                (packet_id_t packet_id, std::uint8_t /*reason*/, std::vector<mqtt::v5::property_variant> /*props*/) {
+                    MQTT_CHK("h_pubcomp");
+                    BOOST_TEST(packet_id == pid_pub);
+                    c->disconnect();
+                    return true;
+                });
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+
         c->set_close_handler(
-            [&order, &current, &c, &pid_pub, &s]
+            [&chk, &c, &pid_pub, &s]
             () {
-                switch (order) {
-                case 1:
-                    BOOST_TEST(current() == "h_close1");
-                    ++order;
-                    // offline publish
-                    pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
-                    c->set_clean_session(false);
-                    c->connect();
-                    break;
-                case 5:
-                    BOOST_TEST(current() == "h_close2");
-                    ++order;
-                    s.close();
-                    break;
-                default:
-                    BOOST_CHECK(false);
-                    break;
-                }
+                auto ret = chk.match(
+                    "h_connack1",
+                    [&] {
+                        MQTT_CHK("h_close1");
+                        // offline publish
+                        pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
+                        c->set_clean_session(false);
+                        c->connect();
+                    },
+                    "h_pubcomp",
+                    [&] {
+                        MQTT_CHK("h_close2");
+                        s.close();
+                    }
+                );
+                BOOST_TEST(ret);
             });
         c->set_error_handler(
             []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
-        c->set_pubrec_handler(
-            [&order, &current, &pid_pub]
-            (std::uint16_t packet_id) {
-                BOOST_TEST(current() == "h_pubrec");
-                ++order;
-                BOOST_TEST(packet_id == pid_pub);
-                return true;
-            });
-        c->set_pubcomp_handler(
-            [&order, &current, &c, &pid_pub]
-            (std::uint16_t packet_id) {
-                BOOST_TEST(current() == "h_pubcomp");
-                ++order;
-                BOOST_TEST(packet_id == pid_pub);
-                c->disconnect();
-                return true;
-            });
+        MQTT_CHK("start");
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
         std::uint16_t pid_pub1;
         std::uint16_t pid_pub2;
 
-        int order = 0;
 
-        std::vector<std::string> const expected = {
+        checker chk = {
+            cont("start"),
             // connect
-            "h_connack1",
+            cont("h_connack1"),
             // disconnect
-            "h_close1",
+            cont("h_close1"),
             // publish topic1 QoS1
             // publish topic1 QoS1
             // connect
-            "h_connack2",
-            "h_puback1",
-            "h_puback2",
+            cont("h_connack2"),
+            cont("h_puback1"),
+            cont("h_puback2"),
             // disconnect
-            "h_close2",
-            "finish",
+            cont("h_close2"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
+        switch (c->get_protocol_version()) {
+        case mqtt::protocol_version::v3_1_1:
+            c->set_connack_handler(
+                [&chk, &c]
+                (bool sp, std::uint8_t connack_return_code) {
+                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == false);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_puback_handler(
+                [&chk, &c, &pid_pub1, &pid_pub2]
+                (packet_id_t packet_id) {
+                    auto ret = chk.match(
+                        "h_connack2",
+                        [&] {
+                            MQTT_CHK("h_puback1");
+                            BOOST_TEST(packet_id == pid_pub1);
+                        },
+                        "h_puback1",
+                        [&] {
+                            MQTT_CHK("h_puback2");
+                            BOOST_TEST(packet_id == pid_pub2);
+                            c->disconnect();
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            break;
+        case mqtt::protocol_version::v5:
+            c->set_v5_connack_handler(
+                [&chk, &c]
+                (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
+                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == false);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_v5_puback_handler(
+                [&chk, &c, &pid_pub1, &pid_pub2]
+                (packet_id_t packet_id, std::uint8_t /*reason*/, std::vector<mqtt::v5::property_variant> /*props*/) {
+                    auto ret = chk.match(
+                        "h_connack2",
+                        [&] {
+                            MQTT_CHK("h_puback1");
+                            BOOST_TEST(packet_id == pid_pub1);
+                        },
+                        "h_puback1",
+                        [&] {
+                            MQTT_CHK("h_puback2");
+                            BOOST_TEST(packet_id == pid_pub2);
+                            c->disconnect();
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
 
-        c->set_connack_handler(
-            [&order, &current, &c]
-            (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                switch (order) {
-                case 0: // clean session
-                    BOOST_TEST(current() == "h_connack1");
-                    ++order;
-                    BOOST_TEST(sp == false);
-                    c->disconnect();
-                    break;
-                case 2:
-                    BOOST_TEST(current() == "h_connack2");
-                    ++order;
-                    BOOST_TEST(sp == false);
-                    break;
-                default:
-                    BOOST_CHECK(false);
-                    break;
-                }
-                return true;
-            });
         c->set_close_handler(
-            [&order, &current, &c, &pid_pub1, &pid_pub2, &s]
+            [&chk, &c, &pid_pub1, &pid_pub2, &s]
             () {
-                switch (order) {
-                case 1:
-                    BOOST_TEST(current() == "h_close1");
-                    ++order;
-                    // offline publish
-                    pid_pub1 = c->publish_at_least_once(/*topic_base()*/ + "987/topic1", "topic1_contents1");
-                    pid_pub2 = c->publish_at_least_once(/*topic_base()*/ + "987/topic1", "topic1_contents2");
-                    c->set_clean_session(false);
-                    c->connect();
-                    break;
-                case 5:
-                    BOOST_TEST(current() == "h_close2");
-                    ++order;
-                    s.close();
-                    break;
-                default:
-                    BOOST_CHECK(false);
-                    break;
-                }
+                auto ret = chk.match(
+                    "h_connack1",
+                    [&] {
+                        MQTT_CHK("h_close1");
+                        // offline publish
+                        pid_pub1 = c->publish_at_least_once(/*topic_base()*/ + "987/topic1", "topic1_contents1");
+                        pid_pub2 = c->publish_at_least_once(/*topic_base()*/ + "987/topic1", "topic1_contents2");
+                        c->set_clean_session(false);
+                        c->connect();
+                    },
+                    "h_puback2",
+                    [&] {
+                        MQTT_CHK("h_close2");
+                        s.close();
+                    }
+                );
+                BOOST_TEST(ret);
             });
         c->set_error_handler(
             []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
-        c->set_puback_handler(
-            [&order, &current, &c, &pid_pub1, &pid_pub2]
-            (std::uint16_t packet_id) {
-                switch (order) {
-                case 3:
-                    BOOST_TEST(current() == "h_puback1");
-                    ++order;
-                    BOOST_TEST(packet_id == pid_pub1);
-                    break;
-                case 4:
-                    BOOST_TEST(current() == "h_puback2");
-                    ++order;
-                    BOOST_TEST(packet_id == pid_pub2);
-                    c->disconnect();
-                    break;
-                default:
-                    BOOST_CHECK(false);
-                }
-                return true;
-            });
+        MQTT_CHK("start");
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s) {
+    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
         std::uint16_t pid_pub;
 
-        int order = 0;
 
-        std::vector<std::string> const expected = {
+        checker chk = {
+            cont("start"),
             // connect
-            "h_connack1",
+            cont("h_connack1"),
             // disconnect
-            "h_close1",
+            cont("h_close1"),
             // publish topic1 QoS1
-            "h_pub_finish",
+            cont("h_pub_finish"),
             // connect
-            "h_connack2",
-            "h_puback",
+            cont("h_connack2"),
+            cont("h_puback"),
             // disconnect
-            "h_close2",
-            "finish",
+            cont("h_close2"),
         };
 
-        auto current =
-            [&order, &expected]() -> std::string {
-                try {
-                    return expected.at(order);
-                }
-                catch (std::out_of_range const& e) {
-                    return e.what();
-                }
-            };
-
-        c->set_connack_handler(
-            [&order, &current, &c]
-            (bool sp, std::uint8_t connack_return_code) {
-                BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                switch (order) {
-                case 0: // clean session
-                    BOOST_TEST(current() == "h_connack1");
-                    ++order;
-                    BOOST_TEST(sp == false);
-                    c->disconnect();
-                    break;
-                case 3:
-                    BOOST_TEST(current() == "h_connack2");
-                    ++order;
-                    BOOST_TEST(sp == false);
-                    break;
-                default:
-                    BOOST_CHECK(false);
-                    break;
-                }
-                return true;
-            });
-        c->set_close_handler(
-            [&order, &current, &c, &pid_pub, &s]
-            () {
-                switch (order) {
-                case 1:
-                    BOOST_TEST(current() == "h_close1");
-                    ++order;
-                    // offline publish
-                    pid_pub = c->async_publish_at_least_once(
-                        "topic1",
-                        "topic1_contents",
-                        false, // retain
-                        [&order, &current](boost::system::error_code const& ec){
-                            BOOST_TEST(ec == boost::system::errc::success);
-                            BOOST_TEST(current() == "h_pub_finish");
-                            ++order;
+        switch (c->get_protocol_version()) {
+        case mqtt::protocol_version::v3_1_1:
+            c->set_connack_handler(
+                [&chk, &c]
+                (bool sp, std::uint8_t connack_return_code) {
+                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->async_disconnect();
+                        },
+                        "h_pub_finish",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == false);
                         }
                     );
-                    c->set_clean_session(false);
-                    c->connect();
-                    break;
-                case 5:
-                    BOOST_TEST(current() == "h_close2");
-                    ++order;
-                    s.close();
-                    break;
-                default:
-                    BOOST_CHECK(false);
-                    break;
-                }
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_puback_handler(
+                [&chk, &c, &pid_pub]
+                (packet_id_t packet_id) {
+                    MQTT_CHK("h_puback");
+                    BOOST_TEST(packet_id == pid_pub);
+                    c->async_disconnect();
+                    return true;
+                });
+            break;
+        case mqtt::protocol_version::v5:
+            c->set_v5_connack_handler(
+                [&chk, &c]
+                (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
+                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->async_disconnect();
+                        },
+                        "h_pub_finish",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == false);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_v5_puback_handler(
+                [&chk, &c, &pid_pub]
+                (packet_id_t packet_id, std::uint8_t /*reason*/, std::vector<mqtt::v5::property_variant> /*props*/) {
+                    MQTT_CHK("h_puback");
+                    BOOST_TEST(packet_id == pid_pub);
+                    c->async_disconnect();
+                    return true;
+                });
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+
+        c->set_close_handler(
+            [&chk, &c, &pid_pub, &s]
+            () {
+                auto ret = chk.match(
+                    "h_connack1",
+                    [&] {
+                        MQTT_CHK("h_close1");
+                        // offline publish
+                        pid_pub = c->async_publish_at_least_once(
+                            "topic1",
+                            "topic1_contents",
+                            false, // retain
+                            [&chk](boost::system::error_code const& ec){
+                                BOOST_TEST(ec == boost::system::errc::success);
+                                MQTT_CHK("h_pub_finish");
+                            }
+                        );
+                        c->set_clean_session(false);
+                        c->connect();
+                    },
+                    "h_puback",
+                    [&] {
+                        MQTT_CHK("h_close2");
+                        s.close();
+                    }
+                );
+                BOOST_TEST(ret);
             });
         c->set_error_handler(
             []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
-        c->set_puback_handler(
-            [&order, &current, &c, &pid_pub]
-            (std::uint16_t packet_id) {
-                BOOST_TEST(current() == "h_puback");
-                ++order;
-                BOOST_TEST(packet_id == pid_pub);
-                c->disconnect();
-                return true;
-            });
+        MQTT_CHK("start");
         c->connect();
         ios.run();
-        BOOST_TEST(current() == "finish");
+        BOOST_TEST(chk.all());
     };
-    do_combi_test(test);
+    do_combi_test_async(test);
 }
 
 

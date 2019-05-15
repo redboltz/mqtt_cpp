@@ -1,12 +1,26 @@
-CMAKE_MINIMUM_REQUIRED (VERSION 2.8.6)
+CMAKE_MINIMUM_REQUIRED (VERSION 3.8.2)
 PROJECT (mqtt_cpp)
 
-OPTION(BUILD_EXAMPLES "enable building example applications" ON)
-OPTION(BUILD_TESTS "enable building test applications" ON)
+OPTION(BUILD_EXAMPLES "Enable building example applications" ON)
+OPTION(BUILD_TESTS "Enable building test applications" ON)
+OPTION(MQTT_USE_STATIC_BOOST "Statically link with boost libraries" OFF)
+OPTION(MQTT_NO_TLS "Disable building TLS code" ON)
+OPTION(MQTT_USE_WS "Enable building WebSockets code" OFF)
+OPTION(MQTT_USE_STR_CHECK "Enable UTF8 String check" ON)
+OPTION(MQTT_STD_VARIANT "Use std::variant from C++17 instead of boost::variant" OFF)
+OPTION(MQTT_STD_OPTIONAL "Use std::optional from C++17 instead of boost::optional" OFF)
+OPTION(MQTT_STD_STRING_VIEW "Use std::string_view from C++17 instead of boost::string_view" OFF)
+OPTION(MQTT_STD_ANY "Use std::any from C++17 instead of boost::any" OFF)
 
 IF ((CMAKE_VERSION VERSION_GREATER 3.1) OR
     (CMAKE_VERSION VERSION_EQUAL 3.1))
     CMAKE_POLICY(SET CMP0054 NEW)
+ENDIF ()
+
+IF (MQTT_USE_STATIC_BOOST)
+    SET (Boost_USE_STATIC_LIBS ON) # only find static libs
+ELSE ()
+    SET (Boost_USE_STATIC_LIBS OFF) # only find shared libs
 ENDIF ()
 
 IF (MQTT_NO_TLS)
@@ -31,15 +45,53 @@ ELSE ()
     MESSAGE (STATUS "UTF8String check disabled")
 ENDIF ()
 
+IF (MQTT_STD_VARIANT)
+    SET(CMAKE_CXX_STANDARD 17)
+    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+    MESSAGE (STATUS "Using std::variant instead of boost::variant. Enables C++17!!!")
+    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_VARIANT ${CMAKE_CXX_FLAGS}")
+ELSE ()
+    MESSAGE (STATUS "Using boost::variant instead of std::variant")
+ENDIF ()
+
+IF (MQTT_STD_OPTIONAL)
+    SET(CMAKE_CXX_STANDARD 17)
+    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+    MESSAGE (STATUS "Using std::optional instead of boost::optional. Enables C++17!!!")
+    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_OPTIONAL ${CMAKE_CXX_FLAGS}")
+ELSE ()
+    MESSAGE (STATUS "Using boost::optional instead of std::optional")
+ENDIF ()
+
+IF (MQTT_STD_STRING_VIEW)
+    SET(CMAKE_CXX_STANDARD 17)
+    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+    MESSAGE (STATUS "Using std::string_view instead of boost::string_view. Enables C++17!!!")
+    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_STRING_VIEW ${CMAKE_CXX_FLAGS}")
+ELSE ()
+    MESSAGE (STATUS "Using boost::string_view instead of std::string_view")
+ENDIF ()
+
+IF (MQTT_STD_ANY_VIEW)
+    SET(CMAKE_CXX_STANDARD 17)
+    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+    MESSAGE (STATUS "Using std::any instead of boost::any. Enables C++17!!!")
+    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_ANY ${CMAKE_CXX_FLAGS}")
+ELSE ()
+    MESSAGE (STATUS "Using boost::any instead of std::any")
+ENDIF ()
+
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     SET (CMAKE_CXX_FLAGS "/bigobj ${CMAKE_CXX_FLAGS}")
 ENDIF ()
 
-SET (Boost_USE_STATIC_LIBS        ON) # only find static libs
 SET (Boost_USE_MULTITHREADED      ON)
-#SET (Boost_USE_STATIC_RUNTIME    OFF)
 FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS chrono timer test_exec_monitor system)
 FIND_PACKAGE (Threads)
+
+IF(BUILD_TESTS)
+    FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS chrono timer unit_test_framework)
+ENDIF()
 
 IF (NOT MQTT_BEAST_INCLUDE_DIR)
     IF (${Boost_VERSION} LESS 106600)
@@ -55,7 +107,7 @@ INCLUDE_DIRECTORIES (
 
 IF (NOT MQTT_NO_TLS)
     INCLUDE_DIRECTORIES (
-        ${OpenSSL_INCLUDE_DIR}
+        ${OPENSSL_INCLUDE_DIR}
         ${MQTT_OPENSSL_INCLUDE_DIR}
     )
 ENDIF ()

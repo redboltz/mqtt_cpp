@@ -27,13 +27,13 @@ constexpr std::uint8_t const unsuback    = 11;
 constexpr std::uint8_t const pingreq     = 12;
 constexpr std::uint8_t const pingresp    = 13;
 constexpr std::uint8_t const disconnect  = 14;
- // reserved    = 15
+constexpr std::uint8_t const auth        = 15;
 
 } // namespace control_packet_type
 
 inline
-constexpr std::uint8_t get_control_packet_type(char v) {
-    return static_cast<std::uint8_t>(v) >> 4;
+constexpr std::uint8_t get_control_packet_type(std::uint8_t v) {
+    return static_cast<std::uint8_t>(v >> 4);
 }
 
 } // namespace mqtt

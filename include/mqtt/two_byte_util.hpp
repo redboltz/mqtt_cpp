@@ -26,11 +26,13 @@ inline void add_uint16_t_to_buf(T& buf, std::uint16_t num) {
 template <typename It>
 std::uint16_t make_uint16_t(It b, It e) {
     BOOST_ASSERT(std::distance(b, e) == 2);
-    auto b2 = b;
-    ++b2;
+    auto b1 = b++;
+    auto b2 = b++;
     return
-        (static_cast<std::uint16_t>(*b) & 0xff) << 8 |
-        (static_cast<std::uint16_t>(*b2) & 0xff);
+        static_cast<std::uint16_t>(
+            (static_cast<std::uint16_t>(*b1) & 0xff) << 8 |
+            (static_cast<std::uint16_t>(*b2) & 0xff)
+        );
 }
 
 } // namespace mqtt

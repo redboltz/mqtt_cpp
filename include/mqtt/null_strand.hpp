@@ -7,9 +7,9 @@
 #if !defined(MQTT_NULL_STRAND_HPP)
 #define MQTT_NULL_STRAND_HPP
 
-#include <boost/asio.hpp>
+#include <utility>
 
-#include <mqtt/utility.hpp>
+#include <boost/asio.hpp>
 
 namespace mqtt {
 
@@ -19,11 +19,11 @@ struct null_strand {
     null_strand(as::io_service& ios) : ios_(ios) {}
     template <typename Func>
     void post(Func&& f) {
-        ios_.post([MQTT_CAPTURE_FORWARD(Func, f)]{ f(); });
+        ios_.post([f = std::forward<Func>(f)] () mutable { std::forward<Func>(f)(); });
     }
     template <typename Func>
     void dispatch(Func&& f) {
-        f();
+        std::forward<Func>(f)();
     }
     template <typename Func>
     Func wrap(Func&& f) {
