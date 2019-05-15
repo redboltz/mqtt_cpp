@@ -9,10 +9,6 @@ add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME} INTERFACE Boost::system Threads::Threads)
 
-IF(!MQTT_NO_TLS)
-    target_link_libraries(${PROJECT_NAME} INTERFACE Boost::ssl)
-ENDIF()
-
 set(ROOT_INCLUDE_TARGET include)
 set(ROOT_MQTT_TARGET include/mqtt)
 
