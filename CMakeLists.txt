@@ -86,11 +86,15 @@ IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 ENDIF ()
 
 SET (Boost_USE_MULTITHREADED      ON)
-FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS chrono timer test_exec_monitor system)
+FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS system)
 FIND_PACKAGE (Threads)
 
 IF(BUILD_TESTS)
-    FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS chrono timer unit_test_framework)
+    FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS chrono timer test_exec_monitor unit_test_framework)
+ENDIF()
+
+IF(!MQTT_NO_TLS)
+    FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS ssl)
 ENDIF()
 
 IF (NOT MQTT_BEAST_INCLUDE_DIR)

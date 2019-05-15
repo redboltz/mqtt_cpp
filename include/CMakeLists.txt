@@ -9,6 +9,10 @@ add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME} INTERFACE Boost::system Threads::Threads)
 
+IF(!MQTT_NO_TLS)
+    target_link_libraries(${PROJECT_NAME} INTERFACE Boost::ssl)
+ENDIF()
+
 set(ROOT_INCLUDE_TARGET include)
 set(ROOT_MQTT_TARGET include/mqtt)
 
@@ -49,6 +53,11 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
   DESTINATION
     ${INSTALL_CONFIGDIR}
 )
+
+target_compile_definitions(${PROJECT_NAME} INTERFACE
+    -DBOOST_MPL_CFG_NO_PREPROCESSED_HEADERS
+    -DBOOST_MPL_LIMIT_LIST_SIZE=40
+    )
 
 IF (MQTT_NO_TLS)
     target_compile_definitions(${PROJECT_NAME} INTERFACE MQTT_NO_TLS)
