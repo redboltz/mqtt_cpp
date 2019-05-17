@@ -331,6 +331,23 @@ public:
         ctx_.load_verify_file(std::move(file));
     }
 
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+
+    /**
+     * @brief Set ssl keylog callback function.
+     * The 2nd parameter of the callback function contains SSLKEYLOGFILE debugging output.
+     * It can be used for decrypt TLS packet.
+     * @param cb callback function
+     * See https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_keylog_callback.html
+     * See https://wiki.wireshark.org/SSL
+     */
+    void set_ssl_keylog_callback(void (*cb)(SSL const* ssl, char const* line)) {
+        SSL_CTX* ssl_ctx = ctx_.native_handle();
+        SSL_CTX_set_keylog_callback(ssl_ctx, cb);
+    }
+
+#endif // OPENSSL_VERSION_NUMBER >= 0x10101000L
+
     /**
      * @brief Call boost::asio::context::add_verify_path
      * @param path the path contains ca cert files
@@ -897,7 +914,6 @@ private:
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (h_error_) h_error_(ec);
     }
-
 
 private:
     as::io_service& ios_;

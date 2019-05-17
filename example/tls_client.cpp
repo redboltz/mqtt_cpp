@@ -39,6 +39,16 @@ int main(int argc, char** argv) {
     c->set_clean_session(true);
     c->set_ca_cert_file(cacert);
 
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+
+    c->set_ssl_keylog_callback(
+        [](SSL const*, char const* line) {
+            std::cout << line << std::endl;
+        }
+    );
+
+#endif // OPENSSL_VERSION_NUMBER >= 0x10101000L
+
     // Setup handlers
     c->set_connack_handler(
         [&c, &pid_sub1, &pid_sub2]
