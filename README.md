@@ -2,6 +2,8 @@
 
 Version 4.0.0 [![Build Status](https://travis-ci.org/redboltz/mqtt_cpp.svg?branch=master)](https://travis-ci.org/redboltz/mqtt_cpp) [![Build status](https://ci.appveyor.com/api/projects/status/21a267hd34s0kqu5/branch/master?svg=true)](https://ci.appveyor.com/project/redboltz/mqtt-client-cpp/branch/master)
 
+[MQTT v5 is supported](https://github.com/redboltz/mqtt_cpp/wiki/MQTT-v5) since version 4.0.0.
+
 ## Overview
 
 mqtt_cpp is a header only library. It requires C++14 and the Boost Libraries 1.57.0 or later (See [#33](https://github.com/redboltz/mqtt_cpp/issues/33)).
