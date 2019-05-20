@@ -168,12 +168,12 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
     s.set_accept_handler(
         [&](con_t& ep) {
             using packet_id_t = typename std::remove_reference_t<decltype(ep)>::packet_id_t;
-            std::cout << "[server]accept" << std::endl;
+            std::cout << "[server] accept" << std::endl;
             auto sp = ep.shared_from_this();
             ep.start_session(
                 [&, sp] // keeping ep's lifetime as sp until session finished
                 (boost::system::error_code const& ec) {
-                    std::cout << "[server]session end: " << ec.message() << std::endl;
+                    std::cout << "[server] session end: " << ec.message() << std::endl;
                     s.close();
                 }
             );
@@ -182,13 +182,13 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
             ep.set_close_handler(
                 [&]
                 (){
-                    std::cout << "[server]closed." << std::endl;
+                    std::cout << "[server] closed." << std::endl;
                     close_proc(connections, subs, ep.shared_from_this());
                 });
             ep.set_error_handler(
                 [&]
                 (boost::system::error_code const& ec){
-                    std::cout << "[server]error: " << ec.message() << std::endl;
+                    std::cout << "[server] error: " << ec.message() << std::endl;
                     close_proc(connections, subs, ep.shared_from_this());
                 });
 
@@ -201,11 +201,11 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                  mqtt::optional<mqtt::will>,
                  bool clean_session,
                  std::uint16_t keep_alive) {
-                    std::cout << "[server]client_id    : " << client_id << std::endl;
-                    std::cout << "[server]username     : " << (username ? username.value() : "none") << std::endl;
-                    std::cout << "[server]password     : " << (password ? password.value() : "none") << std::endl;
-                    std::cout << "[server]clean_session: " << std::boolalpha << clean_session << std::endl;
-                    std::cout << "[server]keep_alive   : " << keep_alive << std::endl;
+                    std::cout << "[server] client_id    : " << client_id << std::endl;
+                    std::cout << "[server] username     : " << (username ? username.value() : "none") << std::endl;
+                    std::cout << "[server] password     : " << (password ? password.value() : "none") << std::endl;
+                    std::cout << "[server] clean_session: " << std::boolalpha << clean_session << std::endl;
+                    std::cout << "[server] keep_alive   : " << keep_alive << std::endl;
                     connections.insert(ep.shared_from_this());
                     ep.connack(false, mqtt::connect_return_code::accepted);
                     return true;
@@ -214,31 +214,31 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
             ep.set_disconnect_handler(
                 [&]
                 (){
-                    std::cout << "[server]disconnect received." << std::endl;
+                    std::cout << "[server] disconnect received." << std::endl;
                     close_proc(connections, subs, ep.shared_from_this());
                 });
             ep.set_puback_handler(
                 [&]
                 (packet_id_t packet_id){
-                    std::cout << "[server]puback received. packet_id: " << packet_id << std::endl;
+                    std::cout << "[server] puback received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_pubrec_handler(
                 [&]
                 (packet_id_t packet_id){
-                    std::cout << "[server]pubrec received. packet_id: " << packet_id << std::endl;
+                    std::cout << "[server] pubrec received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_pubrel_handler(
                 [&]
                 (packet_id_t packet_id){
-                    std::cout << "[server]pubrel received. packet_id: " << packet_id << std::endl;
+                    std::cout << "[server] pubrel received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_pubcomp_handler(
                 [&]
                 (packet_id_t packet_id){
-                    std::cout << "[server]pubcomp received. packet_id: " << packet_id << std::endl;
+                    std::cout << "[server] pubcomp received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_publish_handler(
@@ -249,14 +249,14 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                  std::string contents){
                     std::uint8_t qos = mqtt::publish::get_qos(header);
                     bool retain = mqtt::publish::is_retain(header);
-                    std::cout << "[server]publish received."
+                    std::cout << "[server] publish received."
                               << " dup: " << std::boolalpha << mqtt::publish::is_dup(header)
                               << " qos: " << mqtt::qos::to_str(qos)
                               << " retain: " << retain << std::endl;
                     if (packet_id)
-                        std::cout << "[server]packet_id: " << *packet_id << std::endl;
-                    std::cout << "[server]topic_name: " << topic_name << std::endl;
-                    std::cout << "[server]contents: " << contents << std::endl;
+                        std::cout << "[server] packet_id: " << *packet_id << std::endl;
+                    std::cout << "[server] topic_name: " << topic_name << std::endl;
+                    std::cout << "[server] contents: " << contents << std::endl;
                     auto const& idx = subs.get<tag_topic>();
                     auto r = idx.equal_range(topic_name);
                     for (; r.first != r.second; ++r.first) {
@@ -273,13 +273,13 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 [&]
                 (packet_id_t packet_id,
                  std::vector<std::tuple<std::string, std::uint8_t>> entries) {
-                    std::cout << "[server]subscribe received. packet_id: " << packet_id << std::endl;
+                    std::cout << "[server] subscribe received. packet_id: " << packet_id << std::endl;
                     std::vector<std::uint8_t> res;
                     res.reserve(entries.size());
                     for (auto const& e : entries) {
                         std::string const& topic = std::get<0>(e);
                         std::uint8_t qos = std::get<1>(e);
-                        std::cout << "[server]topic: " << topic  << " qos: " << static_cast<int>(qos) << std::endl;
+                        std::cout << "[server] topic: " << topic  << " qos: " << static_cast<int>(qos) << std::endl;
                         res.emplace_back(qos);
                         subs.emplace(topic, ep.shared_from_this(), qos);
                     }
@@ -291,7 +291,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 [&]
                 (packet_id_t packet_id,
                  std::vector<std::string> topics) {
-                    std::cout << "[server]unsubscribe received. packet_id: " << packet_id << std::endl;
+                    std::cout << "[server] unsubscribe received. packet_id: " << packet_id << std::endl;
                     for (auto const& topic : topics) {
                         subs.erase(topic);
                     }
