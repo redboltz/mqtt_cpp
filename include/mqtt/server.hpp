@@ -39,6 +39,11 @@ class server {
 public:
     using socket_t = tcp_endpoint<as::ip::tcp::socket, Strand>;
     using endpoint_t = endpoint<socket_t, Mutex, LockGuard, PacketIdBytes>;
+
+    /**
+     * @brief Accept handler
+     * @param ep endpoint of the connecting client
+     */
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -121,6 +126,17 @@ public:
         h_error_ = std::move(h);
     }
 
+    /**
+     * @brief Set MQTT protocol version
+     * @param version accepting protocol version
+     * If the specific version is set, only set version is accepted.
+     * If the version is set to protocol_version::undetermined, all versions are accepted.
+     * Initial value is protocol_version::undetermined.
+     */
+    void set_protocol_version(protocol_version version) {
+        version_ = version;
+    }
+
 private:
     void renew_socket() {
         socket_.reset(new socket_t(ios_con_));
@@ -137,7 +153,7 @@ private:
                     if (h_error_) h_error_(ec);
                     return;
                 }
-                auto sp = std::make_shared<endpoint_t>(std::move(socket_));
+                auto sp = std::make_shared<endpoint_t>(std::move(socket_), version_);
                 if (h_accept_) h_accept_(*sp);
                 renew_socket();
                 do_accept();
@@ -155,6 +171,7 @@ private:
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
+    mqtt::protocol_version version_ = protocol_version::undetermined;
 };
 
 #if !defined(MQTT_NO_TLS)
@@ -169,6 +186,11 @@ class server_tls {
 public:
     using socket_t = tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
     using endpoint_t = endpoint<socket_t, Mutex, LockGuard, PacketIdBytes>;
+
+    /**
+     * @brief Accept handler
+     * @param ep endpoint of the connecting client
+     */
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -256,6 +278,17 @@ public:
         h_error_ = std::move(h);
     }
 
+    /**
+     * @brief Set MQTT protocol version
+     * @param version accepting protocol version
+     * If the specific version is set, only set version is accepted.
+     * If the version is set to protocol_version::undetermined, all versions are accepted.
+     * Initial value is protocol_version::undetermined.
+     */
+    void set_protocol_version(protocol_version version) {
+        version_ = version;
+    }
+
 private:
     void renew_socket() {
         socket_.reset(new socket_t(ios_con_, ctx_));
@@ -281,7 +314,7 @@ private:
                             if (h_error_) h_error_(ec);
                             return;
                         }
-                        auto sp = std::make_shared<endpoint_t>(std::move(socket_));
+                        auto sp = std::make_shared<endpoint_t>(std::move(socket_), version_);
                         if (h_accept_) h_accept_(*sp);
                         renew_socket();
                         do_accept();
@@ -302,6 +335,7 @@ private:
     accept_handler h_accept_;
     error_handler h_error_;
     as::ssl::context ctx_;
+    mqtt::protocol_version version_ = protocol_version::undetermined;
 };
 
 #endif // !defined(MQTT_NO_TLS)
@@ -333,6 +367,11 @@ class server_ws {
 public:
     using socket_t = ws_endpoint<as::ip::tcp::socket, Strand>;
     using endpoint_t = endpoint<socket_t, Mutex, LockGuard, PacketIdBytes>;
+
+    /**
+     * @brief Accept handler
+     * @param ep endpoint of the connecting client
+     */
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -415,6 +454,17 @@ public:
         h_error_ = std::move(h);
     }
 
+    /**
+     * @brief Set MQTT protocol version
+     * @param version accepting protocol version
+     * If the specific version is set, only set version is accepted.
+     * If the version is set to protocol_version::undetermined, all versions are accepted.
+     * Initial value is protocol_version::undetermined.
+     */
+    void set_protocol_version(protocol_version version) {
+        version_ = version;
+    }
+
 private:
     void renew_socket() {
         socket_.reset(new socket_t(ios_con_));
@@ -465,7 +515,7 @@ private:
                                     if (h_error_) h_error_(ec);
                                     return;
                                 }
-                                auto sp = std::make_shared<endpoint_t>(std::move(socket_));
+                                auto sp = std::make_shared<endpoint_t>(std::move(socket_), version_);
                                 if (h_accept_) h_accept_(*sp);
                                 renew_socket();
                                 do_accept();
@@ -487,6 +537,7 @@ private:
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
+    mqtt::protocol_version version_ = protocol_version::undetermined;
 };
 
 
@@ -503,6 +554,10 @@ public:
     using socket_t = mqtt::ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
     using endpoint_t = endpoint<socket_t, Mutex, LockGuard, PacketIdBytes>;
 
+    /**
+     * @brief Accept handler
+     * @param ep endpoint of the connecting client
+     */
     using accept_handler = std::function<void(endpoint_t& ep)>;
 
     /**
@@ -590,6 +645,17 @@ public:
         h_error_ = std::move(h);
     }
 
+    /**
+     * @brief Set MQTT protocol version
+     * @param version accepting protocol version
+     * If the specific version is set, only set version is accepted.
+     * If the version is set to protocol_version::undetermined, all versions are accepted.
+     * Initial value is protocol_version::undetermined.
+     */
+    void set_protocol_version(protocol_version version) {
+        version_ = version;
+    }
+
 private:
     void renew_socket() {
         socket_.reset(new socket_t(ios_con_, ctx_));
@@ -649,7 +715,7 @@ private:
                                             if (h_error_) h_error_(ec);
                                             return;
                                         }
-                                        auto sp = std::make_shared<endpoint_t>(std::move(socket_));
+                                        auto sp = std::make_shared<endpoint_t>(std::move(socket_), version_);
                                         if (h_accept_) h_accept_(*sp);
                                         renew_socket();
                                         do_accept();
@@ -674,6 +740,7 @@ private:
     accept_handler h_accept_;
     error_handler h_error_;
     as::ssl::context ctx_;
+    mqtt::protocol_version version_ = protocol_version::undetermined;
 };
 
 #endif // !defined(MQTT_NO_TLS)
