@@ -279,6 +279,7 @@ struct variable_property {
 
 class payload_format_indicator : public detail::n_bytes_property<1> {
 public:
+    using recv = payload_format_indicator;
     enum payload_format {
         binary,
         string
@@ -303,6 +304,7 @@ public:
 
 class message_expiry_interval : public detail::n_bytes_property<4> {
 public:
+    using recv = message_expiry_interval;
     message_expiry_interval(std::uint32_t val)
         : detail::n_bytes_property<4>(id::message_expiry_interval, { MQTT_32BITNUM_TO_BYTE_SEQ(val) } ) {}
 
@@ -315,50 +317,58 @@ public:
     }
 };
 
-class content_type : public detail::string_property {
-public:
-    content_type(string_view type)
-        : detail::string_property(id::content_type, type) {}
-};
-
 class content_type_ref : public detail::string_property_ref {
 public:
+    using recv = content_type_ref;
     content_type_ref(string_view type)
         : detail::string_property_ref(id::content_type, type) {}
 };
 
-class response_topic : public detail::string_property {
+class content_type : public detail::string_property {
 public:
-    response_topic(string_view type)
-        : detail::string_property(id::response_topic, type) {}
+    using recv = content_type_ref;
+    content_type(string_view type)
+        : detail::string_property(id::content_type, type) {}
 };
 
 class response_topic_ref : public detail::string_property_ref {
 public:
+    using recv = response_topic_ref;
     response_topic_ref(string_view type)
         : detail::string_property_ref(id::response_topic, type) {}
 };
 
-class correlation_data : public detail::string_property {
+class response_topic : public detail::string_property {
 public:
-    correlation_data(string_view type)
-        : detail::string_property(id::correlation_data, type) {}
+    using recv = response_topic_ref;
+    response_topic(string_view type)
+        : detail::string_property(id::response_topic, type) {}
 };
 
 class correlation_data_ref : public detail::string_property_ref {
 public:
+    using recv = correlation_data_ref;
     correlation_data_ref(string_view type)
         : detail::string_property_ref(id::correlation_data, type) {}
 };
 
+class correlation_data : public detail::string_property {
+public:
+    using recv = correlation_data_ref;
+    correlation_data(string_view type)
+        : detail::string_property(id::correlation_data, type) {}
+};
+
 class subscription_identifier : public detail::variable_property {
 public:
+    using recv = subscription_identifier;
     subscription_identifier(std::size_t subscription_id)
         : detail::variable_property(id::subscription_identifier, subscription_id) {}
 };
 
 class session_expiry_interval : public detail::n_bytes_property<4> {
 public:
+    using recv = session_expiry_interval;
     session_expiry_interval(std::uint32_t val)
         : detail::n_bytes_property<4>(id::session_expiry_interval, { MQTT_32BITNUM_TO_BYTE_SEQ(val) } ) {}
 
@@ -371,20 +381,23 @@ public:
     }
 };
 
-class assigned_client_identifier : public detail::string_property {
-public:
-    assigned_client_identifier(string_view type)
-        : detail::string_property(id::assigned_client_identifier, type) {}
-};
-
 class assigned_client_identifier_ref : public detail::string_property_ref {
 public:
+    using recv = assigned_client_identifier_ref;
     assigned_client_identifier_ref(string_view type)
         : detail::string_property_ref(id::assigned_client_identifier, type) {}
 };
 
+class assigned_client_identifier : public detail::string_property {
+public:
+    using recv = assigned_client_identifier_ref;
+    assigned_client_identifier(string_view type)
+        : detail::string_property(id::assigned_client_identifier, type) {}
+};
+
 class server_keep_alive : public detail::n_bytes_property<2> {
 public:
+    using recv = server_keep_alive;
     server_keep_alive(std::uint16_t val)
         : detail::n_bytes_property<2>(id::server_keep_alive, { MQTT_16BITNUM_TO_BYTE_SEQ(val) } ) {}
 
@@ -397,32 +410,37 @@ public:
     }
 };
 
-class authentication_method : public detail::string_property {
-public:
-    authentication_method(string_view type)
-        : detail::string_property(id::authentication_method, type) {}
-};
-
 class authentication_method_ref : public detail::string_property_ref {
 public:
+    using recv = authentication_method_ref;
     authentication_method_ref(string_view type)
         : detail::string_property_ref(id::authentication_method, type) {}
 };
 
-class authentication_data : public detail::binary_property {
+class authentication_method : public detail::string_property {
 public:
-    authentication_data(string_view type)
-        : detail::binary_property(id::authentication_data, type) {}
+    using recv = authentication_method_ref;
+    authentication_method(string_view type)
+        : detail::string_property(id::authentication_method, type) {}
 };
 
 class authentication_data_ref : public detail::binary_property_ref {
 public:
+    using recv = authentication_data_ref;
     authentication_data_ref(string_view type)
         : detail::binary_property_ref(id::authentication_data, type) {}
 };
 
+class authentication_data : public detail::binary_property {
+public:
+    using recv = authentication_data_ref;
+    authentication_data(string_view type)
+        : detail::binary_property(id::authentication_data, type) {}
+};
+
 class request_problem_information : public detail::n_bytes_property<1> {
 public:
+    using recv = request_problem_information;
     request_problem_information(bool value)
         : detail::n_bytes_property<1>(id::request_problem_information, { value ? char(1) : char(0) } ) {}
 
@@ -437,6 +455,7 @@ public:
 
 class will_delay_interval : public detail::n_bytes_property<4> {
 public:
+    using recv = will_delay_interval;
     will_delay_interval(std::uint32_t val)
         : detail::n_bytes_property<4>(id::will_delay_interval, { MQTT_32BITNUM_TO_BYTE_SEQ(val) } ) {}
 
@@ -451,6 +470,7 @@ public:
 
 class request_response_information : public detail::n_bytes_property<1> {
 public:
+    using recv = request_response_information;
     request_response_information(bool value)
         : detail::n_bytes_property<1>(id::request_response_information, { value ? char(1) : char(0) } ) {}
 
@@ -463,44 +483,51 @@ public:
     }
 };
 
-class response_information : public detail::string_property {
-public:
-    response_information(string_view type)
-        : detail::string_property(id::response_information, type) {}
-};
-
 class response_information_ref : public detail::string_property_ref {
 public:
+    using recv = response_information_ref;
     response_information_ref(string_view type)
         : detail::string_property_ref(id::response_information, type) {}
 };
 
-class server_reference : public detail::string_property {
+class response_information : public detail::string_property {
 public:
-    server_reference(string_view type)
-        : detail::string_property(id::server_reference, type) {}
+    using recv = response_information_ref;
+    response_information(string_view type)
+        : detail::string_property(id::response_information, type) {}
 };
 
 class server_reference_ref : public detail::string_property_ref {
 public:
+    using recv = server_reference_ref;
     server_reference_ref(string_view type)
         : detail::string_property_ref(id::server_reference, type) {}
 };
 
-class reason_string : public detail::string_property {
+class server_reference : public detail::string_property {
 public:
-    reason_string(string_view type)
-        : detail::string_property(id::reason_string, type) {}
+    using recv = server_reference_ref;
+    server_reference(string_view type)
+        : detail::string_property(id::server_reference, type) {}
 };
 
 class reason_string_ref : public detail::string_property_ref {
 public:
+    using recv = reason_string_ref;
     reason_string_ref(string_view type)
         : detail::string_property_ref(id::reason_string, type) {}
 };
 
+class reason_string : public detail::string_property {
+public:
+    using recv = reason_string_ref;
+    reason_string(string_view type)
+        : detail::string_property(id::reason_string, type) {}
+};
+
 class receive_maximum : public detail::n_bytes_property<2> {
 public:
+    using recv = receive_maximum;
     receive_maximum(std::uint16_t val)
         : detail::n_bytes_property<2>(id::receive_maximum, { MQTT_16BITNUM_TO_BYTE_SEQ(val) } ) {}
 
@@ -515,6 +542,7 @@ public:
 
 class topic_alias_maximum : public detail::n_bytes_property<2> {
 public:
+    using recv = topic_alias_maximum;
     topic_alias_maximum(std::uint16_t val)
         : detail::n_bytes_property<2>(id::topic_alias_maximum, { MQTT_16BITNUM_TO_BYTE_SEQ(val) } ) {}
 
@@ -529,6 +557,7 @@ public:
 
 class topic_alias : public detail::n_bytes_property<2> {
 public:
+    using recv = topic_alias;
     topic_alias(std::uint16_t val)
         : detail::n_bytes_property<2>(id::topic_alias, { MQTT_16BITNUM_TO_BYTE_SEQ(val) } ) {}
 
@@ -543,6 +572,7 @@ public:
 
 class maximum_qos : public detail::n_bytes_property<1> {
 public:
+    using recv = maximum_qos;
     maximum_qos(std::uint8_t qos)
         : detail::n_bytes_property<1>(id::maximum_qos, { static_cast<char>(qos) } ) {
         if (qos != qos::at_most_once &&
@@ -561,6 +591,7 @@ public:
 
 class retain_available : public detail::n_bytes_property<1> {
 public:
+    using recv = retain_available;
     retain_available(bool value)
         : detail::n_bytes_property<1>(id::retain_available, { value ? char(1) : char(0) } ) {}
 
@@ -573,105 +604,12 @@ public:
     }
 };
 
-class user_property {
-    struct len_str {
-        explicit len_str(string_view v)
-            : len{MQTT_16BITNUM_TO_BYTE_SEQ(v.size())}
-            , str(v.data(), v.size())
-        {}
-        std::size_t size() const {
-            return len.size() + str.size();
-        }
-        boost::container::static_vector<char, 2> len;
-        std::string str;
-    };
-public:
-    user_property(string_view key, string_view val)
-        : key_(key), val_(val) {}
-
-    /**
-     * @brief Add const buffer sequence into the given buffer.
-     * @param v buffer to add
-     */
-    void add_const_buffer_sequence(std::vector<as::const_buffer>& v) const {
-        v.emplace_back(as::buffer(&id_, 1));
-        v.emplace_back(as::buffer(key_.len.data(), key_.len.size()));
-        v.emplace_back(as::buffer(key_.str.data(), key_.str.size()));
-        v.emplace_back(as::buffer(val_.len.data(), val_.len.size()));
-        v.emplace_back(as::buffer(val_.str.data(), val_.str.size()));
-    }
-
-    template <typename It>
-    void fill(It b, It e) const {
-        BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
-
-        *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
-        {
-            std::copy(key_.len.begin(), key_.len.end(), b);
-            b += static_cast<typename It::difference_type>(key_.len.size());
-            auto ptr = key_.str.data();
-            auto size = key_.str.size();
-            std::copy(ptr, ptr + size, b);
-            b += static_cast<typename It::difference_type>(size);
-        }
-        {
-            std::copy(val_.len.begin(), val_.len.end(), b);
-            b += static_cast<typename It::difference_type>(val_.len.size());
-            auto ptr = val_.str.data();
-            auto size = val_.str.size();
-            std::copy(ptr, ptr + size, b);
-            b += static_cast<typename It::difference_type>(size);
-        }
-    }
-
-    /**
-     * @brief Get whole size of sequence
-     * @return whole size
-     */
-    std::size_t size() const {
-        return
-            1 + // id_
-            key_.size() +
-            val_.size();
-    }
-
-    /**
-     * @brief Get number of element of const_buffer_sequence
-     * @return number of element of const_buffer_sequence
-     */
-    std::size_t num_of_const_buffer_sequence() const {
-        return
-            1 + // header
-            2 + // key (len, str)
-            2;  // val (len, str)
-    }
-
-    string_view key() const {
-        return key_.str;
-    }
-
-    string_view val() const {
-        return val_.str;
-    }
-
-private:
-    property::id id_ = id::user_property;
-    len_str key_;
-    len_str val_;
-};
-
 class user_property_ref {
     struct len_str {
         explicit len_str(string_view v)
             : len{MQTT_16BITNUM_TO_BYTE_SEQ(v.size())}
             , str(as::buffer(v.data(), v.size()))
         {}
-#if 0
-        explicit len_str(as::const_buffer v)
-            : len{MQTT_16BITNUM_TO_BYTE_SEQ(get_size(v))}
-            , str(v)
-        {}
-#endif
         std::size_t size() const {
             return len.size() + get_size(str);
         }
@@ -679,6 +617,7 @@ class user_property_ref {
         as::const_buffer str;
     };
 public:
+    using recv = user_property_ref;
     user_property_ref(string_view key, string_view val)
         : key_(key), val_(val) {}
 
@@ -753,8 +692,97 @@ private:
     len_str val_;
 };
 
+class user_property {
+    struct len_str {
+        explicit len_str(string_view v)
+            : len{MQTT_16BITNUM_TO_BYTE_SEQ(v.size())}
+            , str(v.data(), v.size())
+        {}
+        std::size_t size() const {
+            return len.size() + str.size();
+        }
+        boost::container::static_vector<char, 2> len;
+        std::string str;
+    };
+public:
+    using recv = user_property_ref;
+    user_property(string_view key, string_view val)
+        : key_(key), val_(val) {}
+
+    /**
+     * @brief Add const buffer sequence into the given buffer.
+     * @param v buffer to add
+     */
+    void add_const_buffer_sequence(std::vector<as::const_buffer>& v) const {
+        v.emplace_back(as::buffer(&id_, 1));
+        v.emplace_back(as::buffer(key_.len.data(), key_.len.size()));
+        v.emplace_back(as::buffer(key_.str.data(), key_.str.size()));
+        v.emplace_back(as::buffer(val_.len.data(), val_.len.size()));
+        v.emplace_back(as::buffer(val_.str.data(), val_.str.size()));
+    }
+
+    template <typename It>
+    void fill(It b, It e) const {
+        BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
+
+        *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
+        {
+            std::copy(key_.len.begin(), key_.len.end(), b);
+            b += static_cast<typename It::difference_type>(key_.len.size());
+            auto ptr = key_.str.data();
+            auto size = key_.str.size();
+            std::copy(ptr, ptr + size, b);
+            b += static_cast<typename It::difference_type>(size);
+        }
+        {
+            std::copy(val_.len.begin(), val_.len.end(), b);
+            b += static_cast<typename It::difference_type>(val_.len.size());
+            auto ptr = val_.str.data();
+            auto size = val_.str.size();
+            std::copy(ptr, ptr + size, b);
+            b += static_cast<typename It::difference_type>(size);
+        }
+    }
+
+    /**
+     * @brief Get whole size of sequence
+     * @return whole size
+     */
+    std::size_t size() const {
+        return
+            1 + // id_
+            key_.size() +
+            val_.size();
+    }
+
+    /**
+     * @brief Get number of element of const_buffer_sequence
+     * @return number of element of const_buffer_sequence
+     */
+    std::size_t num_of_const_buffer_sequence() const {
+        return
+            1 + // header
+            2 + // key (len, str)
+            2;  // val (len, str)
+    }
+
+    string_view key() const {
+        return key_.str;
+    }
+
+    string_view val() const {
+        return val_.str;
+    }
+
+private:
+    property::id id_ = id::user_property;
+    len_str key_;
+    len_str val_;
+};
+
 class maximum_packet_size : public detail::n_bytes_property<4> {
 public:
+    using recv = maximum_packet_size;
     maximum_packet_size(std::uint32_t val)
         : detail::n_bytes_property<4>(id::maximum_packet_size, { MQTT_32BITNUM_TO_BYTE_SEQ(val) } ) {}
 
@@ -769,6 +797,7 @@ public:
 
 class wildcard_subscription_available : public detail::n_bytes_property<1> {
 public:
+    using recv = wildcard_subscription_available;
     wildcard_subscription_available(bool value)
         : detail::n_bytes_property<1>(id::wildcard_subscription_available, { value ? char(1) : char(0) } ) {}
 
@@ -783,6 +812,7 @@ public:
 
 class subscription_identifier_available : public detail::n_bytes_property<1> {
 public:
+    using recv = subscription_identifier_available;
     subscription_identifier_available(bool value)
         : detail::n_bytes_property<1>(id::subscription_identifier_available, { value ? char(1) : char(0) } ) {}
 
@@ -797,6 +827,7 @@ public:
 
 class shared_subscription_available : public detail::n_bytes_property<1> {
 public:
+    using recv = shared_subscription_available;
     shared_subscription_available(bool value)
         : detail::n_bytes_property<1>(id::shared_subscription_available, { value ? char(1) : char(0) } ) {}
 
