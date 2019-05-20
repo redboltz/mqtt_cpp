@@ -23,4 +23,5 @@
 #include <mqtt/str_connect_return_code.hpp>
 #include <mqtt/str_qos.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
+#include <mqtt/visitor_util.hpp>
 #include <mqtt/will.hpp>
