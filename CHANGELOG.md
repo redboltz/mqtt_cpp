@@ -1,3 +1,20 @@
+## 4.0.0
+* Added getting ssl keylog callback for debugging. (#256)
+* Fixed re-listen logic for servers. Now we can re-listen after accept is failed. (#252, #254)
+* Fixed restore lifetime management to avoid accessing memory after destroyed (#251)
+* Removed BOOST_ASSERT checking in the case that actually happens if invalid message is received (#249, #250)
+* Added MQTT v5 support (#226, #245, #257, #258, #259)
+* Added connection overwrite behavior on `test_broker` (#210)
+* Added `async_client` and `sync_client` to avoid misusing async and sync APIs. `client` is still remained that can use both sync and async APIs. (#208)
+* Added concatenating `const_buffer` functionality on asynchronous packet sending (#207)
+* Improved documents (#198, #214, #219, #229, #235)
+* Added switching option between `std` and `boost` (#188, #209)
+* Improved build mechanisim (#184, #201, #253)
+* Code refactoring (#183, #189, #190, #193, #195, #197, #199, #202, #203, #211, #215, #216, #220, #227, #234, #236, #238, #239, #240, #242)
+* Support configure time switches for using std::varient or std::optional instead of the boost versions (#182)
+* Allow inheriting classes to construct mqtt::client (#181)
+* <<<< Breaking change >> Replaced fixed_header type from `char` to `std::uint8_t`. Fixed `-Wconversion` warnings. See https://github.com/redboltz/mqtt_cpp/pull/180/files (#180)
+
 ## 3.1.0
 * Fixed inefficient passed by value. (#174)
 * Fixed unsugscribe message packet id position for continuours buffer. (#167)
