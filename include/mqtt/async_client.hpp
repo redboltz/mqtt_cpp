@@ -267,6 +267,7 @@ protected:
            version
     ) {
         set_auto_pub_response();
+        base::set_async_pingreq();
     }
 };
 
