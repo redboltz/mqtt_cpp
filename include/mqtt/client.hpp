@@ -726,6 +726,14 @@ public:
         return h_error_;
     }
 
+    /**
+     * @brief Set pingreq message sending mode
+     * @param b If true then send pingreq asynchronously, otherwise send synchronously.
+     */
+    void set_async_pingreq(bool b) {
+        async_pingreq_ = b;
+    }
+
 protected:
     client(as::io_service& ios,
            std::string host,
@@ -884,7 +892,12 @@ private:
 
     void handle_timer(boost::system::error_code const& ec) {
         if (!ec) {
-            base::pingreq();
+            if (async_pingreq_) {
+                base::async_pingreq();
+            }
+            else {
+                base::pingreq();
+            }
         }
     }
 
@@ -927,6 +940,7 @@ private:
     mqtt::optional<will> will_;
     mqtt::optional<std::string> user_name_;
     mqtt::optional<std::string> password_;
+    bool async_pingreq_ = false;
 #if !defined(MQTT_NO_TLS)
     as::ssl::context ctx_{as::ssl::context::tlsv12};
 #endif // !defined(MQTT_NO_TLS)
