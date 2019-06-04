@@ -730,7 +730,7 @@ public:
      * @brief Set pingreq message sending mode
      * @param b If true then send pingreq asynchronously, otherwise send synchronously.
      */
-    void set_async_pingreq(bool b = false) {
+    void set_async_pingreq(bool b) {
         async_pingreq_ = b;
     }
 
