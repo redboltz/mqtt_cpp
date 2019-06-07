@@ -1,6 +1,6 @@
 # MQTT client/server for C++14 based on Boost.Asio
 
-Version 4.0.0 [![Build Status](https://travis-ci.org/redboltz/mqtt_cpp.svg?branch=master)](https://travis-ci.org/redboltz/mqtt_cpp) [![Build status](https://ci.appveyor.com/api/projects/status/21a267hd34s0kqu5/branch/master?svg=true)](https://ci.appveyor.com/project/redboltz/mqtt-client-cpp/branch/master)
+Version 4.0.0 [![Build Status](https://travis-ci.org/redboltz/mqtt_cpp.svg?branch=master)](https://travis-ci.org/redboltz/mqtt_cpp)[![Build Status](https://dev.azure.com/redboltz/redboltz/_apis/build/status/redboltz.abp_mqtt_cpp_test?branchName=master)](https://dev.azure.com/redboltz/redboltz/_build/latest?definitionId=5&branchName=master)
 
 [MQTT v5 is supported](https://github.com/redboltz/mqtt_cpp/wiki/MQTT-v5) since version 4.0.0.
 

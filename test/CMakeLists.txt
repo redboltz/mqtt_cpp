@@ -9,41 +9,65 @@ CMAKE_MINIMUM_REQUIRED (VERSION 3.8.2)
 OPTION(MQTT_TEST_1 "Build test part1" ON)
 OPTION(MQTT_TEST_2 "Build test part2" ON)
 OPTION(MQTT_TEST_3 "Build test part3" ON)
+OPTION(MQTT_TEST_3 "Build test part4" ON)
+OPTION(MQTT_TEST_3 "Build test part5" ON)
+OPTION(MQTT_TEST_3 "Build test part6" ON)
+OPTION(MQTT_TEST_3 "Build test part7" ON)
 
 IF (MQTT_TEST_1)
     LIST (APPEND check_PROGRAMS
         connect.cpp
-        pubsub.cpp
-        async_pubsub_1.cpp
-        async_pubsub_2.cpp
-        pubsub_no_strand.cpp
-        remaining_length.cpp
-        multi_sub.cpp
     )
 ENDIF ()
 
 IF (MQTT_TEST_2)
     LIST (APPEND check_PROGRAMS
-        resend.cpp
-        resend_serialize.cpp
-        resend_serialize_ptr_size.cpp
-        offline.cpp
-        manual_publish.cpp
-        retain.cpp
-        will.cpp
         length_check.cpp
+        utf8string_validate.cpp
+        packet_id.cpp
+        remaining_length.cpp
     )
 ENDIF ()
 
 IF (MQTT_TEST_3)
     LIST (APPEND check_PROGRAMS
         sub.cpp
+        pubsub.cpp
+        pubsub_no_strand.cpp
+        multi_sub.cpp
+    )
+ENDIF ()
+
+IF (MQTT_TEST_4)
+    LIST (APPEND check_PROGRAMS
+        async_pubsub_1.cpp
+        async_pubsub_2.cpp
+    )
+ENDIF ()
+
+IF (MQTT_TEST_5)
+    LIST (APPEND check_PROGRAMS
+        resend.cpp
+        resend_serialize.cpp
+        resend_serialize_ptr_size.cpp
+    )
+ENDIF ()
+
+IF (MQTT_TEST_6)
+    LIST (APPEND check_PROGRAMS
+        offline.cpp
+        manual_publish.cpp
+        retain.cpp
+        will.cpp
+    )
+ENDIF ()
+
+IF (MQTT_TEST_7)
+    LIST (APPEND check_PROGRAMS
         as_buffer_sub.cpp
         as_buffer_pubsub.cpp
         as_buffer_async_pubsub_1.cpp
         as_buffer_async_pubsub_2.cpp
-        utf8string_validate.cpp
-        packet_id.cpp
     )
 ENDIF ()
 
@@ -87,7 +111,7 @@ FOREACH (source_file ${check_PROGRAMS})
 ENDFOREACH ()
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../test/certs/mosquitto.org.crt DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release)
+   FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../test/certs/mosquitto.org.crt DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release)
    FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../test/certs/server.crt.pem DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release)
    FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../test/certs/server.key.pem DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release)
    FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../test/certs/cacert.pem DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release)
