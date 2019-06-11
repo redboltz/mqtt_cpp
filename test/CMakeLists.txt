@@ -100,6 +100,12 @@ FOREACH (source_file ${check_PROGRAMS})
     IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         SET_PROPERTY (TARGET ${source_file_we}
                       APPEND_STRING PROPERTY COMPILE_FLAGS "-pthread")
+        IF (MQTT_CODECOV)
+            SET_PROPERTY (TARGET ${source_file_we}
+                          APPEND_STRING PROPERTY COMPILE_FLAGS " -O0 -g --coverage -fno-inline")
+            SET_PROPERTY (TARGET ${source_file_we}
+                          APPEND_STRING PROPERTY LINK_FLAGS " --coverage")
+        ENDIF ()
     ENDIF ()
     IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
         IF (CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
