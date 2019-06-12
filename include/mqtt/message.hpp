@@ -82,7 +82,7 @@ public:
      * @return continuous buffer
      */
     std::string continuous_buffer() const {
-        return std::string(message_.data(), message_.size());
+        return std::string(message_.data(), size());
     }
 private:
     boost::container::static_vector<char, 2> message_;
@@ -120,7 +120,7 @@ public:
      * @return const buffer sequence
      */
     std::vector<as::const_buffer> const_buffer_sequence() const {
-        return { as::buffer(message_.data(), message_.size()) };
+        return { as::buffer(message_.data(), size()) };
     }
 
     /**
@@ -146,7 +146,7 @@ public:
      * @return continuous buffer
      */
     std::string continuous_buffer() const {
-        return std::string(message_.data(), message_.size());
+        return std::string(message_.data(), size());
     }
 protected:
     boost::container::static_vector<char, 2 + PacketIdBytes> const& message() const {
@@ -258,7 +258,7 @@ public:
      * @return const buffer sequence
      */
     std::vector<as::const_buffer> const_buffer_sequence() const {
-        return { as::buffer(message_.data(), message_.size()) };
+        return { as::buffer(message_.data(), size()) };
     }
 
     /**
@@ -284,7 +284,7 @@ public:
      * @return continuous buffer
      */
     std::string continuous_buffer() const {
-        return std::string(message_.data(), message_.size());
+        return std::string(message_.data(), size());
     }
 
 private:
@@ -1060,6 +1060,8 @@ private:
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 };
+
+using unsubscribe_message = basic_unsubscribe_message<2>;
 
 } // inline namespace v3_1_1
 
