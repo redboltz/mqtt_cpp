@@ -2090,6 +2090,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
         std::vector<mqtt::v5::property_variant> ps {
             mqtt::v5::property::payload_format_indicator(mqtt::v5::property::payload_format_indicator::string),
             mqtt::v5::property::message_expiry_interval(0x12345678UL),
+            mqtt::v5::property::content_type("content type"),
             mqtt::v5::property::topic_alias(0x1234U),
             mqtt::v5::property::response_topic("response topic"),
             mqtt::v5::property::correlation_data("correlation data"),
@@ -2170,6 +2171,9 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
                         mqtt::make_lambda_visitor<void>(
                             [&](mqtt::v5::property::payload_format_indicator::recv const& t) {
                                 BOOST_TEST(t.val() == mqtt::v5::property::payload_format_indicator::string);
+                            },
+                            [&](mqtt::v5::property::content_type::recv const& t) {
+                                BOOST_TEST(t.val() == "content type");
                             },
                             [&](mqtt::v5::property::message_expiry_interval::recv const& t) {
                                 BOOST_TEST(t.val() == 0x12345678UL);

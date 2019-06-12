@@ -531,12 +531,12 @@ public:
 
     template <typename Iterator>
     basic_publish_message(Iterator b, Iterator e) {
-        if (b >= e) throw remaining_length_error();
+        if (b + 1 > e) throw remaining_length_error();
         fixed_header_ = static_cast<std::uint8_t>(*b);
         auto qos = publish::get_qos(fixed_header_);
         ++b;
 
-        if (b >= e) throw remaining_length_error();
+        if (b + 1 > e) throw remaining_length_error();
         auto len_consumed = remaining_length(b, e);
         remaining_length_ = std::get<0>(len_consumed);
         auto consumed = static_cast<std::string::difference_type>(std::get<1>(len_consumed));
@@ -544,12 +544,12 @@ public:
         std::copy(b, b + consumed, std::back_inserter(remaining_length_buf_));
         b += consumed;
 
-        if (b + 2 >= e) throw remaining_length_error();
+        if (b + 2 > e) throw remaining_length_error();
         std::copy(b, b + 2, std::back_inserter(topic_name_length_buf_));
         auto topic_name_length = make_uint16_t(b, b + 2);
         b += 2;
 
-        if (b + topic_name_length >= e) throw remaining_length_error();
+        if (b + topic_name_length > e) throw remaining_length_error();
         utf8string_check(string_view(&*b, topic_name_length));
         topic_name_ = as::buffer(&*b, topic_name_length);
         b += topic_name_length;
@@ -559,7 +559,7 @@ public:
             break;
         case qos::at_least_once:
         case qos::exactly_once:
-            if (b + PacketIdBytes >= e) throw remaining_length_error();
+            if (b + PacketIdBytes > e) throw remaining_length_error();
             std::copy(b, b + PacketIdBytes, std::back_inserter(packet_id_));
             b += PacketIdBytes;
             break;

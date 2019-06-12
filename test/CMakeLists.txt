@@ -26,6 +26,7 @@ IF (MQTT_TEST_2)
         utf8string_validate.cpp
         packet_id.cpp
         remaining_length.cpp
+        message.cpp
     )
 ENDIF ()
 
