@@ -216,7 +216,7 @@ BOOST_AUTO_TEST_CASE( publish_get_attributes2 ) {
         auto p = m.payload();
         auto payload = mqtt::string_view(mqtt::get_pointer(p), mqtt::get_size(p));
         BOOST_TEST(payload == "AB");
-        BOOST_TEST(m.continuous_buffer() == std::string(buf, sizeof(buf)));
+        BOOST_TEST(m.continuous_buffer() == buf);
     }
     catch (...) {
         BOOST_TEST(false);
