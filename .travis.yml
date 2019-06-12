@@ -199,7 +199,7 @@ script:
 after_success:
   # Create lcov report
   - if [ "$COV" == "ON" ]; then lcov --capture --directory . --output-file coverage.info; fi
-  - if [ "$COV" == "ON" ]; then lcov --remove coverage.info '/usr/*' --output-file coverage.info # filter system-files; fi
-  - if [ "$COV" == "ON" ]; then lcov --list coverage.info # debug info; fi
+  - if [ "$COV" == "ON" ]; then lcov --remove coverage.info '/usr/*' --output-file coverage.info; fi # filter system-files
+  - if [ "$COV" == "ON" ]; then lcov --list coverage.info; fi # debug info
   # Uploading report to CodeCov
   - if [ "$COV" == "ON" ]; then bash <(curl -s https://codecov.io/bash) -f coverage.info || echo "Codecov did not collect coverage reports"; fi
