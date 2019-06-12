@@ -21,8 +21,8 @@ BOOST_AUTO_TEST_CASE( connect_cbuf ) {
         "cid",
         false,
         std::move(w),
-        "user",
-        "pw"
+        std::string("user"),
+        std::string("pw")
     );
     std::string expected {
         0b0001'0000,
