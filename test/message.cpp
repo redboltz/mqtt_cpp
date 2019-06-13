@@ -15,14 +15,17 @@
 BOOST_AUTO_TEST_SUITE(test_message)
 
 BOOST_AUTO_TEST_CASE( connect_cbuf ) {
-    auto w = mqtt::will("wt", "wmsg", false, 0);
+    std::string cid = "cid";
+    mqtt::optional<mqtt::will> w = mqtt::will("wt", "wmsg", false, 0);
+    mqtt::optional<std::string> user = std::string("user");
+    mqtt::optional<std::string> password = std::string("pw");
     auto m = mqtt::connect_message(
         10,
-        "cid",
+        cid,
         false,
-        std::move(w),
-        std::string("user"),
-        std::string("pw")
+        w,
+        user,
+        password
     );
     std::string expected {
         0b0001'0000,
@@ -34,7 +37,7 @@ BOOST_AUTO_TEST_CASE( connect_cbuf ) {
         'T',
         'T',
         4, // version 3.1.1
-        static_cast<char>(0b11000100),
+        static_cast<char>(0b11000100u),
         0,  // keep alive
         10, //
         0,  // cid len
@@ -73,7 +76,7 @@ BOOST_AUTO_TEST_CASE( connack_cbuf ) {
         0b0010'0000,
         0b0000'0010,
         0b0000'0001,
-        static_cast<char>(0b1000'0000),
+        static_cast<char>(0b1000'0000u),
     };
     BOOST_TEST(m.continuous_buffer() == expected);
 }
@@ -84,7 +87,7 @@ BOOST_AUTO_TEST_CASE( connack_num_of_cbs ) {
         0b0010'0000,
         0b0000'0010,
         0b0000'0001,
-        static_cast<char>(0b1000'0000),
+        static_cast<char>(0b1000'0000u),
     };
     BOOST_TEST(m.num_of_const_buffer_sequence() == 1);
 }
@@ -305,7 +308,7 @@ BOOST_AUTO_TEST_CASE( subscribe_cbuf ) {
     v.emplace_back(as::buffer(topic), 1);
     auto m = mqtt::subscribe_message(v, 2);
     std::string expected {
-        static_cast<char>(0b1000'0010),
+        static_cast<char>(0b1000'0010u),
         7,
         0,           // packet id
         2,           //
@@ -321,7 +324,7 @@ BOOST_AUTO_TEST_CASE( subscribe_cbuf ) {
 BOOST_AUTO_TEST_CASE( suback_cbuf ) {
     auto m = mqtt::suback_message(std::vector<std::uint8_t>{1}, 2);
     std::string expected {
-        static_cast<char>(0b1001'0000),
+        static_cast<char>(0b1001'0000u),
         3,
         0,           // packet id
         2,           //
@@ -336,7 +339,7 @@ BOOST_AUTO_TEST_CASE( unsubscribe_cbuf ) {
     v.emplace_back(as::buffer(topic));
     auto m = mqtt::unsubscribe_message(v, 2);
     std::string expected {
-        static_cast<char>(0b1010'0010),
+        static_cast<char>(0b1010'0010u),
         6,
         0,           // packet id
         2,           //
@@ -351,7 +354,7 @@ BOOST_AUTO_TEST_CASE( unsubscribe_cbuf ) {
 BOOST_AUTO_TEST_CASE( pingreq_cbuf ) { // behalf of header only message
     auto m = mqtt::pingreq_message();
     std::string expected {
-        static_cast<char>(0b1100'0000),
+        static_cast<char>(0b1100'0000u),
         0,
     };
     BOOST_TEST(m.continuous_buffer() == expected);
