@@ -13,6 +13,8 @@ BOOST_AUTO_TEST_SUITE(test_connect)
 BOOST_AUTO_TEST_CASE( connect ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
         c->set_client_id("cid1");
+        c->set_user_name("dummy");
+        c->set_password("dummy");
         c->set_clean_session(true);
         BOOST_TEST(c->connected() == false);
 
