@@ -91,6 +91,8 @@ struct n_bytes_property {
     boost::container::static_vector<char, N> buf_;
 };
 
+struct binary_property_ref;
+
 struct binary_property {
     binary_property(property::id id, string_view sv)
         :id_(id),
@@ -98,6 +100,8 @@ struct binary_property {
          buf_(sv.begin(), sv.end()) {
              if (sv.size() > 0xffff) throw property_length_error();
          }
+
+    binary_property(binary_property_ref const& v);
 
     /**
      * @brief Add const buffer sequence into the given buffer.
@@ -157,6 +161,7 @@ struct binary_property_ref {
              if (sv.size() > 0xffff) throw property_length_error();
          }
 
+    binary_property_ref(binary_property const&);
     /**
      * @brief Add const buffer sequence into the given buffer.
      * @param v buffer to add
@@ -207,12 +212,22 @@ struct binary_property_ref {
     as::const_buffer buf_;
 };
 
+inline binary_property::binary_property(binary_property_ref const& v)
+    :id_(v.id_), length_(v.length_), buf_(get_pointer(v.buf_), get_size(v.buf_)) {}
+
+inline binary_property_ref::binary_property_ref(binary_property const& v)
+    :id_(v.id_), length_(v.length_), buf_(as::buffer(v.buf_)) {}
+
+
+struct string_property_ref;
+
 struct string_property : binary_property {
     string_property(property::id id, string_view sv)
         :binary_property(id, sv) {
         auto r = utf8string::validate_contents(sv);
         if (r != utf8string::validation::well_formed) throw utf8string_contents_error(r);
     }
+    string_property(string_property_ref const& v);
 };
 
 struct string_property_ref : binary_property_ref {
@@ -221,7 +236,14 @@ struct string_property_ref : binary_property_ref {
         auto r = utf8string::validate_contents(sv);
         if (r != utf8string::validation::well_formed) throw utf8string_contents_error(r);
     }
+    string_property_ref(string_property const& v);
 };
+
+inline string_property::string_property(string_property_ref const& v)
+    :binary_property(v) {}
+
+inline string_property_ref::string_property_ref(string_property const& v)
+    :binary_property_ref(v) {}
 
 struct variable_property {
     variable_property(property::id id, std::size_t value)
@@ -317,11 +339,14 @@ public:
     }
 };
 
+class content_type;
+
 class content_type_ref : public detail::string_property_ref {
 public:
     using recv = content_type_ref;
     content_type_ref(string_view type)
         : detail::string_property_ref(id::content_type, type) {}
+    content_type_ref(content_type const& v);
 };
 
 class content_type : public detail::string_property {
@@ -329,13 +354,24 @@ public:
     using recv = content_type_ref;
     content_type(string_view type)
         : detail::string_property(id::content_type, type) {}
+    content_type(content_type_ref const& v);
 };
+
+inline content_type_ref::content_type_ref(content_type const& v)
+    :detail::string_property_ref(v) {}
+
+inline content_type::content_type(content_type_ref const& v)
+    :detail::string_property(v) {}
+
+
+class response_topic;
 
 class response_topic_ref : public detail::string_property_ref {
 public:
     using recv = response_topic_ref;
     response_topic_ref(string_view type)
         : detail::string_property_ref(id::response_topic, type) {}
+    response_topic_ref(response_topic const& v);
 };
 
 class response_topic : public detail::string_property {
@@ -343,13 +379,23 @@ public:
     using recv = response_topic_ref;
     response_topic(string_view type)
         : detail::string_property(id::response_topic, type) {}
+    response_topic(response_topic_ref const& v);
 };
+
+inline response_topic_ref::response_topic_ref(response_topic const& v)
+    :detail::string_property_ref(v) {}
+
+inline response_topic::response_topic(response_topic_ref const& v)
+    :detail::string_property(v) {}
+
+class correlation_data;
 
 class correlation_data_ref : public detail::string_property_ref {
 public:
     using recv = correlation_data_ref;
     correlation_data_ref(string_view type)
         : detail::string_property_ref(id::correlation_data, type) {}
+    correlation_data_ref(correlation_data const& v);
 };
 
 class correlation_data : public detail::string_property {
@@ -357,7 +403,14 @@ public:
     using recv = correlation_data_ref;
     correlation_data(string_view type)
         : detail::string_property(id::correlation_data, type) {}
+    correlation_data(correlation_data_ref const& v);
 };
+
+inline correlation_data_ref::correlation_data_ref(correlation_data const& v)
+    :detail::string_property_ref(v) {}
+
+inline correlation_data::correlation_data(correlation_data_ref const& v)
+    :detail::string_property(v) {}
 
 class subscription_identifier : public detail::variable_property {
 public:
@@ -381,11 +434,14 @@ public:
     }
 };
 
+class assigned_client_identifier;
+
 class assigned_client_identifier_ref : public detail::string_property_ref {
 public:
     using recv = assigned_client_identifier_ref;
     assigned_client_identifier_ref(string_view type)
         : detail::string_property_ref(id::assigned_client_identifier, type) {}
+    assigned_client_identifier_ref(assigned_client_identifier const& v);
 };
 
 class assigned_client_identifier : public detail::string_property {
@@ -393,7 +449,14 @@ public:
     using recv = assigned_client_identifier_ref;
     assigned_client_identifier(string_view type)
         : detail::string_property(id::assigned_client_identifier, type) {}
+    assigned_client_identifier(assigned_client_identifier_ref const& v);
 };
+
+inline assigned_client_identifier_ref::assigned_client_identifier_ref(assigned_client_identifier const& v)
+    :detail::string_property_ref(v) {}
+
+inline assigned_client_identifier::assigned_client_identifier(assigned_client_identifier_ref const& v)
+    :detail::string_property(v) {}
 
 class server_keep_alive : public detail::n_bytes_property<2> {
 public:
@@ -410,11 +473,14 @@ public:
     }
 };
 
+class authentication_method;
+
 class authentication_method_ref : public detail::string_property_ref {
 public:
     using recv = authentication_method_ref;
     authentication_method_ref(string_view type)
         : detail::string_property_ref(id::authentication_method, type) {}
+    authentication_method_ref(authentication_method const& v);
 };
 
 class authentication_method : public detail::string_property {
@@ -422,13 +488,22 @@ public:
     using recv = authentication_method_ref;
     authentication_method(string_view type)
         : detail::string_property(id::authentication_method, type) {}
+    authentication_method(authentication_method_ref const& v);
 };
 
+inline authentication_method_ref::authentication_method_ref(authentication_method const& v)
+    :detail::string_property_ref(v) {}
+
+inline authentication_method::authentication_method(authentication_method_ref const& v)
+    :detail::string_property(v) {}
+
+class authentication_data;
 class authentication_data_ref : public detail::binary_property_ref {
 public:
     using recv = authentication_data_ref;
     authentication_data_ref(string_view type)
         : detail::binary_property_ref(id::authentication_data, type) {}
+    authentication_data_ref(authentication_data const& v);
 };
 
 class authentication_data : public detail::binary_property {
@@ -436,7 +511,14 @@ public:
     using recv = authentication_data_ref;
     authentication_data(string_view type)
         : detail::binary_property(id::authentication_data, type) {}
+    authentication_data(authentication_data_ref const& v);
 };
+
+inline authentication_data_ref::authentication_data_ref(authentication_data const& v)
+    :detail::binary_property_ref(v) {}
+
+inline authentication_data::authentication_data(authentication_data_ref const& v)
+    :detail::binary_property(v) {}
 
 class request_problem_information : public detail::n_bytes_property<1> {
 public:
@@ -483,11 +565,14 @@ public:
     }
 };
 
+class response_information;
+
 class response_information_ref : public detail::string_property_ref {
 public:
     using recv = response_information_ref;
     response_information_ref(string_view type)
         : detail::string_property_ref(id::response_information, type) {}
+    response_information_ref(response_information const& v);
 };
 
 class response_information : public detail::string_property {
@@ -495,13 +580,23 @@ public:
     using recv = response_information_ref;
     response_information(string_view type)
         : detail::string_property(id::response_information, type) {}
+    response_information(response_information_ref const& v);
 };
+
+inline response_information_ref::response_information_ref(response_information const& v)
+    :detail::string_property_ref(v) {}
+
+inline response_information::response_information(response_information_ref const& v)
+    :detail::string_property(v) {}
+
+class server_reference;
 
 class server_reference_ref : public detail::string_property_ref {
 public:
     using recv = server_reference_ref;
     server_reference_ref(string_view type)
         : detail::string_property_ref(id::server_reference, type) {}
+    server_reference_ref(server_reference const& v);
 };
 
 class server_reference : public detail::string_property {
@@ -509,13 +604,23 @@ public:
     using recv = server_reference_ref;
     server_reference(string_view type)
         : detail::string_property(id::server_reference, type) {}
+    server_reference(server_reference_ref const& v);
 };
+
+inline server_reference_ref::server_reference_ref(server_reference const& v)
+    :detail::string_property_ref(v) {}
+
+inline server_reference::server_reference(server_reference_ref const& v)
+    :detail::string_property(v) {}
+
+class reason_string;
 
 class reason_string_ref : public detail::string_property_ref {
 public:
     using recv = reason_string_ref;
     reason_string_ref(string_view type)
         : detail::string_property_ref(id::reason_string, type) {}
+    reason_string_ref(reason_string const& v);
 };
 
 class reason_string : public detail::string_property {
@@ -523,7 +628,14 @@ public:
     using recv = reason_string_ref;
     reason_string(string_view type)
         : detail::string_property(id::reason_string, type) {}
+    reason_string(reason_string_ref const& v);
 };
+
+inline reason_string_ref::reason_string_ref(reason_string const& v)
+    :detail::string_property_ref(v) {}
+
+inline reason_string::reason_string(reason_string_ref const& v)
+    :detail::string_property(v) {}
 
 class receive_maximum : public detail::n_bytes_property<2> {
 public:
@@ -604,22 +716,54 @@ public:
     }
 };
 
+class user_property;
+
+namespace detail {
+
+struct len_str;
+
+struct len_str_ref {
+    explicit len_str_ref(string_view v)
+        : len{MQTT_16BITNUM_TO_BYTE_SEQ(v.size())}
+        , str(as::buffer(v.data(), v.size()))
+    {}
+    len_str_ref(len_str const& v);
+
+    std::size_t size() const {
+        return len.size() + get_size(str);
+    }
+    boost::container::static_vector<char, 2> len;
+    as::const_buffer str;
+};
+
+struct len_str {
+    explicit len_str(string_view v)
+        : len{MQTT_16BITNUM_TO_BYTE_SEQ(v.size())}
+        , str(v.data(), v.size())
+    {}
+    len_str(len_str_ref const& v);
+
+    std::size_t size() const {
+        return len.size() + str.size();
+    }
+    boost::container::static_vector<char, 2> len;
+    std::string str;
+};
+
+inline len_str_ref::len_str_ref(len_str const& v)
+    :len(v.len), str(as::buffer(v.str)) {}
+
+inline len_str::len_str(len_str_ref const& v)
+    :len(v.len), str(get_pointer(v.str), get_size(v.str)) {}
+
+} // namespace detail
+
 class user_property_ref {
-    struct len_str {
-        explicit len_str(string_view v)
-            : len{MQTT_16BITNUM_TO_BYTE_SEQ(v.size())}
-            , str(as::buffer(v.data(), v.size()))
-        {}
-        std::size_t size() const {
-            return len.size() + get_size(str);
-        }
-        boost::container::static_vector<char, 2> len;
-        as::const_buffer str;
-    };
 public:
     using recv = user_property_ref;
     user_property_ref(string_view key, string_view val)
         : key_(key), val_(val) {}
+    user_property_ref(user_property const& v);
 
     /**
      * @brief Add const buffer sequence into the given buffer.
@@ -687,27 +831,18 @@ public:
     }
 
 private:
+    friend class user_property;
     property::id id_ = id::user_property;
-    len_str key_;
-    len_str val_;
+    detail::len_str_ref key_;
+    detail::len_str_ref val_;
 };
 
 class user_property {
-    struct len_str {
-        explicit len_str(string_view v)
-            : len{MQTT_16BITNUM_TO_BYTE_SEQ(v.size())}
-            , str(v.data(), v.size())
-        {}
-        std::size_t size() const {
-            return len.size() + str.size();
-        }
-        boost::container::static_vector<char, 2> len;
-        std::string str;
-    };
 public:
     using recv = user_property_ref;
     user_property(string_view key, string_view val)
         : key_(key), val_(val) {}
+    user_property(user_property_ref const& v);
 
     /**
      * @brief Add const buffer sequence into the given buffer.
@@ -775,10 +910,17 @@ public:
     }
 
 private:
+    friend class user_property_ref;
     property::id id_ = id::user_property;
-    len_str key_;
-    len_str val_;
+    detail::len_str key_;
+    detail::len_str val_;
 };
+
+inline user_property_ref::user_property_ref(user_property const& v)
+    :id_(v.id_), key_(v.key_), val_(v.val_) {}
+
+inline user_property::user_property(user_property_ref const& v)
+    :id_(v.id_), key_(v.key_), val_(v.val_) {}
 
 class maximum_packet_size : public detail::n_bytes_property<4> {
 public:
