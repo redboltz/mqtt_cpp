@@ -22,7 +22,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
-      BUILD_EXAMPLES: ON
+      MQTT_BUILD_EXAMPLES: ON
     ExamplesWs:
       MQTT_NO_TLS: ON
       MQTT_USE_WS: ON
@@ -33,7 +33,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
-      BUILD_EXAMPLES: ON
+      MQTT_BUILD_EXAMPLES: ON
     TestGroup1:
       MQTT_NO_TLS: OFF
       MQTT_USE_WS: OFF
@@ -44,7 +44,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
-      BUILD_EXAMPLES: OFF
+      MQTT_BUILD_EXAMPLES: OFF
     TestGroup2:
       MQTT_NO_TLS: ON
       MQTT_USE_WS: ON
@@ -55,7 +55,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
-      BUILD_EXAMPLES: OFF
+      MQTT_BUILD_EXAMPLES: OFF
     TestGroup3:
       MQTT_NO_TLS: OFF
       MQTT_USE_WS: OFF
@@ -66,7 +66,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
-      BUILD_EXAMPLES: OFF
+      MQTT_BUILD_EXAMPLES: OFF
     TestGroup4:
       MQTT_NO_TLS: ON
       MQTT_USE_WS: ON
@@ -77,7 +77,7 @@ strategy:
       MQTT_TEST_4: ON
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
-      BUILD_EXAMPLES: OFF
+      MQTT_BUILD_EXAMPLES: OFF
     TestGroup5:
       MQTT_NO_TLS: ON
       MQTT_USE_WS: ON
@@ -88,7 +88,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: ON
       MQTT_TEST_6: OFF
-      BUILD_EXAMPLES: OFF
+      MQTT_BUILD_EXAMPLES: OFF
     TestGroup6:
       MQTT_NO_TLS: OFF
       MQTT_USE_WS: OFF
@@ -99,7 +99,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: ON
-      BUILD_EXAMPLES: OFF
+      MQTT_BUILD_EXAMPLES: OFF
     TestGroup7:
       MQTT_NO_TLS: ON
       MQTT_USE_WS: ON
@@ -110,7 +110,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: ON
-      BUILD_EXAMPLES: OFF
+      MQTT_BUILD_EXAMPLES: OFF
 
 steps:
 - script: |
@@ -123,7 +123,7 @@ steps:
     git submodule update --init --recursive
     mkdir build
     cd build
-    cmake -DMQTT_NO_TLS=%MQTT_NO_TLS% -DMQTT_USE_WS=%MQTT_USE_WS% -DMQTT_USE_STR_CHECK=%MQTT_USE_STR_CHECK% -DMQTT_TEST_1=%MQTT_TEST_1% -DMQTT_TEST_2=%MQTT_TEST_2% -DMQTT_TEST_3=%MQTT_TEST_3% -DMQTT_TEST_4=%MQTT_TEST_4% -DMQTT_TEST_5=%MQTT_TEST_5% -DMQTT_TEST_6=%MQTT_TEST_6% -DBUILD_EXAMPLES=%BUILD_EXAMPLES% -DOPENSSL_ROOT_DIR="./openssl/" ..
+    cmake -DMQTT_NO_TLS=%MQTT_NO_TLS% -DMQTT_USE_WS=%MQTT_USE_WS% -DMQTT_USE_STR_CHECK=%MQTT_USE_STR_CHECK% -DMQTT_TEST_1=%MQTT_TEST_1% -DMQTT_TEST_2=%MQTT_TEST_2% -DMQTT_TEST_3=%MQTT_TEST_3% -DMQTT_TEST_4=%MQTT_TEST_4% -DMQTT_TEST_5=%MQTT_TEST_5% -DMQTT_TEST_6=%MQTT_TEST_6% -DMQTT_BUILD_EXAMPLES=%MQTT_BUILD_EXAMPLES% -DOPENSSL_ROOT_DIR="./openssl/" ..
     cmake --build . --config Release
     cd test
     set PATH=%BOOST_ROOT%\lib;D:/a/1/s/openssl/;%PATH%

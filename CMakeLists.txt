@@ -1,8 +1,8 @@
 CMAKE_MINIMUM_REQUIRED (VERSION 3.8.2)
 PROJECT (mqtt_cpp)
 
-OPTION(BUILD_EXAMPLES "Enable building example applications" ON)
-OPTION(BUILD_TESTS "Enable building test applications" ON)
+OPTION(MQTT_BUILD_EXAMPLES "Enable building example applications" ON)
+OPTION(MQTT_BUILD_TESTS "Enable building test applications" ON)
 OPTION(MQTT_USE_STATIC_BOOST "Statically link with boost libraries" OFF)
 OPTION(MQTT_NO_TLS "Disable building TLS code" ON)
 OPTION(MQTT_USE_WS "Enable building WebSockets code" OFF)
@@ -89,7 +89,7 @@ SET (Boost_USE_MULTITHREADED      ON)
 FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS system)
 FIND_PACKAGE (Threads)
 
-IF(BUILD_TESTS)
+IF(MQTT_BUILD_TESTS)
     FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS chrono timer unit_test_framework)
 ENDIF()
 
@@ -114,12 +114,12 @@ ENDIF ()
 
 ENABLE_TESTING ()
 
-IF (BUILD_TESTS)
+IF (MQTT_BUILD_TESTS)
     MESSAGE(STATUS "Tests enabled")
     ADD_SUBDIRECTORY (test)
 ENDIF ()
 
-IF (BUILD_EXAMPLES)
+IF (MQTT_BUILD_EXAMPLES)
     MESSAGE(STATUS "Examples enabled")
     ADD_SUBDIRECTORY (example)
 ENDIF ()
