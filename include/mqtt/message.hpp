@@ -317,8 +317,8 @@ public:
           ),
           protocol_name_and_level_ { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x04 },
           client_id_(as::buffer(client_id)),
-          client_id_length_buf_{ MQTT_16BITNUM_TO_BYTE_SEQ(client_id.size()) },
-          keep_alive_buf_ { MQTT_16BITNUM_TO_BYTE_SEQ(keep_alive_sec ) }
+          client_id_length_buf_{ num_to_2bytes(static_cast<std::uint16_t>(client_id.size())) },
+          keep_alive_buf_ { num_to_2bytes(static_cast<std::uint16_t>(keep_alive_sec )) }
     {
         utf8string_check(client_id);
         if (clean_session) connect_flags_ |= connect_flags::clean_session;
@@ -509,7 +509,7 @@ public:
     )
         : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::publish, 0b0000))),
           topic_name_(topic_name),
-          topic_name_length_buf_ { MQTT_16BITNUM_TO_BYTE_SEQ(get_size(topic_name)) },
+          topic_name_length_buf_ { num_to_2bytes(static_cast<std::uint16_t>(get_size(topic_name))) },
           payload_(payload),
           remaining_length_(publish_remaining_length(topic_name, qos, payload))
     {
@@ -742,7 +742,7 @@ private:
     struct entry {
         entry(as::const_buffer const& topic_name, std::uint8_t qos)
             : topic_name(topic_name),
-              topic_name_length_buf { MQTT_16BITNUM_TO_BYTE_SEQ(get_size(topic_name)) },
+              topic_name_length_buf { num_to_2bytes(static_cast<std::uint16_t>(get_size(topic_name))) },
               qos(qos)
         {}
 
@@ -954,7 +954,7 @@ private:
     struct entry {
         entry(as::const_buffer const& topic_name)
             : topic_name(topic_name),
-              topic_name_length_buf { MQTT_16BITNUM_TO_BYTE_SEQ(get_size(topic_name)) }
+              topic_name_length_buf { num_to_2bytes(static_cast<std::uint16_t>(get_size(topic_name))) }
         {}
 
         as::const_buffer topic_name;

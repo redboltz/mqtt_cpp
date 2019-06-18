@@ -46,8 +46,8 @@ struct n_bytes_property {
     n_bytes_property(property::id id, It b, It e)
         :id_(id), buf_(b, e) {}
 
-    n_bytes_property(property::id id, std::initializer_list<char> il)
-        :id_(id), buf_(std::move(il)) {}
+    n_bytes_property(property::id id, boost::container::static_vector<char, N> buf)
+        :id_(id), buf_(std::move(buf)) {}
 
     /**
      * @brief Add const buffer sequence into the given buffer.
@@ -96,7 +96,7 @@ struct binary_property_ref;
 struct binary_property {
     binary_property(property::id id, string_view sv)
         :id_(id),
-         length_{MQTT_16BITNUM_TO_BYTE_SEQ(sv.size())},
+         length_{num_to_2bytes(static_cast<std::uint16_t>(sv.size()))},
          buf_(sv.begin(), sv.end()) {
              if (sv.size() > 0xffff) throw property_length_error();
          }
@@ -156,7 +156,7 @@ struct binary_property {
 struct binary_property_ref {
     binary_property_ref(property::id id, string_view sv)
         :id_(id),
-         length_{MQTT_16BITNUM_TO_BYTE_SEQ(sv.size())},
+         length_{num_to_2bytes(static_cast<std::uint16_t>(sv.size()))},
          buf_(sv.data(), sv.size()) {
              if (sv.size() > 0xffff) throw property_length_error();
          }
@@ -328,7 +328,7 @@ class message_expiry_interval : public detail::n_bytes_property<4> {
 public:
     using recv = message_expiry_interval;
     message_expiry_interval(std::uint32_t val)
-        : detail::n_bytes_property<4>(id::message_expiry_interval, { MQTT_32BITNUM_TO_BYTE_SEQ(val) } ) {}
+        : detail::n_bytes_property<4>(id::message_expiry_interval, num_to_4bytes(val) ) {}
 
     template <typename It>
     message_expiry_interval(It b, It e)
@@ -423,7 +423,7 @@ class session_expiry_interval : public detail::n_bytes_property<4> {
 public:
     using recv = session_expiry_interval;
     session_expiry_interval(std::uint32_t val)
-        : detail::n_bytes_property<4>(id::session_expiry_interval, { MQTT_32BITNUM_TO_BYTE_SEQ(val) } ) {}
+        : detail::n_bytes_property<4>(id::session_expiry_interval, { num_to_4bytes(static_cast<std::uint32_t>(val)) } ) {}
 
     template <typename It>
     session_expiry_interval(It b, It e)
@@ -462,7 +462,7 @@ class server_keep_alive : public detail::n_bytes_property<2> {
 public:
     using recv = server_keep_alive;
     server_keep_alive(std::uint16_t val)
-        : detail::n_bytes_property<2>(id::server_keep_alive, { MQTT_16BITNUM_TO_BYTE_SEQ(val) } ) {}
+        : detail::n_bytes_property<2>(id::server_keep_alive, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
 
     template <typename It>
     server_keep_alive(It b, It e)
@@ -539,7 +539,7 @@ class will_delay_interval : public detail::n_bytes_property<4> {
 public:
     using recv = will_delay_interval;
     will_delay_interval(std::uint32_t val)
-        : detail::n_bytes_property<4>(id::will_delay_interval, { MQTT_32BITNUM_TO_BYTE_SEQ(val) } ) {}
+        : detail::n_bytes_property<4>(id::will_delay_interval, { num_to_4bytes(static_cast<std::uint32_t>(val)) } ) {}
 
     template <typename It>
     will_delay_interval(It b, It e)
@@ -641,7 +641,7 @@ class receive_maximum : public detail::n_bytes_property<2> {
 public:
     using recv = receive_maximum;
     receive_maximum(std::uint16_t val)
-        : detail::n_bytes_property<2>(id::receive_maximum, { MQTT_16BITNUM_TO_BYTE_SEQ(val) } ) {}
+        : detail::n_bytes_property<2>(id::receive_maximum, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
 
     template <typename It>
     receive_maximum(It b, It e)
@@ -656,7 +656,7 @@ class topic_alias_maximum : public detail::n_bytes_property<2> {
 public:
     using recv = topic_alias_maximum;
     topic_alias_maximum(std::uint16_t val)
-        : detail::n_bytes_property<2>(id::topic_alias_maximum, { MQTT_16BITNUM_TO_BYTE_SEQ(val) } ) {}
+        : detail::n_bytes_property<2>(id::topic_alias_maximum, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
 
     template <typename It>
     topic_alias_maximum(It b, It e)
@@ -671,7 +671,7 @@ class topic_alias : public detail::n_bytes_property<2> {
 public:
     using recv = topic_alias;
     topic_alias(std::uint16_t val)
-        : detail::n_bytes_property<2>(id::topic_alias, { MQTT_16BITNUM_TO_BYTE_SEQ(val) } ) {}
+        : detail::n_bytes_property<2>(id::topic_alias, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
 
     template <typename It>
     topic_alias(It b, It e)
@@ -724,7 +724,7 @@ struct len_str;
 
 struct len_str_ref {
     explicit len_str_ref(string_view v)
-        : len{MQTT_16BITNUM_TO_BYTE_SEQ(v.size())}
+        : len{num_to_2bytes(static_cast<std::uint16_t>(v.size()))}
         , str(as::buffer(v.data(), v.size()))
     {}
     len_str_ref(len_str const& v);
@@ -738,7 +738,7 @@ struct len_str_ref {
 
 struct len_str {
     explicit len_str(string_view v)
-        : len{MQTT_16BITNUM_TO_BYTE_SEQ(v.size())}
+        : len{num_to_2bytes(static_cast<std::uint16_t>(v.size()))}
         , str(v.data(), v.size())
     {}
     len_str(len_str_ref const& v);
@@ -926,7 +926,7 @@ class maximum_packet_size : public detail::n_bytes_property<4> {
 public:
     using recv = maximum_packet_size;
     maximum_packet_size(std::uint32_t val)
-        : detail::n_bytes_property<4>(id::maximum_packet_size, { MQTT_32BITNUM_TO_BYTE_SEQ(val) } ) {}
+        : detail::n_bytes_property<4>(id::maximum_packet_size, { num_to_4bytes(static_cast<std::uint32_t>(val)) } ) {}
 
     template <typename It>
     maximum_packet_size(It b, It e)

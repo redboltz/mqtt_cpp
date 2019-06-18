@@ -118,7 +118,7 @@ public:
           ),
           protocol_name_and_level_ { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x05 },
           client_id_(as::buffer(client_id)),
-          client_id_length_buf_{ MQTT_16BITNUM_TO_BYTE_SEQ(client_id.size()) },
+          client_id_length_buf_{ num_to_2bytes(static_cast<std::uint16_t>(client_id.size())) },
           will_property_length_(
               w ?
               std::accumulate(
@@ -136,7 +136,7 @@ public:
               std::move(w.value().props())
               : properties()
           ),
-          keep_alive_buf_ ({ MQTT_16BITNUM_TO_BYTE_SEQ(keep_alive_sec ) }),
+          keep_alive_buf_ ({ num_to_2bytes(static_cast<std::uint16_t>(keep_alive_sec )) }),
           property_length_(
               std::accumulate(
                   props.begin(),
@@ -548,7 +548,7 @@ public:
     )
         : fixed_header_(make_fixed_header(control_packet_type::publish, 0b0000)),
           topic_name_(topic_name),
-          topic_name_length_buf_ { MQTT_16BITNUM_TO_BYTE_SEQ(get_size(topic_name)) },
+          topic_name_length_buf_ { num_to_2bytes(static_cast<std::uint16_t>(get_size(topic_name))) },
           property_length_(
               std::accumulate(
                   props.begin(),
@@ -1545,7 +1545,7 @@ private:
     struct entry {
         entry(as::const_buffer const& topic_filter, std::uint8_t options)
             : topic_filter(topic_filter),
-              topic_filter_length_buf { MQTT_16BITNUM_TO_BYTE_SEQ(get_size(topic_filter)) },
+              topic_filter_length_buf { num_to_2bytes(static_cast<std::uint16_t>(get_size(topic_filter))) },
               options(options)
         {}
 
@@ -1865,7 +1865,7 @@ private:
     struct entry {
         entry(as::const_buffer const& topic_filter)
             : topic_filter(topic_filter),
-              topic_filter_length_buf { MQTT_16BITNUM_TO_BYTE_SEQ(get_size(topic_filter)) }
+              topic_filter_length_buf { num_to_2bytes(static_cast<std::uint16_t>(get_size(topic_filter))) }
         {}
 
         as::const_buffer topic_filter;

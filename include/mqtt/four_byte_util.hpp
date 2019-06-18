@@ -11,14 +11,18 @@
 #include <cstdint>
 #include <algorithm>
 #include <boost/assert.hpp>
-
-#define MQTT_32BITNUM_TO_BYTE_SEQ(val)                                  \
-    static_cast<char>(static_cast<std::uint32_t>(val) >> 24),           \
-    static_cast<char>(static_cast<std::uint32_t>(val) >> 16),           \
-    static_cast<char>(static_cast<std::uint32_t>(val) >>  8),           \
-    static_cast<char>((val) & 0xff)
+#include <boost/container/static_vector.hpp>
 
 namespace mqtt {
+
+inline boost::container::static_vector<char, 4> num_to_4bytes(std::uint32_t val) {
+    return {
+        static_cast<char>(val >> 24),
+        static_cast<char>(val >> 16),
+        static_cast<char>(val >>  8),
+        static_cast<char>(val & 0xff)
+    };
+}
 
 template <typename T>
 inline void add_uint32_t_to_buf(T& buf, std::uint32_t num) {
