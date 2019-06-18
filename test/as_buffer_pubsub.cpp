@@ -232,10 +232,15 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     pid_sub = c->subscribe(
                         std::vector<std::tuple<as::const_buffer, std::uint8_t>> {
                             std::make_tuple(
+#if defined (_MSC_VER) && (_MSC_VER <= 1921)
+                                // workaround for https://developercommunity.visualstudio.com/content/problem/334025/problem-with-lifetime-of-some-specific-temporary-c.html
+                                as::buffer("topic1", sizeof("topic1") - 1),
+#else
                                 as::buffer(std::string("topic1")),
+#endif
                                 mqtt::qos::at_most_once
                             )
-                                }
+                        }
                     );
                     return true;
                 });
@@ -246,7 +251,12 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
                     pid_unsub = c->unsubscribe(
+#if defined (_MSC_VER) && (_MSC_VER <= 1921)
+                        // workaround for https://developercommunity.visualstudio.com/content/problem/334025/problem-with-lifetime-of-some-specific-temporary-c.html
+                        std::vector<as::const_buffer> { as::buffer("topic1", sizeof("topic1") - 1) });
+#else
                         std::vector<as::const_buffer> { as::buffer(std::string("topic1")) });
+#endif
                     return true;
                 });
             c->set_pubrec_handler(
@@ -311,7 +321,12 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     pid_sub = c->subscribe(
                         std::vector<std::tuple<as::const_buffer, std::uint8_t>> {
                             std::make_tuple(
+#if defined (_MSC_VER) && (_MSC_VER <= 1921)
+                                // workaround for https://developercommunity.visualstudio.com/content/problem/334025/problem-with-lifetime-of-some-specific-temporary-c.html
+                                as::buffer("topic1", sizeof("topic1") - 1),
+#else
                                 as::buffer(std::string("topic1")),
+#endif
                                 mqtt::qos::at_most_once
                             )
                                 }
@@ -325,7 +340,12 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
                     pid_unsub = c->unsubscribe(
+#if defined (_MSC_VER) && (_MSC_VER <= 1921)
+                        // workaround for https://developercommunity.visualstudio.com/content/problem/334025/problem-with-lifetime-of-some-specific-temporary-c.html
+                        std::vector<as::const_buffer> { as::buffer("topic1", strlen("topic1") - 1) });
+#else
                         std::vector<as::const_buffer> { as::buffer(std::string("topic1")) });
+#endif
                     return true;
                 });
             c->set_v5_pubrec_handler(
