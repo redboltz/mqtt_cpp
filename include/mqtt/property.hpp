@@ -37,6 +37,13 @@ namespace property {
 
 namespace detail {
 
+enum class ostream_format {
+    direct,
+    int_cast,
+    key_val,
+    binary_string,
+};
+
 template <std::size_t N>
 struct n_bytes_property {
     explicit n_bytes_property(property::id id)
@@ -87,6 +94,7 @@ struct n_bytes_property {
         return 2;
     }
 
+    static constexpr ostream_format const of_ = ostream_format::direct;
     property::id id_;
     boost::container::static_vector<char, N> buf_;
 };
@@ -148,6 +156,7 @@ struct binary_property {
         return buf_;
     }
 
+    static constexpr ostream_format const of_ = ostream_format::direct;
     property::id id_;
     boost::container::static_vector<char, 2> length_;
     std::string buf_;
@@ -207,6 +216,7 @@ struct binary_property_ref {
         return string_view(get_pointer(buf_), get_size(buf_));
     }
 
+    static constexpr ostream_format const of_ = ostream_format::direct;
     property::id id_;
     boost::container::static_vector<char, 2> length_;
     as::const_buffer buf_;
@@ -293,6 +303,7 @@ struct variable_property {
         return std::get<0>(variable_length(value_));
     }
 
+    static constexpr ostream_format const of_ = ostream_format::direct;
     property::id id_;
     boost::container::static_vector<char, 4> value_;
 };
@@ -322,12 +333,8 @@ public:
             }();
     }
 
+    static constexpr detail::ostream_format const of_ = detail::ostream_format::binary_string;
 };
-
-inline std::ostream& operator<<(std::ostream& o, payload_format_indicator const& p) {
-    o << (p.val() == payload_format_indicator::payload_format_indicator::binary ? "binary" : "string");
-    return o;
-}
 
 
 class message_expiry_interval : public detail::n_bytes_property<4> {
@@ -345,11 +352,6 @@ public:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& o, message_expiry_interval const& p) {
-    o << p.val();
-    return o;
-}
-
 
 class content_type;
 
@@ -360,11 +362,6 @@ public:
         : detail::string_property_ref(id::content_type, type) {}
     content_type_ref(content_type const& v);
 };
-
-inline std::ostream& operator<<(std::ostream& o, content_type_ref const& p) {
-    o << p.val();
-    return o;
-}
 
 class content_type : public detail::string_property {
 public:
@@ -380,11 +377,6 @@ inline content_type_ref::content_type_ref(content_type const& v)
 inline content_type::content_type(content_type_ref const& v)
     :detail::string_property(v) {}
 
-inline std::ostream& operator<<(std::ostream& o, content_type const& p) {
-    o << p.val();
-    return o;
-}
-
 
 class response_topic;
 
@@ -395,11 +387,6 @@ public:
         : detail::string_property_ref(id::response_topic, type) {}
     response_topic_ref(response_topic const& v);
 };
-
-inline std::ostream& operator<<(std::ostream& o, response_topic_ref const& p) {
-    o << p.val();
-    return o;
-}
 
 class response_topic : public detail::string_property {
 public:
@@ -415,11 +402,6 @@ inline response_topic_ref::response_topic_ref(response_topic const& v)
 inline response_topic::response_topic(response_topic_ref const& v)
     :detail::string_property(v) {}
 
-inline std::ostream& operator<<(std::ostream& o, response_topic const& p) {
-    o << p.val();
-    return o;
-}
-
 
 class correlation_data;
 
@@ -430,11 +412,6 @@ public:
         : detail::string_property_ref(id::correlation_data, type) {}
     correlation_data_ref(correlation_data const& v);
 };
-
-inline std::ostream& operator<<(std::ostream& o, correlation_data_ref const& p) {
-    o << p.val();
-    return o;
-}
 
 class correlation_data : public detail::string_property {
 public:
@@ -450,11 +427,6 @@ inline correlation_data_ref::correlation_data_ref(correlation_data const& v)
 inline correlation_data::correlation_data(correlation_data_ref const& v)
     :detail::string_property(v) {}
 
-inline std::ostream& operator<<(std::ostream& o, correlation_data const& p) {
-    o << p.val();
-    return o;
-}
-
 
 class subscription_identifier : public detail::variable_property {
 public:
@@ -462,11 +434,6 @@ public:
     subscription_identifier(std::size_t subscription_id)
         : detail::variable_property(id::subscription_identifier, subscription_id) {}
 };
-
-inline std::ostream& operator<<(std::ostream& o, subscription_identifier const& p) {
-    o << p.val();
-    return o;
-}
 
 class session_expiry_interval : public detail::n_bytes_property<4> {
 public:
@@ -483,11 +450,6 @@ public:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& o, session_expiry_interval const& p) {
-    o << p.val();
-    return o;
-}
-
 
 class assigned_client_identifier;
 
@@ -498,11 +460,6 @@ public:
         : detail::string_property_ref(id::assigned_client_identifier, type) {}
     assigned_client_identifier_ref(assigned_client_identifier const& v);
 };
-
-inline std::ostream& operator<<(std::ostream& o, assigned_client_identifier_ref const& p) {
-    o << p.val();
-    return o;
-}
 
 class assigned_client_identifier : public detail::string_property {
 public:
@@ -517,11 +474,6 @@ inline assigned_client_identifier_ref::assigned_client_identifier_ref(assigned_c
 
 inline assigned_client_identifier::assigned_client_identifier(assigned_client_identifier_ref const& v)
     :detail::string_property(v) {}
-
-inline std::ostream& operator<<(std::ostream& o, assigned_client_identifier const& p) {
-    o << p.val();
-    return o;
-}
 
 
 class server_keep_alive : public detail::n_bytes_property<2> {
@@ -539,11 +491,6 @@ public:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& o, server_keep_alive const& p) {
-    o << p.val();
-    return o;
-}
-
 class authentication_method;
 
 class authentication_method_ref : public detail::string_property_ref {
@@ -553,11 +500,6 @@ public:
         : detail::string_property_ref(id::authentication_method, type) {}
     authentication_method_ref(authentication_method const& v);
 };
-
-inline std::ostream& operator<<(std::ostream& o, authentication_method_ref const& p) {
-    o << p.val();
-    return o;
-}
 
 class authentication_method : public detail::string_property {
 public:
@@ -573,11 +515,6 @@ inline authentication_method_ref::authentication_method_ref(authentication_metho
 inline authentication_method::authentication_method(authentication_method_ref const& v)
     :detail::string_property(v) {}
 
-inline std::ostream& operator<<(std::ostream& o, authentication_method const& p) {
-    o << p.val();
-    return o;
-}
-
 
 class authentication_data;
 class authentication_data_ref : public detail::binary_property_ref {
@@ -587,11 +524,6 @@ public:
         : detail::binary_property_ref(id::authentication_data, type) {}
     authentication_data_ref(authentication_data const& v);
 };
-
-inline std::ostream& operator<<(std::ostream& o, authentication_data_ref const& p) {
-    o << p.val();
-    return o;
-}
 
 class authentication_data : public detail::binary_property {
 public:
@@ -606,11 +538,6 @@ inline authentication_data_ref::authentication_data_ref(authentication_data cons
 
 inline authentication_data::authentication_data(authentication_data_ref const& v)
     :detail::binary_property(v) {}
-
-inline std::ostream& operator<<(std::ostream& o, authentication_data const& p) {
-    o << p.val();
-    return o;
-}
 
 
 class request_problem_information : public detail::n_bytes_property<1> {
@@ -628,11 +555,6 @@ public:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& o, request_problem_information const& p) {
-    o << p.val();
-    return o;
-}
-
 
 class will_delay_interval : public detail::n_bytes_property<4> {
 public:
@@ -649,11 +571,6 @@ public:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& o, will_delay_interval const& p) {
-    o << p.val();
-    return o;
-}
-
 class request_response_information : public detail::n_bytes_property<1> {
 public:
     using recv = request_response_information;
@@ -669,11 +586,6 @@ public:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& o, request_response_information const& p) {
-    o << p.val();
-    return o;
-}
-
 
 class response_information;
 
@@ -684,11 +596,6 @@ public:
         : detail::string_property_ref(id::response_information, type) {}
     response_information_ref(response_information const& v);
 };
-
-inline std::ostream& operator<<(std::ostream& o, response_information_ref const& p) {
-    o << p.val();
-    return o;
-}
 
 class response_information : public detail::string_property {
 public:
@@ -704,11 +611,6 @@ inline response_information_ref::response_information_ref(response_information c
 inline response_information::response_information(response_information_ref const& v)
     :detail::string_property(v) {}
 
-inline std::ostream& operator<<(std::ostream& o, response_information const& p) {
-    o << p.val();
-    return o;
-}
-
 
 class server_reference;
 
@@ -719,11 +621,6 @@ public:
         : detail::string_property_ref(id::server_reference, type) {}
     server_reference_ref(server_reference const& v);
 };
-
-inline std::ostream& operator<<(std::ostream& o, server_reference_ref const& p) {
-    o << p.val();
-    return o;
-}
 
 class server_reference : public detail::string_property {
 public:
@@ -739,11 +636,6 @@ inline server_reference_ref::server_reference_ref(server_reference const& v)
 inline server_reference::server_reference(server_reference_ref const& v)
     :detail::string_property(v) {}
 
-inline std::ostream& operator<<(std::ostream& o, server_reference const& p) {
-    o << p.val();
-    return o;
-}
-
 
 class reason_string;
 
@@ -754,11 +646,6 @@ public:
         : detail::string_property_ref(id::reason_string, type) {}
     reason_string_ref(reason_string const& v);
 };
-
-inline std::ostream& operator<<(std::ostream& o, reason_string_ref const& p) {
-    o << p.val();
-    return o;
-}
 
 class reason_string : public detail::string_property {
 public:
@@ -774,11 +661,6 @@ inline reason_string_ref::reason_string_ref(reason_string const& v)
 inline reason_string::reason_string(reason_string_ref const& v)
     :detail::string_property(v) {}
 
-inline std::ostream& operator<<(std::ostream& o, reason_string const& p) {
-    o << p.val();
-    return o;
-}
-
 class receive_maximum : public detail::n_bytes_property<2> {
 public:
     using recv = receive_maximum;
@@ -793,11 +675,6 @@ public:
         return make_uint16_t(buf_.begin(), buf_.end());
     }
 };
-
-inline std::ostream& operator<<(std::ostream& o, receive_maximum const& p) {
-    o << p.val();
-    return o;
-}
 
 
 class topic_alias_maximum : public detail::n_bytes_property<2> {
@@ -815,11 +692,6 @@ public:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& o, topic_alias_maximum const& p) {
-    o << p.val();
-    return o;
-}
-
 
 class topic_alias : public detail::n_bytes_property<2> {
 public:
@@ -835,11 +707,6 @@ public:
         return make_uint16_t(buf_.begin(), buf_.end());
     }
 };
-
-inline std::ostream& operator<<(std::ostream& o, topic_alias const& p) {
-    o << p.val();
-    return o;
-}
 
 class maximum_qos : public detail::n_bytes_property<1> {
 public:
@@ -858,12 +725,9 @@ public:
     std::uint8_t val() const {
         return static_cast<std::uint8_t>(buf_[0]);
     }
-};
 
-inline std::ostream& operator<<(std::ostream& o, maximum_qos const& p) {
-    o << static_cast<int>(p.val());
-    return o;
-}
+    static constexpr const detail::ostream_format of_ = detail::ostream_format::int_cast;
+};
 
 class retain_available : public detail::n_bytes_property<1> {
 public:
@@ -879,11 +743,6 @@ public:
         return buf_[0] == 1;
     }
 };
-
-inline std::ostream& operator<<(std::ostream& o, retain_available const& p) {
-    o << p.val();
-    return o;
-}
 
 
 class user_property;
@@ -1000,17 +859,13 @@ public:
         return string_view(get_pointer(val_.str), get_size(val_.str));
     }
 
+    static constexpr detail::ostream_format const of_ = detail::ostream_format::key_val;
 private:
     friend class user_property;
     property::id id_ = id::user_property;
     detail::len_str_ref key_;
     detail::len_str_ref val_;
 };
-
-inline std::ostream& operator<<(std::ostream& o, user_property_ref const& p) {
-    o << p.key() << ':' << p.val();
-    return o;
-}
 
 class user_property {
 public:
@@ -1084,6 +939,7 @@ public:
         return val_.str;
     }
 
+    static constexpr detail::ostream_format const of_ = detail::ostream_format::key_val;
 private:
     friend class user_property_ref;
     property::id id_ = id::user_property;
@@ -1096,11 +952,6 @@ inline user_property_ref::user_property_ref(user_property const& v)
 
 inline user_property::user_property(user_property_ref const& v)
     :id_(v.id_), key_(v.key_), val_(v.val_) {}
-
-inline std::ostream& operator<<(std::ostream& o, user_property const& p) {
-    o << p.key() << ':' << p.val();
-    return o;
-}
 
 class maximum_packet_size : public detail::n_bytes_property<4> {
 public:
@@ -1116,11 +967,6 @@ public:
         return make_uint32_t(buf_.begin(), buf_.end());
     }
 };
-
-inline std::ostream& operator<<(std::ostream& o, maximum_packet_size const& p) {
-    o << p.val();
-    return o;
-}
 
 
 class wildcard_subscription_available : public detail::n_bytes_property<1> {
@@ -1138,11 +984,6 @@ public:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& o, wildcard_subscription_available const& p) {
-    o << p.val();
-    return o;
-}
-
 
 class subscription_identifier_available : public detail::n_bytes_property<1> {
 public:
@@ -1158,11 +999,6 @@ public:
         return buf_[0] == 1;
     }
 };
-
-inline std::ostream& operator<<(std::ostream& o, subscription_identifier_available const& p) {
-    o << p.val();
-    return o;
-}
 
 
 class shared_subscription_available : public detail::n_bytes_property<1> {
@@ -1180,8 +1016,43 @@ public:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& o, shared_subscription_available const& p) {
+template <typename Property>
+typename std::enable_if<
+    Property::of_ == detail::ostream_format::direct,
+    std::ostream&
+>::type
+operator<<(std::ostream& o, Property const& p) {
     o << p.val();
+    return o;
+}
+
+template <typename Property>
+typename std::enable_if<
+    Property::of_ == detail::ostream_format::int_cast,
+    std::ostream&
+>::type
+operator<<(std::ostream& o, Property const& p) {
+    o << static_cast<int>(p.val());
+    return o;
+}
+
+template <typename Property>
+typename std::enable_if<
+    Property::of_ == detail::ostream_format::key_val,
+    std::ostream&
+>::type
+operator<<(std::ostream& o, Property const& p) {
+    o << p.key() << ':' << p.val();
+    return o;
+}
+
+template <typename Property>
+typename std::enable_if<
+    Property::of_ == detail::ostream_format::binary_string,
+    std::ostream&
+>::type
+operator<<(std::ostream& o, Property const& p) {
+    o << (p.val() == payload_format_indicator::binary ? "binary" : "string");
     return o;
 }
 
