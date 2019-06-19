@@ -37,6 +37,13 @@ namespace property {
 
 namespace detail {
 
+enum class ostream_format {
+    direct,
+    int_cast,
+    key_val,
+    binary_string,
+};
+
 template <std::size_t N>
 struct n_bytes_property {
     explicit n_bytes_property(property::id id)
@@ -87,6 +94,7 @@ struct n_bytes_property {
         return 2;
     }
 
+    static constexpr ostream_format const of_ = ostream_format::direct;
     property::id id_;
     boost::container::static_vector<char, N> buf_;
 };
@@ -148,6 +156,7 @@ struct binary_property {
         return buf_;
     }
 
+    static constexpr ostream_format const of_ = ostream_format::direct;
     property::id id_;
     boost::container::static_vector<char, 2> length_;
     std::string buf_;
@@ -207,6 +216,7 @@ struct binary_property_ref {
         return string_view(get_pointer(buf_), get_size(buf_));
     }
 
+    static constexpr ostream_format const of_ = ostream_format::direct;
     property::id id_;
     boost::container::static_vector<char, 2> length_;
     as::const_buffer buf_;
@@ -293,6 +303,7 @@ struct variable_property {
         return std::get<0>(variable_length(value_));
     }
 
+    static constexpr ostream_format const of_ = ostream_format::direct;
     property::id id_;
     boost::container::static_vector<char, 4> value_;
 };
@@ -322,7 +333,9 @@ public:
             }();
     }
 
+    static constexpr detail::ostream_format const of_ = detail::ostream_format::binary_string;
 };
+
 
 class message_expiry_interval : public detail::n_bytes_property<4> {
 public:
@@ -338,6 +351,7 @@ public:
         return make_uint32_t(buf_.begin(), buf_.end());
     }
 };
+
 
 class content_type;
 
@@ -388,6 +402,7 @@ inline response_topic_ref::response_topic_ref(response_topic const& v)
 inline response_topic::response_topic(response_topic_ref const& v)
     :detail::string_property(v) {}
 
+
 class correlation_data;
 
 class correlation_data_ref : public detail::string_property_ref {
@@ -412,6 +427,7 @@ inline correlation_data_ref::correlation_data_ref(correlation_data const& v)
 inline correlation_data::correlation_data(correlation_data_ref const& v)
     :detail::string_property(v) {}
 
+
 class subscription_identifier : public detail::variable_property {
 public:
     using recv = subscription_identifier;
@@ -433,6 +449,7 @@ public:
         return make_uint32_t(buf_.begin(), buf_.end());
     }
 };
+
 
 class assigned_client_identifier;
 
@@ -457,6 +474,7 @@ inline assigned_client_identifier_ref::assigned_client_identifier_ref(assigned_c
 
 inline assigned_client_identifier::assigned_client_identifier(assigned_client_identifier_ref const& v)
     :detail::string_property(v) {}
+
 
 class server_keep_alive : public detail::n_bytes_property<2> {
 public:
@@ -497,6 +515,7 @@ inline authentication_method_ref::authentication_method_ref(authentication_metho
 inline authentication_method::authentication_method(authentication_method_ref const& v)
     :detail::string_property(v) {}
 
+
 class authentication_data;
 class authentication_data_ref : public detail::binary_property_ref {
 public:
@@ -520,6 +539,7 @@ inline authentication_data_ref::authentication_data_ref(authentication_data cons
 inline authentication_data::authentication_data(authentication_data_ref const& v)
     :detail::binary_property(v) {}
 
+
 class request_problem_information : public detail::n_bytes_property<1> {
 public:
     using recv = request_problem_information;
@@ -534,6 +554,7 @@ public:
         return buf_[0] == 1;
     }
 };
+
 
 class will_delay_interval : public detail::n_bytes_property<4> {
 public:
@@ -565,6 +586,7 @@ public:
     }
 };
 
+
 class response_information;
 
 class response_information_ref : public detail::string_property_ref {
@@ -589,6 +611,7 @@ inline response_information_ref::response_information_ref(response_information c
 inline response_information::response_information(response_information_ref const& v)
     :detail::string_property(v) {}
 
+
 class server_reference;
 
 class server_reference_ref : public detail::string_property_ref {
@@ -612,6 +635,7 @@ inline server_reference_ref::server_reference_ref(server_reference const& v)
 
 inline server_reference::server_reference(server_reference_ref const& v)
     :detail::string_property(v) {}
+
 
 class reason_string;
 
@@ -652,6 +676,7 @@ public:
     }
 };
 
+
 class topic_alias_maximum : public detail::n_bytes_property<2> {
 public:
     using recv = topic_alias_maximum;
@@ -666,6 +691,7 @@ public:
         return make_uint16_t(buf_.begin(), buf_.end());
     }
 };
+
 
 class topic_alias : public detail::n_bytes_property<2> {
 public:
@@ -699,6 +725,8 @@ public:
     std::uint8_t val() const {
         return static_cast<std::uint8_t>(buf_[0]);
     }
+
+    static constexpr const detail::ostream_format of_ = detail::ostream_format::int_cast;
 };
 
 class retain_available : public detail::n_bytes_property<1> {
@@ -715,6 +743,7 @@ public:
         return buf_[0] == 1;
     }
 };
+
 
 class user_property;
 
@@ -830,6 +859,7 @@ public:
         return string_view(get_pointer(val_.str), get_size(val_.str));
     }
 
+    static constexpr detail::ostream_format const of_ = detail::ostream_format::key_val;
 private:
     friend class user_property;
     property::id id_ = id::user_property;
@@ -909,6 +939,7 @@ public:
         return val_.str;
     }
 
+    static constexpr detail::ostream_format const of_ = detail::ostream_format::key_val;
 private:
     friend class user_property_ref;
     property::id id_ = id::user_property;
@@ -937,6 +968,7 @@ public:
     }
 };
 
+
 class wildcard_subscription_available : public detail::n_bytes_property<1> {
 public:
     using recv = wildcard_subscription_available;
@@ -951,6 +983,7 @@ public:
         return buf_[0] == 1;
     }
 };
+
 
 class subscription_identifier_available : public detail::n_bytes_property<1> {
 public:
@@ -967,6 +1000,7 @@ public:
     }
 };
 
+
 class shared_subscription_available : public detail::n_bytes_property<1> {
 public:
     using recv = shared_subscription_available;
@@ -981,6 +1015,47 @@ public:
         return buf_[0] == 1;
     }
 };
+
+template <typename Property>
+typename std::enable_if<
+    Property::of_ == detail::ostream_format::direct,
+    std::ostream&
+>::type
+operator<<(std::ostream& o, Property const& p) {
+    o << p.val();
+    return o;
+}
+
+template <typename Property>
+typename std::enable_if<
+    Property::of_ == detail::ostream_format::int_cast,
+    std::ostream&
+>::type
+operator<<(std::ostream& o, Property const& p) {
+    o << static_cast<int>(p.val());
+    return o;
+}
+
+template <typename Property>
+typename std::enable_if<
+    Property::of_ == detail::ostream_format::key_val,
+    std::ostream&
+>::type
+operator<<(std::ostream& o, Property const& p) {
+    o << p.key() << ':' << p.val();
+    return o;
+}
+
+template <typename Property>
+typename std::enable_if<
+    Property::of_ == detail::ostream_format::binary_string,
+    std::ostream&
+>::type
+operator<<(std::ostream& o, Property const& p) {
+    o << (p.val() == payload_format_indicator::binary ? "binary" : "string");
+    return o;
+}
+
 
 } // namespace property
 } // namespace v5
