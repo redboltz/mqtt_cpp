@@ -289,6 +289,18 @@ public:
         version_ = version;
     }
 
+    /**
+     * @bried Set underlying layer connection timeout.
+     * The timer is set after TCP layer connection accepted.
+     * The timer is cancelled just before accept handler is called.
+     * If the timer is fired, the endpoint is removed, the socket is automatically closed.
+     * The default timeout value is 10 seconds.
+     * @param timeout timeout value
+     */
+    void set_underlying_connect_timeout(boost::posix_time::time_duration timeout) {
+        underlying_connect_timeout_ = std::move(timeout);
+    }
+
 private:
     void renew_socket() {
         socket_.reset(new socket_t(ios_con_, ctx_));
@@ -305,10 +317,24 @@ private:
                     if (h_error_) h_error_(ec);
                     return;
                 }
+                auto underlying_finished = std::make_shared<bool>(false);
+                auto tim = std::make_shared<as::deadline_timer>(ios_con_);
+                tim->expires_from_now(underlying_connect_timeout_);
+                tim->async_wait(
+                    [this, tim, underlying_finished]
+                    (boost::system::error_code ec) {
+                        if (*underlying_finished) return;
+                        if (ec) return;
+                        boost::system::error_code close_ec;
+                        socket_->lowest_layer().close(close_ec);
+                    }
+                );
                 socket_->async_handshake(
                     as::ssl::stream_base::server,
-                    [this]
+                    [this, tim, underlying_finished]
                     (boost::system::error_code ec) {
+                        *underlying_finished = true;
+                        tim->cancel();
                         if (ec) {
                             acceptor_.reset();
                             if (h_error_) h_error_(ec);
@@ -336,6 +362,7 @@ private:
     error_handler h_error_;
     as::ssl::context ctx_;
     mqtt::protocol_version version_ = protocol_version::undetermined;
+    boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
 };
 
 #endif // !defined(MQTT_NO_TLS)
@@ -465,6 +492,18 @@ public:
         version_ = version;
     }
 
+    /**
+     * @bried Set underlying layer connection timeout.
+     * The timer is set after TCP layer connection accepted.
+     * The timer is cancelled just before accept handler is called.
+     * If the timer is fired, the endpoint is removed, the socket is automatically closed.
+     * The default timeout value is 10 seconds.
+     * @param timeout timeout value
+     */
+    void set_underlying_connect_timeout(boost::posix_time::time_duration timeout) {
+        underlying_connect_timeout_ = std::move(timeout);
+    }
+
 private:
     void renew_socket() {
         socket_.reset(new socket_t(ios_con_));
@@ -481,20 +520,37 @@ private:
                     if (h_error_) h_error_(ec);
                     return;
                 }
+                auto underlying_finished = std::make_shared<bool>(false);
+                auto tim = std::make_shared<as::deadline_timer>(ios_con_);
+                tim->expires_from_now(underlying_connect_timeout_);
+                tim->async_wait(
+                    [this, tim, underlying_finished]
+                    (boost::system::error_code ec) {
+                        if (*underlying_finished) return;
+                        if (ec) return;
+                        boost::system::error_code close_ec;
+                        socket_->lowest_layer().close(close_ec);
+                    }
+                );
+
                 auto sb = std::make_shared<boost::asio::streambuf>();
                 auto request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
                 boost::beast::http::async_read(
                     socket_->next_layer(),
                     *sb,
                     *request,
-                    [this, sb, request]
+                    [this, sb, request, tim, underlying_finished]
                     (boost::system::error_code const& ec, std::size_t) {
                         if (ec) {
+                            *underlying_finished = true;
+                            tim->cancel();
                             acceptor_.reset();
                             if (h_error_) h_error_(ec);
                             return;
                         }
                         if (!boost::beast::websocket::is_upgrade(*request)) {
+                            *underlying_finished = true;
+                            tim->cancel();
                             acceptor_.reset();
                             if (h_error_) h_error_(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                             return;
@@ -508,8 +564,10 @@ private:
                                     m.insert(it->name(), it->value());
                                 }
                             },
-                            [this]
+                            [this, tim, underlying_finished]
                             (boost::system::error_code const& ec) {
+                                *underlying_finished = true;
+                                tim->cancel();
                                 if (ec) {
                                     acceptor_.reset();
                                     if (h_error_) h_error_(ec);
@@ -538,6 +596,7 @@ private:
     accept_handler h_accept_;
     error_handler h_error_;
     mqtt::protocol_version version_ = protocol_version::undetermined;
+    boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
 };
 
 
@@ -656,6 +715,18 @@ public:
         version_ = version;
     }
 
+    /**
+     * @bried Set underlying layer connection timeout.
+     * The timer is set after TCP layer connection accepted.
+     * The timer is cancelled just before accept handler is called.
+     * If the timer is fired, the endpoint is removed, the socket is automatically closed.
+     * The default timeout value is 10 seconds.
+     * @param timeout timeout value
+     */
+    void set_underlying_connect_timeout(boost::posix_time::time_duration timeout) {
+        underlying_connect_timeout_ = std::move(timeout);
+    }
+
 private:
     void renew_socket() {
         socket_.reset(new socket_t(ios_con_, ctx_));
@@ -672,11 +743,25 @@ private:
                     if (h_error_) h_error_(ec);
                     return;
                 }
+                auto underlying_finished = std::make_shared<bool>(false);
+                auto tim = std::make_shared<as::deadline_timer>(ios_con_);
+                tim->expires_from_now(underlying_connect_timeout_);
+                tim->async_wait(
+                    [this, tim, underlying_finished]
+                    (boost::system::error_code ec) {
+                        if (*underlying_finished) return;
+                        if (ec) return;
+                        boost::system::error_code close_ec;
+                        socket_->lowest_layer().close(close_ec);
+                    }
+                );
                 socket_->next_layer().async_handshake(
                     as::ssl::stream_base::server,
-                    [this]
+                    [this, tim, underlying_finished]
                     (boost::system::error_code ec) {
                         if (ec) {
+                            *underlying_finished = true;
+                            tim->cancel();
                             acceptor_.reset();
                             if (h_error_) h_error_(ec);
                             return;
@@ -687,14 +772,18 @@ private:
                             socket_->next_layer(),
                             *sb,
                             *request,
-                            [this, sb, request]
+                            [this, sb, request, tim, underlying_finished]
                             (boost::system::error_code const& ec, std::size_t) {
                                 if (ec) {
+                                    *underlying_finished = true;
+                                    tim->cancel();
                                     acceptor_.reset();
                                     if (h_error_) h_error_(ec);
                                     return;
                                 }
                                 if (!boost::beast::websocket::is_upgrade(*request)) {
+                                    *underlying_finished = true;
+                                    tim->cancel();
                                     acceptor_.reset();
                                     if (h_error_) h_error_(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                                     return;
@@ -708,8 +797,10 @@ private:
                                             m.insert(it->name(), it->value());
                                         }
                                     },
-                                    [this]
+                                    [this, tim, underlying_finished]
                                     (boost::system::error_code const& ec) {
+                                        *underlying_finished = true;
+                                        tim->cancel();
                                         if (ec) {
                                             acceptor_.reset();
                                             if (h_error_) h_error_(ec);
@@ -741,6 +832,7 @@ private:
     error_handler h_error_;
     as::ssl::context ctx_;
     mqtt::protocol_version version_ = protocol_version::undetermined;
+    boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
 };
 
 #endif // !defined(MQTT_NO_TLS)
