@@ -17,6 +17,7 @@ OPTION(MQTT_TEST_3 "Build test part7" ON)
 IF (MQTT_TEST_1)
     LIST (APPEND check_PROGRAMS
         connect.cpp
+        underlying_timeout.cpp
     )
 ENDIF ()
 
