@@ -88,7 +88,6 @@ public:
 
     void listen() {
         close_request_ = false;
-        renew_socket();
 
         if (!acceptor_) {
             try {
@@ -138,24 +137,20 @@ public:
     }
 
 private:
-    void renew_socket() {
-        socket_.reset(new socket_t(ios_con_));
-    }
-
     void do_accept() {
         if (close_request_) return;
+        auto socket = std::make_shared<socket_t>(ios_con_);
         acceptor_.value().async_accept(
-            socket_->lowest_layer(),
-            [this]
+            socket->lowest_layer(),
+            [this, socket]
             (boost::system::error_code const& ec) {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
                     return;
                 }
-                auto sp = std::make_shared<endpoint_t>(std::move(socket_), version_);
+                auto sp = std::make_shared<endpoint_t>(std::move(socket), version_);
                 if (h_accept_) h_accept_(*sp);
-                renew_socket();
                 do_accept();
             }
         );
@@ -167,7 +162,6 @@ private:
     as::io_service& ios_con_;
     mqtt::optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
-    std::unique_ptr<socket_t> socket_;
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
@@ -240,7 +234,6 @@ public:
 
     void listen() {
         close_request_ = false;
-        renew_socket();
 
         if (!acceptor_) {
             try {
@@ -302,15 +295,12 @@ public:
     }
 
 private:
-    void renew_socket() {
-        socket_.reset(new socket_t(ios_con_, ctx_));
-    }
-
     void do_accept() {
         if (close_request_) return;
+        auto socket = std::make_shared<socket_t>(ios_con_, ctx_);
         acceptor_.value().async_accept(
-            socket_->lowest_layer(),
-            [this]
+            socket->lowest_layer(),
+            [this, socket]
             (boost::system::error_code const& ec) {
                 if (ec) {
                     acceptor_.reset();
@@ -321,31 +311,28 @@ private:
                 auto tim = std::make_shared<as::deadline_timer>(ios_con_);
                 tim->expires_from_now(underlying_connect_timeout_);
                 tim->async_wait(
-                    [this, tim, underlying_finished]
+                    [socket, tim, underlying_finished]
                     (boost::system::error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return;
                         boost::system::error_code close_ec;
-                        socket_->lowest_layer().close(close_ec);
+                        socket->lowest_layer().close(close_ec);
                     }
                 );
-                socket_->async_handshake(
+                socket->async_handshake(
                     as::ssl::stream_base::server,
-                    [this, tim, underlying_finished]
+                    [this, socket, tim, underlying_finished]
                     (boost::system::error_code ec) {
                         *underlying_finished = true;
                         tim->cancel();
                         if (ec) {
-                            acceptor_.reset();
-                            if (h_error_) h_error_(ec);
                             return;
                         }
-                        auto sp = std::make_shared<endpoint_t>(std::move(socket_), version_);
+                        auto sp = std::make_shared<endpoint_t>(std::move(socket), version_);
                         if (h_accept_) h_accept_(*sp);
-                        renew_socket();
-                        do_accept();
                     }
                 );
+                do_accept();
             }
         );
     }
@@ -356,7 +343,6 @@ private:
     as::io_service& ios_con_;
     mqtt::optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
-    std::unique_ptr<socket_t> socket_;
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
@@ -443,7 +429,6 @@ public:
 
     void listen() {
         close_request_ = false;
-        renew_socket();
 
         if (!acceptor_) {
             try {
@@ -505,15 +490,12 @@ public:
     }
 
 private:
-    void renew_socket() {
-        socket_.reset(new socket_t(ios_con_));
-    }
-
     void do_accept() {
         if (close_request_) return;
+        auto socket = std::make_shared<socket_t>(ios_con_);
         acceptor_.value().async_accept(
-            socket_->next_layer(),
-            [this]
+            socket->next_layer(),
+            [this, socket]
             (boost::system::error_code const& ec) {
                 if (ec) {
                     acceptor_.reset();
@@ -524,38 +506,34 @@ private:
                 auto tim = std::make_shared<as::deadline_timer>(ios_con_);
                 tim->expires_from_now(underlying_connect_timeout_);
                 tim->async_wait(
-                    [this, tim, underlying_finished]
+                    [socket, tim, underlying_finished]
                     (boost::system::error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return;
                         boost::system::error_code close_ec;
-                        socket_->lowest_layer().close(close_ec);
+                        socket->lowest_layer().close(close_ec);
                     }
                 );
 
                 auto sb = std::make_shared<boost::asio::streambuf>();
                 auto request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
                 boost::beast::http::async_read(
-                    socket_->next_layer(),
+                    socket->next_layer(),
                     *sb,
                     *request,
-                    [this, sb, request, tim, underlying_finished]
+                    [this, socket, sb, request, tim, underlying_finished]
                     (boost::system::error_code const& ec, std::size_t) {
                         if (ec) {
                             *underlying_finished = true;
                             tim->cancel();
-                            acceptor_.reset();
-                            if (h_error_) h_error_(ec);
                             return;
                         }
                         if (!boost::beast::websocket::is_upgrade(*request)) {
                             *underlying_finished = true;
                             tim->cancel();
-                            acceptor_.reset();
-                            if (h_error_) h_error_(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                             return;
                         }
-                        socket_->async_accept_ex(
+                        socket->async_accept_ex(
                             *request,
                             [request]
                             (boost::beast::websocket::response_type& m) {
@@ -564,23 +542,20 @@ private:
                                     m.insert(it->name(), it->value());
                                 }
                             },
-                            [this, tim, underlying_finished]
+                            [this, socket, tim, underlying_finished]
                             (boost::system::error_code const& ec) {
                                 *underlying_finished = true;
                                 tim->cancel();
                                 if (ec) {
-                                    acceptor_.reset();
-                                    if (h_error_) h_error_(ec);
                                     return;
                                 }
-                                auto sp = std::make_shared<endpoint_t>(std::move(socket_), version_);
+                                auto sp = std::make_shared<endpoint_t>(std::move(socket), version_);
                                 if (h_accept_) h_accept_(*sp);
-                                renew_socket();
-                                do_accept();
                             }
                         );
                     }
                 );
+                do_accept();
             }
         );
     }
@@ -591,7 +566,6 @@ private:
     as::io_service& ios_con_;
     mqtt::optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
-    std::unique_ptr<socket_t> socket_;
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
@@ -666,7 +640,6 @@ public:
 
     void listen() {
         close_request_ = false;
-        renew_socket();
 
         if (!acceptor_) {
             try {
@@ -728,15 +701,12 @@ public:
     }
 
 private:
-    void renew_socket() {
-        socket_.reset(new socket_t(ios_con_, ctx_));
-    }
-
     void do_accept() {
         if (close_request_) return;
+        auto socket = std::make_shared<socket_t>(ios_con_, ctx_);
         acceptor_.value().async_accept(
-            socket_->next_layer().next_layer(),
-            [this]
+            socket->next_layer().next_layer(),
+            [this, socket]
             (boost::system::error_code const& ec) {
                 if (ec) {
                     acceptor_.reset();
@@ -747,48 +717,42 @@ private:
                 auto tim = std::make_shared<as::deadline_timer>(ios_con_);
                 tim->expires_from_now(underlying_connect_timeout_);
                 tim->async_wait(
-                    [this, tim, underlying_finished]
+                    [socket, tim, underlying_finished]
                     (boost::system::error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return;
                         boost::system::error_code close_ec;
-                        socket_->lowest_layer().close(close_ec);
+                        socket->lowest_layer().close(close_ec);
                     }
                 );
-                socket_->next_layer().async_handshake(
+                socket->next_layer().async_handshake(
                     as::ssl::stream_base::server,
-                    [this, tim, underlying_finished]
+                    [this, socket, tim, underlying_finished]
                     (boost::system::error_code ec) {
                         if (ec) {
                             *underlying_finished = true;
                             tim->cancel();
-                            acceptor_.reset();
-                            if (h_error_) h_error_(ec);
                             return;
                         }
                         auto sb = std::make_shared<boost::asio::streambuf>();
                         auto request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
                         boost::beast::http::async_read(
-                            socket_->next_layer(),
+                            socket->next_layer(),
                             *sb,
                             *request,
-                            [this, sb, request, tim, underlying_finished]
+                            [this, socket, sb, request, tim, underlying_finished]
                             (boost::system::error_code const& ec, std::size_t) {
                                 if (ec) {
                                     *underlying_finished = true;
                                     tim->cancel();
-                                    acceptor_.reset();
-                                    if (h_error_) h_error_(ec);
                                     return;
                                 }
                                 if (!boost::beast::websocket::is_upgrade(*request)) {
                                     *underlying_finished = true;
                                     tim->cancel();
-                                    acceptor_.reset();
-                                    if (h_error_) h_error_(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                                     return;
                                 }
-                                socket_->async_accept_ex(
+                                socket->async_accept_ex(
                                     *request,
                                     [request]
                                     (boost::beast::websocket::response_type& m) {
@@ -797,25 +761,22 @@ private:
                                             m.insert(it->name(), it->value());
                                         }
                                     },
-                                    [this, tim, underlying_finished]
+                                    [this, socket, tim, underlying_finished]
                                     (boost::system::error_code const& ec) {
                                         *underlying_finished = true;
                                         tim->cancel();
                                         if (ec) {
-                                            acceptor_.reset();
-                                            if (h_error_) h_error_(ec);
                                             return;
                                         }
-                                        auto sp = std::make_shared<endpoint_t>(std::move(socket_), version_);
+                                        auto sp = std::make_shared<endpoint_t>(std::move(socket), version_);
                                         if (h_accept_) h_accept_(*sp);
-                                        renew_socket();
-                                        do_accept();
                                     }
                                 );
                             }
                         );
                     }
                 );
+                do_accept();
             }
         );
     }
@@ -826,7 +787,6 @@ private:
     as::io_service& ios_con_;
     mqtt::optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
-    std::unique_ptr<socket_t> socket_;
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;

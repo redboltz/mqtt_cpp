@@ -90,7 +90,7 @@ public:
      * @brief Constructor for server.
      *        socket should have already been connected with another endpoint.
      */
-    explicit endpoint(std::unique_ptr<Socket> socket, protocol_version version = protocol_version::undetermined)
+    explicit endpoint(std::shared_ptr<Socket> socket, protocol_version version = protocol_version::undetermined)
         :socket_(std::move(socket))
         ,connected_(true)
         ,h_mqtt_message_processed_(
@@ -7285,18 +7285,18 @@ public:
     }
 
     /**
-     * @brief Get Socket unique_ptr reference.
+     * @brief Get Socket shared_ptr reference.
      * @return refereence of Socket unique_ptr
      */
-    std::unique_ptr<Socket>& socket() {
+    std::shared_ptr<Socket>& socket() {
         return socket_;
     }
 
     /**
-     * @brief Get Socket unique_ptr const reference.
+     * @brief Get Socket shared_ptr const reference.
      * @return const refereence of Socket unique_ptr
      */
-    std::unique_ptr<Socket> const& socket() const {
+    std::shared_ptr<Socket> const& socket() const {
         return socket_;
     }
 
@@ -10816,7 +10816,7 @@ protected:
     bool clean_session_{false};
 
 private:
-    std::unique_ptr<Socket> socket_;
+    std::shared_ptr<Socket> socket_;
     std::atomic<bool> connected_{false};
     std::atomic<bool> mqtt_connected_{false};
 

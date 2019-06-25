@@ -481,7 +481,7 @@ public:
      *               You can configure the socket prior to connect.
      * @param func finish handler that is called when the session is finished
      */
-    void connect(std::unique_ptr<Socket>&& socket, async_handler_t func = async_handler_t()) {
+    void connect(std::shared_ptr<Socket>&& socket, async_handler_t func = async_handler_t()) {
         connect(std::move(socket), std::vector<v5::property_variant>{}, std::move(func));
     }
 
@@ -495,7 +495,7 @@ public:
      *        3.1.2.11 CONNECT Properties
      * @param func finish handler that is called when the session is finished
      */
-    void connect(std::unique_ptr<Socket>&& socket, std::vector<v5::property_variant> props, async_handler_t func = async_handler_t()) {
+    void connect(std::shared_ptr<Socket>&& socket, std::vector<v5::property_variant> props, async_handler_t func = async_handler_t()) {
         as::ip::tcp::resolver r(ios_);
 #if BOOST_VERSION < 106600
         as::ip::tcp::resolver::query q(host_, port_);
@@ -763,26 +763,26 @@ protected:
 
 private:
     template <typename Strand>
-    void setup_socket(std::unique_ptr<tcp_endpoint<as::ip::tcp::socket, Strand>>& socket) {
+    void setup_socket(std::shared_ptr<tcp_endpoint<as::ip::tcp::socket, Strand>>& socket) {
         socket.reset(new Socket(ios_));
     }
 
 #if defined(MQTT_USE_WS)
     template <typename Strand>
-    void setup_socket(std::unique_ptr<ws_endpoint<as::ip::tcp::socket, Strand>>& socket) {
+    void setup_socket(std::shared_ptr<ws_endpoint<as::ip::tcp::socket, Strand>>& socket) {
         socket.reset(new Socket(ios_));
     }
 #endif // defined(MQTT_USE_WS)
 
 #if !defined(MQTT_NO_TLS)
     template <typename Strand>
-    void setup_socket(std::unique_ptr<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
+    void setup_socket(std::shared_ptr<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
         socket.reset(new Socket(ios_, ctx_));
     }
 
 #if defined(MQTT_USE_WS)
     template <typename Strand>
-    void setup_socket(std::unique_ptr<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
+    void setup_socket(std::shared_ptr<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
         socket.reset(new Socket(ios_, ctx_));
     }
 #endif // defined(MQTT_USE_WS)
