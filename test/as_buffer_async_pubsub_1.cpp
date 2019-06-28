@@ -76,13 +76,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::at_most_once);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
                     c->async_publish_at_most_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        false,
-                        [topic1, contents](boost::system::error_code const&) {}
+                        as::buffer("topic1", sizeof("topic1") - 1),
+                        as::buffer("topic1_contents", sizeof("topic1_contents") - 1),
+                        mqtt::any(),
+                        false
                     );
                     return true;
                 });
@@ -155,13 +153,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_0);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
                     c->async_publish_at_most_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        false,
-                        [topic1, contents](boost::system::error_code const&) {}
+                        as::buffer("topic1", sizeof("topic1") - 1),
+                        as::buffer("topic1_contents", sizeof("topic1_contents") - 1),
+                        mqtt::any(),
+                        false
                     );
                     return true;
                 });
@@ -712,13 +708,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == mqtt::qos::at_least_once);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
                     c->async_publish_at_most_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        false,
-                        [topic1, contents](boost::system::error_code const&) {}
+                        as::buffer("topic1", sizeof("topic1") - 1),
+                        as::buffer("topic1_contents", sizeof("topic1_contents") - 1),
+                        mqtt::any(),
+                        false
                     );
                     return true;
                 });
@@ -791,13 +785,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == mqtt::v5::reason_code::granted_qos_1);
-                    auto topic1 = std::make_shared<std::string>("topic1");
-                    auto contents = std::make_shared<std::string>("topic1_contents");
                     c->async_publish_at_most_once(
-                        as::buffer(*topic1),
-                        as::buffer(*contents),
-                        false,
-                        [topic1, contents](boost::system::error_code const&) {}
+                        as::buffer("topic1", sizeof("topic1") - 1),
+                        as::buffer("topic1_contents", sizeof("topic1_contents") - 1),
+                        mqtt::any(),
+                        false
                     );
                     return true;
                 });
