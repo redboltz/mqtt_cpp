@@ -76,8 +76,9 @@ public:
     /**
      * @brief Constructor for client
      */
-    endpoint(protocol_version version = protocol_version::undetermined)
-        :h_mqtt_message_processed_(
+    endpoint(protocol_version version = protocol_version::undetermined, bool async_send_store = false)
+        :async_send_store_{async_send_store},
+         h_mqtt_message_processed_(
              [this]
              (async_handler_t func) {
                  async_read_control_packet_type(std::move(func));
@@ -90,10 +91,11 @@ public:
      * @brief Constructor for server.
      *        socket should have already been connected with another endpoint.
      */
-    explicit endpoint(std::shared_ptr<Socket> socket, protocol_version version = protocol_version::undetermined)
-        :socket_(std::move(socket))
-        ,connected_(true)
-        ,h_mqtt_message_processed_(
+    explicit endpoint(std::shared_ptr<Socket> socket, protocol_version version = protocol_version::undetermined, bool async_send_store = false)
+        :socket_(std::move(socket)),
+         connected_(true),
+         async_send_store_{async_send_store},
+         h_mqtt_message_processed_(
              [this]
              (async_handler_t func) {
                  async_read_control_packet_type(std::move(func));
@@ -8616,6 +8618,49 @@ private:
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return false;
         }
+
+        auto connack_proc =
+            [this, func, session_present = is_session_present(payload_[0])] {
+                mqtt_connected_ = true;
+
+                switch (version_) {
+                case protocol_version::v3_1_1:
+                    if (h_connack_) {
+                        return
+                            h_connack_(
+                                session_present,
+                                static_cast<std::uint8_t>(payload_[1])
+                            );
+                    }
+                    break;
+                case protocol_version::v5:
+                    if (h_v5_connack_) {
+                        std::vector<v5::property_variant> props;
+                        char const* b = payload_.data() + 2;
+                        char const* it = b;
+                        char const* e = b + payload_.size() - 2;
+                        if (auto props_opt = v5::property::parse_with_length(it, e)) {
+                            props = std::move(*props_opt);
+                        }
+                        else {
+                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                            return false;
+                        }
+                        return
+                            h_v5_connack_(
+                                session_present,
+                                static_cast<std::uint8_t>(payload_[1]),
+                                std::move(props)
+                            );
+                    }
+                    break;
+                default:
+                    BOOST_ASSERT(false);
+                    return false;
+                }
+                return true;
+            };
+
         if (static_cast<std::uint8_t>(payload_[1]) == connect_return_code::accepted) {
             if (clean_session_) {
                 LockGuard<Mutex> lck (store_mtx_);
@@ -8623,53 +8668,30 @@ private:
                 packet_id_.clear();
             }
             else {
-                LockGuard<Mutex> lck (store_mtx_);
-                auto& idx = store_.template get<tag_seq>();
-                for (auto const& e : idx) {
-                    do_sync_write(e.message());
-                }
-            }
-        }
-        bool session_present = is_session_present(payload_[0]);
-        mqtt_connected_ = true;
+                if (async_send_store_) {
+                    auto org = h_mqtt_message_processed_;
+                    h_mqtt_message_processed_ =
+                        []
+                        (async_handler_t) {
+                        };
 
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            if (h_connack_) {
-                return
-                    h_connack_(
-                        session_present,
-                        static_cast<std::uint8_t>(payload_[1])
-                    );
-            }
-            break;
-        case protocol_version::v5:
-            if (h_v5_connack_) {
-                std::vector<v5::property_variant> props;
-                char const* b = payload_.data() + 2;
-                char const* it = b;
-                char const* e = b + payload_.size() - 2;
-                if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                    props = std::move(*props_opt);
+                    auto async_connack_proc =
+                        [this, func, connack_proc = std::move(connack_proc), org = std::move(org)] () mutable {
+                            h_mqtt_message_processed_ = std::move(org);
+                            if (connack_proc()) {
+                                h_mqtt_message_processed_(std::move(func));
+                            }
+                        };
+                    async_send_store(std::move(async_connack_proc));
+                    return true;
                 }
                 else {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
+                    send_store();
+                    return connack_proc();
                 }
-                return
-                    h_v5_connack_(
-                        session_present,
-                        static_cast<std::uint8_t>(payload_[1]),
-                        std::move(props)
-                    );
             }
-            break;
-        default:
-            BOOST_ASSERT(false);
-            return false;
         }
-
-        return true;
+        return connack_proc();
     }
 
     template <typename F, typename AF>
@@ -9972,6 +9994,14 @@ private:
         }
     }
 
+    void send_store() {
+        LockGuard<Mutex> lck (store_mtx_);
+        auto& idx = store_.template get<tag_seq>();
+        for (auto const& e : idx) {
+            do_sync_write(e.message());
+        }
+    }
+
     // Blocking write
     template <typename MessageVariant>
     void do_sync_write(MessageVariant&& mv) {
@@ -10662,6 +10692,24 @@ private:
         }
     }
 
+    void async_send_store(std::function<void()> func) {
+        auto g = shared_scope_guard(
+            [func = std::move(func)] {
+                func();
+            }
+        );
+        LockGuard<Mutex> lck (store_mtx_);
+        auto& idx = store_.template get<tag_seq>();
+        for (auto const& e : idx) {
+            do_async_write(
+                e.message(),
+                [g]
+                (boost::system::error_code const& /*ec*/) {
+                }
+            );
+        }
+    }
+
     // Non blocking (async) write
 
     class async_packet {
@@ -10898,6 +10946,7 @@ private:
     std::set<packet_id_t> packet_id_;
     bool auto_pub_response_{true};
     bool auto_pub_response_async_{false};
+    bool async_send_store_ { false };
     bool disconnect_requested_{false};
     bool connect_requested_{false};
     std::size_t max_queue_send_count_{1};

@@ -743,9 +743,10 @@ protected:
            std::string path = "/"
 #endif // defined(MQTT_USE_WS)
            ,
-           protocol_version version = protocol_version::v3_1_1
+           protocol_version version = protocol_version::v3_1_1,
+           bool async_store_send = false
     )
-        :base(version),
+        :base(version, async_store_send),
          ios_(ios),
          tim_ping_(ios_),
          tim_close_(ios_),

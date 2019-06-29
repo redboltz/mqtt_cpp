@@ -264,7 +264,8 @@ protected:
            , std::move(path)
 #endif // defined(MQTT_USE_WS)
            ,
-           version
+           version,
+           true
     ) {
         set_auto_pub_response();
         base::set_async_pingreq(true);
