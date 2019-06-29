@@ -156,8 +156,8 @@ public:
               1 +                   // keep alive
               1 +                   // property length
               std::accumulate(
-                  props.begin(),
-                  props.end(),
+                  props_.begin(),
+                  props_.end(),
                   0U,
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
@@ -428,8 +428,8 @@ public:
               1 +                   // reason code
               1 +                   // property length
               std::accumulate(
-                  props.begin(),
-                  props.end(),
+                  props_.begin(),
+                  props_.end(),
                   0U,
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
@@ -570,8 +570,8 @@ public:
               qos == qos::at_most_once ? 0U : 1U + // packet id
               1 +                   // property length
               std::accumulate(
-                  props.begin(),
-                  props.end(),
+                  props_.begin(),
+                  props_.end(),
                   0U,
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
@@ -882,8 +882,8 @@ struct basic_puback_message {
                       1 +                   // reason code
                       1 +                   // property length
                       std::accumulate(
-                          props.begin(),
-                          props.end(),
+                          props_.begin(),
+                          props_.end(),
                           0U,
                           [](std::size_t total, property_variant const& pv) {
                               return total + v5::num_of_const_buffer_sequence(pv);
@@ -1034,8 +1034,8 @@ struct basic_pubrec_message {
                       1 +                   // reason code
                       1 +                   // property length
                       std::accumulate(
-                          props.begin(),
-                          props.end(),
+                          props_.begin(),
+                          props_.end(),
                           0U,
                           [](std::size_t total, property_variant const& pv) {
                               return total + v5::num_of_const_buffer_sequence(pv);
@@ -1186,8 +1186,8 @@ struct basic_pubrel_message {
                       1 +                   // reason code
                       1 +                   // property length
                       std::accumulate(
-                          props.begin(),
-                          props.end(),
+                          props_.begin(),
+                          props_.end(),
                           0U,
                           [](std::size_t total, property_variant const& pv) {
                               return total + v5::num_of_const_buffer_sequence(pv);
@@ -1416,8 +1416,8 @@ struct basic_pubcomp_message {
                       1 +                   // reason code
                       1 +                   // property length
                       std::accumulate(
-                          props.begin(),
-                          props.end(),
+                          props_.begin(),
+                          props_.end(),
                           0U,
                           [](std::size_t total, property_variant const& pv) {
                               return total + v5::num_of_const_buffer_sequence(pv);
@@ -1579,8 +1579,8 @@ public:
               1 +                   // packet id
               1 +                   // property length
               std::accumulate(
-                  props.begin(),
-                  props.end(),
+                  props_.begin(),
+                  props_.end(),
                   0U,
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
@@ -1743,8 +1743,8 @@ public:
               1 +                   // packet id
               1 +                   // property length
               std::accumulate(
-                  props.begin(),
-                  props.end(),
+                  props_.begin(),
+                  props_.end(),
                   0U,
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
@@ -1897,8 +1897,8 @@ public:
               1 +                   // packet id
               1 +                   // property length
               std::accumulate(
-                  props.begin(),
-                  props.end(),
+                  props_.begin(),
+                  props_.end(),
                   0U,
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
@@ -2052,8 +2052,8 @@ public:
               1 +                   // packet id
               1 +                   // property length
               std::accumulate(
-                  props.begin(),
-                  props.end(),
+                  props_.begin(),
+                  props_.end(),
                   0U,
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
@@ -2206,8 +2206,8 @@ struct disconnect_message {
                       1 +                   // reason code
                       1 +                   // property length
                       std::accumulate(
-                          props.begin(),
-                          props.end(),
+                          props_.begin(),
+                          props_.end(),
                           0U,
                           [](std::size_t total, property_variant const& pv) {
                               return total + v5::num_of_const_buffer_sequence(pv);
@@ -2347,8 +2347,8 @@ struct auth_message {
                       1 +                   // reason code
                       1 +                   // property length
                       std::accumulate(
-                          props.begin(),
-                          props.end(),
+                          props_.begin(),
+                          props_.end(),
                           0U,
                           [](std::size_t total, property_variant const& pv) {
                               return total + v5::num_of_const_buffer_sequence(pv);
