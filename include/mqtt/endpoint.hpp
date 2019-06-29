@@ -3228,13 +3228,17 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901145<BR>
      *        3.6.2.2 PUBREL Properties
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     * @param
      */
     void pubrel(
         packet_id_t packet_id,
         mqtt::optional<std::uint8_t> reason_code = mqtt::nullopt,
-        std::vector<v5::property_variant> props = {}
+        std::vector<v5::property_variant> props = {},
+        mqtt::any life_keeper = mqtt::any()
     ) {
-        send_pubrel(packet_id, reason_code, std::move(props));
+        send_pubrel(packet_id, reason_code, std::move(props), std::move(life_keeper));
     }
 
     /**
@@ -6974,7 +6978,7 @@ public:
      * @param packet_id packet id corresponding to publish
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
     void async_pubrel(
         packet_id_t packet_id,
@@ -6996,15 +7000,18 @@ public:
      *        3.6.2.2 PUBREL Properties
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
     void async_pubrel(
         packet_id_t packet_id,
         std::uint8_t reason_code,
         std::vector<v5::property_variant> props,
-        async_handler_t func = async_handler_t()
+        async_handler_t func = async_handler_t(),
+        mqtt::any life_keeper = mqtt::any()
     ) {
-        async_send_pubrel(packet_id, reason_code, std::move(props), std::move(func));
+        async_send_pubrel(packet_id, reason_code, std::move(props), std::move(func), std::move(life_keeper));
     }
 
     /**
@@ -8914,7 +8921,7 @@ private:
                     else store_pubrel(packet_id);
                 },
                 [this, &packet_id, &func] {
-                    if (connected_) async_send_pubrel(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, func);
+                    if (connected_) async_send_pubrel(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, func, mqtt::any());
                     else store_pubrel(packet_id);
                 }
             );
@@ -9636,7 +9643,8 @@ private:
     void send_pubrel(
         packet_id_t packet_id,
         mqtt::optional<std::uint8_t> reason = mqtt::nullopt,
-        std::vector<v5::property_variant> props = {}
+        std::vector<v5::property_variant> props = {},
+        mqtt::any life_keeper = mqtt::any()
     ) {
 
         auto impl =
@@ -9650,7 +9658,8 @@ private:
                     auto ret = store_.emplace(
                         packet_id,
                         control_packet_type::pubcomp,
-                        msg
+                        msg,
+                        std::move(life_keeper)
                     );
                     BOOST_ASSERT(ret.second);
                 }
@@ -10195,7 +10204,8 @@ private:
         packet_id_t packet_id,
         mqtt::optional<std::uint8_t> reason,
         std::vector<v5::property_variant> props,
-        async_handler_t func
+        async_handler_t func,
+        mqtt::any life_keeper
     ) {
 
         auto msg = basic_pubrel_message<PacketIdBytes>(packet_id);
@@ -10226,7 +10236,8 @@ private:
                                 e = store(
                                     packet_id,
                                     control_packet_type::pubcomp,
-                                    msg
+                                    msg,
+                                    life_keeper
                                 );
                             }
                         );
@@ -10236,7 +10247,12 @@ private:
                 if (serialize) {
                     serialize(msg);
                 }
-                do_async_write(std::move(msg), std::move(func));
+                do_async_write(
+                    std::move(msg),
+                    [life_keeper = std::move(life_keeper), func = std::move(func)](boost::system::error_code const& ec) {
+                        if (func) func(ec);
+                    }
+                );
             };
 
         switch (version_) {
