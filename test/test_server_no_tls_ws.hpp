@@ -18,7 +18,16 @@ namespace as = boost::asio;
 class test_server_no_tls_ws {
 public:
     test_server_no_tls_ws(as::io_service& ios, test_broker& b)
-        : server_(as::ip::tcp::endpoint(as::ip::tcp::v4(), broker_notls_ws_port), ios), b_(b) {
+        : server_(
+            as::ip::tcp::endpoint(
+                as::ip::tcp::v4(), broker_notls_ws_port
+            ),
+            ios,
+            ios,
+            [](auto& acceptor) {
+                acceptor.set_option(as::ip::tcp::acceptor::reuse_address(true));
+            }
+        ), b_(b) {
         server_.set_error_handler(
             [](boost::system::error_code const& /*ec*/) {
             }
