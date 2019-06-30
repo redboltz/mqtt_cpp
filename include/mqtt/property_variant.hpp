@@ -15,7 +15,7 @@ namespace mqtt {
 namespace v5 {
 //  property_variant
 
-using property_variant = variant<
+using property_variant_elem = variant<
     property::payload_format_indicator,
     property::message_expiry_interval,
     property::content_type,
@@ -54,6 +54,14 @@ using property_variant = variant<
     property::subscription_identifier_available,
     property::shared_subscription_available
 >;
+
+struct property_variant : property_variant_elem {
+    using property_variant_elem::property_variant_elem;
+    property_variant(property_variant const&) = default;
+    property_variant(property_variant&&) = default;
+    property_variant& operator=(property_variant const&) = default;
+    property_variant& operator=(property_variant&&) = default;
+};
 
 namespace property {
 

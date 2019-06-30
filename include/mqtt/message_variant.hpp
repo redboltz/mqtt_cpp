@@ -16,7 +16,7 @@ namespace mqtt {
 //  message_variant
 
 template <std::size_t PacketIdBytes>
-using basic_message_variant = variant<
+using basic_message_variant_elem = variant<
     v3_1_1::connect_message,
     v3_1_1::connack_message,
     v3_1_1::basic_publish_message<PacketIdBytes>,
@@ -47,6 +47,15 @@ using basic_message_variant = variant<
     v5::disconnect_message,
     v5::auth_message
 >;
+
+template <std::size_t PacketIdBytes>
+struct basic_message_variant : basic_message_variant_elem<PacketIdBytes> {
+    using basic_message_variant_elem<PacketIdBytes>::basic_message_variant_elem;
+    basic_message_variant(basic_message_variant const&) = default;
+    basic_message_variant(basic_message_variant&&) = default;
+    basic_message_variant& operator=(basic_message_variant const&) = default;
+    basic_message_variant& operator=(basic_message_variant&&) = default;
+};
 
 using message_variant = basic_message_variant<2>;
 
