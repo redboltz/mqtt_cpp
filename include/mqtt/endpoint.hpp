@@ -8390,9 +8390,6 @@ private:
         if (ret) {
             h_mqtt_message_processed_(std::move(func));
         }
-        else if (func) {
-            func(boost::system::errc::make_error_code(boost::system::errc::success));
-        }
     }
 
     bool handle_connect(async_handler_t const& func) {
