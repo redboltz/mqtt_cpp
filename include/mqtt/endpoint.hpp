@@ -7638,9 +7638,9 @@ public:
      * @param h mqtt_message_processed_handler.
      */
     void set_mqtt_message_processed_handler(
-        mqtt_message_processed_handler const& h = mqtt_message_processed_handler()) {
+        mqtt_message_processed_handler h = mqtt_message_processed_handler()) {
         if (h) {
-            h_mqtt_message_processed_ = h;
+            h_mqtt_message_processed_ = std::move(h);
         }
         else {
             h_mqtt_message_processed_ =
@@ -7649,6 +7649,14 @@ public:
                     async_read_control_packet_type(std::move(func));
             };
         }
+    }
+
+    /**
+     * @brief Get  mqtt_message_processed_handler.
+     * @return mqtt_message_processed_handler.
+     */
+    mqtt_message_processed_handler get_mqtt_message_processed_handler() const {
+        return h_mqtt_message_processed_;
     }
 
     /**
@@ -8669,15 +8677,21 @@ private:
             }
             else {
                 if (async_send_store_) {
-                    auto org = h_mqtt_message_processed_;
-                    h_mqtt_message_processed_ =
+                    // Store and replace mqtt_message_processed handler
+                    // Until all stored messages are written to internal send buffer,
+                    // stop the next async read.
+                    auto org = get_mqtt_message_processed_handler();
+                    set_mqtt_message_processed_handler(
                         []
                         (async_handler_t) {
-                        };
+                        }
+                    );
 
                     auto async_connack_proc =
                         [this, func, connack_proc = std::move(connack_proc), org = std::move(org)] () mutable {
-                            h_mqtt_message_processed_ = std::move(org);
+                            // All stored messages are sent, then restore the original handler
+                            // and do the connack process. If it returns true, read the next mqtt message.
+                            set_mqtt_message_processed_handler(std::move(org));
                             if (connack_proc()) {
                                 h_mqtt_message_processed_(std::move(func));
                             }
