@@ -6986,7 +6986,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrel(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, std::move(func), mqtt::any());
+        async_send_pubrel(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -8954,7 +8954,7 @@ private:
                     else store_pubrel(packet_id);
                 },
                 [this, &packet_id, &func] {
-                    if (connected_) async_send_pubrel(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, func, mqtt::any());
+                    if (connected_) async_send_pubrel(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, func);
                     else store_pubrel(packet_id);
                 }
             );
@@ -10246,7 +10246,7 @@ private:
         mqtt::optional<std::uint8_t> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func,
-        mqtt::any life_keeper
+        mqtt::any life_keeper = mqtt::any()
     ) {
 
         auto msg = basic_pubrel_message<PacketIdBytes>(packet_id);
