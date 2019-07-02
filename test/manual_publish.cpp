@@ -120,8 +120,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 [&chk]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents) {
+                 mqtt::string_view topic,
+                 mqtt::string_view contents) {
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
                     BOOST_TEST(mqtt::publish::is_retain(header) == false);
@@ -222,8 +222,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 [&chk]
                 (std::uint8_t header,
                  mqtt::optional<packet_id_t> packet_id,
-                 std::string topic,
-                 std::string contents,
+                 mqtt::string_view topic,
+                 mqtt::string_view contents,
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     BOOST_TEST(mqtt::publish::is_dup(header) == false);
                     BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);

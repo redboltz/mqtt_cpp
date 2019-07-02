@@ -37,16 +37,14 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    std::string topic1("topic1");
-                    c->subscribe(as::buffer(topic1), mqtt::qos::at_most_once);
+                    c->subscribe("topic1", mqtt::qos::at_most_once);
                     return true;
                 });
             c->set_suback_handler(
                 [&chk, &c]
                 (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
                     MQTT_CHK("h_suback");
-                    std::string topic1("topic1");
-                    c->unsubscribe(as::buffer(topic1));
+                    c->unsubscribe("topic1");
                     return true;
                 });
             c->set_unsuback_handler(
@@ -64,16 +62,14 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    std::string topic1("topic1");
-                    c->subscribe(as::buffer(topic1), mqtt::qos::at_most_once);
+                    c->subscribe("topic1", mqtt::qos::at_most_once);
                     return true;
                 });
             c->set_v5_suback_handler(
                 [&chk, &c]
                 (packet_id_t, std::vector<std::uint8_t>, std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_suback");
-                    std::string topic1("topic1");
-                    c->unsubscribe(as::buffer(topic1));
+                    c->unsubscribe("topic1");
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -132,20 +128,16 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    std::string topic1("topic1");
-                    std::string topic2("topic2");
                     c->subscribe(
-                        as::buffer(topic1), mqtt::qos::at_most_once,
-                        as::buffer(topic2), mqtt::qos::exactly_once);
+                        "topic1", mqtt::qos::at_most_once,
+                        "topic2", mqtt::qos::exactly_once);
                     return true;
                 });
             c->set_suback_handler(
                 [&chk, &c]
                 (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
                     MQTT_CHK("h_suback");
-                    std::string topic1("topic1");
-                    std::string topic2("topic2");
-                    c->unsubscribe(as::buffer(topic1), as::buffer(topic2));
+                    c->unsubscribe("topic1", "topic2");
                     return true;
                 });
             c->set_unsuback_handler(
@@ -163,20 +155,16 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    std::string topic1("topic1");
-                    std::string topic2("topic2");
                     c->subscribe(
-                        as::buffer(topic1), mqtt::qos::at_most_once,
-                        as::buffer(topic2), mqtt::qos::exactly_once);
+                        "topic1", mqtt::qos::at_most_once,
+                        "topic2", mqtt::qos::exactly_once);
                     return true;
                 });
             c->set_v5_suback_handler(
                 [&chk, &c]
                 (packet_id_t, std::vector<std::uint8_t>, std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_suback");
-                    std::string topic1("topic1");
-                    std::string topic2("topic2");
-                    c->unsubscribe(as::buffer(topic1), as::buffer(topic2));
+                    c->unsubscribe("topic1", "topic2");
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -235,26 +223,19 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    std::vector<std::tuple<as::const_buffer, std::uint8_t>> v;
-                    std::string topic1("topic1");
-                    std::string topic2("topic2");
-                    v.emplace_back(as::buffer(topic1), mqtt::qos::at_most_once);
-                    v.emplace_back(as::buffer(topic2), mqtt::qos::exactly_once);
-                    c->subscribe(v);
+                    std::vector<std::tuple<mqtt::string_view, std::uint8_t>> v
+                        {
+                            { "topic1", mqtt::qos::at_most_once },
+                            { "topic2", mqtt::qos::exactly_once }
+                        };
+                    c->subscribe(std::move(v));
                     return true;
                 });
             c->set_suback_handler(
                 [&chk, &c]
                 (packet_id_t /*packet_id*/, std::vector<mqtt::optional<std::uint8_t>> /*results*/) {
                     MQTT_CHK("h_suback");
-                    std::string topic1("topic1");
-                    std::string topic2("topic2");
-                    std::vector<as::const_buffer> v
-                        {
-                            as::buffer(topic1),
-                            as::buffer(topic2),
-                        };
-                    c->unsubscribe(v);
+                    c->unsubscribe(std::vector<mqtt::string_view>{"topic1", "topic2"});
                     return true;
                 });
             c->set_unsuback_handler(
@@ -272,26 +253,19 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
-                    std::vector<std::tuple<as::const_buffer, std::uint8_t>> v;
-                    std::string topic1("topic1");
-                    std::string topic2("topic2");
-                    v.emplace_back(as::buffer(topic1), mqtt::qos::at_most_once);
-                    v.emplace_back(as::buffer(topic2), mqtt::qos::exactly_once);
-                    c->subscribe(v);
+                    std::vector<std::tuple<mqtt::string_view, std::uint8_t>> v
+                        {
+                            { "topic1", mqtt::qos::at_most_once },
+                            { "topic2", mqtt::qos::exactly_once }
+                        };
+                    c->subscribe(std::move(v));
                     return true;
                 });
             c->set_v5_suback_handler(
                 [&chk, &c]
                 (packet_id_t, std::vector<std::uint8_t>, std::vector<mqtt::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_suback");
-                    std::string topic1("topic1");
-                    std::string topic2("topic2");
-                    std::vector<as::const_buffer> v
-                        {
-                            as::buffer(topic1),
-                            as::buffer(topic2),
-                        };
-                    c->unsubscribe(v);
+                    c->unsubscribe(std::vector<mqtt::string_view>{"topic1", "topic2"});
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -571,11 +545,13 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto topic2 = std::make_shared<std::string>("topic2");
-                    std::vector<std::tuple<as::const_buffer, std::uint8_t>> v;
-                    v.emplace_back(as::buffer(*topic1), mqtt::qos::at_most_once);
-                    v.emplace_back(as::buffer(*topic2), mqtt::qos::exactly_once);
+                    std::vector<std::tuple<as::const_buffer, std::uint8_t>> v
+                    {
+                        { as::buffer(*topic1), mqtt::qos::at_most_once },
+                        { as::buffer(*topic2), mqtt::qos::exactly_once }
+                    };
                     c->async_subscribe(
-                        v,
+                        std::move(v),
                         [topic1, topic2](boost::system::error_code const&) {}
                     );
                     return true;
@@ -592,7 +568,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                             as::buffer(*topic2),
                         };
                     c->async_unsubscribe(
-                        v,
+                        std::move(v),
                         [topic1, topic2](boost::system::error_code const&) {}
                     );
                     return true;
@@ -614,11 +590,13 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                     BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto topic2 = std::make_shared<std::string>("topic2");
-                    std::vector<std::tuple<as::const_buffer, std::uint8_t>> v;
-                    v.emplace_back(as::buffer(*topic1), mqtt::qos::at_most_once);
-                    v.emplace_back(as::buffer(*topic2), mqtt::qos::exactly_once);
+                    std::vector<std::tuple<as::const_buffer, std::uint8_t>> v
+                        {
+                            { as::buffer(*topic1), mqtt::qos::at_most_once },
+                            { as::buffer(*topic2), mqtt::qos::exactly_once }
+                        };
                     c->async_subscribe(
-                        v,
+                        std::move(v),
                         [topic1, topic2](boost::system::error_code const&) {}
                     );
                     return true;
@@ -635,7 +613,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                             as::buffer(*topic2),
                         };
                     c->async_unsubscribe(
-                        v,
+                        std::move(v),
                         [topic1, topic2](boost::system::error_code const&) {}
                     );
                     return true;

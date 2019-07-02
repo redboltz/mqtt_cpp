@@ -7,6 +7,7 @@
 #if !defined(MQTT_REMAINING_LENGTH_HPP)
 #define MQTT_REMAINING_LENGTH_HPP
 
+#include <mqtt/string_view.hpp>
 #include <mqtt/variable_length.hpp>
 
 namespace mqtt {
@@ -19,7 +20,7 @@ remaining_bytes(std::size_t size) {
 }
 
 inline std::tuple<std::size_t, std::size_t>
-remaining_length(std::string const& bytes) {
+remaining_length(mqtt::string_view bytes) {
     return variable_length(bytes);
 }
 

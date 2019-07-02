@@ -12,7 +12,6 @@
 #include <mqtt/connect_flags.hpp>
 #include <mqtt/connect_return_code.hpp>
 #include <mqtt/control_packet_type.hpp>
-#include <mqtt/encoded_length.hpp>
 #include <mqtt/exception.hpp>
 #include <mqtt/fixed_header.hpp>
 #include <mqtt/hexdump.hpp>

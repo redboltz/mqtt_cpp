@@ -124,8 +124,8 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
         [&chk, &c2, &pid_unsub2]
         (std::uint8_t header,
          mqtt::optional<packet_id_t> packet_id,
-         std::string topic,
-         std::string contents) {
+         mqtt::string_view topic,
+         mqtt::string_view contents) {
             MQTT_CHK("h_publish_2");
             BOOST_TEST(mqtt::publish::is_dup(header) == false);
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
@@ -249,8 +249,8 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
         [&chk, &c2, &pid_unsub2]
         (std::uint8_t header,
          mqtt::optional<packet_id_t> packet_id,
-         std::string topic,
-         std::string contents) {
+         mqtt::string_view topic,
+         mqtt::string_view contents) {
             MQTT_CHK("h_publish_2");
             BOOST_TEST(mqtt::publish::is_dup(header) == false);
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_least_once);
@@ -376,8 +376,8 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
         [&chk]
         (std::uint8_t header,
          mqtt::optional<packet_id_t> packet_id,
-         std::string topic,
-         std::string contents) {
+         mqtt::string_view topic,
+         mqtt::string_view contents) {
             MQTT_CHK("h_publish_2");
             BOOST_TEST(mqtt::publish::is_dup(header) == false);
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::exactly_once);
@@ -532,8 +532,8 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
         [&chk, &c2, &pid_unsub2]
         (std::uint8_t header,
          mqtt::optional<packet_id_t> packet_id,
-         std::string topic,
-         std::string contents) {
+         mqtt::string_view topic,
+         mqtt::string_view contents) {
             BOOST_TEST(mqtt::publish::is_dup(header) == false);
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
             BOOST_CHECK(!packet_id);
@@ -718,8 +718,8 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
         [&chk, &c2, &pid_unsub2, prop_size, &user_prop_count]
         (std::uint8_t header,
          mqtt::optional<packet_id_t> packet_id,
-         std::string topic,
-         std::string contents,
+         mqtt::string_view topic,
+         mqtt::string_view contents,
          std::vector<mqtt::v5::property_variant> props) {
             MQTT_CHK("h_publish_2");
             BOOST_TEST(mqtt::publish::is_dup(header) == false);

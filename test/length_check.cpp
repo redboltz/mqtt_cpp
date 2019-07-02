@@ -64,8 +64,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             []
             (std::uint8_t /*header*/,
              mqtt::optional<packet_id_t> ,
-             std::string /*topic*/,
-             std::string /*contents*/) {
+             mqtt::string_view /*topic*/,
+             mqtt::string_view /*contents*/) {
                 BOOST_CHECK(false);
                 return false;
             });

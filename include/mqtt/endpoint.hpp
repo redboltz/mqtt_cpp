@@ -36,7 +36,6 @@
 #include <mqtt/remaining_length.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
 #include <mqtt/connect_flags.hpp>
-#include <mqtt/encoded_length.hpp>
 #include <mqtt/will.hpp>
 #include <mqtt/session_present.hpp>
 #include <mqtt/qos.hpp>
@@ -163,9 +162,9 @@ public:
      *
      */
     using connect_handler = std::function<
-        bool(std::string const& client_id,
-             mqtt::optional<std::string> const& username,
-             mqtt::optional<std::string> const& password,
+        bool(mqtt::string_view client_id,
+             mqtt::optional<mqtt::string_view> username,
+             mqtt::optional<mqtt::string_view> password,
              mqtt::optional<will> will,
              bool clean_session,
              std::uint16_t keep_alive)>;
@@ -202,8 +201,8 @@ public:
      */
     using publish_handler = std::function<bool(std::uint8_t fixed_header,
                                                mqtt::optional<packet_id_t> packet_id,
-                                               std::string topic_name,
-                                               std::string contents)>;
+                                               mqtt::string_view topic_name,
+                                               mqtt::string_view contents)>;
 
     /**
      * @brief Puback handler
@@ -256,7 +255,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using subscribe_handler = std::function<bool(packet_id_t packet_id,
-                                                 std::vector<std::tuple<std::string, std::uint8_t>> entries)>;
+                                                 std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries)>;
 
     /**
      * @brief Suback handler
@@ -283,7 +282,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using unsubscribe_handler = std::function<bool(packet_id_t packet_id,
-                                                   std::vector<std::string> topics)>;
+                                                   std::vector<mqtt::string_view> topics)>;
 
     /**
      * @brief Unsuback handler
@@ -347,9 +346,9 @@ public:
      *
      */
     using v5_connect_handler = std::function<
-        bool(std::string const& client_id,
-             mqtt::optional<std::string> const& username,
-             mqtt::optional<std::string> const& password,
+        bool(mqtt::string_view client_id,
+             mqtt::optional<mqtt::string_view> username,
+             mqtt::optional<mqtt::string_view> password,
              mqtt::optional<will> will,
              bool clean_start,
              std::uint16_t keep_alive,
@@ -406,8 +405,8 @@ public:
     using v5_publish_handler = std::function<
         bool(std::uint8_t fixed_header,
              mqtt::optional<packet_id_t> packet_id,
-             std::string topic_name,
-             std::string contents,
+             mqtt::string_view topic_name,
+             mqtt::string_view contents,
              std::vector<v5::property_variant> props)
     >;
 
@@ -515,7 +514,7 @@ public:
      */
     using v5_subscribe_handler = std::function<
         bool(packet_id_t packet_id,
-             std::vector<std::tuple<std::string, std::uint8_t>> entries,
+             std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries,
              std::vector<v5::property_variant> props)
     >;
 
@@ -557,7 +556,7 @@ public:
      */
     using v5_unsubscribe_handler = std::function<
         bool(packet_id_t packet_id,
-             std::vector<std::string> topics,
+             std::vector<mqtt::string_view> topics,
              std::vector<v5::property_variant> props)
     >;
 
@@ -3057,7 +3056,7 @@ public:
         std::vector<as::const_buffer> cb_params;
         cb_params.reserve(params.size());
 
-        for (auto&& e : params) {
+        for (auto const& e : params) {
             cb_params.emplace_back(as::buffer(e.data(), e.size()));
         }
         send_unsubscribe(std::move(cb_params), packet_id, std::move(props));
@@ -6436,7 +6435,7 @@ public:
         std::vector<std::shared_ptr<std::string>> life_keepers;
         life_keepers.reserve(params.size());
 
-        for (auto&& e : params) {
+        for (auto const& e : params) {
             auto sp_topic_name = std::make_shared<std::string>(std::move(std::get<0>(e)));
             cb_params.emplace_back(as::buffer(*sp_topic_name), std::get<1>(e));
             life_keepers.emplace_back(std::move(sp_topic_name));
@@ -6480,7 +6479,7 @@ public:
         std::vector<std::shared_ptr<std::string>> life_keepers;
         life_keepers.reserve(params.size());
 
-        for (auto&& e : params) {
+        for (auto const& e : params) {
             auto sp_topic_name = std::make_shared<std::string>(std::move(std::get<0>(e)));
             cb_params.emplace_back(as::buffer(*sp_topic_name), std::get<1>(e));
             life_keepers.emplace_back(std::move(sp_topic_name));
@@ -6621,7 +6620,7 @@ public:
         std::vector<std::shared_ptr<std::string>> life_keepers;
         life_keepers.reserve(params.size());
 
-        for (auto&& e : params) {
+        for (auto const& e : params) {
             life_keepers.emplace_back(std::make_shared<std::string>(std::move(e)));
             cb_params.emplace_back(as::buffer(*life_keepers.back()));
         }
@@ -6663,7 +6662,7 @@ public:
         std::vector<std::shared_ptr<std::string>> life_keepers;
         life_keepers.reserve(params.size());
 
-        for (auto&& e : params) {
+        for (auto const& e : params) {
             life_keepers.emplace_back(std::make_shared<std::string>(std::move(e)));
             cb_params.emplace_back(as::buffer(*life_keepers.back()));
         }
@@ -7323,7 +7322,7 @@ public:
      */
     void for_each_store(std::function<void(char const*, std::size_t)> const& f) {
         LockGuard<Mutex> lck (store_mtx_);
-        auto& idx = store_.template get<tag_seq>();
+        auto const& idx = store_.template get<tag_seq>();
         for (auto const & e : idx) {
             auto const& m = e.message();
             auto cb = continuous_buffer(m);
@@ -7337,7 +7336,7 @@ public:
      */
     void for_each_store(std::function<void(message_variant const&)> const& f) {
         LockGuard<Mutex> lck (store_mtx_);
-        auto& idx = store_.template get<tag_seq>();
+        auto const& idx = store_.template get<tag_seq>();
         for (auto const & e : idx) {
             f(e.message());
         }
@@ -8472,6 +8471,9 @@ private:
         i += client_id_length;
 
         clean_session_ = connect_flags::has_clean_session(byte8);
+        // TODO: Implement a "will_view" which, instead of containing string objects, only
+        //       has string_views into the message buffer. This "will_view" would need to
+        //       be assigned to a real "will" object in order to have it's contents preserved.
         mqtt::optional<will> w;
         if (connect_flags::has_will_flag(byte8)) {
 
@@ -8522,14 +8524,14 @@ private:
             }
             std::string will_message(payload_.data() + i, will_message_length);
             i += will_message_length;
-            w = will(topic_name,
-                     will_message,
+            w = will(std::move(topic_name),
+                     std::move(will_message),
                      connect_flags::has_will_retain(byte8),
                      connect_flags::will_qos(byte8),
                      std::move(will_props));
         }
 
-        mqtt::optional<std::string> user_name;
+        mqtt::optional<mqtt::string_view> user_name;
         if (connect_flags::has_user_name_flag(byte8)) {
 
             if (remaining_length_ < i + 2) {
@@ -8543,7 +8545,7 @@ private:
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
-            user_name = std::string(payload_.data() + i, user_name_length);
+            user_name = mqtt::string_view(payload_.data() + i, user_name_length);
             if (utf8string::validate_contents(user_name.value()) != utf8string::validation::well_formed) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
                 return false;
@@ -8551,7 +8553,7 @@ private:
             i += user_name_length;
         }
 
-        mqtt::optional<std::string> password;
+        mqtt::optional<mqtt::string_view> password;
         if (connect_flags::has_password_flag(byte8)) {
 
             if (remaining_length_ < i + 2) {
@@ -8565,7 +8567,7 @@ private:
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
-            password = std::string(payload_.data() + i, password_length);
+            password = mqtt::string_view(payload_.data() + i, password_length);
             i += password_length;
         }
         mqtt_connected_ = true;
@@ -8729,7 +8731,7 @@ private:
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return false;
         }
-        std::string topic_name(payload_.data() + i, topic_name_length);
+        mqtt::string_view topic_name(payload_.data() + i, topic_name_length);
         if (utf8string::validate_contents(topic_name) != utf8string::validation::well_formed) {
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
             return false;
@@ -8744,8 +8746,8 @@ private:
                 switch (version_) {
                 case protocol_version::v3_1_1:
                     if (h_publish_) {
-                        std::string contents(payload_.data() + i, payload_.size() - i);
-                        return h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents));
+                        mqtt::string_view contents(payload_.data() + i, payload_.size() - i);
+                        return h_publish_(fixed_header_, packet_id, topic_name, contents);
                     }
                     break;
                 case protocol_version::v5:
@@ -8762,8 +8764,8 @@ private:
                             return false;
                         }
                         i += static_cast<std::size_t>(std::distance(b, it));
-                        std::string contents(payload_.data() + i, payload_.size() - i);
-                        return h_v5_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents), std::move(props));
+                        mqtt::string_view contents(payload_.data() + i, payload_.size() - i);
+                        return h_v5_publish_(fixed_header_, packet_id, topic_name, contents, std::move(props));
                     }
                     break;
                 default:
@@ -8828,8 +8830,8 @@ private:
                 if (h_publish_) {
                     auto it = qos2_publish_handled_.find(*packet_id);
                     if (it == qos2_publish_handled_.end()) {
-                        std::string contents(payload_.data() + i, payload_.size() - i);
-                        if (h_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents))) {
+                        mqtt::string_view contents(payload_.data() + i, payload_.size() - i);
+                        if (h_publish_(fixed_header_, packet_id, topic_name, contents)) {
                             qos2_publish_handled_.emplace(*packet_id);
                             res();
                             return true;
@@ -8854,8 +8856,8 @@ private:
                             return false;
                         }
                         i += static_cast<std::size_t>(std::distance(b, it));
-                        std::string contents(payload_.data() + i, payload_.size() - i);
-                        if (h_v5_publish_(fixed_header_, packet_id, std::move(topic_name), std::move(contents), std::move(props))) {
+                        mqtt::string_view contents(payload_.data() + i, payload_.size() - i);
+                        if (h_v5_publish_(fixed_header_, packet_id, topic_name, contents, std::move(props))) {
                             qos2_publish_handled_.emplace(*packet_id);
                             res();
                             return true;
@@ -9141,7 +9143,7 @@ private:
 
         switch (version_) {
         case protocol_version::v3_1_1: {
-            std::vector<std::tuple<std::string, std::uint8_t>> entries;
+            std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries;
             while (i < remaining_length_) {
                 if (remaining_length_ < i + 2) {
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
@@ -9154,7 +9156,7 @@ private:
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     return false;
                 }
-                std::string topic_filter(payload_.data() + i, topic_length);
+                mqtt::string_view topic_filter(payload_.data() + i, topic_length);
                 if (utf8string::validate_contents(topic_filter) != utf8string::validation::well_formed) {
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
                     return false;
@@ -9171,7 +9173,7 @@ private:
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                     return false;
                 }
-                entries.emplace_back(std::move(topic_filter), option);
+                entries.emplace_back(topic_filter, option);
                 ++i;
             }
             if (h_subscribe_) return h_subscribe_(packet_id, std::move(entries));
@@ -9190,7 +9192,7 @@ private:
             }
             i += static_cast<std::size_t>(std::distance(b, it));
 
-            std::vector<std::tuple<std::string, std::uint8_t>> entries;
+            std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries;
             while (i < remaining_length_) {
                 if (remaining_length_ < i + 2) {
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
@@ -9203,7 +9205,7 @@ private:
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     return false;
                 }
-                std::string topic_filter(payload_.data() + i, topic_length);
+                mqtt::string_view topic_filter(payload_.data() + i, topic_length);
                 if (utf8string::validate_contents(topic_filter) != utf8string::validation::well_formed) {
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
                     return false;
@@ -9220,7 +9222,7 @@ private:
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
                     return false;
                 }
-                entries.emplace_back(std::move(topic_filter), option);
+                entries.emplace_back(topic_filter, option);
                 ++i;
             }
             if (h_v5_subscribe_) return h_v5_subscribe_(packet_id, std::move(entries), std::move(props));
@@ -9321,7 +9323,7 @@ private:
             i += static_cast<std::size_t>(std::distance(b, it));
         }
 
-        std::vector<std::string> topic_filters;
+        std::vector<mqtt::string_view> topic_filters;
         while (i < remaining_length_) {
             if (remaining_length_ < i + 2) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
@@ -9333,14 +9335,14 @@ private:
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return false;
             }
-            std::string topic_filter(payload_.data() + i, topic_length);
+            mqtt::string_view topic_filter(payload_.data() + i, topic_length);
             if (utf8string::validate_contents(topic_filter) != utf8string::validation::well_formed) {
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
                 return false;
             }
             i += topic_length;
 
-            topic_filters.emplace_back(std::move(topic_filter));
+            topic_filters.emplace_back(topic_filter);
         }
 
         switch (version_) {
@@ -9681,7 +9683,7 @@ private:
     ) {
 
         auto impl =
-            [&](auto&& msg, auto const& serialize) {
+            [&](auto msg, auto const& serialize) {
                 {
                     LockGuard<Mutex> lck (store_mtx_);
 
@@ -9700,7 +9702,7 @@ private:
                 if (serialize) {
                     serialize(msg);
                 }
-                do_sync_write(msg);
+                do_sync_write(std::move(msg));
             };
 
         switch (version_) {
@@ -9729,7 +9731,7 @@ private:
     ) {
 
         auto impl =
-            [&](auto&& msg, auto const& serialize) {
+            [&](auto msg, auto const& serialize) {
                 {
                     LockGuard<Mutex> lck (store_mtx_);
 
@@ -9745,7 +9747,7 @@ private:
                 }
 
                 if (serialize) {
-                    serialize(msg);
+                    serialize(std::move(msg));
                 }
             };
 
@@ -9790,7 +9792,7 @@ private:
 
     template <typename... Args>
     void send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>>&& params,
+        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
         packet_id_t packet_id,
         as::const_buffer topic_name,
         std::uint8_t qos,
@@ -9801,7 +9803,7 @@ private:
 
     template <typename... Args>
     void send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>>&& params,
+        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
         packet_id_t packet_id,
         mqtt::string_view topic_name,
         std::uint8_t qos,
@@ -9811,7 +9813,7 @@ private:
     }
 
     void send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>>&& params,
+        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props = {}
     ) {
@@ -9838,12 +9840,12 @@ private:
 
     template <typename... Args>
     void send_suback(
-        std::vector<std::uint8_t>& params,
+        std::vector<std::uint8_t> params,
         packet_id_t packet_id,
         std::uint8_t reason,
         Args&&... args) {
         params.push_back(reason);
-        send_suback(params, packet_id, std::forward<Args>(args)...);
+        send_suback(std::move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void send_suback(
@@ -9866,17 +9868,17 @@ private:
 
     template <typename... Args>
     void send_unsubscribe(
-        std::vector<as::const_buffer>&& params,
+        std::vector<as::const_buffer> params,
         packet_id_t packet_id,
         as::const_buffer topic_name,
         Args&&... args) {
-        params.emplace_back(std::move(topic_name));
+        params.emplace_back(topic_name);
         send_unsubscribe(std::move(params), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void send_unsubscribe(
-        std::vector<as::const_buffer>&& params,
+        std::vector<as::const_buffer> params,
         packet_id_t packet_id,
         mqtt::string_view topic_name,
         Args&&... args) {
@@ -9885,7 +9887,7 @@ private:
     }
 
     void send_unsubscribe(
-        std::vector<as::const_buffer>&& params,
+        std::vector<as::const_buffer> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props = {}
     ) {
@@ -9920,7 +9922,7 @@ private:
 
     template <typename... Args>
     void send_unsuback(
-        std::vector<std::uint8_t>&& params,
+        std::vector<std::uint8_t> params,
         packet_id_t packet_id,
         std::uint8_t reason,
         Args&&... args) {
@@ -9929,7 +9931,7 @@ private:
     }
 
     void send_unsuback(
-        std::vector<std::uint8_t>&& params,
+        std::vector<std::uint8_t> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props = {}
     ) {
@@ -10010,7 +10012,7 @@ private:
 
     void send_store() {
         LockGuard<Mutex> lck (store_mtx_);
-        auto& idx = store_.template get<tag_seq>();
+        auto const& idx = store_.template get<tag_seq>();
         for (auto const& e : idx) {
             do_sync_write(e.message());
         }
@@ -10187,7 +10189,7 @@ private:
     ) {
 
         auto impl =
-            [&] (auto&& msg) {
+            [&] (auto msg) {
                 auto self = this->shared_from_this();
                 do_async_write(
                     std::move(msg),
@@ -10252,7 +10254,7 @@ private:
         auto msg = basic_pubrel_message<PacketIdBytes>(packet_id);
 
         auto impl =
-            [&](auto&& msg, auto const& serialize) {
+            [&](auto msg, auto const& serialize) {
                 {
                     LockGuard<Mutex> lck (store_mtx_);
 
@@ -10277,7 +10279,7 @@ private:
                                 e = store(
                                     packet_id,
                                     control_packet_type::pubcomp,
-                                    msg,
+                                    std::move(msg),
                                     life_keeper
                                 );
                             }
@@ -10322,7 +10324,7 @@ private:
         async_handler_t func
     ) {
         auto impl =
-            [&] (auto&& msg) {
+            [&] (auto msg) {
                 auto self = this->shared_from_this();
                 do_async_write(
                     std::move(msg),
@@ -10352,19 +10354,19 @@ private:
 
     template <typename... Args>
     void async_send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>>&& params,
+        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
         mqtt::any life_keepers,
         packet_id_t packet_id,
         as::const_buffer topic_name,
         std::uint8_t qos,
         Args&&... args) {
-        params.emplace_back(std::move(topic_name), qos);
+        params.emplace_back(topic_name, qos);
         async_send_subscribe(std::move(params), std::move(life_keepers), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void async_send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>>&& params,
+        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
         mqtt::any life_keepers,
         packet_id_t packet_id,
         std::string topic_name,
@@ -10377,7 +10379,7 @@ private:
     }
 
     void async_send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>>&& params,
+        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
         mqtt::any life_keepers,
         packet_id_t packet_id,
         async_handler_t func) {
@@ -10408,7 +10410,7 @@ private:
     }
 
     void async_send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>>&& params,
+        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
         mqtt::any life_keepers,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
@@ -10441,7 +10443,7 @@ private:
 
     template <typename... Args>
     void async_send_suback(
-        std::vector<std::uint8_t>&& params,
+        std::vector<std::uint8_t> params,
         packet_id_t packet_id,
         std::uint8_t qos,
         Args&&... args) {
@@ -10450,7 +10452,7 @@ private:
     }
 
     void async_send_suback(
-        std::vector<std::uint8_t>&& params,
+        std::vector<std::uint8_t> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
         async_handler_t func
@@ -10474,18 +10476,18 @@ private:
 
     template <typename... Args>
     void async_send_unsubscribe(
-        std::vector<as::const_buffer>&& params,
+        std::vector<as::const_buffer> params,
         mqtt::any life_keepers,
         packet_id_t packet_id,
         as::const_buffer topic_name,
         Args&&... args) {
-        params.emplace_back(std::move(topic_name));
+        params.emplace_back(topic_name);
         async_send_unsubscribe(std::move(params), std::move(life_keepers), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void async_send_unsubscribe(
-        std::vector<as::const_buffer>&& params,
+        std::vector<as::const_buffer> params,
         mqtt::any life_keepers,
         packet_id_t packet_id,
         std::string topic_name,
@@ -10497,7 +10499,7 @@ private:
     }
 
     void async_send_unsubscribe(
-        std::vector<as::const_buffer>&& params,
+        std::vector<as::const_buffer> params,
         mqtt::any life_keepers,
         packet_id_t packet_id,
         async_handler_t func) {
@@ -10535,7 +10537,7 @@ private:
     }
 
     void async_send_unsubscribe(
-        std::vector<as::const_buffer>&& params,
+        std::vector<as::const_buffer> params,
         mqtt::any life_keepers,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
@@ -10592,7 +10594,7 @@ private:
 
     template <typename... Args>
     void async_send_unsuback(
-        std::vector<std::uint8_t>&& params,
+        std::vector<std::uint8_t> params,
         packet_id_t packet_id,
         std::uint8_t qos,
         Args&&... args) {
@@ -10601,7 +10603,7 @@ private:
     }
 
     void async_send_unsuback(
-        std::vector<std::uint8_t>&& params,
+        std::vector<std::uint8_t> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
         async_handler_t func
@@ -10713,7 +10715,7 @@ private:
             }
         );
         LockGuard<Mutex> lck (store_mtx_);
-        auto& idx = store_.template get<tag_seq>();
+        auto const& idx = store_.template get<tag_seq>();
         for (auto const& e : idx) {
             do_async_write(
                 e.message(),

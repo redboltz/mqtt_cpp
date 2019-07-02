@@ -101,8 +101,8 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
             [&chk, &c, &pid_unsub]
             (std::uint8_t header,
              mqtt::optional<packet_id_t> packet_id,
-             std::string topic,
-             std::string contents) {
+             mqtt::string_view topic,
+             mqtt::string_view contents) {
                 BOOST_TEST(mqtt::publish::is_dup(header) == false);
                 BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
                 BOOST_TEST(mqtt::publish::is_retain(header) == false);
@@ -238,8 +238,8 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
         [&chk, &c1, &pid_unsub1]
         (std::uint8_t header,
          mqtt::optional<packet_id_t> packet_id,
-         std::string topic,
-         std::string contents) {
+         mqtt::string_view topic,
+         mqtt::string_view contents) {
             MQTT_CHK("h_publish_1");
             BOOST_TEST(mqtt::publish::is_dup(header) == false);
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
@@ -319,8 +319,8 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
         [&chk, &c2, &pid_unsub2]
         (std::uint8_t header,
          mqtt::optional<packet_id_t> packet_id,
-         std::string topic,
-         std::string contents) {
+         mqtt::string_view topic,
+         mqtt::string_view contents) {
             MQTT_CHK("h_publish_2");
             BOOST_TEST(mqtt::publish::is_dup(header) == false);
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
@@ -443,8 +443,8 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
         [&chk, &c1, &pid_unsub1]
         (std::uint8_t header,
          mqtt::optional<packet_id_t> packet_id,
-         std::string topic,
-         std::string contents) {
+         mqtt::string_view topic,
+         mqtt::string_view contents) {
             MQTT_CHK("h_publish_1");
             BOOST_TEST(mqtt::publish::is_dup(header) == false);
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_least_once);
@@ -505,8 +505,8 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
         [&chk, &c2, &pid_unsub2]
         (std::uint8_t header,
          mqtt::optional<packet_id_t> packet_id,
-         std::string topic,
-         std::string contents) {
+         mqtt::string_view topic,
+         mqtt::string_view contents) {
             MQTT_CHK("h_publish_2");
             BOOST_TEST(mqtt::publish::is_dup(header) == false);
             BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_least_once);

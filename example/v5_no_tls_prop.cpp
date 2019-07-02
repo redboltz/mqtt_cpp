@@ -172,9 +172,9 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
             // set MQTT level handlers
             ep.set_v5_connect_handler( // use v5 handler
                 [&]
-                (std::string const& client_id,
-                 mqtt::optional<std::string> const& username,
-                 mqtt::optional<std::string> const& password,
+                (mqtt::string_view client_id,
+                 mqtt::optional<mqtt::string_view> const& username,
+                 mqtt::optional<mqtt::string_view> const& password,
                  mqtt::optional<mqtt::will>,
                  bool clean_session,
                  std::uint16_t keep_alive,

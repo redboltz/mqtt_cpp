@@ -111,9 +111,9 @@ public:
         // set MQTT level handlers
         ep.set_connect_handler(
             [&]
-            (std::string const& client_id,
-             mqtt::optional<std::string> const& username,
-             mqtt::optional<std::string> const& password,
+            (mqtt::string_view client_id,
+             mqtt::optional<mqtt::string_view> username,
+             mqtt::optional<mqtt::string_view> password,
              mqtt::optional<mqtt::will> will,
              bool clean_session,
              std::uint16_t keep_alive) {
@@ -132,9 +132,9 @@ public:
         );
         ep.set_v5_connect_handler(
             [&]
-            (std::string const& client_id,
-             mqtt::optional<std::string> const& username,
-             mqtt::optional<std::string> const& password,
+            (mqtt::string_view client_id,
+             mqtt::optional<mqtt::string_view> username,
+             mqtt::optional<mqtt::string_view> password,
              mqtt::optional<mqtt::will> will,
              bool clean_session,
              std::uint16_t keep_alive,
@@ -223,14 +223,14 @@ public:
             [&]
             (std::uint8_t header,
              mqtt::optional<typename Endpoint::packet_id_t> packet_id,
-             std::string topic_name,
-             std::string contents){
+             mqtt::string_view topic_name,
+             mqtt::string_view contents){
                 return publish_handler(
                     std::forward<Endpoint>(ep),
                     header,
                     packet_id,
-                    std::move(topic_name),
-                    std::move(contents),
+                    topic_name,
+                    contents,
                     {}
                 );
             });
@@ -238,8 +238,8 @@ public:
             [&]
             (std::uint8_t header,
              mqtt::optional<typename Endpoint::packet_id_t> packet_id,
-             std::string topic_name,
-             std::string contents,
+             mqtt::string_view topic_name,
+             mqtt::string_view contents,
              std::vector<mqtt::v5::property_variant> props
             ) {
                 if (h_publish_props_) h_publish_props_(props);
@@ -247,15 +247,15 @@ public:
                     std::forward<Endpoint>(ep),
                     header,
                     packet_id,
-                    std::move(topic_name),
-                    std::move(contents),
+                    topic_name,
+                    contents,
                     std::move(props)
                 );
             });
         ep.set_subscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::vector<std::tuple<std::string, std::uint8_t>> entries) {
+             std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries) {
                 return subscribe_handler(
                     std::forward<Endpoint>(ep),
                     packet_id,
@@ -267,7 +267,7 @@ public:
         ep.set_v5_subscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::vector<std::tuple<std::string, std::uint8_t>> entries,
+             std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries,
              std::vector<mqtt::v5::property_variant> props
             ) {
                 return subscribe_handler(
@@ -281,7 +281,7 @@ public:
         ep.set_unsubscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::vector<std::string> topics) {
+             std::vector<mqtt::string_view> topics) {
                 return unsubscribe_handler(
                     std::forward<Endpoint>(ep),
                     packet_id,
@@ -293,7 +293,7 @@ public:
         ep.set_v5_unsubscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::vector<std::string> topics,
+             std::vector<mqtt::string_view> topics,
              std::vector<mqtt::v5::property_variant> props
             ) {
                 return unsubscribe_handler(
@@ -393,9 +393,9 @@ private:
     template <typename Endpoint>
     bool connect_handler(
         Endpoint&& ep,
-        std::string const& client_id,
-        mqtt::optional<std::string> const& /*username*/,
-        mqtt::optional<std::string> const& /*password*/,
+        mqtt::string_view client_id,
+        mqtt::optional<mqtt::string_view> const& /*username*/,
+        mqtt::optional<mqtt::string_view> const& /*password*/,
         mqtt::optional<mqtt::will> will,
         bool clean_session,
         std::uint16_t /*keep_alive*/,
@@ -414,7 +414,7 @@ private:
         auto emplace =
             [&] {
                 return cons_.emplace(
-                    client_id,
+                    std::string(client_id),
                     spep,
                     [this, spep] () {
                         // send will no keep
@@ -465,8 +465,8 @@ private:
         Endpoint&& ep,
         std::uint8_t header,
         mqtt::optional<typename Endpoint::packet_id_t> packet_id,
-        std::string topic_name,
-        std::string contents,
+        mqtt::string_view topic_name,
+        mqtt::string_view contents,
         std::vector<mqtt::v5::property_variant> props) {
 
         std::uint8_t qos = mqtt::publish::get_qos(header);
@@ -515,7 +515,7 @@ private:
     bool subscribe_handler(
         Endpoint&& ep,
         typename Endpoint::packet_id_t packet_id,
-        std::vector<std::tuple<std::string, std::uint8_t>> entries,
+        std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries,
         std::vector<mqtt::v5::property_variant> props) {
 
         // An in-order list of qos settings, used to send the reply.
@@ -526,7 +526,7 @@ private:
         std::vector<std::uint8_t> res;
         res.reserve(entries.size());
         for (auto const& e : entries) {
-            std::string const& topic = std::get<0>(e);
+            mqtt::string_view topic = std::get<0>(e);
             std::uint8_t qos = std::get<1>(e);
             res.emplace_back(qos);
             // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
@@ -548,10 +548,10 @@ private:
             break;
         }
         for (auto const& e : entries) {
-            std::string const& topic = std::get<0>(e);
+            mqtt::string_view topic = std::get<0>(e);
             std::uint8_t qos = std::get<1>(e);
             // Publish any retained messages that match the newly subscribed topic.
-            auto it = retains_.find(topic);
+            auto it = retains_.find(std::string(topic));
             if (it != retains_.end()) {
                 ep.publish(
                     as::buffer(*it->topic),
@@ -569,11 +569,11 @@ private:
     bool unsubscribe_handler(
         Endpoint&& ep,
         typename Endpoint::packet_id_t packet_id,
-        std::vector<std::string> topics,
+        std::vector<mqtt::string_view> topics,
         std::vector<mqtt::v5::property_variant> props) {
 
         for (auto const& topic : topics) {
-            subs_.erase(topic);
+            subs_.erase(std::string(topic));
         }
 
         switch (ep.get_protocol_version()) {
@@ -613,9 +613,9 @@ private:
         Endpoint&& ep,
         bool clean_session,
         con_sp_t const& spep,
-        std::string const& client_id,
+        mqtt::string_view client_id,
         mqtt::optional<mqtt::will> will) {
-        auto it = sessions_.find(client_id);
+        auto it = sessions_.find(std::string(client_id));
         mqtt::visit(
             mqtt::make_lambda_visitor<void>(
                 [&](auto& con) {
@@ -646,13 +646,13 @@ private:
         }
 
         if (clean_session) {
-            subsessions_.erase(client_id);
+            subsessions_.erase(std::string(client_id));
         }
         else {
             // If it's not a clean session, then all of the
             // saved subscriptions are moved to the new session
             // object so they can be used immediately.
-            auto r = subsessions_.equal_range(client_id);
+            auto r = subsessions_.equal_range(std::string(client_id));
             std::vector<session_data> data;
             if (r.first != r.second) {
                 data = std::move(r.first->s->data);
@@ -661,7 +661,7 @@ private:
                 subs_.emplace(r.first->topic, spep, r.first->qos);
                 r.first = subsessions_.erase(r.first);
             }
-            // Any, of course, any saved messages need to go out as well.
+            // And, of course, any saved messages need to go out as well.
             for (auto const& d : data) {
                 mqtt::visit(
                     mqtt::make_lambda_visitor<void>(

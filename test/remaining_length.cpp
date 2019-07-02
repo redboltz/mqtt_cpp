@@ -100,8 +100,8 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
             [&chk, &c, &pid_unsub, &test_contents]
             (std::uint8_t header,
              mqtt::optional<packet_id_t> packet_id,
-             std::string topic,
-             std::string contents) {
+             mqtt::string_view topic,
+             mqtt::string_view contents) {
                 MQTT_CHK("h_publish");
                 BOOST_TEST(mqtt::publish::is_dup(header) == false);
                 BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
@@ -207,8 +207,8 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
             [&chk, &c, &pid_unsub, &test_contents]
             (std::uint8_t header,
              mqtt::optional<packet_id_t> packet_id,
-             std::string topic,
-             std::string contents) {
+             mqtt::string_view topic,
+             mqtt::string_view contents) {
                 MQTT_CHK("h_publish");
                 BOOST_TEST(mqtt::publish::is_dup(header) == false);
                 BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
@@ -316,8 +316,8 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
             [&chk, &c, &pid_unsub, &test_contents]
             (std::uint8_t header,
              mqtt::optional<packet_id_t> packet_id,
-             std::string topic,
-             std::string contents) {
+             mqtt::string_view topic,
+             mqtt::string_view contents) {
                 MQTT_CHK("h_publish");
                 BOOST_TEST(mqtt::publish::is_dup(header) == false);
                 BOOST_TEST(mqtt::publish::get_qos(header) == mqtt::qos::at_most_once);
