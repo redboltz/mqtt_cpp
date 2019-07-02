@@ -10831,7 +10831,7 @@ private:
             // If we hit the byte limit, we don't include this buffer for this send.
             if (max_queue_send_size_ != 0 && max_queue_send_size_ < total_bytes + size) {
                 end = it;
-                iterator_count = boost::numeric_cast<size_t>(std::distance(start, end));
+                iterator_count = boost::numeric_cast<std::size_t>(std::distance(start, end));
                 break;
             }
             total_bytes += size;
