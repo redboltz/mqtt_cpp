@@ -10814,7 +10814,7 @@ private:
     void do_async_write() {
         // Only attempt to send up to the user specified maximum items
         using difference_t = typename decltype(queue_)::difference_type;
-        size_t iterator_count =   (max_queue_send_count_ == 0)
+        std::size_t iterator_count =   (max_queue_send_count_ == 0)
                                 ? queue_.size()
                                 : std::min(max_queue_send_count_, queue_.size());
         auto const& start = queue_.cbegin();
