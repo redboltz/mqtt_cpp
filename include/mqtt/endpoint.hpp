@@ -10826,7 +10826,7 @@ private:
         for (auto it = start; it != end; ++it) {
             auto const& elem = *it;
             auto const& mv = elem.message();
-            size_t const size = mqtt::size<PacketIdBytes>(mv);
+            std::size_t const size = mqtt::size<PacketIdBytes>(mv);
 
             // If we hit the byte limit, we don't include this buffer for this send.
             if (max_queue_send_size_ != 0 && max_queue_send_size_ < total_bytes + size) {
