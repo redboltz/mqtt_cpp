@@ -181,17 +181,15 @@ struct checker {
         }
     }
 
-    // cannot use BOOST_TEST here
     ~checker() {
         if (!all_called_) {
             bool ret = true;
             for (auto const& e : entries_) {
                 if (!e.passed) {
-                    std::cout << e.self + " has not been passed" << std::endl;
+                    BOOST_ERROR(e.self + " has not been passed");
                     ret = false;
                 }
             }
-            BOOST_ASSERT(ret);
         }
     }
 
