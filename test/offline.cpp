@@ -79,7 +79,13 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                         "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            BOOST_TEST(sp == false);
+                            // If clean session is not provided, than there will be a session present
+                            // if there was ever a previous connection, even if clean session was provided
+                            // on the previous connection.
+                            // This is because MQTTv5 change the semantics of the flag to "clean start"
+                            // such that it only effects the start of the session.
+                            // Post Session cleanup is handled with a timer, not with the  clean session flag.
+                            BOOST_TEST(sp == true);
                         }
                     );
                     BOOST_TEST(ret);
@@ -209,7 +215,13 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                         "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            BOOST_TEST(sp == false);
+                            // If clean session is not provided, than there will be a session present
+                            // if there was ever a previous connection, even if clean session was provided
+                            // on the previous connection.
+                            // This is because MQTTv5 change the semantics of the flag to "clean start"
+                            // such that it only effects the start of the session.
+                            // Post Session cleanup is handled with a timer, not with the  clean session flag.
+                            BOOST_TEST(sp == true);
                         }
                     );
                     BOOST_TEST(ret);
@@ -352,7 +364,13 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                         "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            BOOST_TEST(sp == false);
+                            // If clean session is not provided, than there will be a session present
+                            // if there was ever a previous connection, even if clean session was provided
+                            // on the previous connection.
+                            // This is because MQTTv5 change the semantics of the flag to "clean start"
+                            // such that it only effects the start of the session.
+                            // Post Session cleanup is handled with a timer, not with the  clean session flag.
+                            BOOST_TEST(sp == true);
                         }
                     );
                     BOOST_TEST(ret);
@@ -487,7 +505,13 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                         "h_pub_finish",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            BOOST_TEST(sp == false);
+                            // If clean session is not provided, than there will be a session present
+                            // if there was ever a previous connection, even if clean session was provided
+                            // on the previous connection.
+                            // This is because MQTTv5 change the semantics of the flag to "clean start"
+                            // such that it only effects the start of the session.
+                            // Post Session cleanup is handled with a timer, not with the  clean session flag.
+                            BOOST_TEST(sp == true);
                         }
                     );
                     BOOST_TEST(ret);
