@@ -183,11 +183,9 @@ struct checker {
 
     ~checker() {
         if (!all_called_) {
-            bool ret = true;
             for (auto const& e : entries_) {
                 if (!e.passed) {
                     BOOST_ERROR(e.self + " has not been passed");
-                    ret = false;
                 }
             }
         }
