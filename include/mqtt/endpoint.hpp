@@ -10757,7 +10757,7 @@ private:
             :self_(std::move(self)),
              func_(std::move(func)),
              num_of_messages_(num_of_messages),
-             expected_(expected)
+             bytes_to_transfer_(expected)
         {}
         void operator()(boost::system::error_code const& ec) const {
             if (func_) func_(ec);
@@ -10793,13 +10793,13 @@ private:
                 }
                 return;
             }
-            if (expected_ != bytes_transferred) {
+            if (bytes_to_transfer_ != bytes_transferred) {
                 self_->connected_ = false;
                 while (!self_->queue_.empty()) {
                     self_->queue_.front().handler()(ec);
                     self_->queue_.pop_front();
                 }
-                throw write_bytes_transferred_error(expected_, bytes_transferred);
+                throw write_bytes_transferred_error(bytes_to_transfer_, bytes_transferred);
             }
             if (!self_->queue_.empty()) {
                 self_->do_async_write();
@@ -10808,40 +10808,41 @@ private:
         std::shared_ptr<this_type> self_;
         async_handler_t func_;
         std::size_t num_of_messages_;
-        std::size_t expected_;
+        std::size_t bytes_to_transfer_;
     };
 
     void do_async_write() {
-        std::vector<as::const_buffer> buf;
-        std::vector<async_handler_t> handlers;
+        // Only attempt to send up to the user specified maximum items
+        using difference_t = typename decltype(queue_)::difference_type;
+        std::size_t iterator_count =   (max_queue_send_count_ == 0)
+                                ? queue_.size()
+                                : std::min(max_queue_send_count_, queue_.size());
+        auto const& start = queue_.cbegin();
+        auto end = std::next(start, boost::numeric_cast<difference_t>(iterator_count));
 
+        // And further, only up to the specified maximum bytes
+        std::size_t total_bytes = 0;
         std::size_t total_const_buffer_sequence = 0;
-        auto start = queue_.cbegin();
-        auto end =
-            [&] {
-                if (max_queue_send_count_ == 0) return queue_.cend();
-                if (max_queue_send_count_ >= queue_.size()) return queue_.cend();
-                return
-                    start +
-                    static_cast<typename std::deque<async_packet>::const_iterator::difference_type>(max_queue_send_count_);
-            } ();
-
-        std::size_t total = 0;
         for (auto it = start; it != end; ++it) {
             auto const& elem = *it;
             auto const& mv = elem.message();
-            auto size = mqtt::size<PacketIdBytes>(mv);
+            std::size_t const size = mqtt::size<PacketIdBytes>(mv);
 
-            if (max_queue_send_size_ != 0 && max_queue_send_size_ < total + size) {
+            // If we hit the byte limit, we don't include this buffer for this send.
+            if (max_queue_send_size_ != 0 && max_queue_send_size_ < total_bytes + size) {
                 end = it;
+                iterator_count = boost::numeric_cast<std::size_t>(std::distance(start, end));
                 break;
             }
-            total += size;
+            total_bytes += size;
             total_const_buffer_sequence += num_of_const_buffer_sequence(mv);
         }
 
+        std::vector<as::const_buffer> buf;
+        std::vector<async_handler_t> handlers;
+
         buf.reserve(total_const_buffer_sequence);
-        handlers.reserve(queue_.size());
+        handlers.reserve(iterator_count);
 
         for (auto it = start; it != end; ++it) {
             auto const& elem = *it;
@@ -10855,7 +10856,7 @@ private:
 
         async_write(
             *socket_,
-            buf,
+            std::move(buf),
             write_completion_handler(
                 this->shared_from_this(),
                 [handlers = std::move(handlers)]
@@ -10864,8 +10865,8 @@ private:
                         if (h) h(ec);
                     }
                 },
-                static_cast<std::size_t>(std::distance(start, end)),
-                total
+                iterator_count,
+                total_bytes
             )
         );
     }
