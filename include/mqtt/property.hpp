@@ -321,6 +321,7 @@ struct variable_property {
 class payload_format_indicator : public detail::n_bytes_property<1> {
 public:
     using recv = payload_format_indicator;
+    using store = payload_format_indicator;
     enum payload_format {
         binary,
         string
@@ -348,6 +349,7 @@ public:
 class message_expiry_interval : public detail::n_bytes_property<4> {
 public:
     using recv = message_expiry_interval;
+    using store = message_expiry_interval;
     message_expiry_interval(std::uint32_t val)
         : detail::n_bytes_property<4>(id::message_expiry_interval, num_to_4bytes(val) ) {}
 
@@ -366,6 +368,7 @@ class content_type;
 class content_type_ref : public detail::string_property_ref {
 public:
     using recv = content_type_ref;
+    using store = content_type;
     content_type_ref(string_view type)
         : detail::string_property_ref(id::content_type, type) {}
     content_type_ref(content_type const& v);
@@ -374,6 +377,7 @@ public:
 class content_type : public detail::string_property {
 public:
     using recv = content_type_ref;
+    using store = content_type;
     explicit content_type(std::string type)
         : detail::string_property(id::content_type, std::move(type)) {}
     explicit content_type(content_type_ref const& v);
@@ -394,6 +398,7 @@ class response_topic;
 class response_topic_ref : public detail::string_property_ref {
 public:
     using recv = response_topic_ref;
+    using store = response_topic;
     response_topic_ref(string_view type)
         : detail::string_property_ref(id::response_topic, type) {}
     response_topic_ref(response_topic const& v);
@@ -402,6 +407,7 @@ public:
 class response_topic : public detail::string_property {
 public:
     using recv = response_topic_ref;
+    using store = response_topic;
     explicit response_topic(std::string type)
         : detail::string_property(id::response_topic, std::move(type)) {}
     explicit response_topic(response_topic_ref const& v);
@@ -422,6 +428,7 @@ class correlation_data;
 class correlation_data_ref : public detail::string_property_ref {
 public:
     using recv = correlation_data_ref;
+    using store = correlation_data;
     correlation_data_ref(string_view type)
         : detail::string_property_ref(id::correlation_data, type) {}
     correlation_data_ref(correlation_data const& v);
@@ -430,6 +437,7 @@ public:
 class correlation_data : public detail::string_property {
 public:
     using recv = correlation_data_ref;
+    using store = correlation_data;
     explicit correlation_data(std::string type)
         : detail::string_property(id::correlation_data, std::move(type)) {}
     explicit correlation_data(correlation_data_ref const& v);
@@ -448,6 +456,7 @@ static_assert(std::is_constructible<correlation_data_ref, correlation_data>::val
 class subscription_identifier : public detail::variable_property {
 public:
     using recv = subscription_identifier;
+    using store = subscription_identifier;
     subscription_identifier(std::size_t subscription_id)
         : detail::variable_property(id::subscription_identifier, subscription_id) {}
 };
@@ -455,6 +464,7 @@ public:
 class session_expiry_interval : public detail::n_bytes_property<4> {
 public:
     using recv = session_expiry_interval;
+    using store = session_expiry_interval;
     session_expiry_interval(std::uint32_t val)
         : detail::n_bytes_property<4>(id::session_expiry_interval, { num_to_4bytes(static_cast<std::uint32_t>(val)) } ) {}
 
@@ -473,6 +483,7 @@ class assigned_client_identifier;
 class assigned_client_identifier_ref : public detail::string_property_ref {
 public:
     using recv = assigned_client_identifier_ref;
+    using store = assigned_client_identifier;
     assigned_client_identifier_ref(string_view type)
         : detail::string_property_ref(id::assigned_client_identifier, type) {}
     assigned_client_identifier_ref(assigned_client_identifier const& v);
@@ -481,6 +492,7 @@ public:
 class assigned_client_identifier : public detail::string_property {
 public:
     using recv = assigned_client_identifier_ref;
+    using store = assigned_client_identifier;
     explicit assigned_client_identifier(std::string type)
         : detail::string_property(id::assigned_client_identifier, std::move(type)) {}
     explicit assigned_client_identifier(assigned_client_identifier_ref const& v);
@@ -499,6 +511,7 @@ static_assert(std::is_constructible<assigned_client_identifier_ref, assigned_cli
 class server_keep_alive : public detail::n_bytes_property<2> {
 public:
     using recv = server_keep_alive;
+    using store = server_keep_alive;
     server_keep_alive(std::uint16_t val)
         : detail::n_bytes_property<2>(id::server_keep_alive, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
 
@@ -516,6 +529,7 @@ class authentication_method;
 class authentication_method_ref : public detail::string_property_ref {
 public:
     using recv = authentication_method_ref;
+    using store = authentication_method;
     authentication_method_ref(string_view type)
         : detail::string_property_ref(id::authentication_method, type) {}
     authentication_method_ref(authentication_method const& v);
@@ -524,6 +538,7 @@ public:
 class authentication_method : public detail::string_property {
 public:
     using recv = authentication_method_ref;
+    using store = authentication_method;
     explicit authentication_method(std::string type)
         : detail::string_property(id::authentication_method, std::move(type)) {}
     explicit authentication_method(authentication_method_ref const& v);
@@ -543,6 +558,7 @@ class authentication_data;
 class authentication_data_ref : public detail::binary_property_ref {
 public:
     using recv = authentication_data_ref;
+    using store = authentication_data;
     authentication_data_ref(string_view type)
         : detail::binary_property_ref(id::authentication_data, type) {}
     authentication_data_ref(authentication_data const& v);
@@ -551,6 +567,7 @@ public:
 class authentication_data : public detail::binary_property {
 public:
     using recv = authentication_data_ref;
+    using store = authentication_data;
     explicit authentication_data(std::string type)
         : detail::binary_property(id::authentication_data, std::move(type)) {}
     explicit authentication_data(authentication_data_ref const& v);
@@ -569,6 +586,7 @@ static_assert(std::is_constructible<authentication_data_ref, authentication_data
 class request_problem_information : public detail::n_bytes_property<1> {
 public:
     using recv = request_problem_information;
+    using store = request_problem_information;
     request_problem_information(bool value)
         : detail::n_bytes_property<1>(id::request_problem_information, { value ? char(1) : char(0) } ) {}
 
@@ -585,6 +603,7 @@ public:
 class will_delay_interval : public detail::n_bytes_property<4> {
 public:
     using recv = will_delay_interval;
+    using store = will_delay_interval;
     will_delay_interval(std::uint32_t val)
         : detail::n_bytes_property<4>(id::will_delay_interval, { num_to_4bytes(static_cast<std::uint32_t>(val)) } ) {}
 
@@ -600,6 +619,7 @@ public:
 class request_response_information : public detail::n_bytes_property<1> {
 public:
     using recv = request_response_information;
+    using store = request_response_information;
     request_response_information(bool value)
         : detail::n_bytes_property<1>(id::request_response_information, { value ? char(1) : char(0) } ) {}
 
@@ -618,6 +638,7 @@ class response_information;
 class response_information_ref : public detail::string_property_ref {
 public:
     using recv = response_information_ref;
+    using store = response_information;
     response_information_ref(string_view type)
         : detail::string_property_ref(id::response_information, type) {}
     response_information_ref(response_information const& v);
@@ -626,6 +647,7 @@ public:
 class response_information : public detail::string_property {
 public:
     using recv = response_information_ref;
+    using store = response_information;
     explicit response_information(std::string type)
         : detail::string_property(id::response_information, std::move(type)) {}
     explicit response_information(response_information_ref const& v);
@@ -646,6 +668,7 @@ class server_reference;
 class server_reference_ref : public detail::string_property_ref {
 public:
     using recv = server_reference_ref;
+    using store = server_reference;
     server_reference_ref(string_view type)
         : detail::string_property_ref(id::server_reference, type) {}
     server_reference_ref(server_reference const& v);
@@ -654,6 +677,7 @@ public:
 class server_reference : public detail::string_property {
 public:
     using recv = server_reference_ref;
+    using store = server_reference;
     explicit server_reference(std::string type)
         : detail::string_property(id::server_reference, std::move(type)) {}
     explicit server_reference(server_reference_ref const& v);
@@ -674,6 +698,7 @@ class reason_string;
 class reason_string_ref : public detail::string_property_ref {
 public:
     using recv = reason_string_ref;
+    using store = reason_string;
     reason_string_ref(string_view type)
         : detail::string_property_ref(id::reason_string, type) {}
     reason_string_ref(reason_string const& v);
@@ -682,6 +707,7 @@ public:
 class reason_string : public detail::string_property {
 public:
     using recv = reason_string_ref;
+    using store = reason_string;
     explicit reason_string(std::string type)
         : detail::string_property(id::reason_string, std::move(type)) {}
     explicit reason_string(reason_string_ref const& v);
@@ -700,6 +726,7 @@ static_assert(std::is_constructible<reason_string_ref, reason_string>::value, "M
 class receive_maximum : public detail::n_bytes_property<2> {
 public:
     using recv = receive_maximum;
+    using store = receive_maximum;
     receive_maximum(std::uint16_t val)
         : detail::n_bytes_property<2>(id::receive_maximum, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
 
@@ -716,6 +743,7 @@ public:
 class topic_alias_maximum : public detail::n_bytes_property<2> {
 public:
     using recv = topic_alias_maximum;
+    using store = topic_alias_maximum;
     topic_alias_maximum(std::uint16_t val)
         : detail::n_bytes_property<2>(id::topic_alias_maximum, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
 
@@ -732,6 +760,7 @@ public:
 class topic_alias : public detail::n_bytes_property<2> {
 public:
     using recv = topic_alias;
+    using store = topic_alias;
     topic_alias(std::uint16_t val)
         : detail::n_bytes_property<2>(id::topic_alias, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
 
@@ -747,6 +776,7 @@ public:
 class maximum_qos : public detail::n_bytes_property<1> {
 public:
     using recv = maximum_qos;
+    using store = maximum_qos;
     maximum_qos(std::uint8_t qos)
         : detail::n_bytes_property<1>(id::maximum_qos, { static_cast<char>(qos) } ) {
         if (qos != qos::at_most_once &&
@@ -768,6 +798,7 @@ public:
 class retain_available : public detail::n_bytes_property<1> {
 public:
     using recv = retain_available;
+    using store = retain_available;
     retain_available(bool value)
         : detail::n_bytes_property<1>(id::retain_available, { value ? char(1) : char(0) } ) {}
 
@@ -826,6 +857,7 @@ inline len_str::len_str(len_str_ref const& v)
 class user_property_ref {
 public:
     using recv = user_property_ref;
+    using store = user_property;
     user_property_ref(string_view key, string_view val)
         : key_(key), val_(val) {}
     user_property_ref(user_property const& v);
@@ -906,6 +938,7 @@ private:
 class user_property {
 public:
     using recv = user_property_ref;
+    using store = user_property;
     user_property(std::string key, std::string val)
         : key_(std::move(key)), val_(std::move(val)) {}
     explicit user_property(user_property_ref const& v);
@@ -996,6 +1029,7 @@ static_assert(std::is_constructible<user_property_ref, user_property>::value, "M
 class maximum_packet_size : public detail::n_bytes_property<4> {
 public:
     using recv = maximum_packet_size;
+    using store = maximum_packet_size;
     maximum_packet_size(std::uint32_t val)
         : detail::n_bytes_property<4>(id::maximum_packet_size, { num_to_4bytes(static_cast<std::uint32_t>(val)) } ) {}
 
@@ -1012,6 +1046,7 @@ public:
 class wildcard_subscription_available : public detail::n_bytes_property<1> {
 public:
     using recv = wildcard_subscription_available;
+    using store = wildcard_subscription_available;
     wildcard_subscription_available(bool value)
         : detail::n_bytes_property<1>(id::wildcard_subscription_available, { value ? char(1) : char(0) } ) {}
 
@@ -1028,6 +1063,7 @@ public:
 class subscription_identifier_available : public detail::n_bytes_property<1> {
 public:
     using recv = subscription_identifier_available;
+    using store = subscription_identifier_available;
     subscription_identifier_available(bool value)
         : detail::n_bytes_property<1>(id::subscription_identifier_available, { value ? char(1) : char(0) } ) {}
 
@@ -1044,6 +1080,7 @@ public:
 class shared_subscription_available : public detail::n_bytes_property<1> {
 public:
     using recv = shared_subscription_available;
+    using store = shared_subscription_available;
     shared_subscription_available(bool value)
         : detail::n_bytes_property<1>(id::shared_subscription_available, { value ? char(1) : char(0) } ) {}
 
