@@ -199,7 +199,7 @@ mqtt::optional<property_variant> parse_one(It& begin, It end) {
             auto val_len = make_uint16_t(it, it + 2);
             it += 2;
             if (it + val_len > end) return mqtt::nullopt;
-            auto val = mqtt::string_view(&*it, key_len);
+            auto val = mqtt::string_view(&*it, val_len);
 
             auto p = user_property_ref(key, val);
             std::advance(begin, static_cast<typename std::iterator_traits<It>::difference_type>(p.size()));
