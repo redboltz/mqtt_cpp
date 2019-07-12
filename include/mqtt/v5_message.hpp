@@ -643,9 +643,16 @@ public:
             break;
         };
 
+        auto len_lim = std::next(
+            b,
+            std::min(
+                static_cast<typename std::iterator_traits<Iterator>::difference_type>(4),
+                std::distance(b, e)
+            )
+        );
         auto len_consume = variable_length(
             b,
-            std::min(b + 4, e)
+            len_lim
         );
         property_length_ = std::get<0>(len_consume);
         auto pb = variable_bytes(property_length_);
@@ -1252,9 +1259,16 @@ struct basic_pubrel_message {
 
         reason_code_ = *b++;
 
+        auto len_lim = std::next(
+            b,
+            std::min(
+                static_cast<typename std::iterator_traits<Iterator>::difference_type>(4),
+                std::distance(b, e)
+            )
+        );
         auto len_consume = variable_length(
             b,
-            std::min(b + 4, e)
+            len_lim
         );
         property_length_ = std::get<0>(len_consume);
         auto pb = variable_bytes(property_length_);
