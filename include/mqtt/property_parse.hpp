@@ -64,7 +64,13 @@ mqtt::optional<property_variant> parse_one(It& begin, It end) {
             return property_variant(p);
         } break;
         case id::subscription_identifier: {
-            auto lim = std::min(end, it + 4);
+            auto lim = std::next(
+                it,
+                std::min(
+                    static_cast<typename std::iterator_traits<It>::difference_type>(4),
+                    std::distance(it, end)
+                )
+            );
             auto val_consumed = variable_length(it, lim);
             auto val = std::get<0>(val_consumed);
             auto consumed = std::get<1>(val_consumed);
@@ -255,9 +261,16 @@ std::vector<property_variant> parse(It& it, It end) {
 template <typename It>
 inline
 mqtt::optional<std::vector<property_variant>> parse_with_length(It& it, It end) {
+    auto len_lim = std::next(
+        it,
+        std::min(
+            static_cast<typename std::iterator_traits<It>::difference_type>(4),
+            std::distance(it, end)
+        )
+    );
     auto r = variable_length(
         it,
-        std::min(it + 4, end)
+        len_lim
     );
     auto property_length = static_cast<typename std::iterator_traits<It>::difference_type>(std::get<0>(r));
     it += static_cast<typename std::iterator_traits<It>::difference_type>(std::get<1>(r));
