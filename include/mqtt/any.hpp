@@ -14,6 +14,7 @@
 namespace mqtt {
 
 using std::any;
+using std::any_cast;
 
 } // namespace mqtt
 
@@ -24,6 +25,7 @@ using std::any;
 namespace mqtt {
 
 using boost::any;
+using boost::any_cast;
 
 } // namespace mqtt
 

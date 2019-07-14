@@ -26,7 +26,7 @@
 #include <mqtt/utf8encoded_strings.hpp>
 #include <mqtt/qos.hpp>
 #include <mqtt/variable_length.hpp>
-
+#include <mqtt/buffer.hpp>
 namespace mqtt {
 
 namespace as = boost::asio;
@@ -99,17 +99,13 @@ struct n_bytes_property {
     boost::container::static_vector<char, N> buf_;
 };
 
-struct binary_property_ref;
-
 struct binary_property {
-    binary_property(property::id id, std::string str)
+    binary_property(property::id id, buffer buf)
         :id_(id),
-         length_{num_to_2bytes(static_cast<std::uint16_t>(str.size()))},
-         buf_(str.begin(), str.end()) {
-             if (str.size() > 0xffff) throw property_length_error();
+         buf_(std::move(buf)),
+         length_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(buf_.size())) } {
+             if (buf_.size() > 0xffff) throw property_length_error();
          }
-
-    explicit binary_property(binary_property_ref const& v);
 
     /**
      * @brief Add const buffer sequence into the given buffer.
@@ -152,116 +148,25 @@ struct binary_property {
         return 2;
     }
 
-     std::string const& val() const {
+     buffer const& val() const {
         return buf_;
     }
 
     static constexpr ostream_format const of_ = ostream_format::direct;
     property::id id_;
+    buffer buf_;
     boost::container::static_vector<char, 2> length_;
-    std::string buf_;
 };
-
-struct binary_property_ref {
-    binary_property_ref(property::id id, string_view sv)
-        :id_(id),
-         length_{num_to_2bytes(static_cast<std::uint16_t>(sv.size()))},
-         buf_(sv.data(), sv.size()) {
-             if (sv.size() > 0xffff) throw property_length_error();
-         }
-
-    binary_property_ref(binary_property const&);
-
-    /**
-     * @brief Add const buffer sequence into the given buffer.
-     * @param v buffer to add
-     */
-    void add_const_buffer_sequence(std::vector<as::const_buffer>& v) const {
-        v.emplace_back(as::buffer(&id_, 1));
-        v.emplace_back(as::buffer(length_.data(), length_.size()));
-        v.emplace_back(as::buffer(get_pointer(buf_), get_size(buf_)));
-    }
-
-    /**
-     * @brief Copy the internal information to the range between b and e
-     *        it is for boost asio APIs
-     * @param b begin of the range to fill
-     * @param e end of the range to fill
-     */
-    template <typename It>
-    void fill(It b, It e) const {
-        BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
-        *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
-        std::copy(length_.begin(), length_.end(), b);
-        b += static_cast<typename It::difference_type>(length_.size());
-        std::copy(get_pointer(buf_), get_pointer(buf_) + get_size(buf_), b);
-    }
-
-    /**
-     * @brief Get whole size of sequence
-     * @return whole size
-     */
-    std::size_t size() const {
-        return 1 + length_.size() + get_size(buf_);
-    }
-
-    /**
-     * @brief Get number of element of const_buffer_sequence
-     * @return number of element of const_buffer_sequence
-     */
-    std::size_t num_of_const_buffer_sequence() const {
-        return 3;
-    }
-
-    string_view val() const {
-        return string_view(get_pointer(buf_), get_size(buf_));
-    }
-
-    static constexpr ostream_format const of_ = ostream_format::direct;
-    property::id id_;
-    boost::container::static_vector<char, 2> length_;
-    as::const_buffer buf_;
-};
-
-inline binary_property::binary_property(binary_property_ref const& v)
-    :id_(v.id_), length_(v.length_), buf_(get_pointer(v.buf_), get_size(v.buf_)) {}
-
-inline binary_property_ref::binary_property_ref(binary_property const& v)
-    :id_(v.id_), length_(v.length_), buf_(as::buffer(v.buf_)) {}
-
-static_assert(std::is_convertible<binary_property, binary_property_ref>::value, "Must be able to implicitly convert from a property to its ref type.");
-static_assert(std::is_constructible<binary_property, binary_property_ref>::value, "Must be able to construct a property from its ref type.");
-static_assert(std::is_constructible<binary_property_ref, binary_property>::value, "Must be able to construct a property ref from the property.");
-
-struct string_property_ref;
 
 struct string_property : binary_property {
-    string_property(property::id id, std::string str)
-        :binary_property(id, std::move(str)) {
-        auto r = utf8string::validate_contents(this->val());
-        if (r != utf8string::validation::well_formed) throw utf8string_contents_error(r);
+    string_property(property::id id, buffer buf, bool already_checked)
+        :binary_property(id, std::move(buf)) {
+        if (!already_checked) {
+            auto r = utf8string::validate_contents(this->val());
+            if (r != utf8string::validation::well_formed) throw utf8string_contents_error(r);
+        }
     }
-    explicit string_property(string_property_ref const& v);
 };
-
-struct string_property_ref : binary_property_ref {
-    string_property_ref(property::id id, string_view sv)
-        :binary_property_ref(id, sv) {
-        auto r = utf8string::validate_contents(sv);
-        if (r != utf8string::validation::well_formed) throw utf8string_contents_error(r);
-    }
-    string_property_ref(string_property const& v);
-};
-
-inline string_property::string_property(string_property_ref const& v)
-    :binary_property(v) {}
-
-inline string_property_ref::string_property_ref(string_property const& v)
-    :binary_property_ref(v) {}
-
-static_assert(std::is_convertible<string_property, string_property_ref>::value, "Must be able to implicitly convert from a property to its ref type.");
-static_assert(std::is_constructible<string_property, string_property_ref>::value, "Must be able to construct a property from its ref type.");
-static_assert(std::is_constructible<string_property_ref, string_property>::value, "Must be able to construct a property ref from the property.");
 
 struct variable_property {
     variable_property(property::id id, std::size_t value)
@@ -362,96 +267,23 @@ public:
     }
 };
 
-
-class content_type;
-
-class content_type_ref : public detail::string_property_ref {
-public:
-    using recv = content_type_ref;
-    using store = content_type;
-    content_type_ref(string_view type)
-        : detail::string_property_ref(id::content_type, type) {}
-    content_type_ref(content_type const& v);
-};
-
 class content_type : public detail::string_property {
 public:
-    using recv = content_type_ref;
-    using store = content_type;
-    explicit content_type(std::string type)
-        : detail::string_property(id::content_type, std::move(type)) {}
-    explicit content_type(content_type_ref const& v);
-};
-
-inline content_type_ref::content_type_ref(content_type const& v)
-    :detail::string_property_ref(v) {}
-
-inline content_type::content_type(content_type_ref const& v)
-    :detail::string_property(v) {}
-
-static_assert(std::is_convertible<content_type, content_type_ref>::value, "Must be able to implicitly convert from a property to its ref type.");
-static_assert(std::is_constructible<content_type, content_type_ref>::value, "Must be able to construct a property from its ref type.");
-static_assert(std::is_constructible<content_type_ref, content_type>::value, "Must be able to construct a property ref from the property.");
-
-class response_topic;
-
-class response_topic_ref : public detail::string_property_ref {
-public:
-    using recv = response_topic_ref;
-    using store = response_topic;
-    response_topic_ref(string_view type)
-        : detail::string_property_ref(id::response_topic, type) {}
-    response_topic_ref(response_topic const& v);
+    explicit content_type(buffer val, bool already_checked = false)
+        : detail::string_property(id::content_type, std::move(val), already_checked) {}
 };
 
 class response_topic : public detail::string_property {
 public:
-    using recv = response_topic_ref;
-    using store = response_topic;
-    explicit response_topic(std::string type)
-        : detail::string_property(id::response_topic, std::move(type)) {}
-    explicit response_topic(response_topic_ref const& v);
-};
-
-inline response_topic_ref::response_topic_ref(response_topic const& v)
-    :detail::string_property_ref(v) {}
-
-inline response_topic::response_topic(response_topic_ref const& v)
-    :detail::string_property(v) {}
-
-static_assert(std::is_convertible<response_topic, response_topic_ref>::value, "Must be able to implicitly convert from a property to its ref type.");
-static_assert(std::is_constructible<response_topic, response_topic_ref>::value, "Must be able to construct a property from its ref type.");
-static_assert(std::is_constructible<response_topic_ref, response_topic>::value, "Must be able to construct a property ref from the property.");
-
-class correlation_data;
-
-class correlation_data_ref : public detail::string_property_ref {
-public:
-    using recv = correlation_data_ref;
-    using store = correlation_data;
-    correlation_data_ref(string_view type)
-        : detail::string_property_ref(id::correlation_data, type) {}
-    correlation_data_ref(correlation_data const& v);
+    explicit response_topic(buffer val, bool already_checked = false)
+        : detail::string_property(id::response_topic, std::move(val), already_checked) {}
 };
 
 class correlation_data : public detail::string_property {
 public:
-    using recv = correlation_data_ref;
-    using store = correlation_data;
-    explicit correlation_data(std::string type)
-        : detail::string_property(id::correlation_data, std::move(type)) {}
-    explicit correlation_data(correlation_data_ref const& v);
+    explicit correlation_data(buffer val, bool already_checked = false)
+        : detail::string_property(id::correlation_data, std::move(val), already_checked) {}
 };
-
-inline correlation_data_ref::correlation_data_ref(correlation_data const& v)
-    :detail::string_property_ref(v) {}
-
-inline correlation_data::correlation_data(correlation_data_ref const& v)
-    :detail::string_property(v) {}
-
-static_assert(std::is_convertible<correlation_data, correlation_data_ref>::value, "Must be able to implicitly convert from a property to its ref type.");
-static_assert(std::is_constructible<correlation_data, correlation_data_ref>::value, "Must be able to construct a property from its ref type.");
-static_assert(std::is_constructible<correlation_data_ref, correlation_data>::value, "Must be able to construct a property ref from the property.");
 
 class subscription_identifier : public detail::variable_property {
 public:
@@ -466,7 +298,7 @@ public:
     using recv = session_expiry_interval;
     using store = session_expiry_interval;
     session_expiry_interval(std::uint32_t val)
-        : detail::n_bytes_property<4>(id::session_expiry_interval, { num_to_4bytes(static_cast<std::uint32_t>(val)) } ) {}
+        : detail::n_bytes_property<4>(id::session_expiry_interval, { num_to_4bytes(val) } ) {}
 
     template <typename It>
     session_expiry_interval(It b, It e)
@@ -477,43 +309,18 @@ public:
     }
 };
 
-
-class assigned_client_identifier;
-
-class assigned_client_identifier_ref : public detail::string_property_ref {
-public:
-    using recv = assigned_client_identifier_ref;
-    using store = assigned_client_identifier;
-    assigned_client_identifier_ref(string_view type)
-        : detail::string_property_ref(id::assigned_client_identifier, type) {}
-    assigned_client_identifier_ref(assigned_client_identifier const& v);
-};
-
 class assigned_client_identifier : public detail::string_property {
 public:
-    using recv = assigned_client_identifier_ref;
-    using store = assigned_client_identifier;
-    explicit assigned_client_identifier(std::string type)
-        : detail::string_property(id::assigned_client_identifier, std::move(type)) {}
-    explicit assigned_client_identifier(assigned_client_identifier_ref const& v);
+    explicit assigned_client_identifier(buffer val, bool already_checked = false)
+        : detail::string_property(id::assigned_client_identifier, std::move(val), already_checked) {}
 };
-
-inline assigned_client_identifier_ref::assigned_client_identifier_ref(assigned_client_identifier const& v)
-    :detail::string_property_ref(v) {}
-
-inline assigned_client_identifier::assigned_client_identifier(assigned_client_identifier_ref const& v)
-    :detail::string_property(v) {}
-
-static_assert(std::is_convertible<assigned_client_identifier, assigned_client_identifier_ref>::value, "Must be able to implicitly convert from a property to its ref type.");
-static_assert(std::is_constructible<assigned_client_identifier, assigned_client_identifier_ref>::value, "Must be able to construct a property from its ref type.");
-static_assert(std::is_constructible<assigned_client_identifier_ref, assigned_client_identifier>::value, "Must be able to construct a property ref from the property.");
 
 class server_keep_alive : public detail::n_bytes_property<2> {
 public:
     using recv = server_keep_alive;
     using store = server_keep_alive;
     server_keep_alive(std::uint16_t val)
-        : detail::n_bytes_property<2>(id::server_keep_alive, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
+        : detail::n_bytes_property<2>(id::server_keep_alive, { num_to_2bytes(val) } ) {}
 
     template <typename It>
     server_keep_alive(It b, It e)
@@ -524,64 +331,17 @@ public:
     }
 };
 
-class authentication_method;
-
-class authentication_method_ref : public detail::string_property_ref {
-public:
-    using recv = authentication_method_ref;
-    using store = authentication_method;
-    authentication_method_ref(string_view type)
-        : detail::string_property_ref(id::authentication_method, type) {}
-    authentication_method_ref(authentication_method const& v);
-};
-
 class authentication_method : public detail::string_property {
 public:
-    using recv = authentication_method_ref;
-    using store = authentication_method;
-    explicit authentication_method(std::string type)
-        : detail::string_property(id::authentication_method, std::move(type)) {}
-    explicit authentication_method(authentication_method_ref const& v);
-};
-
-inline authentication_method_ref::authentication_method_ref(authentication_method const& v)
-    :detail::string_property_ref(v) {}
-
-inline authentication_method::authentication_method(authentication_method_ref const& v)
-    :detail::string_property(v) {}
-
-static_assert(std::is_convertible<authentication_method, authentication_method_ref>::value, "Must be able to implicitly convert from a property to its ref type.");
-static_assert(std::is_constructible<authentication_method, authentication_method_ref>::value, "Must be able to construct a property from its ref type.");
-static_assert(std::is_constructible<authentication_method_ref, authentication_method>::value, "Must be able to construct a property ref from the property.");
-
-class authentication_data;
-class authentication_data_ref : public detail::binary_property_ref {
-public:
-    using recv = authentication_data_ref;
-    using store = authentication_data;
-    authentication_data_ref(string_view type)
-        : detail::binary_property_ref(id::authentication_data, type) {}
-    authentication_data_ref(authentication_data const& v);
+    explicit authentication_method(buffer val, bool already_checked = false)
+        : detail::string_property(id::authentication_method, std::move(val), already_checked) {}
 };
 
 class authentication_data : public detail::binary_property {
 public:
-    using recv = authentication_data_ref;
-    using store = authentication_data;
-    explicit authentication_data(std::string type)
-        : detail::binary_property(id::authentication_data, std::move(type)) {}
-    explicit authentication_data(authentication_data_ref const& v);
+    explicit authentication_data(buffer val)
+        : detail::binary_property(id::authentication_data, std::move(val)) {}
 };
-
-inline authentication_data_ref::authentication_data_ref(authentication_data const& v)
-    :detail::binary_property_ref(v) {}
-
-inline authentication_data::authentication_data(authentication_data_ref const& v)
-    :detail::binary_property(v) {}
-
-static_assert(std::is_convertible<authentication_data, authentication_data_ref>::value, "Must be able to implicitly convert from a property to its ref type.");
-static_assert(std::is_constructible<authentication_data, authentication_data_ref>::value, "Must be able to construct a property from its ref type.");
-static_assert(std::is_constructible<authentication_data_ref, authentication_data>::value, "Must be able to construct a property ref from the property.");
 
 class request_problem_information : public detail::n_bytes_property<1> {
 public:
@@ -599,13 +359,12 @@ public:
     }
 };
 
-
 class will_delay_interval : public detail::n_bytes_property<4> {
 public:
     using recv = will_delay_interval;
     using store = will_delay_interval;
     will_delay_interval(std::uint32_t val)
-        : detail::n_bytes_property<4>(id::will_delay_interval, { num_to_4bytes(static_cast<std::uint32_t>(val)) } ) {}
+        : detail::n_bytes_property<4>(id::will_delay_interval, { num_to_4bytes(val) } ) {}
 
     template <typename It>
     will_delay_interval(It b, It e)
@@ -632,103 +391,30 @@ public:
     }
 };
 
-
-class response_information;
-
-class response_information_ref : public detail::string_property_ref {
-public:
-    using recv = response_information_ref;
-    using store = response_information;
-    response_information_ref(string_view type)
-        : detail::string_property_ref(id::response_information, type) {}
-    response_information_ref(response_information const& v);
-};
-
 class response_information : public detail::string_property {
 public:
-    using recv = response_information_ref;
-    using store = response_information;
-    explicit response_information(std::string type)
-        : detail::string_property(id::response_information, std::move(type)) {}
-    explicit response_information(response_information_ref const& v);
-};
-
-inline response_information_ref::response_information_ref(response_information const& v)
-    :detail::string_property_ref(v) {}
-
-inline response_information::response_information(response_information_ref const& v)
-    :detail::string_property(v) {}
-
-static_assert(std::is_convertible<response_information, response_information_ref>::value, "Must be able to implicitly convert from a property to its ref type.");
-static_assert(std::is_constructible<response_information, response_information_ref>::value, "Must be able to construct a property from its ref type.");
-static_assert(std::is_constructible<response_information_ref, response_information>::value, "Must be able to construct a property ref from the property.");
-
-class server_reference;
-
-class server_reference_ref : public detail::string_property_ref {
-public:
-    using recv = server_reference_ref;
-    using store = server_reference;
-    server_reference_ref(string_view type)
-        : detail::string_property_ref(id::server_reference, type) {}
-    server_reference_ref(server_reference const& v);
+    explicit response_information(buffer val, bool already_checked = false)
+        : detail::string_property(id::response_information, std::move(val), already_checked) {}
 };
 
 class server_reference : public detail::string_property {
 public:
-    using recv = server_reference_ref;
-    using store = server_reference;
-    explicit server_reference(std::string type)
-        : detail::string_property(id::server_reference, std::move(type)) {}
-    explicit server_reference(server_reference_ref const& v);
-};
-
-inline server_reference_ref::server_reference_ref(server_reference const& v)
-    :detail::string_property_ref(v) {}
-
-inline server_reference::server_reference(server_reference_ref const& v)
-    :detail::string_property(v) {}
-
-static_assert(std::is_convertible<server_reference, server_reference_ref>::value, "Must be able to implicitly convert from a property to its ref type.");
-static_assert(std::is_constructible<server_reference, server_reference_ref>::value, "Must be able to construct a property from its ref type.");
-static_assert(std::is_constructible<server_reference_ref, server_reference>::value, "Must be able to construct a property ref from the property.");
-
-class reason_string;
-
-class reason_string_ref : public detail::string_property_ref {
-public:
-    using recv = reason_string_ref;
-    using store = reason_string;
-    reason_string_ref(string_view type)
-        : detail::string_property_ref(id::reason_string, type) {}
-    reason_string_ref(reason_string const& v);
+    explicit server_reference(buffer val, bool already_checked = false)
+        : detail::string_property(id::server_reference, std::move(val), already_checked) {}
 };
 
 class reason_string : public detail::string_property {
 public:
-    using recv = reason_string_ref;
-    using store = reason_string;
-    explicit reason_string(std::string type)
-        : detail::string_property(id::reason_string, std::move(type)) {}
-    explicit reason_string(reason_string_ref const& v);
+    explicit reason_string(buffer val, bool already_checked = false)
+        : detail::string_property(id::reason_string, std::move(val), already_checked) {}
 };
-
-inline reason_string_ref::reason_string_ref(reason_string const& v)
-    :detail::string_property_ref(v) {}
-
-inline reason_string::reason_string(reason_string_ref const& v)
-    :detail::string_property(v) {}
-
-static_assert(std::is_convertible<reason_string, reason_string_ref>::value, "Must be able to implicitly convert from a property to its ref type.");
-static_assert(std::is_constructible<reason_string, reason_string_ref>::value, "Must be able to construct a property from its ref type.");
-static_assert(std::is_constructible<reason_string_ref, reason_string>::value, "Must be able to construct a property ref from the property.");
 
 class receive_maximum : public detail::n_bytes_property<2> {
 public:
     using recv = receive_maximum;
     using store = receive_maximum;
     receive_maximum(std::uint16_t val)
-        : detail::n_bytes_property<2>(id::receive_maximum, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
+        : detail::n_bytes_property<2>(id::receive_maximum, { num_to_2bytes(val) } ) {}
 
     template <typename It>
     receive_maximum(It b, It e)
@@ -745,7 +431,7 @@ public:
     using recv = topic_alias_maximum;
     using store = topic_alias_maximum;
     topic_alias_maximum(std::uint16_t val)
-        : detail::n_bytes_property<2>(id::topic_alias_maximum, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
+        : detail::n_bytes_property<2>(id::topic_alias_maximum, { num_to_2bytes(val) } ) {}
 
     template <typename It>
     topic_alias_maximum(It b, It e)
@@ -762,7 +448,7 @@ public:
     using recv = topic_alias;
     using store = topic_alias;
     topic_alias(std::uint16_t val)
-        : detail::n_bytes_property<2>(id::topic_alias, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
+        : detail::n_bytes_property<2>(id::topic_alias, { num_to_2bytes(val) } ) {}
 
     template <typename It>
     topic_alias(It b, It e)
@@ -812,136 +498,10 @@ public:
 };
 
 
-class user_property;
-
-namespace detail {
-
-struct len_str;
-
-struct len_str_ref {
-    explicit len_str_ref(string_view v)
-        : len{num_to_2bytes(static_cast<std::uint16_t>(v.size()))}
-        , str(as::buffer(v.data(), v.size()))
-    {}
-    len_str_ref(len_str const& v);
-
-    std::size_t size() const {
-        return len.size() + get_size(str);
-    }
-    boost::container::static_vector<char, 2> len;
-    as::const_buffer str;
-};
-
-struct len_str {
-    explicit len_str(std::string v)
-        : len{num_to_2bytes(static_cast<std::uint16_t>(v.size()))}
-        , str(v.data(), v.size())
-    {}
-    explicit len_str(len_str_ref const& v);
-
-    std::size_t size() const {
-        return len.size() + str.size();
-    }
-    boost::container::static_vector<char, 2> len;
-    std::string str;
-};
-
-inline len_str_ref::len_str_ref(len_str const& v)
-    :len(v.len), str(as::buffer(v.str)) {}
-
-inline len_str::len_str(len_str_ref const& v)
-    :len(v.len), str(get_pointer(v.str), get_size(v.str)) {}
-
-} // namespace detail
-
-class user_property_ref {
-public:
-    using recv = user_property_ref;
-    using store = user_property;
-    user_property_ref(string_view key, string_view val)
-        : key_(key), val_(val) {}
-    user_property_ref(user_property const& v);
-
-    /**
-     * @brief Add const buffer sequence into the given buffer.
-     * @param v buffer to add
-     */
-    void add_const_buffer_sequence(std::vector<as::const_buffer>& v) const {
-        v.emplace_back(as::buffer(&id_, 1));
-        v.emplace_back(as::buffer(key_.len.data(), key_.len.size()));
-        v.emplace_back(key_.str);
-        v.emplace_back(as::buffer(val_.len.data(), val_.len.size()));
-        v.emplace_back(val_.str);
-    }
-
-    template <typename It>
-    void fill(It b, It e) const {
-        BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
-
-        *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
-        {
-            std::copy(key_.len.begin(), key_.len.end(), b);
-            b += static_cast<typename It::difference_type>(key_.len.size());
-            auto ptr = get_pointer(key_.str);
-            auto size = get_size(key_.str);
-            std::copy(ptr, ptr + size, b);
-            b += static_cast<typename It::difference_type>(size);
-        }
-        {
-            std::copy(val_.len.begin(), val_.len.end(), b);
-            b += static_cast<typename It::difference_type>(val_.len.size());
-            auto ptr = get_pointer(val_.str);
-            auto size = get_size(val_.str);
-            std::copy(ptr, ptr + size, b);
-            b += static_cast<typename It::difference_type>(size);
-        }
-    }
-
-    /**
-     * @brief Get whole size of sequence
-     * @return whole size
-     */
-    std::size_t size() const {
-        return
-            1 + // id_
-            key_.size() +
-            val_.size();
-    }
-
-    /**
-     * @brief Get number of element of const_buffer_sequence
-     * @return number of element of const_buffer_sequence
-     */
-    std::size_t num_of_const_buffer_sequence() const {
-        return
-            1 + // header
-            2 + // key (len, str)
-            2;  // val (len, str)
-    }
-
-    string_view key() const {
-        return string_view(get_pointer(key_.str), get_size(key_.str));
-    }
-
-    string_view val() const {
-        return string_view(get_pointer(val_.str), get_size(val_.str));
-    }
-
-    static constexpr detail::ostream_format const of_ = detail::ostream_format::key_val;
-private:
-    friend class user_property;
-    property::id id_ = id::user_property;
-    detail::len_str_ref key_;
-    detail::len_str_ref val_;
-};
-
 class user_property {
 public:
-    using recv = user_property_ref;
-    using store = user_property;
-    user_property(std::string key, std::string val)
-        : key_(std::move(key)), val_(std::move(val)) {}
-    explicit user_property(user_property_ref const& v);
+    user_property(buffer key, buffer val, bool key_already_checked = false, bool val_already_checked = false)
+        : key_(std::move(key), key_already_checked), val_(std::move(val), val_already_checked) {}
 
     /**
      * @brief Add const buffer sequence into the given buffer.
@@ -950,9 +510,9 @@ public:
     void add_const_buffer_sequence(std::vector<as::const_buffer>& v) const {
         v.emplace_back(as::buffer(&id_, 1));
         v.emplace_back(as::buffer(key_.len.data(), key_.len.size()));
-        v.emplace_back(as::buffer(key_.str.data(), key_.str.size()));
+        v.emplace_back(as::buffer(key_.buf.data(), key_.buf.size()));
         v.emplace_back(as::buffer(val_.len.data(), val_.len.size()));
-        v.emplace_back(as::buffer(val_.str.data(), val_.str.size()));
+        v.emplace_back(as::buffer(val_.buf.data(), val_.buf.size()));
     }
 
     template <typename It>
@@ -963,16 +523,16 @@ public:
         {
             std::copy(key_.len.begin(), key_.len.end(), b);
             b += static_cast<typename It::difference_type>(key_.len.size());
-            auto ptr = key_.str.data();
-            auto size = key_.str.size();
+            auto ptr = key_.buf.data();
+            auto size = key_.buf.size();
             std::copy(ptr, ptr + size, b);
             b += static_cast<typename It::difference_type>(size);
         }
         {
             std::copy(val_.len.begin(), val_.len.end(), b);
             b += static_cast<typename It::difference_type>(val_.len.size());
-            auto ptr = val_.str.data();
-            auto size = val_.str.size();
+            auto ptr = val_.buf.data();
+            auto size = val_.buf.size();
             std::copy(ptr, ptr + size, b);
             b += static_cast<typename It::difference_type>(size);
         }
@@ -996,42 +556,51 @@ public:
     std::size_t num_of_const_buffer_sequence() const {
         return
             1 + // header
-            2 + // key (len, str)
-            2;  // val (len, str)
+            2 + // key (len, buf)
+            2;  // val (len, buf)
     }
 
-    std::string const& key() const {
-        return key_.str;
+    buffer const& key() const {
+        return key_.buf;
     }
 
-    std::string const& val() const {
-        return val_.str;
+    buffer const& val() const {
+        return val_.buf;
     }
 
     static constexpr detail::ostream_format const of_ = detail::ostream_format::key_val;
+
 private:
-    friend class user_property_ref;
+    struct len_str {
+        explicit len_str(buffer b, bool already_checked = false)
+            : buf(std::move(b)),
+              len{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(buf.size())) }
+        {
+            if (!already_checked) {
+                auto r = utf8string::validate_contents(buf);
+                if (r != utf8string::validation::well_formed) throw utf8string_contents_error(r);
+            }
+        }
+
+        std::size_t size() const {
+            return len.size() + buf.size();
+        }
+        buffer buf;
+        boost::container::static_vector<char, 2> len;
+    };
+
+private:
     property::id id_ = id::user_property;
-    detail::len_str key_;
-    detail::len_str val_;
+    len_str key_;
+    len_str val_;
 };
-
-inline user_property_ref::user_property_ref(user_property const& v)
-    :id_(v.id_), key_(v.key_), val_(v.val_) {}
-
-inline user_property::user_property(user_property_ref const& v)
-    :id_(v.id_), key_(v.key_), val_(v.val_) {}
-
-static_assert(std::is_convertible<user_property, user_property_ref>::value, "Must be able to implicitly convert from a property to its ref type.");
-static_assert(std::is_constructible<user_property, user_property_ref>::value, "Must be able to construct a property from its ref type.");
-static_assert(std::is_constructible<user_property_ref, user_property>::value, "Must be able to construct a property ref from the property.");
 
 class maximum_packet_size : public detail::n_bytes_property<4> {
 public:
     using recv = maximum_packet_size;
     using store = maximum_packet_size;
     maximum_packet_size(std::uint32_t val)
-        : detail::n_bytes_property<4>(id::maximum_packet_size, { num_to_4bytes(static_cast<std::uint32_t>(val)) } ) {}
+        : detail::n_bytes_property<4>(id::maximum_packet_size, { num_to_4bytes(val) } ) {}
 
     template <typename It>
     maximum_packet_size(It b, It e)

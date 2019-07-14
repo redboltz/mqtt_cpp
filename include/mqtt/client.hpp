@@ -37,9 +37,9 @@ namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
 template <typename Socket, std::size_t PacketIdBytes = 2>
-class client : public endpoint<Socket, std::mutex, std::lock_guard, PacketIdBytes> {
+class client : public endpoint<std::mutex, std::lock_guard, PacketIdBytes> {
     using this_type = client<Socket, PacketIdBytes>;
-    using base = endpoint<Socket, std::mutex, std::lock_guard, PacketIdBytes>;
+    using base = endpoint<std::mutex, std::lock_guard, PacketIdBytes>;
 protected:
     struct constructor_access{};
 public:
@@ -470,8 +470,8 @@ public:
         auto it = eps.begin();
         auto end = eps.end();
 #endif // BOOST_VERSION < 106600
-        setup_socket(base::socket());
-        connect_impl(*base::socket(), it, end, std::move(props), std::move(func));
+        setup_socket(socket_);
+        connect_impl(*socket_, it, end, std::move(props), std::move(func));
     }
 
     /**
@@ -506,8 +506,9 @@ public:
         auto it = eps.begin();
         auto end = eps.end();
 #endif // BOOST_VERSION < 106600
-        base::socket() = std::move(socket);
-        connect_impl(*base::socket(), it, end, std::move(props), std::move(func));
+        socket_ = std::move(socket);
+        base::socket_optional().emplace(socket_);
+        connect_impl(*socket_, it, end, std::move(props), std::move(func));
     }
 
     /**
@@ -734,6 +735,14 @@ public:
         async_pingreq_ = b;
     }
 
+    std::shared_ptr<Socket> const& socket() const {
+        return socket_;
+    }
+
+    std::shared_ptr<Socket>& socket() {
+        return socket_;
+    }
+
 protected:
     client(as::io_service& ios,
            std::string host,
@@ -765,30 +774,34 @@ protected:
 private:
     template <typename Strand>
     void setup_socket(std::shared_ptr<tcp_endpoint<as::ip::tcp::socket, Strand>>& socket) {
-        socket.reset(new Socket(ios_));
+        socket = std::make_shared<Socket>(ios_);
+        base::socket_optional().emplace(socket);
     }
 
 #if defined(MQTT_USE_WS)
     template <typename Strand>
     void setup_socket(std::shared_ptr<ws_endpoint<as::ip::tcp::socket, Strand>>& socket) {
-        socket.reset(new Socket(ios_));
+        socket = std::make_shared<Socket>(ios_);
+        base::socket_optional().emplace(socket);
     }
 #endif // defined(MQTT_USE_WS)
 
 #if !defined(MQTT_NO_TLS)
     template <typename Strand>
     void setup_socket(std::shared_ptr<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
-        socket.reset(new Socket(ios_, ctx_));
+        socket = std::make_shared<Socket>(ios_, ctx_);
+        base::socket_optional().emplace(socket);
     }
 
 #if defined(MQTT_USE_WS)
     template <typename Strand>
     void setup_socket(std::shared_ptr<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
-        socket.reset(new Socket(ios_, ctx_));
+        socket = std::make_shared<Socket>(ios_, ctx_);
+        base::socket_optional().emplace(socket);
     }
 #endif // defined(MQTT_USE_WS)
 
-#endif // defined(MQTT_NO_TLS)
+#endif // !defined(MQTT_NO_TLS)
 
     template <typename Strand>
     void handshake_socket(
@@ -930,6 +943,7 @@ private:
     }
 
 private:
+    std::shared_ptr<Socket> socket_;
     as::io_service& ios_;
     as::deadline_timer tim_ping_;
     as::deadline_timer tim_close_;

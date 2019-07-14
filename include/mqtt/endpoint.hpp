@@ -17,6 +17,7 @@
 #include <memory>
 #include <mutex>
 #include <atomic>
+#include <algorithm>
 
 #include <boost/any.hpp>
 #include <boost/lexical_cast.hpp>
@@ -51,10 +52,12 @@
 #include <mqtt/packet_id_type.hpp>
 #include <mqtt/optional.hpp>
 #include <mqtt/property_variant.hpp>
-#include <mqtt/property_parse.hpp>
 #include <mqtt/protocol_version.hpp>
 #include <mqtt/reason_code.hpp>
 #include <mqtt/subscribe.hpp>
+#include <mqtt/buffer.hpp>
+#include <mqtt/shared_ptr_array.hpp>
+#include <mqtt/type_erased_socket.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -65,10 +68,12 @@ namespace mqtt {
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
-template <typename Socket, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard, std::size_t PacketIdBytes = 2>
-class endpoint : public std::enable_shared_from_this<endpoint<Socket, Mutex, LockGuard, PacketIdBytes>> {
-    using this_type = endpoint<Socket, Mutex, LockGuard, PacketIdBytes>;
+template <typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard, std::size_t PacketIdBytes = 2>
+class endpoint : public std::enable_shared_from_this<endpoint<Mutex, LockGuard, PacketIdBytes>> {
+    using this_type = endpoint<Mutex, LockGuard, PacketIdBytes>;
+    using this_type_sp = std::shared_ptr<this_type>;
 public:
+    using std::enable_shared_from_this<this_type>::shared_from_this;
     using async_handler_t = std::function<void(boost::system::error_code const& ec)>;
     using packet_id_t = typename packet_id_type<PacketIdBytes>::type;
 
@@ -90,6 +95,7 @@ public:
      * @brief Constructor for server.
      *        socket should have already been connected with another endpoint.
      */
+    template <typename Socket>
     explicit endpoint(std::shared_ptr<Socket> socket, protocol_version version = protocol_version::undetermined, bool async_send_store = false)
         :socket_(std::move(socket)),
          connected_(true),
@@ -130,7 +136,7 @@ public:
      *        Client Identifier.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349245<BR>
      *        3.1.3.1 Client Identifier
-     * @param username
+     * @param user_name
      *        User Name.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349245<BR>
      *        3.1.3.4 User Name
@@ -162,9 +168,9 @@ public:
      *
      */
     using connect_handler = std::function<
-        bool(mqtt::string_view client_id,
-             mqtt::optional<mqtt::string_view> username,
-             mqtt::optional<mqtt::string_view> password,
+        bool(mqtt::buffer client_id,
+             mqtt::optional<mqtt::buffer> user_name,
+             mqtt::optional<mqtt::buffer> password,
              mqtt::optional<will> will,
              bool clean_session,
              std::uint16_t keep_alive)>;
@@ -201,8 +207,8 @@ public:
      */
     using publish_handler = std::function<bool(std::uint8_t fixed_header,
                                                mqtt::optional<packet_id_t> packet_id,
-                                               mqtt::string_view topic_name,
-                                               mqtt::string_view contents)>;
+                                               mqtt::buffer topic_name,
+                                               mqtt::buffer contents)>;
 
     /**
      * @brief Puback handler
@@ -255,7 +261,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using subscribe_handler = std::function<bool(packet_id_t packet_id,
-                                                 std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries)>;
+                                                 std::vector<std::tuple<mqtt::buffer, std::uint8_t>> entries)>;
 
     /**
      * @brief Suback handler
@@ -282,7 +288,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using unsubscribe_handler = std::function<bool(packet_id_t packet_id,
-                                                   std::vector<mqtt::string_view> topics)>;
+                                                   std::vector<mqtt::buffer> topics)>;
 
     /**
      * @brief Unsuback handler
@@ -308,7 +314,7 @@ public:
      *        Client Identifier.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
      *        3.1.3.1 Client Identifier
-     * @param username
+     * @param user_name
      *        User Name.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
      *        3.1.3.4 User Name
@@ -346,9 +352,9 @@ public:
      *
      */
     using v5_connect_handler = std::function<
-        bool(mqtt::string_view client_id,
-             mqtt::optional<mqtt::string_view> username,
-             mqtt::optional<mqtt::string_view> password,
+        bool(mqtt::buffer client_id,
+             mqtt::optional<mqtt::buffer> user_name,
+             mqtt::optional<mqtt::buffer> password,
              mqtt::optional<will> will,
              bool clean_start,
              std::uint16_t keep_alive,
@@ -405,8 +411,8 @@ public:
     using v5_publish_handler = std::function<
         bool(std::uint8_t fixed_header,
              mqtt::optional<packet_id_t> packet_id,
-             mqtt::string_view topic_name,
-             mqtt::string_view contents,
+             mqtt::buffer topic_name,
+             mqtt::buffer contents,
              std::vector<v5::property_variant> props)
     >;
 
@@ -514,7 +520,7 @@ public:
      */
     using v5_subscribe_handler = std::function<
         bool(packet_id_t packet_id,
-             std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries,
+             std::vector<std::tuple<mqtt::buffer, std::uint8_t>> entries,
              std::vector<v5::property_variant> props)
     >;
 
@@ -556,7 +562,7 @@ public:
      */
     using v5_unsubscribe_handler = std::function<
         bool(packet_id_t packet_id,
-             std::vector<mqtt::string_view> topics,
+             std::vector<mqtt::buffer> topics,
              std::vector<v5::property_variant> props)
     >;
 
@@ -1360,6 +1366,13 @@ public:
         h_is_valid_length_ = std::move(h);
     }
 
+    void set_packet_bulk_read_limit(std::size_t size) {
+        packet_bulk_read_limit_ = size;
+    }
+
+    void set_props_bulk_read_limit(std::size_t size) {
+        props_bulk_read_limit_ = size;
+    }
 
     /**
      * @brief Get close handler
@@ -7300,23 +7313,6 @@ public:
     }
 
     /**
-     * @brief Get Socket shared_ptr reference.
-     * @return refereence of Socket unique_ptr
-     */
-    std::shared_ptr<Socket>& socket() {
-        return socket_;
-    }
-
-    /**
-     * @brief Get Socket shared_ptr const reference.
-     * @return const refereence of Socket unique_ptr
-     */
-    std::shared_ptr<Socket> const& socket() const {
-        return socket_;
-    }
-
-
-    /**
      * @brief Apply f to stored messages.
      * @param f applying function. f should be void(char const*, std::size_t)
      */
@@ -7426,16 +7422,35 @@ public:
     template <typename Iterator>
     typename std::enable_if<std::is_convertible<typename Iterator::value_type, char>::value>::type
     restore_serialized_message(packet_id_t /*packet_id*/, Iterator b, Iterator e) {
+        static_assert(
+            std::is_same<
+                typename std::iterator_traits<Iterator>::iterator_category,
+                std::random_access_iterator_tag
+            >::value,
+            "Iterator doesn't support random access"
+        );
+
         if (b == e) return;
 
         auto fixed_header = static_cast<std::uint8_t>(*b);
         switch (get_control_packet_type(fixed_header)) {
         case control_packet_type::publish: {
-            auto sp = std::make_shared<std::string>(b, e);
-            restore_serialized_message(basic_publish_message<PacketIdBytes>(sp->begin(), sp->end()), sp);
+            auto size = static_cast<std::size_t>(std::distance(b, e));
+            auto spa = make_shared_ptr_array(size);
+            std::copy(b, e, spa.get());
+            restore_serialized_message(
+                basic_publish_message<PacketIdBytes>(
+                    buffer(string_view(spa.get(), size))
+                ),
+                spa
+            );
         } break;
         case control_packet_type::pubrel: {
-            restore_serialized_message(basic_pubrel_message<PacketIdBytes>(b, e));
+            restore_serialized_message(
+                basic_pubrel_message<PacketIdBytes>(
+                    buffer(string_view(&*b, static_cast<std::size_t>(std::distance(b, e))))
+                )
+            );
         } break;
         default:
             throw protocol_error();
@@ -7529,12 +7544,26 @@ public:
         auto fixed_header = static_cast<std::uint8_t>(*b);
         switch (get_control_packet_type(fixed_header)) {
         case control_packet_type::publish: {
-            auto sp = std::make_shared<std::string>(b, e);
-            restore_v5_serialized_message(v5::basic_publish_message<PacketIdBytes>(sp->begin(), sp->end()), sp);
+            auto size = static_cast<std::size_t>(std::distance(b, e));
+            auto spa = make_shared_ptr_array(size);
+            std::copy(b, e, spa.get());
+            restore_v5_serialized_message(
+                v5::basic_publish_message<PacketIdBytes>(
+                    buffer(string_view(spa.get(), size))
+                ),
+                spa
+            );
         } break;
         case control_packet_type::pubrel: {
-            auto sp = std::make_shared<std::string>(b, e);
-            restore_v5_serialized_message(v5::basic_pubrel_message<PacketIdBytes>(sp->begin(), sp->end()), sp);
+            auto size = static_cast<std::size_t>(std::distance(b, e));
+            auto spa = make_shared_ptr_array(size);
+            std::copy(b, e, spa.get());
+            restore_v5_serialized_message(
+                v5::basic_pubrel_message<PacketIdBytes>(
+                    buffer(string_view(spa.get(), size))
+                ),
+                spa
+            );
         } break;
         default:
             throw protocol_error();
@@ -7703,23 +7732,33 @@ public:
         return version_;
     }
 
+    mqtt::socket const& socket() const {
+        return socket_.value();
+    }
+
+    mqtt::socket& socket() {
+        return socket_.value();
+    }
+
 protected:
+
+    /**
+     * @brief Get shared_any of socket
+     * @return reference of shared_any socket
+     */
+    mqtt::optional<mqtt::socket>& socket_optional() {
+        return socket_;
+    }
+
     void async_read_control_packet_type(async_handler_t func) {
-        async_read(
-            *socket_,
-            as::buffer(&buf_, 1),
-            [self = this->shared_from_this(), func = std::move(func)](
+        auto self = shared_from_this();
+        socket_->async_read(
+            as::buffer(&buf_[0], 1),
+            [this, self = std::move(self), func = std::move(func)](
                 boost::system::error_code const& ec,
-                std::size_t bytes_transferred){
-                if (self->handle_close_or_error(ec)) {
-                    if (func) func(ec);
-                    return;
-                }
-                if (bytes_transferred != 1) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return;
-                }
-                self->handle_control_packet_type(std::move(func));
+                std::size_t bytes_transferred) {
+                if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
+                handle_control_packet_type(std::move(func), std::move(self));
             }
         );
     }
@@ -7729,7 +7768,10 @@ protected:
         if (connected_) {
             connected_ = false;
             mqtt_connected_ = false;
-            shutdown_from_server(*socket_);
+            {
+                boost::system::error_code ec;
+                socket_->close(ec);
+            }
         }
         if (ec == as::error::eof ||
             ec == as::error::connection_reset
@@ -7776,47 +7818,62 @@ protected:
     }
 
 private:
+
+    bool check_error(
+        boost::system::error_code const& ec,
+        async_handler_t const& func) {
+        if (handle_close_or_error(ec)) {
+            if (func) func(ec);
+            return false;
+        }
+        return true;
+    }
+
+    bool check_transferred_length(
+        std::size_t bytes_transferred,
+        std::size_t bytes_expected,
+        async_handler_t const& func) {
+        if (bytes_transferred != bytes_expected) {
+            call_message_size_error_handlers(func);
+            return false;
+        }
+        return true;
+    }
+
+    bool check_error_and_transferred_length(
+        boost::system::error_code const& ec,
+        async_handler_t const& func,
+        std::size_t bytes_transferred,
+        std::size_t bytes_expected) {
+        if (!check_error(ec, func)) return false;
+        if (!check_transferred_length(bytes_transferred, bytes_expected, func)) return false;
+        return true;
+    }
+
+    void call_error_handlers(boost::system::error_code const& ec, async_handler_t const& func) {
+        handle_error(ec);
+        if (func) func(ec);
+    }
+
+    void call_message_size_error_handlers(async_handler_t const& func) {
+        call_error_handlers(
+            boost::system::errc::make_error_code(boost::system::errc::message_size),
+            func
+        );
+    }
+
+    void call_protocol_error_handlers(async_handler_t const& func) {
+        call_error_handlers(
+            boost::system::errc::make_error_code(boost::system::errc::protocol_error),
+            func
+        );
+    }
+
     template <typename T>
     void shutdown_from_client(T& socket) {
         boost::system::error_code ec;
         socket.lowest_layer().close(ec);
     }
-
-    template <typename T>
-    void shutdown_from_server(T& socket) {
-        boost::system::error_code ec;
-        socket.close(ec);
-    }
-
-#if defined(MQTT_USE_WS)
-    template <typename T, typename S>
-    void shutdown_from_server(ws_endpoint<T, S>& /*socket*/) {
-    }
-#endif // defined(MQTT_USE_WS)
-
-#if !defined(MQTT_NO_TLS)
-    template <typename T>
-    void shutdown_from_client(as::ssl::stream<T>& socket) {
-        boost::system::error_code ec;
-        socket.lowest_layer().close(ec);
-    }
-    template <typename T>
-    void shutdown_from_server(as::ssl::stream<T>& socket) {
-        boost::system::error_code ec;
-        socket.lowest_layer().close(ec);
-    }
-#if defined(MQTT_USE_WS)
-    template <typename T, typename S>
-    void shutdown_from_client(ws_endpoint<as::ssl::stream<T>, S>& socket) {
-        boost::system::error_code ec;
-        socket.lowest_layer().close(ec);
-    }
-    template <typename T, typename S>
-    void shutdown_from_server(ws_endpoint<as::ssl::stream<T>, S>& /*socket*/) {
-    }
-#endif // defined(MQTT_USE_WS)
-#endif // defined(MQTT_NO_TLS)
-
 
     template <typename... Args>
     typename std::enable_if<
@@ -8157,43 +8214,33 @@ private:
         >
     >;
 
-    void handle_control_packet_type(async_handler_t func) {
-        fixed_header_ = static_cast<std::uint8_t>(buf_);
+    void handle_control_packet_type(async_handler_t func, this_type_sp self) {
+        fixed_header_ = static_cast<std::uint8_t>(buf_[0]);
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
-        async_read(
-            *socket_,
-            as::buffer(&buf_, 1),
-            [self = this->shared_from_this(), func = std::move(func)](
+        socket_->async_read(
+            as::buffer(&buf_[0], 1),
+            [this, self = std::move(self), func = std::move(func)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred){
-                if (self->handle_close_or_error(ec)) {
-                    if (func) func(ec);
-                    return;
-                }
-                if (bytes_transferred != 1) {
-                    self->handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return;
-                }
-                self->handle_remaining_length(std::move(func));
+                if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
+                handle_remaining_length(std::move(func), std::move(self));
             }
         );
     }
 
-    void handle_remaining_length(async_handler_t func) {
-        remaining_length_ += (buf_ & 0b01111111) * remaining_length_multiplier_;
+    void handle_remaining_length(async_handler_t func, this_type_sp self) {
+        remaining_length_ += (buf_[0] & 0b01111111) * remaining_length_multiplier_;
         remaining_length_multiplier_ *= 128;
         if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) {
             handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return;
         }
-        if (buf_ & 0b10000000) {
-            async_read(
-                *socket_,
-                as::buffer(&buf_, 1),
-                [self = this->shared_from_this(), func = std::move(func)](
+        if (buf_[0] & 0b10000000) {
+            socket_->async_read(
+                as::buffer(&buf_[0], 1),
+                [self = std::move(self), func = std::move(func)](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
                     if (self->handle_close_or_error(ec)) {
@@ -8205,7 +8252,7 @@ private:
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
-                    self->handle_remaining_length(std::move(func));
+                    self->handle_remaining_length(std::move(func), std::move(self));
                 }
             );
         }
@@ -8278,436 +8325,3800 @@ private:
                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return;
             }
-            /*
-             * Note that this call to resize will never shrink the vector's allocated memory
-             * The standard guarentees that iterators to items that are still valid with the
-             * new size will remain valid. There are only two ways to provide that guarantee
-             * - Ensure that unused memory is only freed with calls to the memory allocator
-             *   that will reclaim the unused memory, and not move items to a new buffer.
-             * - Ensure that calls to resize only call the memory allocator when growing.
-             * Testing by redboltz shows that the second possibility is the case for at least
-             * one implementation of the standard library, and it's unlikely that there would
-             * be a difference in this behavior between implementations.
-             */
-            payload_.resize(remaining_length_);
-            if (remaining_length_ == 0) {
-                handle_payload(func);
+
+            process_payload(std::move(func), std::move(self));
+        }
+    }
+
+    void process_payload(async_handler_t func, this_type_sp self) {
+        auto control_packet_type = get_control_packet_type(fixed_header_);
+        switch (control_packet_type) {
+        case control_packet_type::connect:
+            process_connect(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            return;
+        case control_packet_type::connack:
+            process_connack(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            return;
+        case control_packet_type::publish:
+            if (mqtt_connected_) {
+                process_publish(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            }
+            break;
+        case control_packet_type::puback:
+            if (mqtt_connected_) {
+                process_puback(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            }
+            break;
+        case control_packet_type::pubrec:
+            if (mqtt_connected_) {
+                process_pubrec(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            }
+            break;
+        case control_packet_type::pubrel:
+            if (mqtt_connected_) {
+                process_pubrel(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            }
+            break;
+        case control_packet_type::pubcomp:
+            if (mqtt_connected_) {
+                process_pubcomp(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            }
+            break;
+        case control_packet_type::subscribe:
+            if (mqtt_connected_) {
+                process_subscribe(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            }
+            break;
+        case control_packet_type::suback:
+            if (mqtt_connected_) {
+                process_suback(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            }
+            break;
+        case control_packet_type::unsubscribe:
+            if (mqtt_connected_) {
+                process_unsubscribe(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            }
+            break;
+        case control_packet_type::unsuback:
+            if (mqtt_connected_) {
+                process_unsuback(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            }
+            break;
+        case control_packet_type::pingreq:
+            if (mqtt_connected_) {
+                process_pingreq(std::move(func));
+            }
+            break;
+        case control_packet_type::pingresp:
+            if (mqtt_connected_) {
+                process_pingresp(std::move(func));
+            }
+            break;
+        case control_packet_type::disconnect:
+            process_disconnect(func, remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            break;
+        case control_packet_type::auth:
+            process_auth(func, remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            break;
+        default:
+            break;
+        }
+    }
+
+    // primitive read functions
+    void process_nbytes(
+        async_handler_t func,
+        buffer buf,
+        std::size_t size,
+        std::function<void(buffer, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
+        if (remaining_length_ < size) {
+            call_message_size_error_handlers(func);
+            return;
+        }
+        remaining_length_ -= size;
+
+        if (buf.empty()) {
+            auto spa = make_shared_ptr_array(size);
+            socket_->async_read(
+                as::buffer(spa.get(), size),
+                [
+                    this,
+                    self = std::move(self),
+                    func = std::move(func),
+                    size,
+                    handler = std::move(handler),
+                    spa
+                ]
+                (boost::system::error_code const& ec,
+                 std::size_t bytes_transferred) mutable {
+                    if (!check_error_and_transferred_length(ec, func, bytes_transferred, size)) return;
+                    auto ptr = spa.get();
+                    handler(
+                        buffer(string_view(ptr, size), std::move(spa)),
+                        buffer(),
+                        std::move(func),
+                        std::move(self)
+                    );
+                }
+            );
+        }
+        else {
+            if (buf.size() < size) {
+                call_message_size_error_handlers(func);
                 return;
             }
-            async_read(
-                *socket_,
-                as::buffer(payload_),
-                [self = this->shared_from_this(), func = std::move(func)](
-                    boost::system::error_code const& ec,
-                    std::size_t bytes_transferred){
-                    auto g = unique_scope_guard(
-                        [&self]
-                        {
-                            self->payload_.clear();
-                        }
+            socket_->post(
+                [
+                    self = std::move(self),
+                    func = std::move(func),
+                    buf = std::move(buf),
+                    size,
+                    handler = std::move(handler)
+                ]
+                () mutable {
+                    handler(
+                        buf.substr(0, size),
+                        buf.substr(size),
+                        std::move(func),
+                        std::move(self)
                     );
-                    if (self->handle_close_or_error(ec)) {
-                        if (func) func(ec);
-                        return;
-                    }
-                    if (bytes_transferred != self->remaining_length_) {
-                        self->handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                        return;
-                    }
-                    self->handle_payload(std::move(func));
                 }
             );
         }
     }
 
-    void handle_payload(async_handler_t func) {
-        auto control_packet_type = get_control_packet_type(fixed_header_);
-        bool ret = false;
-        switch (control_packet_type) {
-        case control_packet_type::connect:
-            ret = handle_connect(func);
-            break;
-        case control_packet_type::connack:
-            ret = handle_connack(func);
-            break;
-        case control_packet_type::publish:
-            if (mqtt_connected_) {
-                ret = handle_publish(func);
-            }
-            break;
-        case control_packet_type::puback:
-            if (mqtt_connected_) {
-                ret = handle_puback(func);
-            }
-            break;
-        case control_packet_type::pubrec:
-            if (mqtt_connected_) {
-                ret = handle_pubrec(func);
-            }
-            break;
-        case control_packet_type::pubrel:
-            if (mqtt_connected_) {
-                ret = handle_pubrel(func);
-            }
-            break;
-        case control_packet_type::pubcomp:
-            if (mqtt_connected_) {
-                ret = handle_pubcomp(func);
-            }
-            break;
-        case control_packet_type::subscribe:
-            if (mqtt_connected_) {
-                ret = handle_subscribe(func);
-            }
-            break;
-        case control_packet_type::suback:
-            if (mqtt_connected_) {
-                ret = handle_suback(func);
-            }
-            break;
-        case control_packet_type::unsubscribe:
-            if (mqtt_connected_) {
-                ret = handle_unsubscribe(func);
-            }
-            break;
-        case control_packet_type::unsuback:
-            if (mqtt_connected_) {
-                ret = handle_unsuback(func);
-            }
-            break;
-        case control_packet_type::pingreq:
-            if (mqtt_connected_) {
-                ret = handle_pingreq(func);
-            }
-            break;
-        case control_packet_type::pingresp:
-            if (mqtt_connected_) {
-                ret = handle_pingresp(func);
-            }
-            break;
-        case control_packet_type::disconnect:
-            handle_disconnect(func);
-            ret = false;
-            break;
-        case control_packet_type::auth:
-            ret = handle_auth(func);
-            break;
-        default:
-            break;
+    template <std::size_t Bytes>
+    void process_fixed_length(
+        async_handler_t func,
+        buffer buf,
+        std::function<void(std::size_t, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
+        if (remaining_length_ < Bytes) {
+            call_message_size_error_handlers(func);
+            return;
         }
-        if (ret) {
-            h_mqtt_message_processed_(std::move(func));
+
+        remaining_length_ -= Bytes;
+
+        if (buf.empty()) {
+            socket_->async_read(
+                as::buffer(&buf_[0], Bytes),
+                [
+                    this,
+                    self = std::move(self),
+                    func = std::move(func),
+                    handler = std::move(handler)
+                ]
+                (boost::system::error_code const& ec,
+                 std::size_t bytes_transferred) mutable {
+                    if (!check_error_and_transferred_length(ec, func, bytes_transferred, Bytes)) return;
+                    handler(
+                        make_packet_id<Bytes>::apply(&buf_[0], &buf_[0] + static_cast<buffer::difference_type>(Bytes)),
+                        buffer(),
+                        std::move(func),
+                        std::move(self)
+                    );
+                }
+            );
+        }
+        else {
+            socket_->post(
+               [
+                    self = std::move(self),
+                    func = std::move(func),
+                    buf = std::move(buf),
+                    handler = std::move(handler)
+               ]
+               () mutable {
+                    auto packet_id = make_packet_id<Bytes>::apply(&buf[0], &buf[0] + static_cast<buffer::difference_type>(Bytes));
+                    handler(
+                        packet_id,
+                        std::move(buf).substr(Bytes),
+                        std::move(func),
+                        std::move(self)
+                    );
+               }
+            );
         }
     }
 
-    bool handle_connect(async_handler_t const& func) {
-        std::size_t i = 0;
-        if (remaining_length_ < 10 || // *1
-            payload_[i++] != 0x00 ||
-            payload_[i++] != 0x04 ||
-            payload_[i++] != 'M' ||
-            payload_[i++] != 'Q' ||
-            payload_[i++] != 'T' ||
-            payload_[i++] != 'T') {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
-            return false;
+    // This function isn't used for remaining lengh.
+    void process_variable_length(
+        async_handler_t func,
+        buffer buf,
+        std::function<void(std::size_t, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
+        process_variable_length_impl(
+            std::move(func),
+            std::move(buf),
+            std::move(handler),
+            0,
+            1,
+            std::move(self)
+        );
+    }
+
+    void process_variable_length_impl(
+        async_handler_t func,
+        buffer buf,
+        std::function<void(std::size_t, buffer, async_handler_t, this_type_sp)> handler,
+        std::size_t size,
+        std::size_t multiplier,
+        this_type_sp self
+    ) {
+        if (remaining_length_ == 0) {
+            call_message_size_error_handlers(func);
+            return;
         }
+        --remaining_length_;
 
-        auto version = static_cast<protocol_version>(payload_[i++]);
-        if (version != protocol_version::v3_1_1 && version != protocol_version::v5) {
-            if (func) {
-                func(boost::system::errc::make_error_code(boost::system::errc::protocol_not_supported));
-            }
-            return false;
-        }
-
-        if (version_ == protocol_version::undetermined) {
-            version_ = version;
-        }
-        else if (version_ != version) {
-            if (func) {
-                func(boost::system::errc::make_error_code(boost::system::errc::protocol_not_supported));
-            }
-            return false;
-        }
-
-        const char byte8 = payload_[i++];
-
-        const std::uint16_t keep_alive = make_uint16_t(payload_[i], payload_[i + 1]); // index is checked at *1
-        i += 2;
-
-        std::vector<v5::property_variant> props;
-        if (version_ == protocol_version::v5) {
-            char const* b = payload_.data() + i;
-            char const* it = b;
-            char const* e = b + payload_.size() - i;
-            if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                props = std::move(*props_opt);
-            }
-            else {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            i += static_cast<std::size_t>(std::distance(b, it));
-        }
-
-        if (remaining_length_ < i + 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-        const std::uint16_t client_id_length = make_uint16_t(payload_[i], payload_[i + 1]);
-        i += 2;
-
-        if (remaining_length_ < i + client_id_length) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-        std::string client_id(payload_.data() + i, client_id_length);
-        if (utf8string::validate_contents(client_id) != utf8string::validation::well_formed) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
-            return false;
-        }
-        i += client_id_length;
-
-        clean_session_ = connect_flags::has_clean_session(byte8);
-        // TODO: Implement a "will_view" which, instead of containing string objects, only
-        //       has string_views into the message buffer. This "will_view" would need to
-        //       be assigned to a real "will" object in order to have it's contents preserved.
-        mqtt::optional<will> w;
-        if (connect_flags::has_will_flag(byte8)) {
-
-            std::vector<v5::property_variant> will_props;
-            if (version_ == protocol_version::v5) {
-                char const* b = payload_.data() + i;
-                char const* it = b;
-                char const* e = b + payload_.size() - i;
-                if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                    will_props = std::move(*props_opt);
+        auto proc =
+            [this]
+            (
+                async_handler_t&& func,
+                buffer&& buf,
+                std::function<void(std::size_t, buffer, async_handler_t, this_type_sp)>&& handler,
+                std::size_t size,
+                std::size_t multiplier,
+                this_type_sp&& self
+            ) mutable {
+                size += (buf[0] & 0b01111111) * multiplier;
+                multiplier *= 128;
+                if (multiplier > 128 * 128 * 128 * 128) {
+                    call_message_size_error_handlers(func);
+                    return;
+                }
+                if (buf[0] & 0b10000000) {
+                    BOOST_ASSERT(!buf.empty());
+                    process_variable_length_impl(
+                        std::move(func),
+                        std::move(buf).substr(1),
+                        std::move(handler),
+                        size,
+                        multiplier,
+                        std::move(self)
+                    );
                 }
                 else {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
+                    handler(
+                        size,
+                        std::move(buf).substr(1),
+                        std::move(func),
+                        std::move(self)
+                    );
                 }
-                i += static_cast<std::size_t>(std::distance(b, it));
-            }
-
-            if (remaining_length_ < i + 2) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            const std::uint16_t topic_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
-            i += 2;
-
-            if (remaining_length_ < i + topic_name_length) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            std::string topic_name(payload_.data() + i, topic_name_length);
-            if (utf8string::validate_contents(topic_name) != utf8string::validation::well_formed) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
-                return false;
-            }
-
-            i += topic_name_length;
-
-            if (remaining_length_ < i + 2) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            std::uint16_t will_message_length = make_uint16_t(payload_[i], payload_[i + 1]);
-            i += 2;
-
-            if (remaining_length_ < i + will_message_length) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            std::string will_message(payload_.data() + i, will_message_length);
-            i += will_message_length;
-            w = will(std::move(topic_name),
-                     std::move(will_message),
-                     connect_flags::has_will_retain(byte8),
-                     connect_flags::will_qos(byte8),
-                     std::move(will_props));
-        }
-
-        mqtt::optional<mqtt::string_view> user_name;
-        if (connect_flags::has_user_name_flag(byte8)) {
-
-            if (remaining_length_ < i + 2) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            const std::uint16_t user_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
-            i += 2;
-
-            if (remaining_length_ < i + user_name_length) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            user_name = mqtt::string_view(payload_.data() + i, user_name_length);
-            if (utf8string::validate_contents(user_name.value()) != utf8string::validation::well_formed) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
-                return false;
-            }
-            i += user_name_length;
-        }
-
-        mqtt::optional<mqtt::string_view> password;
-        if (connect_flags::has_password_flag(byte8)) {
-
-            if (remaining_length_ < i + 2) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            const std::uint16_t password_length = make_uint16_t(payload_[i], payload_[i + 1]);
-            i += 2;
-
-            if (remaining_length_ < i + password_length) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            password = mqtt::string_view(payload_.data() + i, password_length);
-            i += password_length;
-        }
-        mqtt_connected_ = true;
-
-        if (clean_session_) {
-            LockGuard<Mutex> lck (store_mtx_);
-            store_.clear();
-            packet_id_.clear();
-        }
-
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            if (h_connect_) {
-                if (h_connect_(
-                        client_id,
-                        user_name,
-                        password,
-                        std::move(w),
-                        clean_session_,
-                        keep_alive)
-                ) {
-                    return true;
-                }
-                return false;
-            }
-            break;
-        case protocol_version::v5:
-            if (h_v5_connect_) {
-                if (h_v5_connect_(
-                        client_id,
-                        user_name,
-                        password,
-                        std::move(w),
-                        clean_session_,
-                        keep_alive,
-                        props)
-                ) {
-                    return true;
-                }
-                return false;
-            }
-            break;
-        default:
-            BOOST_ASSERT(false);
-            return false;
-        }
-        return true;
-    }
-
-    bool handle_connack(async_handler_t const& func) {
-        if (!connect_requested_) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
-            return false;
-        }
-        connect_requested_ = false;
-
-        if (remaining_length_ < 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-
-        auto connack_proc =
-            [this, func, session_present = is_session_present(payload_[0])] {
-                mqtt_connected_ = true;
-
-                switch (version_) {
-                case protocol_version::v3_1_1:
-                    if (h_connack_) {
-                        return
-                            h_connack_(
-                                session_present,
-                                static_cast<std::uint8_t>(payload_[1])
-                            );
-                    }
-                    break;
-                case protocol_version::v5:
-                    if (h_v5_connack_) {
-                        std::vector<v5::property_variant> props;
-                        char const* b = payload_.data() + 2;
-                        char const* it = b;
-                        char const* e = b + payload_.size() - 2;
-                        if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                            props = std::move(*props_opt);
-                        }
-                        else {
-                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                            return false;
-                        }
-                        return
-                            h_v5_connack_(
-                                session_present,
-                                static_cast<std::uint8_t>(payload_[1]),
-                                std::move(props)
-                            );
-                    }
-                    break;
-                default:
-                    BOOST_ASSERT(false);
-                    return false;
-                }
-                return true;
             };
 
-        if (static_cast<std::uint8_t>(payload_[1]) == connect_return_code::accepted) {
-            if (clean_session_) {
-                LockGuard<Mutex> lck (store_mtx_);
-                store_.clear();
-                packet_id_.clear();
-            }
-            else {
-                if (async_send_store_) {
-                    // Store and replace mqtt_message_processed handler
-                    // Until all stored messages are written to internal send buffer,
-                    // stop the next async read.
-                    auto org = get_mqtt_message_processed_handler();
-                    set_mqtt_message_processed_handler(
-                        []
-                        (async_handler_t) {
+        if (buf.empty()) {
+            socket_->async_read(
+                as::buffer(&buf_[0], 1),
+                [
+                    this,
+                    self = std::move(self),
+                    func = std::move(func),
+                    handler = std::move(handler),
+                    size,
+                    multiplier,
+                    proc = std::move(proc)
+                ]
+                (boost::system::error_code const& ec,
+                 std::size_t bytes_transferred) mutable {
+                    if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
+                    proc(
+                        std::move(func),
+                        buffer(string_view(buf_.data(), 1)),
+                        std::move(handler),
+                        size,
+                        multiplier,
+                        std::move(self)
+                    );
+                }
+            );
+        }
+        else {
+            socket_->post(
+                [
+                    func = std::move(func),
+                    handler = std::move(handler),
+                    buf = std::move(buf),
+                    size,
+                    multiplier,
+                    proc = std::move(proc),
+                    self = std::move(self)
+                ]
+                () mutable {
+                    proc(
+                        std::move(func),
+                        std::move(buf),
+                        std::move(handler),
+                        size,
+                        multiplier,
+                        std::move(self)
+                    );
+                }
+            );
+        }
+    }
+
+    void process_packet_id(
+        async_handler_t func,
+        buffer buf,
+        std::function<void(packet_id_t, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
+        process_fixed_length<sizeof(packet_id_t)>(
+            std::move(func),
+            std::move(buf),
+            [
+                handler = std::move(handler)
+            ]
+            (std::size_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                handler(static_cast<packet_id_t>(packet_id), std::move(buf), std::move(func), std::move(self));
+            },
+            std::move(self)
+        );
+    }
+
+    void process_binary(
+        async_handler_t func,
+        buffer buf,
+        std::function<void(buffer, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
+        if (remaining_length_ < 2) {
+            call_message_size_error_handlers(func);
+            return;
+        }
+        process_fixed_length<2>(
+            std::move(func),
+            std::move(buf),
+            [
+                this,
+                handler = std::move(handler)
+            ]
+            (std::size_t size,
+             buffer buf,
+             async_handler_t func,
+             this_type_sp self) mutable {
+                if (remaining_length_ < size) {
+                    call_message_size_error_handlers(func);
+                    return;
+                }
+                process_nbytes(
+                    std::move(func),
+                    std::move(buf),
+                    size,
+                    std::move(handler),
+                    std::move(self)
+                );
+            },
+            std::move(self)
+        );
+    }
+
+    void process_string(
+        async_handler_t func,
+        buffer buf,
+        std::function<void(buffer, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
+        process_binary(
+            std::move(func),
+            std::move(buf),
+            [this, handler = std::move(handler)]
+            (buffer str, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                auto r = utf8string::validate_contents(str);
+                if (r != utf8string::validation::well_formed) {
+                    call_protocol_error_handlers(func);
+                    return;
+                }
+                handler(std::move(str), std::move(buf), std::move(func), std::move(self));
+            },
+            std::move(self)
+        );
+    }
+
+
+    void process_properties(
+        async_handler_t func,
+        buffer buf,
+        std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
+        process_variable_length(
+            std::move(func),
+            std::move(buf),
+            [
+                this,
+                handler = std::move(handler)
+            ]
+            (std::size_t property_length, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                if (property_length > remaining_length_) {
+                    call_message_size_error_handlers(func);
+                    return;
+                }
+                if (property_length == 0) {
+                    handler(std::vector<v5::property_variant>(), std::move(buf), std::move(func), std::move(self));
+                    return;
+                }
+
+                if (buf.empty()) {
+                    struct spa_address_len {
+                        shared_ptr_array spa;
+                        char* address;
+                        std::size_t len;
+                    };
+                    auto result =
+                        [&] () -> spa_address_len {
+                            if (property_length < props_bulk_read_limit_) {
+                                auto spa = make_shared_ptr_array(property_length);
+                                auto ptr = spa.get();
+                                return
+                                    {
+                                        std::move(spa),
+                                        ptr,
+                                        property_length
+                                    };
+                            }
+                            return
+                                {
+                                    nullptr,
+                                    &buf_[0],
+                                    1
+                                };
+                        } ();
+                    socket_->async_read(
+                        as::buffer(result.address, result.len),
+                        [
+                            this,
+                            self = std::move(self),
+                            func = std::move(func),
+                            handler = std::move(handler),
+                            property_length,
+                            result
+                        ]
+                        (boost::system::error_code const& ec,
+                         std::size_t bytes_transferred) mutable {
+                            if (!check_error_and_transferred_length(ec, func, bytes_transferred, result.len)) return;
+                            process_property_id(
+                                std::move(func),
+                                buffer(string_view(result.address, result.len), result.spa),
+                                property_length,
+                                std::vector<v5::property_variant>(),
+                                std::move(handler),
+                                std::move(self)
+                            );
                         }
                     );
-
-                    auto async_connack_proc =
-                        [this, func, connack_proc = std::move(connack_proc), org = std::move(org)] () mutable {
-                            // All stored messages are sent, then restore the original handler
-                            // and do the connack process. If it returns true, read the next mqtt message.
-                            set_mqtt_message_processed_handler(std::move(org));
-                            if (connack_proc()) {
-                                h_mqtt_message_processed_(std::move(func));
-                            }
-                        };
-                    async_send_store(std::move(async_connack_proc));
-                    return true;
                 }
                 else {
+                    socket_->post(
+                        [
+                            this,
+                            self = std::move(self),
+                            func = std::move(func),
+                            buf = std::move(buf),
+                            handler = std::move(handler),
+                            property_length
+                        ]
+                        () mutable {
+                            process_property_id(
+                                std::move(func),
+                                std::move(buf),
+                                property_length,
+                                std::vector<v5::property_variant>(),
+                                std::move(handler),
+                                std::move(self)
+                            );
+                        }
+                    );
+                }
+            },
+            std::move(self)
+        );
+    }
+
+    void process_property_id(
+        async_handler_t func,
+        buffer buf,
+        std::size_t property_length_rest,
+        std::vector<v5::property_variant> props,
+        std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
+
+        if (property_length_rest == 0) {
+            handler(std::move(props), std::move(buf), std::move(func), std::move(self));
+            return;
+        }
+
+        --remaining_length_;
+        if (buf.empty()) {
+            socket_->async_read(
+                as::buffer(&buf_[0], 1),
+                [
+                    this,
+                    self = std::move(self),
+                    func = std::move(func),
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest
+                ]
+                (boost::system::error_code const& ec,
+                 std::size_t bytes_transferred) mutable {
+                    if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
+                    process_property_body(
+                        std::move(func),
+                        buffer(),
+                        static_cast<v5::property::id>(buf_[0]),
+                        property_length_rest - 1,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                }
+            );
+        }
+        else {
+            socket_->post(
+                [
+                    this,
+                    self = std::move(self),
+                    func = std::move(func),
+                    buf = std::move(buf),
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest
+                ]
+                () mutable {
+                    auto id = static_cast<v5::property::id>(buf[0]);
+                    process_property_body(
+                        std::move(func),
+                        std::move(buf).substr(1),
+                        id,
+                        property_length_rest - 1,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                }
+            );
+        }
+    }
+
+    void process_property_body(
+        async_handler_t func,
+        buffer buf,
+        v5::property::id id,
+        std::size_t property_length_rest,
+        std::vector<v5::property_variant> props,
+        std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
+
+        static constexpr std::size_t const length_bytes = 2;
+
+        if (property_length_rest == 0) {
+            call_message_size_error_handlers(func);
+            return;
+        }
+
+        switch (id) {
+        case v5::property::id::payload_format_indicator: {
+            std::size_t const len = 1;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::payload_format_indicator(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::message_expiry_interval: {
+            std::size_t const len = 4;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::message_expiry_interval(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::content_type: {
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    auto rest = property_length_rest - length_bytes - body.size();
+                    props.emplace_back(
+                        v5::property::content_type(std::move(body), true)
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::response_topic: {
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    auto rest = property_length_rest - length_bytes - body.size();
+                    props.emplace_back(
+                        v5::property::response_topic(std::move(body), true)
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::correlation_data: {
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    auto rest = property_length_rest - length_bytes - body.size();
+                    props.emplace_back(
+                        v5::property::correlation_data(std::move(body), true)
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::subscription_identifier: {
+            process_variable_length(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest,
+                    size_before = buf.size()
+                ]
+                (std::size_t size, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    auto rest = property_length_rest - (size_before - buf.size());
+                    props.emplace_back(
+                        v5::property::subscription_identifier(size)
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::session_expiry_interval: {
+            std::size_t const len = 4;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::session_expiry_interval(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::assigned_client_identifier: {
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    auto rest = property_length_rest - length_bytes - body.size();
+                    props.emplace_back(
+                        v5::property::assigned_client_identifier(std::move(body), true)
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+
+        } break;
+        case v5::property::id::server_keep_alive: {
+            std::size_t const len = 2;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::server_keep_alive(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::authentication_method: {
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    auto rest = property_length_rest - length_bytes - body.size();
+                    props.emplace_back(
+                        v5::property::authentication_method(std::move(body), true)
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::authentication_data: {
+            process_binary(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    auto rest = property_length_rest - length_bytes - body.size();
+                    props.emplace_back(
+                        v5::property::authentication_data(std::move(body))
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::request_problem_information: {
+            std::size_t const len = 1;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::request_problem_information(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::will_delay_interval: {
+            std::size_t const len = 4;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::will_delay_interval(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::request_response_information: {
+            std::size_t const len = 1;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::request_response_information(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::response_information: {
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    auto rest = property_length_rest - length_bytes - body.size();
+                    props.emplace_back(
+                        v5::property::response_information(std::move(body), true)
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::server_reference: {
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    auto rest = property_length_rest - length_bytes - body.size();
+                    props.emplace_back(
+                        v5::property::server_reference(std::move(body), true)
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::reason_string: {
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    auto rest = property_length_rest - length_bytes - body.size();
+                    props.emplace_back(
+                        v5::property::reason_string(std::move(body), true)
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::receive_maximum: {
+            std::size_t const len = 2;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::receive_maximum(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::topic_alias_maximum: {
+            std::size_t const len = 2;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::topic_alias_maximum(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::topic_alias: {
+            std::size_t const len = 2;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::topic_alias(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::maximum_qos: {
+            std::size_t const len = 1;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::maximum_qos(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::retain_available: {
+            std::size_t const len = 1;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::retain_available(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::user_property: {
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    property_length_rest
+                ]
+                (buffer key, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    auto rest = property_length_rest - length_bytes - key.size();
+                    process_string(
+                        std::move(func),
+                        std::move(buf),
+                        [
+                            this,
+                            props = std::move(props),
+                            handler = std::move(handler),
+                            key = std::move(key),
+                            property_length_rest = rest
+                        ]
+                        (buffer val, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                            auto rest = property_length_rest - length_bytes - val.size();
+                            props.emplace_back(
+                                v5::property::user_property(
+                                    std::move(key),
+                                    std::move(val),
+                                    true,
+                                    true
+                                )
+                            );
+                            process_property_id(
+                                std::move(func),
+                                std::move(buf),
+                                rest,
+                                std::move(props),
+                                std::move(handler),
+                                std::move(self)
+                            );
+                        },
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::maximum_packet_size: {
+            std::size_t const len = 4;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::maximum_packet_size(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::wildcard_subscription_available: {
+            std::size_t const len = 1;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::wildcard_subscription_available(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::subscription_identifier_available: {
+            std::size_t const len = 1;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::subscription_identifier_available(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        case v5::property::id::shared_subscription_available: {
+            std::size_t const len = 1;
+            if (property_length_rest < len) {
+                call_message_size_error_handlers(func);
+                return;
+            }
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                len,
+                [
+                    this,
+                    props = std::move(props),
+                    handler = std::move(handler),
+                    rest = property_length_rest - len
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    props.emplace_back(
+                        v5::property::shared_subscription_available(body.begin(), body.end())
+                    );
+                    process_property_id(
+                        std::move(func),
+                        std::move(buf),
+                        rest,
+                        std::move(props),
+                        std::move(handler),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+        } break;
+        }
+    }
+
+    // process common
+
+    template <typename NextFunc, typename NextPhase, typename Info>
+    void process_header(
+        async_handler_t func,
+        bool all_read,
+        std::size_t header_len,
+        NextFunc&& next_func,
+        NextPhase next_phase,
+        Info&& info,
+        this_type_sp self
+    ) {
+
+        if (all_read) {
+            auto spa = make_shared_ptr_array(remaining_length_);
+            auto ptr = spa.get();
+            socket_->async_read(
+                as::buffer(ptr, remaining_length_),
+                [
+                    this,
+                    func = std::move(func),
+                    spa = std::move(spa),
+                    next_func = std::forward<NextFunc>(next_func),
+                    next_phase,
+                    info = std::forward<Info>(info),
+                    self = std::move(self)
+                ]
+                (boost::system::error_code const& ec, std::size_t bytes_transferred) mutable {
+                    if (!check_error_and_transferred_length(ec, func, bytes_transferred, remaining_length_)) return;
+                    auto ptr = spa.get();
+                    (this->*next_func)(
+                        std::move(func),
+                        buffer(string_view(ptr, remaining_length_), std::move(spa)),
+                        next_phase,
+                        std::move(info),
+                        std::move(self)
+                    );
+                }
+            );
+            return;
+        }
+
+        if (header_len == 0) {
+            (this->*next_func)(
+                std::move(func),
+                buffer(),
+                next_phase,
+                std::move(info),
+                std::move(self)
+            );
+            return;
+        }
+
+        socket_->async_read(
+            as::buffer(&buf_[0], header_len),
+            [
+                this,
+                func = std::move(func),
+                header_len,
+                next_func = std::forward<NextFunc>(next_func),
+                next_phase,
+                info = std::forward<Info>(info),
+                self = std::move(self)
+            ]
+            (boost::system::error_code const& ec,
+             std::size_t bytes_transferred) mutable {
+                if (!check_error_and_transferred_length(ec, func, bytes_transferred, header_len)) return;
+                (this->*next_func)(
+                    std::move(func),
+                    buffer(string_view(buf_.data(), header_len)),
+                    next_phase,
+                    std::move(info),
+                    std::move(self)
+                );
+            }
+        );
+    }
+
+    // process connect
+
+    enum class connect_phase {
+        header,
+        properties,
+        client_id,
+        will,
+        user_name,
+        password,
+        finish,
+    };
+
+    struct connect_info {
+        std::size_t header_len;
+        char connect_flag;
+        std::uint16_t keep_alive;
+        std::vector<v5::property_variant> props;
+        buffer client_id;
+        std::vector<v5::property_variant> will_props;
+        buffer will_topic;
+        buffer will_payload;
+        mqtt::optional<buffer> user_name;
+        mqtt::optional<buffer> password;
+    };
+
+    void process_connect(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        std::size_t const header_len =
+            2 +  // string length
+            4 +  // "MQTT" string
+            1 +  // ProtocolVersion
+            1 +  // ConnectFlag
+            2;   // KeepAlive
+
+        if (remaining_length_ < header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        connect_info info;
+        info.header_len = header_len;
+
+        process_header(
+            std::move(func),
+            all_read,
+            header_len,
+            &this_type::process_connect_impl,
+            connect_phase::header,
+            std::move(info),
+            std::move(self)
+        );
+    }
+
+    void process_connect_impl(
+        async_handler_t func,
+        buffer buf,
+        connect_phase phase,
+        connect_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case connect_phase::header: {
+            std::size_t i = 0;
+            if (buf[i++] != 0x00 ||
+                buf[i++] != 0x04 ||
+                buf[i++] != 'M' ||
+                buf[i++] != 'Q' ||
+                buf[i++] != 'T' ||
+                buf[i++] != 'T') {
+                call_protocol_error_handlers(func);
+                return;
+            }
+            auto version = static_cast<protocol_version>(buf[i++]);
+            if (version != protocol_version::v3_1_1 && version != protocol_version::v5) {
+                if (func) {
+                    func(
+                        boost::system::errc::make_error_code(
+                            boost::system::errc::protocol_not_supported
+                        )
+                    );
+                }
+                return;
+            }
+
+            if (version_ == protocol_version::undetermined) {
+                version_ = version;
+            }
+            else if (version_ != version) {
+                if (func) {
+                    func(
+                        boost::system::errc::make_error_code(
+                            boost::system::errc::protocol_not_supported
+                        )
+                    );
+                }
+                return;
+            }
+
+            info.connect_flag = buf[i++];
+
+            info.keep_alive = make_uint16_t(buf[i], buf[i + 1]);
+            clean_session_ = connect_flags::has_clean_session(info.connect_flag);
+
+            process_connect_impl(
+                std::move(func),
+                std::move(buf).substr(info.header_len), // consume buffer
+                [&] {
+                    if (version_ == protocol_version::v5) {
+                        return connect_phase::properties;
+                    }
+                    return connect_phase::client_id;
+                } (),
+                std::move(info),
+                std::move(self)
+            );
+        } break;
+        case connect_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (
+                    std::vector<v5::property_variant> props,
+                    buffer buf,
+                    async_handler_t func,
+                    this_type_sp self
+                ) mutable {
+                    info.props = std::move(props);
+                    process_connect_impl(
+                        std::move(func),
+                        std::move(buf),
+                        connect_phase::client_id,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case connect_phase::client_id:
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer client_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.client_id = std::move(client_id);
+                    auto connect_flag = info.connect_flag;
+                    process_connect_impl(
+                        std::move(func),
+                        std::move(buf),
+                        [&] {
+                            if (connect_flags::has_will_flag(connect_flag)) {
+                                return connect_phase::will;
+                            }
+                            if (connect_flags::has_user_name_flag(connect_flag)) {
+                                return connect_phase::user_name;
+                            }
+                            if (connect_flags::has_password_flag(connect_flag)) {
+                                return connect_phase::password;
+                            }
+                            return connect_phase::finish;
+                        } (),
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case connect_phase::will: {
+            auto topic_message_proc =
+                [this]
+                (
+                    async_handler_t&& func,
+                    buffer&& buf,
+                    connect_info&& info,
+                    this_type_sp&& self
+                ) mutable {
+                    process_string(
+                        std::move(func),
+                        std::move(buf),
+                        [
+                            this,
+                            info = std::move(info)
+                        ]
+                        (buffer will_topic, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                            info.will_topic = std::move(will_topic);
+                            process_binary(
+                                std::move(func),
+                                std::move(buf),
+                                [
+                                    this,
+                                    info = std::move(info)
+                                ]
+                                (buffer will_payload, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                                    info.will_payload = std::move(will_payload);
+                                    auto connect_flag = info.connect_flag;
+                                    process_connect_impl(
+                                        std::move(func),
+                                        std::move(buf),
+                                        [&] {
+                                            if (connect_flags::has_user_name_flag(connect_flag)) {
+                                                return connect_phase::user_name;
+                                            }
+                                            if (connect_flags::has_password_flag(connect_flag)) {
+                                                return connect_phase::password;
+                                            }
+                                            return connect_phase::finish;
+                                        } (),
+                                        std::move(info),
+                                        std::move(self)
+                                    );
+                                },
+                                std::move(self)
+                            );
+                        },
+                        std::move(self)
+                    );
+                };
+
+            if (version_ == protocol_version::v5) {
+                process_properties(
+                    std::move(func),
+                    std::move(buf),
+                    [
+                        info = std::move(info),
+                        topic_message_proc
+                    ]
+                    (std::vector<v5::property_variant> will_props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                        info.will_props = std::move(will_props);
+                        topic_message_proc(
+                            std::move(func),
+                            std::move(buf),
+                            std::move(info),
+                            std::move(self)
+                        );
+                    },
+                    std::move(self)
+                );
+                return;
+            }
+            topic_message_proc(
+                std::move(func),
+                std::move(buf),
+                std::move(info),
+                std::move(self)
+            );
+        } break;
+        case connect_phase::user_name:
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer user_name, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.user_name = std::move(user_name);
+                    auto connect_flag = info.connect_flag;
+                    process_connect_impl(
+                        std::move(func),
+                        std::move(buf),
+                        [&] {
+                            if (connect_flags::has_password_flag(connect_flag)) {
+                                return connect_phase::password;
+                            }
+                            return connect_phase::finish;
+                        } (),
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case connect_phase::password:
+            process_binary(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer password, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.password = std::move(password);
+                    process_connect_impl(
+                        std::move(func),
+                        std::move(buf),
+                        connect_phase::finish,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case connect_phase::finish:
+            mqtt_connected_ = true;
+            switch (version_) {
+            case protocol_version::v3_1_1:
+                if (h_connect_) {
+                    if (!h_connect_(
+                            std::move(info.client_id),
+                            std::move(info.user_name),
+                            std::move(info.password),
+                            [&] () -> optional<will> {
+                                if (connect_flags::has_will_flag(info.connect_flag)) {
+                                    return
+                                        will(
+                                            std::move(info.will_topic),
+                                            std::move(info.will_payload),
+                                            connect_flags::has_will_retain(info.connect_flag),
+                                            connect_flags::will_qos(info.connect_flag)
+                                        );
+                                }
+                                return mqtt::nullopt;
+                            } (),
+                            clean_session_,
+                            info.keep_alive
+                        )
+                    ) {
+                        return;
+                    }
+                }
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            case protocol_version::v5:
+                if (h_v5_connect_) {
+                    if (!h_v5_connect_(
+                            std::move(info.client_id),
+                            std::move(info.user_name),
+                            std::move(info.password),
+                            [&] () -> optional<will> {
+                                if (connect_flags::has_will_flag(info.connect_flag)) {
+                                    return
+                                        will(
+                                            std::move(info.will_topic),
+                                            std::move(info.will_payload),
+                                            connect_flags::has_will_retain(info.connect_flag),
+                                            connect_flags::will_qos(info.connect_flag),
+                                            std::move(info.will_props)
+                                        );
+                                }
+                                return mqtt::nullopt;
+                            } (),
+                            clean_session_,
+                            info.keep_alive,
+                            std::move(info.props)
+                        )
+                    ) {
+                        return;
+                    }
+                }
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            default:
+                BOOST_ASSERT(false);
+            }
+            break;
+        }
+    }
+
+    // process connack
+
+    enum class connack_phase {
+        header,
+        properties,
+        finish,
+    };
+
+    struct connack_info {
+        std::size_t header_len;
+        bool session_present;
+        std::uint8_t reason_code;
+        std::vector<v5::property_variant> props;
+    };
+
+    void process_connack(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        std::size_t const header_len =
+            1 +  // Connect Acknowledge Flags
+            1;   // Reason Code
+
+        if (remaining_length_ < header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        connack_info info;
+        info.header_len = header_len;
+        process_header(
+            std::move(func),
+            all_read,
+            header_len,
+            &this_type::process_connack_impl,
+            connack_phase::header,
+            std::move(info),
+            std::move(self)
+        );
+    }
+
+    void process_connack_impl(
+        async_handler_t func,
+        buffer buf,
+        connack_phase phase,
+        connack_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case connack_phase::header:
+            info.session_present = is_session_present(buf[0]);
+            info.reason_code = static_cast<std::uint8_t>(buf[1]);
+
+            process_connack_impl(
+                std::move(func),
+                std::move(buf).substr(info.header_len),
+                [&] {
+                    if (version_ == protocol_version::v5) {
+                        return connack_phase::properties;
+                    }
+                    return connack_phase::finish;
+                } (),
+                std::move(info),
+                std::move(self)
+            );
+            break;
+        case connack_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.props = std::move(props);
+                    process_connack_impl(
+                        std::move(func),
+                        std::move(buf),
+                        connack_phase::finish,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case connack_phase::finish: {
+            mqtt_connected_ = true;
+            auto connack_proc =
+                [this]
+                (
+                    async_handler_t&& func,
+                    connack_info&& info
+                ) mutable {
+
+                    switch (version_) {
+                    case protocol_version::v3_1_1:
+                        if (h_connack_) {
+                            if (!h_connack_(info.session_present, info.reason_code)) {
+                                return;
+                            }
+                        }
+                        h_mqtt_message_processed_(std::move(func));
+                        break;
+                    case protocol_version::v5:
+                        if (h_v5_connack_) {
+                            if (!h_v5_connack_(info.session_present, info.reason_code, std::move(info.props))) {
+                                return;
+                            }
+                        }
+                        h_mqtt_message_processed_(std::move(func));
+                        break;
+                    default:
+                        BOOST_ASSERT(false);
+                    }
+                };
+
+            if (info.reason_code == v5::reason_code::success) {
+                if (clean_session_) {
+                    LockGuard<Mutex> lck (store_mtx_);
+                    store_.clear();
+                    packet_id_.clear();
+                }
+                else {
+                    if (async_send_store_) {
+                        // Store and replace mqtt_message_processed handler
+                        // Until all stored messages are written to internal send buffer,
+                        // stop the next async read.
+                        auto org = get_mqtt_message_processed_handler();
+                        set_mqtt_message_processed_handler(
+                            []
+                            (async_handler_t) {
+                            }
+                        );
+
+                        auto async_connack_proc =
+                            [
+                                this,
+                                self = std::move(self),
+                                func = std::move(func),
+                                connack_proc = std::move(connack_proc),
+                                org = std::move(org),
+                                info = std::move(info)
+                            ]
+                            () mutable {
+                                // All stored messages are sent, then restore the original handler
+                                // and do the connack process. If it returns true, read the next mqtt message.
+                                set_mqtt_message_processed_handler(std::move(org));
+                                connack_proc(std::move(func), std::move(info));
+                            };
+                        async_send_store(std::move(async_connack_proc));
+                        return;
+                    }
                     send_store();
-                    return connack_proc();
                 }
             }
+            connack_proc(std::move(func), std::move(info));
+        } break;
         }
-        return connack_proc();
+    }
+
+    // process publish
+
+    enum class publish_phase {
+        topic_name,
+        packet_id,
+        properties,
+        payload,
+    };
+
+    struct publish_info {
+        buffer topic_name;
+        mqtt::optional<packet_id_t> packet_id;
+        std::vector<v5::property_variant> props;
+    };
+
+    void process_publish(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        std::size_t const min_len =
+            2; // topic name length
+
+        if (remaining_length_ < min_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        process_header(
+            std::move(func),
+            all_read,
+            0,
+            &this_type::process_publish_impl,
+            publish_phase::topic_name,
+            publish_info(),
+            std::move(self)
+        );
+    }
+
+    void process_publish_impl(
+        async_handler_t func,
+        buffer buf,
+        publish_phase phase,
+        publish_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case publish_phase::topic_name:
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer topic_name, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.topic_name = std::move(topic_name);
+                    auto qos = publish::get_qos(fixed_header_);
+                    if (qos != qos::at_most_once &&
+                        qos != qos::at_least_once &&
+                        qos != qos::exactly_once) {
+                        call_protocol_error_handlers(func);
+                        return;
+                    }
+                    process_publish_impl(
+                        std::move(func),
+                        std::move(buf),
+                        [&] {
+                            if (qos == qos::at_most_once) {
+                                if (version_ == protocol_version::v5) {
+                                    return publish_phase::properties;
+                                }
+                                return publish_phase::payload;
+                            }
+                            return publish_phase::packet_id;
+                        } (),
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case publish_phase::packet_id:
+            process_packet_id(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.packet_id = packet_id;
+                    process_publish_impl(
+                        std::move(func),
+                        std::move(buf),
+                        [&] {
+                            if (version_ == protocol_version::v5) {
+                                return publish_phase::properties;
+                            }
+                            return publish_phase::payload;
+                        } (),
+                        std::move(info),
+                        std::move(self)
+                    );
+
+                },
+                std::move(self)
+            );
+            break;
+        case publish_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.props = std::move(props);
+                    process_publish_impl(
+                        std::move(func),
+                        std::move(buf),
+                        publish_phase::payload,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case publish_phase::payload:
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                remaining_length_,
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer payload, buffer /*buf*/, async_handler_t func, this_type_sp /*self*/) mutable {
+                    auto handler_call =
+                        [&] {
+                            switch (version_) {
+                            case protocol_version::v3_1_1:
+                                if (h_publish_) {
+                                    if (!h_publish_(fixed_header_, info.packet_id, std::move(info.topic_name), std::move(payload))) {
+                                        return false;
+                                    }
+                                }
+                                h_mqtt_message_processed_(std::move(func));
+                                break;
+                            case protocol_version::v5:
+                                if (h_v5_publish_) {
+                                    if (!h_v5_publish_(
+                                            fixed_header_,
+                                            info.packet_id,
+                                            std::move(info.topic_name),
+                                            std::move(payload),
+                                            std::move(info.props)
+                                        )
+                                    ) {
+                                        return false;
+                                    }
+                                }
+                                h_mqtt_message_processed_(std::move(func));
+                                break;
+                            default:
+                                BOOST_ASSERT(false);
+                            }
+                            return true;
+                        };
+                    switch (publish::get_qos(fixed_header_)) {
+                    case qos::at_most_once:
+                        handler_call();
+                        break;
+                    case qos::at_least_once:
+                        if (handler_call()) {
+                            auto_pub_response(
+                                [this, &info] {
+                                    if (connected_) {
+                                        send_puback(*info.packet_id);
+                                    }
+                                },
+                                [this, &info, &func] {
+                                    if (connected_) {
+                                        async_send_puback(
+                                            *info.packet_id,
+                                            mqtt::nullopt,
+                                            std::vector<v5::property_variant>{},
+                                            func
+                                        );
+                                    }
+                                }
+                            );
+                        }
+                        break;
+                    case qos::exactly_once:
+                        if (handler_call()) {
+                            qos2_publish_handled_.emplace(*info.packet_id);
+                            auto_pub_response(
+                                [this, &info] {
+                                    if (connected_) {
+                                        send_pubrec(*info.packet_id);
+                                    }
+                                },
+                                [this, &info, &func] {
+                                    if (connected_) {
+                                        async_send_pubrec(
+                                            *info.packet_id,
+                                            mqtt::nullopt,
+                                            std::vector<v5::property_variant>{},
+                                            func
+                                        );
+                                    }
+                                }
+                            );
+                        }
+                        break;
+                    }
+                },
+                std::move(self)
+            );
+            break;
+        }
+    }
+
+    // process puback
+
+    enum class puback_phase {
+        packet_id,
+        reason_code,
+        properties,
+        finish,
+    };
+
+    struct puback_info {
+        packet_id_t packet_id;
+        std::uint8_t reason_code;
+        std::vector<v5::property_variant> props;
+    };
+
+    void process_puback(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        std::size_t const header_len =
+            sizeof(packet_id_t);    // Packet Id
+
+        if (remaining_length_ < header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        puback_info info;
+        process_header(
+            std::move(func),
+            all_read,
+            header_len,
+            &this_type::process_puback_impl,
+            puback_phase::packet_id,
+            std::move(info),
+            std::move(self)
+        );
+    }
+
+    void process_puback_impl(
+        async_handler_t func,
+        buffer buf,
+        puback_phase phase,
+        puback_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case puback_phase::packet_id:
+            process_packet_id(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.packet_id = packet_id;
+                    process_puback_impl(
+                        std::move(func),
+                        std::move(buf),
+                        [&] {
+                            if (remaining_length_ == 0) {
+                                info.reason_code = v5::reason_code::success;
+                                return puback_phase::finish;
+                            }
+                            return puback_phase::reason_code;
+                        } (),
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case puback_phase::reason_code:
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                1, // reason_code
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    process_puback_impl(
+                        std::move(func),
+                        std::move(buf),
+                        puback_phase::properties,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case puback_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.props = std::move(props);
+                    process_puback_impl(
+                        std::move(func),
+                        std::move(buf),
+                        puback_phase::finish,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case puback_phase::finish:
+            {
+                LockGuard<Mutex> lck (store_mtx_);
+                auto& idx = store_.template get<tag_packet_id_type>();
+                auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::puback));
+                idx.erase(std::get<0>(r), std::get<1>(r));
+                packet_id_.erase(info.packet_id);
+            }
+            if (h_serialize_remove_) h_serialize_remove_(info.packet_id);
+            switch (version_) {
+            case protocol_version::v3_1_1:
+                if (h_puback_) {
+                    if (!h_puback_(info.packet_id)) {
+                        return;
+                    }
+                }
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            case protocol_version::v5:
+                if (h_v5_puback_) {
+                    if (!h_v5_puback_(info.packet_id, info.reason_code, std::move(info.props))) {
+                        return;
+                    }
+                }
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            default:
+                BOOST_ASSERT(false);
+            }
+            break;
+        }
+    }
+
+    // process pubrec
+
+    enum class pubrec_phase {
+        packet_id,
+        reason_code,
+        properties,
+        finish,
+    };
+
+    struct pubrec_info {
+        packet_id_t packet_id;
+        std::uint8_t reason_code;
+        std::vector<v5::property_variant> props;
+    };
+
+    void process_pubrec(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        std::size_t const header_len =
+            sizeof(packet_id_t);    // Packet Id
+
+        if (remaining_length_ < header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        pubrec_info info;
+        process_header(
+            std::move(func),
+            all_read,
+            header_len,
+            &this_type::process_pubrec_impl,
+            pubrec_phase::packet_id,
+            std::move(info),
+            std::move(self)
+        );
+    }
+
+    void process_pubrec_impl(
+        async_handler_t func,
+        buffer buf,
+        pubrec_phase phase,
+        pubrec_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case pubrec_phase::packet_id:
+            process_packet_id(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.packet_id = packet_id;
+                    process_pubrec_impl(
+                        std::move(func),
+                        std::move(buf),
+                        [&] {
+                            if (remaining_length_ == 0) {
+                                info.reason_code = v5::reason_code::success;
+                                return pubrec_phase::finish;
+                            }
+                            return pubrec_phase::reason_code;
+                        } (),
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case pubrec_phase::reason_code:
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                1, // reason_code
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    process_pubrec_impl(
+                        std::move(func),
+                        std::move(buf),
+                        pubrec_phase::properties,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case pubrec_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.props = std::move(props);
+                    process_pubrec_impl(
+                        std::move(func),
+                        std::move(buf),
+                        pubrec_phase::finish,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case pubrec_phase::finish: {
+            {
+                LockGuard<Mutex> lck (store_mtx_);
+                auto& idx = store_.template get<tag_packet_id_type>();
+                auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::pubrec));
+                idx.erase(std::get<0>(r), std::get<1>(r));
+                // packet_id shouldn't be erased here.
+                // It is reused for pubrel/pubcomp.
+            }
+            auto res =
+                [&] {
+                    auto_pub_response(
+                        [&] {
+                            if (connected_) {
+                                send_pubrel(info.packet_id);
+                            }
+                            else {
+                                store_pubrel(info.packet_id);
+                            }
+                        },
+                        [&] {
+                            if (connected_) {
+                                async_send_pubrel(
+                                    info.packet_id,
+                                    mqtt::nullopt,
+                                    std::vector<v5::property_variant>{},
+                                    func
+                                );
+                            }
+                            else {
+                                store_pubrel(info.packet_id);
+                            }
+                        }
+                    );
+                };
+            switch (version_) {
+            case protocol_version::v3_1_1:
+                if (h_pubrec_) {
+                    if (!h_pubrec_(info.packet_id)) {
+                        return;
+                    }
+                }
+                res();
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            case protocol_version::v5:
+                if (h_v5_pubrec_) {
+                    if (!h_v5_pubrec_(info.packet_id, info.reason_code, std::move(info.props))) {
+                        return;
+                    }
+                }
+                res();
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            default:
+                BOOST_ASSERT(false);
+            }
+        } break;
+        }
+    }
+
+    // process pubrel
+
+    enum class pubrel_phase {
+        packet_id,
+        reason_code,
+        properties,
+        finish,
+    };
+
+    struct pubrel_info {
+        packet_id_t packet_id;
+        std::uint8_t reason_code;
+        std::vector<v5::property_variant> props;
+    };
+
+    void process_pubrel(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        std::size_t const header_len =
+            sizeof(packet_id_t);    // Packet Id
+
+        if (remaining_length_ < header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        pubrel_info info;
+        process_header(
+            std::move(func),
+            all_read,
+            header_len,
+            &this_type::process_pubrel_impl,
+            pubrel_phase::packet_id,
+            std::move(info),
+            std::move(self)
+        );
+    }
+
+    void process_pubrel_impl(
+        async_handler_t func,
+        buffer buf,
+        pubrel_phase phase,
+        pubrel_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case pubrel_phase::packet_id:
+            process_packet_id(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.packet_id = packet_id;
+                    process_pubrel_impl(
+                        std::move(func),
+                        std::move(buf),
+                        [&] {
+                            if (remaining_length_ == 0) {
+                                info.reason_code = v5::reason_code::success;
+                                return pubrel_phase::finish;
+                            }
+                            return pubrel_phase::reason_code;
+                        } (),
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case pubrel_phase::reason_code:
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                1, // reason_code
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    process_pubrel_impl(
+                        std::move(func),
+                        std::move(buf),
+                        pubrel_phase::properties,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case pubrel_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.props = std::move(props);
+                    process_pubrel_impl(
+                        std::move(func),
+                        std::move(buf),
+                        pubrel_phase::finish,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case pubrel_phase::finish: {
+            auto res =
+                [&] {
+                    auto_pub_response(
+                        [&] {
+                            if (connected_) {
+                                send_pubcomp(info.packet_id);
+                            }
+                        },
+                        [&] {
+                            if (connected_) {
+                                async_send_pubcomp(
+                                    info.packet_id,
+                                    mqtt::nullopt,
+                                    std::vector<v5::property_variant>{},
+                                    func
+                                );
+                            }
+                        }
+                    );
+                };
+            qos2_publish_handled_.erase(info.packet_id);
+            switch (version_) {
+            case protocol_version::v3_1_1:
+                if (h_pubrel_) {
+                    if (!h_pubrel_(info.packet_id)) {
+                        return;
+                    }
+                }
+                res();
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            case protocol_version::v5:
+                if (h_v5_pubrel_) {
+                    if (!h_v5_pubrel_(info.packet_id, info.reason_code, std::move(info.props))) {
+                        return;
+                    }
+                }
+                res();
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            default:
+                BOOST_ASSERT(false);
+            }
+        } break;
+        }
+    }
+
+    // process pubcomp
+
+    enum class pubcomp_phase {
+        packet_id,
+        reason_code,
+        properties,
+        finish,
+    };
+
+    struct pubcomp_info {
+        packet_id_t packet_id;
+        std::uint8_t reason_code;
+        std::vector<v5::property_variant> props;
+    };
+
+    void process_pubcomp(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        std::size_t const header_len =
+            sizeof(packet_id_t);    // Packet Id
+
+        if (remaining_length_ < header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        pubcomp_info info;
+        process_header(
+            std::move(func),
+            all_read,
+            header_len,
+            &this_type::process_pubcomp_impl,
+            pubcomp_phase::packet_id,
+            std::move(info),
+            std::move(self)
+        );
+    }
+
+    void process_pubcomp_impl(
+        async_handler_t func,
+        buffer buf,
+        pubcomp_phase phase,
+        pubcomp_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case pubcomp_phase::packet_id:
+            process_packet_id(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.packet_id = packet_id;
+                    process_pubcomp_impl(
+                        std::move(func),
+                        std::move(buf),
+                        [&] {
+                            if (remaining_length_ == 0) {
+                                info.reason_code = v5::reason_code::success;
+                                return pubcomp_phase::finish;
+                            }
+                            return pubcomp_phase::reason_code;
+                        } (),
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case pubcomp_phase::reason_code:
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                1, // reason_code
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    process_pubcomp_impl(
+                        std::move(func),
+                        std::move(buf),
+                        pubcomp_phase::properties,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case pubcomp_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.props = std::move(props);
+                    process_pubcomp_impl(
+                        std::move(func),
+                        std::move(buf),
+                        pubcomp_phase::finish,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case pubcomp_phase::finish:
+            {
+                LockGuard<Mutex> lck (store_mtx_);
+                auto& idx = store_.template get<tag_packet_id_type>();
+                auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::pubcomp));
+                idx.erase(std::get<0>(r), std::get<1>(r));
+                // packet_id shouldn't be erased here.
+                // It is reused for pubrel/pubcomp.
+            }
+            if (h_serialize_remove_) h_serialize_remove_(info.packet_id);
+            switch (version_) {
+            case protocol_version::v3_1_1:
+                if (h_pubcomp_) {
+                    if (!h_pubcomp_(info.packet_id)) {
+                        return;
+                    }
+                }
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            case protocol_version::v5:
+                if (h_v5_pubcomp_) {
+                    if (!h_v5_pubcomp_(info.packet_id, info.reason_code, std::move(info.props))) {
+                        return;
+                    }
+                }
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            default:
+                BOOST_ASSERT(false);
+            }
+            break;
+        }
+    }
+
+    // process subscribe
+
+    enum class subscribe_phase {
+        packet_id,
+        properties,
+        topic,
+        finish,
+    };
+
+    struct subscribe_info {
+        packet_id_t packet_id;
+        std::vector<v5::property_variant> props;
+        std::vector<std::tuple<buffer, std::uint8_t>> entries;
+    };
+
+    void process_subscribe(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        std::size_t const header_len =
+            sizeof(packet_id_t);    // Packet Id
+
+        if (remaining_length_ < header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        subscribe_info info;
+        process_header(
+            std::move(func),
+            all_read,
+            header_len,
+            &this_type::process_subscribe_impl,
+            subscribe_phase::packet_id,
+            std::move(info),
+            std::move(self)
+        );
+    }
+
+    void process_subscribe_impl(
+        async_handler_t func,
+        buffer buf,
+        subscribe_phase phase,
+        subscribe_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case subscribe_phase::packet_id:
+            process_packet_id(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.packet_id = packet_id;
+                    process_subscribe_impl(
+                        std::move(func),
+                        std::move(buf),
+                        [&] {
+                            if (version_ == protocol_version::v5) {
+                                return subscribe_phase::properties;
+                            }
+                            return subscribe_phase::topic;
+                        } (),
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case subscribe_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.props = std::move(props);
+                    process_subscribe_impl(
+                        std::move(func),
+                        std::move(buf),
+                        subscribe_phase::topic,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case subscribe_phase::topic:
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer topic_filter, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    process_nbytes(
+                        std::move(func),
+                        std::move(buf),
+                        1, // requested_qos
+                        [
+                            this,
+                            info = std::move(info),
+                            topic_filter = std::move(topic_filter)
+                        ]
+                        (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                            auto requested_qos = static_cast<std::uint8_t>(body[0]);
+                            if (requested_qos != qos::at_most_once &&
+                                requested_qos != qos::at_least_once &&
+                                requested_qos != qos::exactly_once) {
+                                call_protocol_error_handlers(func);
+                                return;
+                            }
+                            info.entries.emplace_back(std::move(topic_filter), requested_qos);
+                            process_subscribe_impl(
+                                std::move(func),
+                                std::move(buf),
+                                [&] {
+                                    if (remaining_length_ == 0) {
+                                        return subscribe_phase::finish;
+                                    }
+                                    return subscribe_phase::topic;
+                                } (),
+                                std::move(info),
+                                std::move(self)
+                            );
+                        },
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case subscribe_phase::finish:
+            switch (version_) {
+            case protocol_version::v3_1_1:
+                if (h_subscribe_) {
+                    if (!h_subscribe_(info.packet_id, std::move(info.entries))) {
+                        return;
+                    }
+                }
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            case protocol_version::v5:
+                if (h_v5_subscribe_) {
+                    if (!h_v5_subscribe_(info.packet_id, std::move(info.entries), std::move(info.props))) {
+                        return;
+                    }
+                }
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            default:
+                BOOST_ASSERT(false);
+            }
+            break;
+        }
+    }
+
+    // process suback
+
+    enum class suback_phase {
+        packet_id,
+        properties,
+        reasons,
+    };
+
+    struct suback_info {
+        packet_id_t packet_id;
+        std::vector<v5::property_variant> props;
+    };
+
+    void process_suback(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        std::size_t const header_len =
+            sizeof(packet_id_t);    // Packet Id
+
+        if (remaining_length_ < header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        suback_info info;
+        process_header(
+            std::move(func),
+            all_read,
+            header_len,
+            &this_type::process_suback_impl,
+            suback_phase::packet_id,
+            std::move(info),
+            std::move(self)
+        );
+    }
+
+    void process_suback_impl(
+        async_handler_t func,
+        buffer buf,
+        suback_phase phase,
+        suback_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case suback_phase::packet_id:
+            process_packet_id(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.packet_id = packet_id;
+                    process_suback_impl(
+                        std::move(func),
+                        std::move(buf),
+                        [&] {
+                            if (version_ == protocol_version::v5) {
+                                return suback_phase::properties;
+                            }
+                            return suback_phase::reasons;
+                        } (),
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case suback_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.props = std::move(props);
+                    process_suback_impl(
+                        std::move(func),
+                        std::move(buf),
+                        suback_phase::reasons,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case suback_phase::reasons:
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                remaining_length_, // Reason Codes
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer body, buffer /*buf*/, async_handler_t func, this_type_sp /*self*/) mutable {
+                    {
+                        LockGuard<Mutex> lck (store_mtx_);
+                        packet_id_.erase(info.packet_id);
+                    }
+                    switch (version_) {
+                    case protocol_version::v3_1_1:
+                        if (h_suback_) {
+                            std::vector<mqtt::optional<std::uint8_t>> results;
+                            results.resize(body.size());
+                            std::transform(
+                                body.begin(),
+                                body.end(),
+                                results.begin(),
+                                [&](auto const& e) -> mqtt::optional<std::uint8_t> {
+                                    if (e & 0b10000000) {
+                                        return mqtt::nullopt;
+                                    }
+                                    else {
+                                        return static_cast<std::uint8_t>(e);
+                                    }
+                                }
+                            );
+                            if (!h_suback_(info.packet_id, std::move(results))) {
+                                return;
+                            }
+                        }
+                        h_mqtt_message_processed_(std::move(func));
+                        break;
+                    case protocol_version::v5:
+                        if (h_v5_suback_) {
+                            std::vector<std::uint8_t> reasons;
+                            reasons.resize(body.size());
+                            std::transform(
+                                body.begin(),
+                                body.end(),
+                                reasons.begin(),
+                                [&](auto const& e) {
+                                    return static_cast<uint8_t>(e);
+                                }
+                            );
+                            if (!h_v5_suback_(info.packet_id, std::move(reasons), std::move(info.props))) {
+                                return;
+                            }
+                        }
+                        h_mqtt_message_processed_(std::move(func));
+                        break;
+                    default:
+                        BOOST_ASSERT(false);
+                    }
+                },
+                std::move(self)
+            );
+            break;
+        }
+    }
+
+    // process unsubscribe
+
+    enum class unsubscribe_phase {
+        packet_id,
+        properties,
+        topic,
+        finish,
+    };
+
+    struct unsubscribe_info {
+        packet_id_t packet_id;
+        std::vector<v5::property_variant> props;
+        std::vector<buffer> entries;
+    };
+
+    void process_unsubscribe(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        std::size_t const header_len =
+            sizeof(packet_id_t);    // Packet Id
+
+        if (remaining_length_ < header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        unsubscribe_info info;
+        process_header(
+            std::move(func),
+            all_read,
+            header_len,
+            &this_type::process_unsubscribe_impl,
+            unsubscribe_phase::packet_id,
+            std::move(info),
+            std::move(self)
+        );
+    }
+
+    void process_unsubscribe_impl(
+        async_handler_t func,
+        buffer buf,
+        unsubscribe_phase phase,
+        unsubscribe_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case unsubscribe_phase::packet_id:
+            process_packet_id(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.packet_id = packet_id;
+                    process_unsubscribe_impl(
+                        std::move(func),
+                        std::move(buf),
+                        [&] {
+                            if (version_ == protocol_version::v5) {
+                                return unsubscribe_phase::properties;
+                            }
+                            return unsubscribe_phase::topic;
+                        } (),
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case unsubscribe_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.props = std::move(props);
+                    process_unsubscribe_impl(
+                        std::move(func),
+                        std::move(buf),
+                        unsubscribe_phase::topic,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case unsubscribe_phase::topic:
+            process_string(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer topic_filter, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.entries.emplace_back(std::move(topic_filter));
+                    process_unsubscribe_impl(
+                        std::move(func),
+                        std::move(buf),
+                        [&] {
+                            if (remaining_length_ == 0) {
+                                return unsubscribe_phase::finish;
+                            }
+                            return unsubscribe_phase::topic;
+                        } (),
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case unsubscribe_phase::finish:
+            switch (version_) {
+            case protocol_version::v3_1_1:
+                if (h_unsubscribe_) {
+                    if (!h_unsubscribe_(info.packet_id, std::move(info.entries))) {
+                        return;
+                    }
+                }
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            case protocol_version::v5:
+                if (h_v5_unsubscribe_) {
+                    if (!h_v5_unsubscribe_(info.packet_id, std::move(info.entries), std::move(info.props))) {
+                        return;
+                    }
+                }
+                h_mqtt_message_processed_(std::move(func));
+                break;
+            default:
+                BOOST_ASSERT(false);
+            }
+            break;
+        }
+    }
+
+    // process unsuback
+
+    enum class unsuback_phase {
+        packet_id,
+        properties,
+        reasons,
+    };
+
+    struct unsuback_info {
+        packet_id_t packet_id;
+        std::vector<v5::property_variant> props;
+    };
+
+    void process_unsuback(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        std::size_t const header_len =
+            sizeof(packet_id_t);    // Packet Id
+
+        if (remaining_length_ < header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        unsuback_info info;
+        process_header(
+            std::move(func),
+            all_read,
+            header_len,
+            &this_type::process_unsuback_impl,
+            unsuback_phase::packet_id,
+            std::move(info),
+            std::move(self)
+        );
+    }
+
+    void process_unsuback_impl(
+        async_handler_t func,
+        buffer buf,
+        unsuback_phase phase,
+        unsuback_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case unsuback_phase::packet_id:
+            process_packet_id(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.packet_id = packet_id;
+                    {
+                        LockGuard<Mutex> lck (store_mtx_);
+                        packet_id_.erase(info.packet_id);
+                    }
+                    switch (version_) {
+                    case protocol_version::v3_1_1:
+                        if (h_unsuback_) {
+                            if (!h_unsuback_(info.packet_id)) {
+                                return;
+                            }
+                        }
+                        h_mqtt_message_processed_(std::move(func));
+                        break;
+                    case protocol_version::v5:
+                        process_unsuback_impl(
+                            std::move(func),
+                            std::move(buf),
+                            unsuback_phase::properties,
+                            std::move(info),
+                            std::move(self)
+                        );
+                        break;
+                    default:
+                        BOOST_ASSERT(false);
+                    }
+                },
+                std::move(self)
+            );
+            break;
+        case unsuback_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.props = std::move(props);
+                    process_unsuback_impl(
+                        std::move(func),
+                        std::move(buf),
+                        unsuback_phase::reasons,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case unsuback_phase::reasons:
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                remaining_length_, // Reason Codes
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer body, buffer /*buf*/, async_handler_t func, this_type_sp /*self*/) mutable {
+                    BOOST_ASSERT(version_ == protocol_version::v5);
+                    {
+                        LockGuard<Mutex> lck (store_mtx_);
+                        packet_id_.erase(info.packet_id);
+                    }
+                    if (h_v5_unsuback_) {
+                        std::vector<std::uint8_t> reasons;
+                        reasons.resize(body.size());
+                        std::transform(
+                            body.begin(),
+                            body.end(),
+                            reasons.begin(),
+                            [&](auto const& e) {
+                                return static_cast<uint8_t>(e);
+                            }
+                        );
+                        if (!h_v5_unsuback_(info.packet_id, std::move(reasons), std::move(info.props))) {
+                            return;
+                        }
+                        h_mqtt_message_processed_(std::move(func));
+                    }
+                },
+                std::move(self)
+            );
+            break;
+        }
+    }
+
+    // process pingreq
+
+    void process_pingreq(
+        async_handler_t func
+    ) {
+        std::size_t const header_len = 0;
+
+        if (remaining_length_ != header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+        if (h_pingreq_) {
+            if (!h_pingreq_()) return;
+        }
+        h_mqtt_message_processed_(std::move(func));
+    }
+
+    // process pingresp
+
+    void process_pingresp(
+        async_handler_t func
+    ) {
+        std::size_t const header_len = 0;
+
+        if (remaining_length_ != header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+        if (h_pingresp_) {
+            if (!h_pingresp_()) return;
+        }
+        h_mqtt_message_processed_(std::move(func));
+    }
+
+    // process disconnect
+
+    enum class disconnect_phase {
+        reason_code,
+        properties,
+        finish,
+    };
+
+    struct disconnect_info {
+        std::uint8_t reason_code;
+        std::vector<v5::property_variant> props;
+    };
+
+    void process_disconnect(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        if (remaining_length_ == 0) {
+            disconnect_info info { v5::reason_code::normal_disconnection, std::vector<v5::property_variant>() };
+            process_disconnect_impl(
+                std::move(func),
+                buffer(),
+                disconnect_phase::finish,
+                std::move(info),
+                std::move(self)
+            );
+            return;
+        }
+
+        if (version_ != protocol_version::v5) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        std::size_t const header_len =
+            1; // Reason Code
+
+        if (remaining_length_ < header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        disconnect_info info;
+        process_header(
+            std::move(func),
+            all_read,
+            header_len,
+            &this_type::process_disconnect_impl,
+            disconnect_phase::reason_code,
+            std::move(info),
+            std::move(self)
+        );
+    }
+
+    void process_disconnect_impl(
+        async_handler_t func,
+        buffer buf,
+        disconnect_phase phase,
+        disconnect_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case disconnect_phase::reason_code:
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                1, // reason_code
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    process_disconnect_impl(
+                        std::move(func),
+                        std::move(buf),
+                        disconnect_phase::properties,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case disconnect_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.props = std::move(props);
+                    process_disconnect_impl(
+                        std::move(func),
+                        std::move(buf),
+                        disconnect_phase::finish,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case disconnect_phase::finish:
+            switch (version_) {
+            case protocol_version::v3_1_1:
+                if (h_disconnect_) {
+                    h_disconnect_();
+                }
+                break;
+            case protocol_version::v5:
+                if (h_v5_disconnect_) {
+                    h_v5_disconnect_(info.reason_code, std::move(info.props));
+                }
+                break;
+            default:
+                BOOST_ASSERT(false);
+            }
+            break;
+        }
+    }
+
+    // process auth
+
+    enum class auth_phase {
+        reason_code,
+        properties,
+        finish,
+    };
+
+    struct auth_info {
+        std::uint8_t reason_code;
+        std::vector<v5::property_variant> props;
+    };
+
+    void process_auth(
+        async_handler_t func,
+        bool all_read,
+        this_type_sp self
+    ) {
+        if (version_ != protocol_version::v5) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        if (remaining_length_ == 0) {
+            auth_info info { v5::reason_code::success, std::vector<v5::property_variant>() };
+            process_auth_impl(
+                std::move(func),
+                buffer(),
+                auth_phase::finish,
+                std::move(info),
+                std::move(self)
+            );
+            return;
+        }
+
+        std::size_t const header_len =
+            1; // Reason Code
+
+        if (remaining_length_ < header_len) {
+            call_protocol_error_handlers(func);
+            return;
+        }
+
+        auth_info info;
+        process_header(
+            std::move(func),
+            all_read,
+            header_len,
+            &this_type::process_auth_impl,
+            auth_phase::reason_code,
+            std::move(info),
+            std::move(self)
+        );
+    }
+
+    void process_auth_impl(
+        async_handler_t func,
+        buffer buf,
+        auth_phase phase,
+        auth_info&& info,
+        this_type_sp self
+    ) {
+        switch (phase) {
+        case auth_phase::reason_code:
+            process_nbytes(
+                std::move(func),
+                std::move(buf),
+                1, // reason_code
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    process_auth_impl(
+                        std::move(func),
+                        std::move(buf),
+                        auth_phase::properties,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case auth_phase::properties:
+            process_properties(
+                std::move(func),
+                std::move(buf),
+                [
+                    this,
+                    info = std::move(info)
+                ]
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    info.props = std::move(props);
+                    process_auth_impl(
+                        std::move(func),
+                        std::move(buf),
+                        auth_phase::finish,
+                        std::move(info),
+                        std::move(self)
+                    );
+                },
+                std::move(self)
+            );
+            break;
+        case auth_phase::finish:
+            BOOST_ASSERT(version_ == protocol_version::v5);
+            if (h_v5_auth_) {
+                if (!h_v5_auth_(info.reason_code, std::move(info.props))) {
+                    return;
+                }
+            }
+            h_mqtt_message_processed_(std::move(func));
+            break;
+        }
     }
 
     template <typename F, typename AF>
@@ -8716,779 +12127,6 @@ private:
             if (auto_pub_response_async_) af();
             else f();
         }
-    }
-
-    bool handle_publish(async_handler_t const& func) {
-        if (remaining_length_ < 2) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-        std::size_t i = 0;
-        std::uint16_t topic_name_length = make_uint16_t(payload_[i], payload_[i + 1]);
-        i += 2;
-
-        if (remaining_length_ < i + topic_name_length) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-        mqtt::string_view topic_name(payload_.data() + i, topic_name_length);
-        if (utf8string::validate_contents(topic_name) != utf8string::validation::well_formed) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
-            return false;
-        }
-        i += topic_name_length;
-
-        mqtt::optional<packet_id_t> packet_id;
-        auto qos = publish::get_qos(fixed_header_);
-
-        auto handler_call =
-            [&] {
-                switch (version_) {
-                case protocol_version::v3_1_1:
-                    if (h_publish_) {
-                        mqtt::string_view contents(payload_.data() + i, payload_.size() - i);
-                        return h_publish_(fixed_header_, packet_id, topic_name, contents);
-                    }
-                    break;
-                case protocol_version::v5:
-                    if (h_v5_publish_) {
-                        std::vector<v5::property_variant> props;
-                        char const* b = payload_.data() + i;
-                        char const* it = b;
-                        char const* e = b + payload_.size() - i;
-                        if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                            props = std::move(*props_opt);
-                        }
-                        else {
-                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                            return false;
-                        }
-                        i += static_cast<std::size_t>(std::distance(b, it));
-                        mqtt::string_view contents(payload_.data() + i, payload_.size() - i);
-                        return h_v5_publish_(fixed_header_, packet_id, topic_name, contents, std::move(props));
-                    }
-                    break;
-                default:
-                    BOOST_ASSERT(false);
-                    return false;
-                }
-                return true;
-            };
-
-        switch (qos) {
-        case qos::at_most_once:
-            return handler_call();
-        case qos::at_least_once: {
-            if (remaining_length_ < i + sizeof(packet_id_t)) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            packet_id = make_packet_id<PacketIdBytes>::apply(
-                payload_.data() + i,
-                payload_.data() + i + sizeof(packet_id_t)
-            );
-            i += sizeof(packet_id_t);
-            auto res = [this, &packet_id, &func] {
-                auto_pub_response(
-                    [this, &packet_id] {
-                        if (connected_) send_puback(*packet_id);
-                    },
-                    [this, &packet_id, &func] {
-                        if (connected_) async_send_puback(*packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, func);
-                    }
-                );
-            };
-            if (handler_call()) {
-                res();
-                return true;
-            }
-            return false;
-        } break;
-        case qos::exactly_once: {
-            if (remaining_length_ < i + sizeof(packet_id_t)) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            packet_id = make_packet_id<PacketIdBytes>::apply(
-                payload_.data() + i,
-                payload_.data() + i + sizeof(packet_id_t)
-            );
-            i += sizeof(packet_id_t);
-            auto res = [this, &packet_id, &func] {
-                auto_pub_response(
-                    [this, &packet_id] {
-                        if (connected_) send_pubrec(*packet_id);
-                    },
-                    [this, &packet_id, &func] {
-                        if (connected_) async_send_pubrec(*packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, func);
-                    }
-                );
-            };
-
-            switch (version_) {
-            case protocol_version::v3_1_1:
-                if (h_publish_) {
-                    auto it = qos2_publish_handled_.find(*packet_id);
-                    if (it == qos2_publish_handled_.end()) {
-                        mqtt::string_view contents(payload_.data() + i, payload_.size() - i);
-                        if (h_publish_(fixed_header_, packet_id, topic_name, contents)) {
-                            qos2_publish_handled_.emplace(*packet_id);
-                            res();
-                            return true;
-                        }
-                        return false;
-                    }
-                }
-                break;
-            case protocol_version::v5:
-                if (h_v5_publish_) {
-                    auto it = qos2_publish_handled_.find(*packet_id);
-                    if (it == qos2_publish_handled_.end()) {
-                        std::vector<v5::property_variant> props;
-                        char const* b = payload_.data() + i;
-                        char const* it = b;
-                        char const* e = b + payload_.size() - i;
-                        if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                            props = std::move(*props_opt);
-                        }
-                        else {
-                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                            return false;
-                        }
-                        i += static_cast<std::size_t>(std::distance(b, it));
-                        mqtt::string_view contents(payload_.data() + i, payload_.size() - i);
-                        if (h_v5_publish_(fixed_header_, packet_id, topic_name, contents, std::move(props))) {
-                            qos2_publish_handled_.emplace(*packet_id);
-                            res();
-                            return true;
-                        }
-                        return false;
-                    }
-                }
-                break;
-            default:
-                BOOST_ASSERT(false);
-                return false;
-            }
-            res();
-        } break;
-        default:
-            break;
-        }
-        return true;
-    }
-
-    bool handle_puback(async_handler_t const& func) {
-        if (remaining_length_ < sizeof(packet_id_t)) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-
-        packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data(),
-            payload_.data() + sizeof(packet_id_t)
-        );
-        {
-            LockGuard<Mutex> lck (store_mtx_);
-            auto& idx = store_.template get<tag_packet_id_type>();
-            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::puback));
-            idx.erase(std::get<0>(r), std::get<1>(r));
-            packet_id_.erase(packet_id);
-        }
-        if (h_serialize_remove_) h_serialize_remove_(packet_id);
-
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            if (h_puback_) {
-                return h_puback_(packet_id);
-            }
-            break;
-        case protocol_version::v5:
-            if (h_v5_puback_) {
-                std::vector<v5::property_variant> props;
-
-                if (remaining_length_ == sizeof(packet_id_t)) {
-                    return h_v5_puback_(packet_id, v5::reason_code::success, std::move(props));
-                }
-
-                char const* b = payload_.data() + 3;
-                char const* it = b;
-                char const* e = b + payload_.size() - 3;
-                if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                    props = std::move(*props_opt);
-                }
-                else {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
-                }
-                return h_v5_puback_(packet_id, static_cast<std::uint8_t>(payload_[sizeof(packet_id_t)]), std::move(props));
-            }
-            break;
-        default:
-            BOOST_ASSERT(false);
-            return false;
-        }
-        return true;
-    }
-
-    bool handle_pubrec(async_handler_t const& func) {
-        if (remaining_length_ < sizeof(packet_id_t)) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-
-        packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data(),
-            payload_.data() + sizeof(packet_id_t)
-        );
-        {
-            LockGuard<Mutex> lck (store_mtx_);
-            auto& idx = store_.template get<tag_packet_id_type>();
-            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubrec));
-            idx.erase(std::get<0>(r), std::get<1>(r));
-            // packet_id shouldn't be erased here.
-            // It is reused for pubrel/pubcomp.
-        }
-        auto res = [this, &packet_id, &func] {
-            auto_pub_response(
-                [this, &packet_id] {
-                    if (connected_) send_pubrel(packet_id);
-                    else store_pubrel(packet_id);
-                },
-                [this, &packet_id, &func] {
-                    if (connected_) async_send_pubrel(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, func);
-                    else store_pubrel(packet_id);
-                }
-            );
-        };
-
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            if (h_pubrec_) {
-                if (h_pubrec_(packet_id)) {
-                    res();
-                    return true;
-                }
-                return false;
-            }
-            break;
-        case protocol_version::v5:
-            if (h_v5_pubrec_) {
-                std::vector<v5::property_variant> props;
-
-                if (remaining_length_ == sizeof(packet_id_t)) {
-                    if (h_v5_pubrec_(packet_id, v5::reason_code::success, std::move(props))) {
-                        res();
-                        return true;
-                    }
-                    return false;
-                }
-
-                char const* b = payload_.data() + 3;
-                char const* it = b;
-                char const* e = b + payload_.size() - 3;
-                if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                    props = std::move(*props_opt);
-                }
-                else {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
-                }
-                if (h_v5_pubrec_(packet_id, static_cast<std::uint8_t>(payload_[sizeof(packet_id_t)]), std::move(props))) {
-                    res();
-                    return true;
-                }
-                return false;
-            }
-            break;
-        default:
-            BOOST_ASSERT(false);
-            return false;
-        }
-        res();
-        return true;
-    }
-
-    bool handle_pubrel(async_handler_t const& func) {
-        if (remaining_length_ < sizeof(packet_id_t)) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-
-        packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data(),
-            payload_.data() + sizeof(packet_id_t)
-        );
-        auto res = [this, &packet_id, &func] {
-            auto_pub_response(
-                [this, &packet_id] {
-                    if (connected_) send_pubcomp(packet_id);
-                },
-                [this, &packet_id, &func] {
-                    if (connected_) async_send_pubcomp(packet_id, mqtt::nullopt, std::vector<v5::property_variant>{}, func);
-                }
-            );
-        };
-        qos2_publish_handled_.erase(packet_id);
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            if (h_pubrel_) {
-                if (h_pubrel_(packet_id)) {
-                    res();
-                    return true;
-                }
-                return false;
-            }
-            break;
-        case protocol_version::v5:
-            if (h_v5_pubrel_) {
-                std::vector<v5::property_variant> props;
-
-                if (remaining_length_ == sizeof(packet_id_t)) {
-                    if (h_v5_pubrel_(packet_id, v5::reason_code::success, std::move(props))) {
-                        res();
-                        return true;
-                    }
-                    return false;
-                }
-
-                char const* b = payload_.data() + 3;
-                char const* it = b;
-                char const* e = b + payload_.size() - 3;
-                if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                    props = std::move(*props_opt);
-                }
-                else {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
-                }
-                if (h_v5_pubrel_(packet_id, static_cast<std::uint8_t>(payload_[sizeof(packet_id_t)]), std::move(props))) {
-                    res();
-                    return true;
-                }
-                return false;
-            }
-            break;
-        default:
-            BOOST_ASSERT(false);
-            return false;
-        }
-        res();
-        return true;
-    }
-
-    bool handle_pubcomp(async_handler_t const& func) {
-        if (remaining_length_ < sizeof(packet_id_t)) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-
-        packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data(),
-            payload_.data() + sizeof(packet_id_t)
-        );
-        {
-            LockGuard<Mutex> lck (store_mtx_);
-            auto& idx = store_.template get<tag_packet_id_type>();
-            auto r = idx.equal_range(std::make_tuple(packet_id, control_packet_type::pubcomp));
-            idx.erase(std::get<0>(r), std::get<1>(r));
-            packet_id_.erase(packet_id);
-        }
-        if (h_serialize_remove_) h_serialize_remove_(packet_id);
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            if (h_pubcomp_) {
-                return h_pubcomp_(packet_id);
-            }
-            break;
-        case protocol_version::v5:
-            if (h_v5_pubcomp_) {
-                std::vector<v5::property_variant> props;
-
-                if (remaining_length_ == sizeof(packet_id_t)) {
-                    return h_v5_pubcomp_(packet_id, v5::reason_code::success, std::move(props));
-                }
-
-                char const* b = payload_.data() + 3;
-                char const* it = b;
-                char const* e = b + payload_.size() - 3;
-                if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                    props = std::move(*props_opt);
-                }
-                else {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
-                }
-                return h_v5_pubcomp_(packet_id, static_cast<std::uint8_t>(payload_[sizeof(packet_id_t)]), std::move(props));
-            }
-            break;
-        default:
-            BOOST_ASSERT(false);
-            return false;
-        }
-        return true;
-    }
-
-    bool handle_subscribe(async_handler_t const& func) {
-        std::size_t i = 0;
-        if (remaining_length_ < sizeof(packet_id_t)) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-        packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data(),
-            payload_.data() + sizeof(packet_id_t)
-        );
-        i += sizeof(packet_id_t);
-
-        switch (version_) {
-        case protocol_version::v3_1_1: {
-            std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries;
-            while (i < remaining_length_) {
-                if (remaining_length_ < i + 2) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
-                }
-                std::uint16_t topic_length = make_uint16_t(payload_[i], payload_[i + 1]);
-                i += 2;
-
-                if (remaining_length_ < i + topic_length) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
-                }
-                mqtt::string_view topic_filter(payload_.data() + i, topic_length);
-                if (utf8string::validate_contents(topic_filter) != utf8string::validation::well_formed) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
-                    return false;
-                }
-                i += topic_length;
-
-                if (remaining_length_ < i + 1) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
-                }
-
-                std::uint8_t option = static_cast<std::uint8_t>(payload_[i]);
-                if ((option & 0b11111100) != 0) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
-                    return false;
-                }
-                entries.emplace_back(topic_filter, option);
-                ++i;
-            }
-            if (h_subscribe_) return h_subscribe_(packet_id, std::move(entries));
-        } break;
-        case protocol_version::v5: {
-            std::vector<v5::property_variant> props;
-            char const* b = payload_.data() + i;
-            char const* it = b;
-            char const* e = b + payload_.size() - i;
-            if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                props = std::move(*props_opt);
-            }
-            else {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            i += static_cast<std::size_t>(std::distance(b, it));
-
-            std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries;
-            while (i < remaining_length_) {
-                if (remaining_length_ < i + 2) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
-                }
-                std::uint16_t topic_length = make_uint16_t(payload_[i], payload_[i + 1]);
-                i += 2;
-
-                if (remaining_length_ < i + topic_length) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
-                }
-                mqtt::string_view topic_filter(payload_.data() + i, topic_length);
-                if (utf8string::validate_contents(topic_filter) != utf8string::validation::well_formed) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
-                    return false;
-                }
-                i += topic_length;
-
-                if (remaining_length_ < i + 1) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
-                }
-
-                std::uint8_t option = static_cast<std::uint8_t>(payload_[i]);
-                if ((option & 0b11000000) != 0) {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
-                    return false;
-                }
-                entries.emplace_back(topic_filter, option);
-                ++i;
-            }
-            if (h_v5_subscribe_) return h_v5_subscribe_(packet_id, std::move(entries), std::move(props));
-        } break;
-        default:
-            BOOST_ASSERT(false);
-            return false;
-        }
-        return true;
-    }
-
-    bool handle_suback(async_handler_t const& func) {
-        std::size_t i = 0;
-        if (remaining_length_ < sizeof(packet_id_t)) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-        packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data(),
-            payload_.data() + sizeof(packet_id_t)
-        );
-        i += sizeof(packet_id_t);
-        {
-            LockGuard<Mutex> lck (store_mtx_);
-            packet_id_.erase(packet_id);
-        }
-
-        std::vector<v5::property_variant> props;
-        if (version_ == protocol_version::v5) {
-            char const* b = payload_.data() + i;
-            char const* it = b;
-            char const* e = b + payload_.size() - i;
-            if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                props = std::move(*props_opt);
-            }
-            else {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            i += static_cast<std::size_t>(std::distance(b, it));
-        }
-
-        switch (version_) {
-        case protocol_version::v3_1_1: {
-            std::vector<mqtt::optional<std::uint8_t>> results;
-            results.reserve(payload_.size() - i);
-            auto it = payload_.cbegin() + static_cast<std::vector<char>::difference_type>(i);
-            auto end = payload_.cend();
-            for (; it != end; ++it) {
-                if (*it & 0b10000000) {
-                    results.push_back(mqtt::nullopt);
-                }
-                else {
-                    results.push_back(static_cast<std::uint8_t>(*it));
-                }
-            }
-            if (h_suback_) return h_suback_(packet_id, std::move(results));
-        } break;
-        case protocol_version::v5: {
-            std::vector<std::uint8_t> reasons;
-            reasons.reserve(payload_.size() - i);
-            auto it = payload_.cbegin() + static_cast<std::vector<char>::difference_type>(i);
-            auto end = payload_.cend();
-            std::copy(it, end, std::back_inserter(reasons));
-            if (h_v5_suback_) return h_v5_suback_(packet_id, std::move(reasons), std::move(props));
-        } break;
-        default:
-            BOOST_ASSERT(false);
-            return false;
-        }
-        return true;
-    }
-
-    bool handle_unsubscribe(async_handler_t const& func) {
-        std::size_t i = 0;
-        if (remaining_length_ < sizeof(packet_id_t)) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-        packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data(),
-            payload_.data() + sizeof(packet_id_t)
-        );
-        i += sizeof(packet_id_t);
-
-        std::vector<v5::property_variant> props;
-        if (version_ == protocol_version::v5) {
-            char const* b = payload_.data() + i;
-            char const* it = b;
-            char const* e = b + payload_.size() - i;
-            if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                props = std::move(*props_opt);
-            }
-            else {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            i += static_cast<std::size_t>(std::distance(b, it));
-        }
-
-        std::vector<mqtt::string_view> topic_filters;
-        while (i < remaining_length_) {
-            if (remaining_length_ < i + 2) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            std::uint16_t topic_length = make_uint16_t(payload_[i], payload_[i + 1]);
-            i += 2;
-            if (remaining_length_ < i + topic_length) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-            mqtt::string_view topic_filter(payload_.data() + i, topic_length);
-            if (utf8string::validate_contents(topic_filter) != utf8string::validation::well_formed) {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::bad_message));
-                return false;
-            }
-            i += topic_length;
-
-            topic_filters.emplace_back(topic_filter);
-        }
-
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            if (h_unsubscribe_) return h_unsubscribe_(packet_id, std::move(topic_filters));
-            break;
-        case protocol_version::v5:
-            if (h_v5_unsubscribe_) return h_v5_unsubscribe_(packet_id, std::move(topic_filters), std::move(props));
-            break;
-        default:
-            BOOST_ASSERT(false);
-            return false;
-        }
-        return true;
-    }
-
-    bool handle_unsuback(async_handler_t const& func) {
-        std::size_t i = 0;
-        if (remaining_length_ < sizeof(packet_id_t)) {
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            return false;
-        }
-        packet_id_t packet_id = make_packet_id<PacketIdBytes>::apply(
-            payload_.data(),
-            payload_.data() + sizeof(packet_id_t)
-        );
-        i += sizeof(packet_id_t);
-
-        {
-            LockGuard<Mutex> lck (store_mtx_);
-            packet_id_.erase(packet_id);
-        }
-
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            if (h_unsuback_) return h_unsuback_(packet_id);
-            break;
-        case protocol_version::v5: {
-            std::vector<v5::property_variant> props;
-            {
-                char const* b = payload_.data() + i;
-                char const* it = b;
-                char const* e = b + payload_.size() - i;
-                if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                    props = std::move(*props_opt);
-                }
-                else {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    return false;
-                }
-                i += static_cast<std::size_t>(std::distance(b, it));
-            }
-            std::vector<std::uint8_t> reasons;
-            {
-                reasons.reserve(payload_.size() - i);
-                auto it = payload_.cbegin() + static_cast<std::vector<char>::difference_type>(i);
-                auto end = payload_.cend();
-                std::copy(it, end, std::back_inserter(reasons));
-            }
-            if (h_v5_unsuback_) return h_v5_unsuback_(packet_id, std::move(reasons), std::move(props));
-        } break;
-        default:
-            BOOST_ASSERT(false);
-            return false;
-        }
-        return true;
-    }
-
-    bool handle_pingreq(async_handler_t const& /*func*/) {
-        if (h_pingreq_) return h_pingreq_();
-        return true;
-    }
-
-    bool handle_pingresp(async_handler_t const& /*func*/) {
-        if (h_pingresp_) return h_pingresp_();
-        return true;
-    }
-
-    void handle_disconnect(async_handler_t const& func) {
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            if (h_disconnect_) h_disconnect_();
-            break;
-        case protocol_version::v5: {
-            std::size_t i = 0;
-            std::vector<v5::property_variant> props;
-            if (remaining_length_ < 1) {
-                if (h_v5_disconnect_) h_v5_disconnect_(v5::reason_code::normal_disconnection, std::move(props));
-                return;
-            }
-
-            auto reason = static_cast<std::uint8_t>(payload_[i]);
-            ++i;
-
-            char const* b = payload_.data() + i;
-            char const* it = b;
-            char const* e = b + payload_.size() - i;
-            if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                props = std::move(*props_opt);
-            }
-            else {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return;
-            }
-
-            if (h_v5_disconnect_) h_v5_disconnect_(reason, std::move(props));
-        } break;
-        default:
-            BOOST_ASSERT(false);
-            break;
-        }
-    }
-
-    bool handle_auth(async_handler_t const& func) {
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            return false;
-        case protocol_version::v5: {
-            std::size_t i = 0;
-            std::vector<v5::property_variant> props;
-            if (remaining_length_ < 1) {
-                if (h_v5_auth_) h_v5_auth_(v5::reason_code::success, std::move(props));
-                return true;
-            }
-
-            auto reason = static_cast<std::uint8_t>(payload_[i]);
-            ++i;
-
-            char const* b = payload_.data() + i;
-            char const* it = b;
-            char const* e = b + payload_.size() - i;
-            if (auto props_opt = v5::property::parse_with_length(it, e)) {
-                props = std::move(*props_opt);
-            }
-            else {
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                return false;
-            }
-
-            if (h_v5_auth_) return h_v5_auth_(reason, std::move(props));
-        } break;
-        default:
-            BOOST_ASSERT(false);
-            return false;
-        }
-        return true;
     }
 
     // Blocking senders.
@@ -10024,7 +12662,7 @@ private:
         boost::system::error_code ec;
         if (!connected_) return;
         if (h_pre_send_) h_pre_send_();
-        write(*socket_, const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
+        socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
         if (ec) handle_error(ec);
     }
 
@@ -10190,7 +12828,7 @@ private:
 
         auto impl =
             [&] (auto msg) {
-                auto self = this->shared_from_this();
+                auto self = shared_from_this();
                 do_async_write(
                     std::move(msg),
                     [this, self, packet_id, func = std::move(func)]
@@ -10325,10 +12963,10 @@ private:
     ) {
         auto impl =
             [&] (auto msg) {
-                auto self = this->shared_from_this();
+                auto self = shared_from_this();
                 do_async_write(
                     std::move(msg),
-                    [this, self, packet_id, func = std::move(func)]
+                    [this, self = std::move(self), packet_id, func = std::move(func)]
                     (boost::system::error_code const& ec){
                         if (func) func(ec);
                         if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
@@ -10854,11 +13492,10 @@ private:
 
         if (h_pre_send_) h_pre_send_();
 
-        async_write(
-            *socket_,
+        socket_->async_write(
             std::move(buf),
             write_completion_handler(
-                this->shared_from_this(),
+                shared_from_this(),
                 [handlers = std::move(handlers)]
                 (boost::system::error_code const& ec) {
                     for (auto const& h : handlers) {
@@ -10872,9 +13509,10 @@ private:
     }
 
     void do_async_write(basic_message_variant<PacketIdBytes> mv, async_handler_t func) {
+        auto self = shared_from_this();
         // Move this job to the socket's strand so that it can be queued without mutexes.
         socket_->post(
-            [self = this->shared_from_this(), mv = std::move(mv), func = std::move(func)]
+            [self = std::move(self), mv = std::move(mv), func = std::move(func)]
             () {
                 if (!self->connected_) {
                     // offline async publish is successfully finished, because there's nothing to do.
@@ -10901,11 +13539,11 @@ protected:
     bool clean_session_{false};
 
 private:
-    std::shared_ptr<Socket> socket_;
+    mqtt::optional<mqtt::socket> socket_;
     std::atomic<bool> connected_{false};
     std::atomic<bool> mqtt_connected_{false};
 
-    char buf_;
+    std::array<char, 10>  buf_;
     std::uint8_t fixed_header_;
     std::size_t remaining_length_multiplier_;
     std::size_t remaining_length_;
@@ -10970,6 +13608,8 @@ private:
     std::size_t max_queue_send_size_{0};
     mqtt_message_processed_handler h_mqtt_message_processed_;
     protocol_version version_{protocol_version::undetermined};
+    std::size_t packet_bulk_read_limit_ = 256;
+    std::size_t props_bulk_read_limit_ = packet_bulk_read_limit_;
 };
 
 } // namespace mqtt

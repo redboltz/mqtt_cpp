@@ -16,6 +16,7 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/optional.hpp>
 #include <boost/container/static_vector.hpp>
+#include <boost/numeric/conversion/cast.hpp>
 
 #include <mqtt/two_byte_util.hpp>
 #include <mqtt/fixed_header.hpp>
@@ -32,6 +33,7 @@
 #include <mqtt/property.hpp>
 #include <mqtt/property_variant.hpp>
 #include <mqtt/property_parse.hpp>
+
 #include <mqtt/packet_id_type.hpp>
 
 namespace mqtt {
@@ -118,7 +120,7 @@ public:
           ),
           protocol_name_and_level_ { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x05 },
           client_id_(as::buffer(client_id.data(), client_id.size())),
-          client_id_length_buf_{ num_to_2bytes(static_cast<std::uint16_t>(client_id.size())) },
+          client_id_length_buf_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(client_id.size())) },
           will_property_length_(
               w ?
               std::accumulate(
@@ -136,7 +138,7 @@ public:
               std::move(w.value().props())
               : properties()
           ),
-          keep_alive_buf_ ({ num_to_2bytes(static_cast<std::uint16_t>(keep_alive_sec )) }),
+          keep_alive_buf_ ({ num_to_2bytes(keep_alive_sec ) }),
           property_length_(
               std::accumulate(
                   props.begin(),
@@ -179,7 +181,7 @@ public:
             utf8string_check(user_name.value());
             connect_flags_ |= connect_flags::user_name_flag;
             user_name_ = as::buffer(user_name.value());
-            add_uint16_t_to_buf(user_name_length_buf_, static_cast<std::uint16_t>(get_size(user_name_)));
+            add_uint16_t_to_buf(user_name_length_buf_, boost::numeric_cast<std::uint16_t>(get_size(user_name_)));
 
             remaining_length_ += 2 + get_size(user_name_);
             num_of_const_buffer_sequence_ += 2; // user name length, user name
@@ -187,7 +189,7 @@ public:
         if (password) {
             connect_flags_ |= connect_flags::password_flag;
             password_ = as::buffer(password.value());
-            add_uint16_t_to_buf(password_length_buf_, static_cast<std::uint16_t>(get_size(password_)));
+            add_uint16_t_to_buf(password_length_buf_, boost::numeric_cast<std::uint16_t>(get_size(password_)));
 
             remaining_length_ += 2 + get_size(password_);
             num_of_const_buffer_sequence_ += 2; // password length, password
@@ -206,13 +208,13 @@ public:
             will_topic_name_ = as::buffer(w.value().topic());
             add_uint16_t_to_buf(
                 will_topic_name_length_buf_,
-                static_cast<std::uint16_t>(get_size(will_topic_name_))
+                boost::numeric_cast<std::uint16_t>(get_size(will_topic_name_))
             );
             if (w.value().message().size() > 0xffffL) throw will_message_length_error();
             will_message_ = as::buffer(w.value().message());
             add_uint16_t_to_buf(
                 will_message_length_buf_,
-                static_cast<std::uint16_t>(get_size(will_message_)));
+                boost::numeric_cast<std::uint16_t>(get_size(will_message_)));
 
             remaining_length_ +=
                 will_property_length_buf_.size() +
@@ -548,7 +550,7 @@ public:
     )
         : fixed_header_(make_fixed_header(control_packet_type::publish, 0b0000)),
           topic_name_(topic_name),
-          topic_name_length_buf_ { num_to_2bytes(static_cast<std::uint16_t>(get_size(topic_name))) },
+          topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(get_size(topic_name))) },
           property_length_(
               std::accumulate(
                   props.begin(),
@@ -604,70 +606,62 @@ public:
         }
     }
 
-    template <typename Iterator>
-    basic_publish_message(Iterator b, Iterator e) {
-        if (b >= e) throw remaining_length_error();
-        fixed_header_ = static_cast<std::uint8_t>(*b);
+    basic_publish_message(buffer buf) {
+        if (buf.empty())  throw remaining_length_error();
+        fixed_header_ = static_cast<std::uint8_t>(buf.front());
         auto qos = publish::get_qos(fixed_header_);
-        ++b;
+        buf = buf.substr(1);
 
-        if (b >= e) throw remaining_length_error();
-        auto len_consumed = remaining_length(b, e);
+        if (buf.empty()) throw remaining_length_error();
+        auto len_consumed = remaining_length(buf.begin(), buf.end());
         remaining_length_ = std::get<0>(len_consumed);
         auto consumed = std::get<1>(len_consumed);
 
-        std::copy(b, b + static_cast<typename std::iterator_traits<Iterator>::difference_type>(consumed), std::back_inserter(remaining_length_buf_));
-        b += static_cast<typename std::iterator_traits<Iterator>::difference_type>(consumed);
+        std::copy(
+            buf.begin(),
+            buf.begin() + consumed,
+            std::back_inserter(remaining_length_buf_));
+        buf = buf.substr(consumed);
 
-        if (b + 2 >= e) throw remaining_length_error();
-        std::copy(b, b + 2, std::back_inserter(topic_name_length_buf_));
-        auto topic_name_length = make_uint16_t(b, b + 2);
-        b += 2;
+        if (buf.size() < 2) throw remaining_length_error();
+        std::copy(buf.begin(), buf.begin() + 2, std::back_inserter(topic_name_length_buf_));
+        auto topic_name_length = make_uint16_t(buf.begin(), buf.begin() + 2);
+        buf = buf.substr(2);
 
-        if (b + topic_name_length >= e) throw remaining_length_error();
-        utf8string_check(string_view(&*b, topic_name_length));
-        topic_name_ = as::buffer(&*b, topic_name_length);
-        b += topic_name_length;
+        if (buf.size() < topic_name_length) throw remaining_length_error();
+        utf8string_check(buf.substr(0, topic_name_length));
+        topic_name_ = as::buffer(&buf.front(), topic_name_length);
+        buf = buf.substr(topic_name_length);
 
         switch (qos) {
         case qos::at_most_once:
             break;
         case qos::at_least_once:
         case qos::exactly_once:
-            if (b + PacketIdBytes >= e) throw remaining_length_error();
-            std::copy(b, b + PacketIdBytes, std::back_inserter(packet_id_));
-            b += PacketIdBytes;
+            if (buf.size() < PacketIdBytes) throw remaining_length_error();
+            std::copy(buf.begin(), buf.begin() + PacketIdBytes, std::back_inserter(packet_id_));
+            buf = buf.substr(PacketIdBytes);
             break;
         default:
             throw protocol_error();
             break;
         };
 
-        auto len_lim = std::next(
-            b,
-            std::min(
-                static_cast<typename std::iterator_traits<Iterator>::difference_type>(4),
-                std::distance(b, e)
-            )
-        );
         auto len_consume = variable_length(
-            b,
-            len_lim
+            buf.begin(),
+            buf.end()
         );
         property_length_ = std::get<0>(len_consume);
-        auto pb = variable_bytes(property_length_);
-        for (auto e : pb) {
-            property_length_buf_.push_back(e);
-        }
         auto consume = std::get<1>(len_consume);
         if (consume == 0) throw property_length_error();
-        b += static_cast<typename std::iterator_traits<Iterator>::difference_type>(consume);
-        auto prop_end = b +
-            static_cast<typename std::iterator_traits<Iterator>::difference_type>(property_length_);
+        std::copy(buf.begin(), buf.begin() + consume, std::back_inserter(property_length_buf_));
+        buf = buf.substr(consume);
+        if (buf.size() < property_length_) throw property_length_error();
 
-        props_ = property::parse(b, e);
-        if (b != prop_end) throw property_length_error();
-        payload_ = as::buffer(&*b, static_cast<std::size_t>(std::distance(b, e)));
+        auto props_buf = property::parse(buf);
+        props_ = std::move(props_buf.first);
+        buf = std::move(props_buf.second);
+        payload_ = as::buffer(buf.data(), buf.size());
         num_of_const_buffer_sequence_ =
             1 +                   // fixed header
             1 +                   // remaining length
@@ -1229,27 +1223,27 @@ struct basic_pubrel_message {
         }
     }
 
-    template <typename Iterator>
-    basic_pubrel_message(Iterator b, Iterator e) {
-        if (b >= e) throw remaining_length_error();
-        fixed_header_ = static_cast<std::uint8_t>(*b);
-        ++b;
+    basic_pubrel_message(buffer buf) {
+        if (buf.empty())  throw remaining_length_error();
+        fixed_header_ = static_cast<std::uint8_t>(buf.front());
+        buf = buf.substr(1);
 
-        if (b >= e) throw remaining_length_error();
-        auto len_consumed = remaining_length(b, e);
+        if (buf.empty()) throw remaining_length_error();
+        auto len_consumed = remaining_length(buf.begin(), buf.end());
         remaining_length_ = std::get<0>(len_consumed);
-        auto consumed = static_cast<
-            typename std::iterator_traits<Iterator>::difference_type
-        >(std::get<1>(len_consumed));
+        auto consumed = std::get<1>(len_consumed);
 
-        std::copy(b, b + consumed, std::back_inserter(remaining_length_buf_));
-        b += consumed;
+        std::copy(
+            buf.begin(),
+            buf.begin() + consumed,
+            std::back_inserter(remaining_length_buf_));
+        buf = buf.substr(consumed);
 
-        if (b + PacketIdBytes > e) throw remaining_length_error();
-        std::copy(b, b + PacketIdBytes, std::back_inserter(packet_id_));
-        b += PacketIdBytes;
+        if (buf.size() < PacketIdBytes) throw remaining_length_error();
+        std::copy(buf.begin(), buf.begin() + PacketIdBytes, std::back_inserter(packet_id_));
+        buf = buf.substr(PacketIdBytes);
 
-        if (b >= e) {
+        if (buf.empty()) {
             num_of_const_buffer_sequence_ =
                 1 +                   // fixed header
                 1 +                   // remaining length
@@ -1257,32 +1251,23 @@ struct basic_pubrel_message {
             return;
         }
 
-        reason_code_ = *b++;
+        reason_code_ = static_cast<std::uint8_t>(buf.front());
+        buf = buf.substr(1);
 
-        auto len_lim = std::next(
-            b,
-            std::min(
-                static_cast<typename std::iterator_traits<Iterator>::difference_type>(4),
-                std::distance(b, e)
-            )
-        );
         auto len_consume = variable_length(
-            b,
-            len_lim
+            buf.begin(),
+            buf.end()
         );
         property_length_ = std::get<0>(len_consume);
-        auto pb = variable_bytes(property_length_);
-        for (auto e : pb) {
-            property_length_buf_.push_back(e);
-        }
         auto consume = std::get<1>(len_consume);
         if (consume == 0) throw property_length_error();
-        b += static_cast<typename std::iterator_traits<Iterator>::difference_type>(consume);
-        auto prop_end = b +
-            static_cast<typename std::iterator_traits<Iterator>::difference_type>(property_length_);
+        std::copy(buf.begin(), buf.begin() + consume, std::back_inserter(property_length_buf_));
+        buf = buf.substr(consume);
+        if (buf.size() != property_length_) throw property_length_error();
 
-        props_ = property::parse(b, e);
-        if (b != prop_end) throw property_length_error();
+        auto props_buf = property::parse(buf);
+        props_ = std::move(props_buf.first);
+        buf = std::move(props_buf.second);
         num_of_const_buffer_sequence_ =
             1 +                   // fixed header
             1 +                   // remaining length
@@ -1559,7 +1544,7 @@ private:
     struct entry {
         entry(as::const_buffer const& topic_filter, std::uint8_t options)
             : topic_filter(topic_filter),
-              topic_filter_length_buf { num_to_2bytes(static_cast<std::uint16_t>(get_size(topic_filter))) },
+              topic_filter_length_buf { num_to_2bytes(boost::numeric_cast<std::uint16_t>(get_size(topic_filter))) },
               options(options)
         {}
 
@@ -1879,7 +1864,7 @@ private:
     struct entry {
         entry(as::const_buffer const& topic_filter)
             : topic_filter(topic_filter),
-              topic_filter_length_buf { num_to_2bytes(static_cast<std::uint16_t>(get_size(topic_filter))) }
+              topic_filter_length_buf { num_to_2bytes(boost::numeric_cast<std::uint16_t>(get_size(topic_filter))) }
         {}
 
         as::const_buffer topic_filter;

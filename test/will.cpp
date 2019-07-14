@@ -14,6 +14,8 @@
 
 BOOST_AUTO_TEST_SUITE(test_will)
 
+using namespace mqtt::literals;
+
 BOOST_AUTO_TEST_CASE( will_qos0 ) {
     boost::asio::io_service ios;
     test_broker b(ios);
@@ -23,7 +25,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
-        mqtt::will("topic1", "will_contents"));
+        mqtt::will("topic1"_mb, "will_contents"_mb));
     int c1fd_count = 0;
     auto c1_force_disconnect = [&c1, &c1fd_count] {
         if (++c1fd_count == 2) c1->force_disconnect();
@@ -153,7 +155,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
-        mqtt::will("topic1", "will_contents", mqtt::qos::at_least_once));
+        mqtt::will("topic1"_mb, "will_contents"_mb, mqtt::qos::at_least_once));
     int c1fd_count = 0;
     auto c1_force_disconnect = [&c1, &c1fd_count] {
         if (++c1fd_count == 2) c1->force_disconnect();
@@ -279,7 +281,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
-        mqtt::will("topic1", "will_contents", mqtt::qos::exactly_once));
+        mqtt::will("topic1"_mb, "will_contents"_mb, mqtt::qos::exactly_once));
     int c1fd_count = 0;
     auto c1_force_disconnect = [&c1, &c1fd_count] {
         if (++c1fd_count == 2) c1->force_disconnect();
@@ -410,7 +412,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
-        mqtt::will("topic1", "will_contents", true));
+        mqtt::will("topic1"_mb, "will_contents"_mb, true));
     int c1fd_count = 0;
     auto c1_force_disconnect = [&c1, &c1fd_count] {
         if (++c1fd_count == 2) c1->force_disconnect();
@@ -572,7 +574,7 @@ BOOST_AUTO_TEST_CASE( overlength_message ) {
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     std::string wm(0x10000, 'a');
-    c1->set_will(mqtt::will("topic1", wm));
+    c1->set_will(mqtt::will("topic1"_mb, mqtt::buffer(mqtt::string_view(wm))));
     c1->set_clean_session(true);
     c1->connect();
     try {
@@ -598,10 +600,10 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
         mqtt::v5::property::message_expiry_interval(0x12345678UL),
         mqtt::v5::property::will_delay_interval(0x12345678UL),
         mqtt::v5::property::topic_alias(0x1234U),
-        mqtt::v5::property::response_topic("response topic"),
-        mqtt::v5::property::correlation_data("correlation data"),
-        mqtt::v5::property::user_property("key1", "val1"),
-        mqtt::v5::property::user_property("key2", "val2"),
+        mqtt::v5::property::response_topic("response topic"_mb),
+        mqtt::v5::property::correlation_data("correlation data"_mb),
+        mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+        mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
         mqtt::v5::property::subscription_identifier(123),
     };
 
@@ -610,8 +612,8 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
 
     c1->set_will(
         mqtt::will(
-            "topic1",
-            "will_contents",
+            "topic1"_mb,
+            "will_contents"_mb,
             false,
             std::move(ps)
         ));
@@ -734,25 +736,25 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
             for (auto const& p : props) {
                 mqtt::visit(
                     mqtt::make_lambda_visitor<void>(
-                        [&](mqtt::v5::property::payload_format_indicator::recv const& t) {
+                        [&](mqtt::v5::property::payload_format_indicator const& t) {
                             BOOST_TEST(t.val() == mqtt::v5::property::payload_format_indicator::string);
                         },
-                        [&](mqtt::v5::property::message_expiry_interval::recv const& t) {
+                        [&](mqtt::v5::property::message_expiry_interval const& t) {
                             BOOST_TEST(t.val() == 0x12345678UL);
                         },
-                        [&](mqtt::v5::property::will_delay_interval::recv const& t) {
+                        [&](mqtt::v5::property::will_delay_interval const& t) {
                             BOOST_TEST(t.val() == 0x12345678UL);
                         },
-                        [&](mqtt::v5::property::topic_alias::recv const& t) {
+                        [&](mqtt::v5::property::topic_alias const& t) {
                             BOOST_TEST(t.val() == 0x1234U);
                         },
-                        [&](mqtt::v5::property::response_topic::recv const& t) {
+                        [&](mqtt::v5::property::response_topic const& t) {
                             BOOST_TEST(t.val() == "response topic");
                         },
-                        [&](mqtt::v5::property::correlation_data::recv const& t) {
+                        [&](mqtt::v5::property::correlation_data const& t) {
                             BOOST_TEST(t.val() == "correlation data");
                         },
-                        [&](mqtt::v5::property::user_property::recv const& t) {
+                        [&](mqtt::v5::property::user_property const& t) {
                             switch (user_prop_count++) {
                             case 0:
                                 BOOST_TEST(t.key() == "key1");
@@ -767,7 +769,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
                                 break;
                             }
                         },
-                        [&](mqtt::v5::property::subscription_identifier::recv const& t) {
+                        [&](mqtt::v5::property::subscription_identifier const& t) {
                             BOOST_TEST(t.val() == 123U);
                         },
                         [&](auto&& ...) {

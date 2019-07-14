@@ -1,6 +1,6 @@
 sudo: false
 language: cpp
-dist: trusty
+dist: bionic
 
 if: type != push OR branch = master OR branch =~ /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 
@@ -12,8 +12,8 @@ install:
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then ./cmake-3.8.2-Linux-x86_64.sh --prefix=${BASE}/usr --skip-license; fi
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export PATH="${BASE}/usr/bin:$PATH"; fi
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export LD_LIBRARY_PATH="${BASE}/usr/lib:$LD_LIBRARY_PATH"; fi
- - if [ "$CXX" = "g++" ]; then export CXX="g++-7" CC="gcc-7"; fi
- - if [ "$CXX" = "clang++" ] && [ "$TRAVIS_OS_NAME" == "linux" ]; then export CXX="clang++-5.0" CC="clang-5.0"; fi
+ - if [ "$CXX" = "g++" ]; then export CXX="g++" CC="gcc"; fi
+ - if [ "$CXX" = "clang++" ] && [ "$TRAVIS_OS_NAME" == "linux" ]; then export CXX="clang++-8" CC="clang-8"; fi
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export OPENSSL_ROOT_DIR="${BASE}/usr"; fi
  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then export OPENSSL_ROOT_DIR="/usr/local/opt/openssl"; fi
 
@@ -46,18 +46,10 @@ matrix:
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-trusty-5.0
-            - llvm-toolchain-trusty
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
             - sourceline: 'ppa:mhier/libboost-latest'
           packages:
-            - g++-multilib
-            - gcc-multilib
-            - gcc-7-multilib
-            - g++-7-multilib
-            - bzip2
-            - clang-5.0
-            - libc6-dbg
+            - clang-8
             - boost1.67
     - os: linux
       sudo: required
@@ -66,19 +58,10 @@ matrix:
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-trusty-5.0
-            - llvm-toolchain-trusty
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
             - sourceline: 'ppa:mhier/libboost-latest'
           packages:
-            - openssl
-            - g++-multilib
-            - gcc-multilib
-            - gcc-7-multilib
-            - g++-7-multilib
-            - bzip2
-            - clang-5.0
-            - libc6-dbg
+            - clang-8
             - boost1.67
     - os: linux
       sudo: required
@@ -87,19 +70,10 @@ matrix:
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-trusty-5.0
-            - llvm-toolchain-trusty
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
             - sourceline: 'ppa:mhier/libboost-latest'
           packages:
-            - openssl
-            - g++-multilib
-            - gcc-multilib
-            - gcc-7-multilib
-            - g++-7-multilib
-            - bzip2
-            - clang-5.0
-            - libc6-dbg
+            - clang-8
             - boost1.67
     - os: linux
       sudo: required
@@ -108,19 +82,10 @@ matrix:
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-trusty-5.0
-            - llvm-toolchain-trusty
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
             - sourceline: 'ppa:mhier/libboost-latest'
           packages:
-            - openssl
-            - g++-multilib
-            - gcc-multilib
-            - gcc-7-multilib
-            - g++-7-multilib
-            - bzip2
-            - clang-5.0
-            - libc6-dbg
+            - clang-8
             - boost1.67
     - os: linux
       compiler: gcc
@@ -128,16 +93,11 @@ matrix:
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
             - sourceline: 'ppa:mhier/libboost-latest'
           packages:
             - lcov
-            - g++-multilib
-            - gcc-multilib
-            - gcc-7-multilib
-            - g++-7-multilib
-            - bzip2
-            - libc6-dbg
+            - g++-9
             - boost1.67
     - os: linux
       compiler: gcc
@@ -145,16 +105,11 @@ matrix:
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
             - sourceline: 'ppa:mhier/libboost-latest'
           packages:
             - lcov
-            - g++-multilib
-            - gcc-multilib
-            - gcc-7-multilib
-            - g++-7-multilib
-            - bzip2
-            - libc6-dbg
+            - g++-9
             - boost1.67
     - os: linux
       compiler: gcc
@@ -162,16 +117,11 @@ matrix:
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
             - sourceline: 'ppa:mhier/libboost-latest'
           packages:
             - lcov
-            - g++-multilib
-            - gcc-multilib
-            - gcc-7-multilib
-            - g++-7-multilib
-            - bzip2
-            - libc6-dbg
+            - g++-9
             - boost1.67
     - os: linux
       sudo: required
@@ -180,17 +130,11 @@ matrix:
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
             - sourceline: 'ppa:mhier/libboost-latest'
           packages:
             - lcov
-            - openssl
-            - g++-multilib
-            - gcc-multilib
-            - gcc-7-multilib
-            - g++-7-multilib
-            - bzip2
-            - libc6-dbg
+            - g++-9
             - boost1.67
 
 script:
