@@ -907,25 +907,25 @@ BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
                 for (auto const& p : props) {
                     mqtt::visit(
                         mqtt::make_lambda_visitor<void>(
-                            [&](mqtt::v5::property::session_expiry_interval::recv const& t) {
+                            [&](mqtt::v5::property::session_expiry_interval const& t) {
                                 BOOST_TEST(t.val() == 0x12345678UL);
                             },
-                            [&](mqtt::v5::property::receive_maximum::recv const& t) {
+                            [&](mqtt::v5::property::receive_maximum const& t) {
                                 BOOST_TEST(t.val() == 0x1234U);
                             },
-                            [&](mqtt::v5::property::maximum_packet_size::recv const& t) {
+                            [&](mqtt::v5::property::maximum_packet_size const& t) {
                                 BOOST_TEST(t.val() == 0x12345678UL);
                             },
-                            [&](mqtt::v5::property::topic_alias_maximum::recv const& t) {
+                            [&](mqtt::v5::property::topic_alias_maximum const& t) {
                                 BOOST_TEST(t.val() == 0x1234U);
                             },
-                            [&](mqtt::v5::property::request_response_information::recv const& t) {
+                            [&](mqtt::v5::property::request_response_information const& t) {
                                 BOOST_TEST(t.val() == true);
                             },
-                            [&](mqtt::v5::property::request_problem_information::recv const& t) {
+                            [&](mqtt::v5::property::request_problem_information const& t) {
                                 BOOST_TEST(t.val() == false);
                             },
-                            [&](mqtt::v5::property::user_property::recv const& t) {
+                            [&](mqtt::v5::property::user_property const& t) {
                                 switch (con_user_prop_count++) {
                                 case 0:
                                     BOOST_TEST(t.key() == "key1");
@@ -940,10 +940,10 @@ BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
                                     break;
                                 }
                             },
-                            [&](mqtt::v5::property::authentication_method::recv const& t) {
+                            [&](mqtt::v5::property::authentication_method const& t) {
                                 BOOST_TEST(t.val() == "test authentication method");
                             },
-                            [&](mqtt::v5::property::authentication_data::recv const& t) {
+                            [&](mqtt::v5::property::authentication_data const& t) {
                                 BOOST_TEST(t.val() == "test authentication data");
                             },
                             [&](auto&& ...) {
@@ -962,13 +962,13 @@ BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
                 for (auto const& p : props) {
                     mqtt::visit(
                         mqtt::make_lambda_visitor<void>(
-                            [&](mqtt::v5::property::session_expiry_interval::recv const& t) {
+                            [&](mqtt::v5::property::session_expiry_interval const& t) {
                                 BOOST_TEST(t.val() == 0x12345678UL);
                             },
-                            [&](mqtt::v5::property::reason_string::recv const& t) {
+                            [&](mqtt::v5::property::reason_string const& t) {
                                 BOOST_TEST(t.val() == "test reason string");
                             },
-                            [&](mqtt::v5::property::user_property::recv const& t) {
+                            [&](mqtt::v5::property::user_property const& t) {
                                 switch (discon_user_prop_count++) {
                                 case 0:
                                     BOOST_TEST(t.key() == "key1");
@@ -983,7 +983,7 @@ BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
                                     break;
                                 }
                             },
-                            [&](mqtt::v5::property::server_reference::recv const& t) {
+                            [&](mqtt::v5::property::server_reference const& t) {
                                 BOOST_TEST(t.val() == "test server reference");
                             },
                             [&](auto&& ...) {
@@ -1082,31 +1082,31 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
                 for (auto const& p : props) {
                     mqtt::visit(
                         mqtt::make_lambda_visitor<void>(
-                            [&](mqtt::v5::property::session_expiry_interval::recv const& t) {
+                            [&](mqtt::v5::property::session_expiry_interval const& t) {
                                 BOOST_TEST(t.val() == 0);
                             },
-                            [&](mqtt::v5::property::receive_maximum::recv const& t) {
+                            [&](mqtt::v5::property::receive_maximum const& t) {
                                 BOOST_TEST(t.val() == 0);
                             },
-                            [&](mqtt::v5::property::maximum_qos::recv const& t) {
+                            [&](mqtt::v5::property::maximum_qos const& t) {
                                 BOOST_TEST(t.val() == 2);
                             },
-                            [&](mqtt::v5::property::retain_available::recv const& t) {
+                            [&](mqtt::v5::property::retain_available const& t) {
                                 BOOST_TEST(t.val() == true);
                             },
-                            [&](mqtt::v5::property::maximum_packet_size::recv const& t) {
+                            [&](mqtt::v5::property::maximum_packet_size const& t) {
                                 BOOST_TEST(t.val() == 0);
                             },
-                            [&](mqtt::v5::property::assigned_client_identifier::recv const& t) {
+                            [&](mqtt::v5::property::assigned_client_identifier const& t) {
                                 BOOST_TEST(t.val() == "test cid");
                             },
-                            [&](mqtt::v5::property::topic_alias_maximum::recv const& t) {
+                            [&](mqtt::v5::property::topic_alias_maximum const& t) {
                                 BOOST_TEST(t.val() == 0);
                             },
-                            [&](mqtt::v5::property::reason_string::recv const& t) {
+                            [&](mqtt::v5::property::reason_string const& t) {
                                 BOOST_TEST(t.val() == "test connect success");
                             },
-                            [&](mqtt::v5::property::user_property::recv const& t) {
+                            [&](mqtt::v5::property::user_property const& t) {
                                 switch (user_prop_count++) {
                                 case 0:
                                     BOOST_TEST(t.key() == "key1");
@@ -1121,28 +1121,28 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
                                     break;
                                 }
                             },
-                            [&](mqtt::v5::property::wildcard_subscription_available::recv const& t) {
+                            [&](mqtt::v5::property::wildcard_subscription_available const& t) {
                                 BOOST_TEST(t.val() == false);
                             },
-                            [&](mqtt::v5::property::subscription_identifier_available::recv const& t) {
+                            [&](mqtt::v5::property::subscription_identifier_available const& t) {
                                 BOOST_TEST(t.val() == false);
                             },
-                            [&](mqtt::v5::property::shared_subscription_available::recv const& t) {
+                            [&](mqtt::v5::property::shared_subscription_available const& t) {
                                 BOOST_TEST(t.val() == false);
                             },
-                            [&](mqtt::v5::property::server_keep_alive::recv const& t) {
+                            [&](mqtt::v5::property::server_keep_alive const& t) {
                                 BOOST_TEST(t.val() == 0);
                             },
-                            [&](mqtt::v5::property::response_information::recv const& t) {
+                            [&](mqtt::v5::property::response_information const& t) {
                                 BOOST_TEST(t.val() == "test response information");
                             },
-                            [&](mqtt::v5::property::server_reference::recv const& t) {
+                            [&](mqtt::v5::property::server_reference const& t) {
                                 BOOST_TEST(t.val() == "test server reference");
                             },
-                            [&](mqtt::v5::property::authentication_method::recv const& t) {
+                            [&](mqtt::v5::property::authentication_method const& t) {
                                 BOOST_TEST(t.val() == "test authentication method");
                             },
-                            [&](mqtt::v5::property::authentication_data::recv const& t) {
+                            [&](mqtt::v5::property::authentication_data const& t) {
                                 BOOST_TEST(t.val() == "test authentication data");
                             },
                             [&](auto&& ...) {

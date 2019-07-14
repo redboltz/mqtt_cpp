@@ -111,9 +111,9 @@ public:
         // set MQTT level handlers
         ep.set_connect_handler(
             [&]
-            (mqtt::string_view client_id,
-             mqtt::optional<mqtt::string_view> username,
-             mqtt::optional<mqtt::string_view> password,
+            (mqtt::buffer client_id,
+             mqtt::optional<mqtt::buffer> username,
+             mqtt::optional<mqtt::buffer> password,
              mqtt::optional<mqtt::will> will,
              bool clean_session,
              std::uint16_t keep_alive) {
@@ -132,9 +132,9 @@ public:
         );
         ep.set_v5_connect_handler(
             [&]
-            (mqtt::string_view client_id,
-             mqtt::optional<mqtt::string_view> username,
-             mqtt::optional<mqtt::string_view> password,
+            (mqtt::buffer client_id,
+             mqtt::optional<mqtt::buffer> username,
+             mqtt::optional<mqtt::buffer> password,
              mqtt::optional<mqtt::will> will,
              bool clean_session,
              std::uint16_t keep_alive,
@@ -223,8 +223,8 @@ public:
             [&]
             (std::uint8_t header,
              mqtt::optional<typename Endpoint::packet_id_t> packet_id,
-             mqtt::string_view topic_name,
-             mqtt::string_view contents){
+             mqtt::buffer topic_name,
+             mqtt::buffer contents){
                 return publish_handler(
                     ep,
                     header,
@@ -238,8 +238,8 @@ public:
             [&]
             (std::uint8_t header,
              mqtt::optional<typename Endpoint::packet_id_t> packet_id,
-             mqtt::string_view topic_name,
-             mqtt::string_view contents,
+             mqtt::buffer topic_name,
+             mqtt::buffer contents,
              std::vector<mqtt::v5::property_variant> props
             ) {
                 if (h_publish_props_) h_publish_props_(props);
@@ -255,7 +255,7 @@ public:
         ep.set_subscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries) {
+             std::vector<std::tuple<mqtt::buffer, std::uint8_t>> entries) {
                 return subscribe_handler(
                     ep,
                     packet_id,
@@ -267,7 +267,7 @@ public:
         ep.set_v5_subscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries,
+             std::vector<std::tuple<mqtt::buffer, std::uint8_t>> entries,
              std::vector<mqtt::v5::property_variant> props
             ) {
                 return subscribe_handler(
@@ -281,7 +281,7 @@ public:
         ep.set_unsubscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::vector<mqtt::string_view> topics) {
+             std::vector<mqtt::buffer> topics) {
                 return unsubscribe_handler(
                     ep,
                     packet_id,
@@ -293,7 +293,7 @@ public:
         ep.set_v5_unsubscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::vector<mqtt::string_view> topics,
+             std::vector<mqtt::buffer> topics,
              std::vector<mqtt::v5::property_variant> props
             ) {
                 return unsubscribe_handler(
@@ -410,9 +410,9 @@ private:
     template <typename Endpoint>
     bool connect_handler(
         Endpoint& ep,
-        mqtt::string_view client_id,
-        mqtt::optional<mqtt::string_view> const& /*username*/,
-        mqtt::optional<mqtt::string_view> const& /*password*/,
+        mqtt::buffer client_id,
+        mqtt::optional<mqtt::buffer> const& /*username*/,
+        mqtt::optional<mqtt::buffer> const& /*password*/,
         mqtt::optional<mqtt::will> will,
         bool clean_session,
         std::uint16_t /*keep_alive*/,
@@ -610,8 +610,8 @@ private:
         Endpoint& ep,
         std::uint8_t header,
         mqtt::optional<typename Endpoint::packet_id_t> packet_id,
-        mqtt::string_view topic_name,
-        mqtt::string_view contents,
+        mqtt::buffer topic_name,
+        mqtt::buffer contents,
         std::vector<mqtt::v5::property_variant> props) {
 
         std::uint8_t qos = mqtt::publish::get_qos(header);
@@ -660,7 +660,7 @@ private:
     bool subscribe_handler(
         Endpoint& ep,
         typename Endpoint::packet_id_t packet_id,
-        std::vector<std::tuple<mqtt::string_view, std::uint8_t>> entries,
+        std::vector<std::tuple<mqtt::buffer, std::uint8_t>> entries,
         std::vector<mqtt::v5::property_variant> props) {
 
         // An in-order list of qos settings, used to send the reply.
@@ -671,7 +671,7 @@ private:
         std::vector<std::uint8_t> res;
         res.reserve(entries.size());
         for (auto const& e : entries) {
-            mqtt::string_view topic = std::get<0>(e);
+            mqtt::buffer topic = std::get<0>(e);
             std::uint8_t qos = std::get<1>(e);
             res.emplace_back(qos);
             // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
@@ -693,7 +693,7 @@ private:
             break;
         }
         for (auto const& e : entries) {
-            mqtt::string_view topic = std::get<0>(e);
+            mqtt::buffer topic = std::get<0>(e);
             std::uint8_t qos = std::get<1>(e);
             // Publish any retained messages that match the newly subscribed topic.
             auto it = retains_.find(std::string(topic));
@@ -714,7 +714,7 @@ private:
     bool unsubscribe_handler(
         Endpoint& ep,
         typename Endpoint::packet_id_t packet_id,
-        std::vector<mqtt::string_view> topics,
+        std::vector<mqtt::buffer> topics,
         std::vector<mqtt::v5::property_variant> props) {
 
         auto spep = ep.shared_from_this();

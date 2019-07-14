@@ -724,22 +724,22 @@ BOOST_AUTO_TEST_CASE( prop ) {
                 for (auto const& p : props) {
                     mqtt::visit(
                         mqtt::make_lambda_visitor<void>(
-                            [&](mqtt::v5::property::payload_format_indicator::recv const& t) {
+                            [&](mqtt::v5::property::payload_format_indicator const& t) {
                                 BOOST_TEST(t.val() == mqtt::v5::property::payload_format_indicator::string);
                             },
-                            [&](mqtt::v5::property::message_expiry_interval::recv const& t) {
+                            [&](mqtt::v5::property::message_expiry_interval const& t) {
                                 BOOST_TEST(t.val() == 0x12345678UL);
                             },
-                            [&](mqtt::v5::property::topic_alias::recv const& t) {
+                            [&](mqtt::v5::property::topic_alias const& t) {
                                 BOOST_TEST(t.val() == 0x1234U);
                             },
-                            [&](mqtt::v5::property::response_topic::recv const& t) {
+                            [&](mqtt::v5::property::response_topic const& t) {
                                 BOOST_TEST(t.val() == "response topic");
                             },
-                            [&](mqtt::v5::property::correlation_data::recv const& t) {
+                            [&](mqtt::v5::property::correlation_data const& t) {
                                 BOOST_TEST(t.val() == "correlation data");
                             },
-                            [&](mqtt::v5::property::user_property::recv const& t) {
+                            [&](mqtt::v5::property::user_property const& t) {
                                 switch (user_prop_count++) {
                                 case 0:
                                     BOOST_TEST(t.key() == "key1");
@@ -754,7 +754,7 @@ BOOST_AUTO_TEST_CASE( prop ) {
                                     break;
                                 }
                             },
-                            [&](mqtt::v5::property::subscription_identifier::recv const& t) {
+                            [&](mqtt::v5::property::subscription_identifier const& t) {
                                 BOOST_TEST(t.val() == 123U);
                             },
                             [&](auto&& ...) {

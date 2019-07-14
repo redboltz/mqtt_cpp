@@ -33,55 +33,55 @@ void client_proc(Client& c) {
             for (auto const& p : props) {
                 mqtt::visit(
                     mqtt::make_lambda_visitor<void>(
-                        [&](mqtt::v5::property::session_expiry_interval::recv const& t) {
+                        [&](mqtt::v5::property::session_expiry_interval const& t) {
                             std::cout << "[client] prop: session_expiry_interval: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::receive_maximum::recv const& t) {
+                        [&](mqtt::v5::property::receive_maximum const& t) {
                             std::cout << "[client] prop: receive_maximum: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::maximum_qos::recv const& t) {
+                        [&](mqtt::v5::property::maximum_qos const& t) {
                             std::cout << "[client] prop: maximum_qos: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::retain_available::recv const& t) {
+                        [&](mqtt::v5::property::retain_available const& t) {
                             std::cout << "[client] prop: retain_available: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::maximum_packet_size::recv const& t) {
+                        [&](mqtt::v5::property::maximum_packet_size const& t) {
                             std::cout << "[client] prop: maximum_packet_size: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::assigned_client_identifier::recv const& t) {
+                        [&](mqtt::v5::property::assigned_client_identifier const& t) {
                             std::cout << "[client] prop: assigned_client_identifier_ref: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::topic_alias_maximum::recv const& t) {
+                        [&](mqtt::v5::property::topic_alias_maximum const& t) {
                             std::cout << "[client] prop: topic_alias_maximum: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::reason_string::recv const& t) {
+                        [&](mqtt::v5::property::reason_string const& t) {
                             std::cout << "[client] prop: reason_string_ref: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::user_property::recv const& t) {
+                        [&](mqtt::v5::property::user_property const& t) {
                             std::cout << "[client] prop: user_property_ref: " << t.key() << ":" << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::wildcard_subscription_available::recv const& t) {
+                        [&](mqtt::v5::property::wildcard_subscription_available const& t) {
                             std::cout << "[client] prop: wildcard_subscription_available: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::subscription_identifier_available::recv const& t) {
+                        [&](mqtt::v5::property::subscription_identifier_available const& t) {
                             std::cout << "[client] prop: subscription_identifier_available: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::shared_subscription_available::recv const& t) {
+                        [&](mqtt::v5::property::shared_subscription_available const& t) {
                             std::cout << "[client] prop: shared_subscription_available: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::server_keep_alive::recv const& t) {
+                        [&](mqtt::v5::property::server_keep_alive const& t) {
                             std::cout << "[client] prop: server_keep_alive: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::response_information::recv const& t) {
+                        [&](mqtt::v5::property::response_information const& t) {
                             std::cout << "[client] prop: response_information_ref: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::server_reference::recv const& t) {
+                        [&](mqtt::v5::property::server_reference const& t) {
                             std::cout << "[client] prop: server_reference_ref: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::authentication_method::recv const& t) {
+                        [&](mqtt::v5::property::authentication_method const& t) {
                             std::cout << "[client] prop: authentication_method_ref: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::authentication_data::recv const& t) {
+                        [&](mqtt::v5::property::authentication_data const& t) {
                             std::cout << "[client] prop: authentication_data_ref: " << t.val() << std::endl;
                         },
                         [&](auto&& ...) {
@@ -172,16 +172,16 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
             // set MQTT level handlers
             ep.set_v5_connect_handler( // use v5 handler
                 [&]
-                (mqtt::string_view client_id,
-                 mqtt::optional<mqtt::string_view> const& username,
-                 mqtt::optional<mqtt::string_view> const& password,
+                (mqtt::buffer client_id,
+                 mqtt::optional<mqtt::buffer> const& username,
+                 mqtt::optional<mqtt::buffer> const& password,
                  mqtt::optional<mqtt::will>,
                  bool clean_session,
                  std::uint16_t keep_alive,
                  std::vector<mqtt::v5::property_variant> props){
                     std::cout << "[server] client_id    : " << client_id << std::endl;
-                    std::cout << "[server] username     : " << (username ? username.value() : "none") << std::endl;
-                    std::cout << "[server] password     : " << (password ? password.value() : "none") << std::endl;
+                    std::cout << "[server] username     : " << (username ? username.value() : mqtt::buffer("none")) << std::endl;
+                    std::cout << "[server] password     : " << (password ? password.value() : mqtt::buffer("none")) << std::endl;
                     std::cout << "[server] clean_session: " << std::boolalpha << clean_session << std::endl;
                     std::cout << "[server] keep_alive   : " << keep_alive << std::endl;
 
@@ -189,31 +189,31 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                     for (auto const& p : props) {
                         mqtt::visit(
                             mqtt::make_lambda_visitor<void>(
-                                [&](mqtt::v5::property::session_expiry_interval::recv const& t) {
+                                [&](mqtt::v5::property::session_expiry_interval const& t) {
                                     std::cout << "[server] prop: session_expiry_interval: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::receive_maximum::recv const& t) {
+                                [&](mqtt::v5::property::receive_maximum const& t) {
                                     std::cout << "[server] prop: receive_maximum: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::maximum_packet_size::recv const& t) {
+                                [&](mqtt::v5::property::maximum_packet_size const& t) {
                                     std::cout << "[server] prop: maximum_packet_size: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::topic_alias_maximum::recv const& t) {
+                                [&](mqtt::v5::property::topic_alias_maximum const& t) {
                                     std::cout << "[server] prop: topic_alias_maximum: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::request_response_information::recv const& t) {
+                                [&](mqtt::v5::property::request_response_information const& t) {
                                     std::cout << "[server] prop: request_response_information: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::request_problem_information::recv const& t) {
+                                [&](mqtt::v5::property::request_problem_information const& t) {
                                     std::cout << "[server] prop: request_problem_information: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::user_property::recv const& t) {
+                                [&](mqtt::v5::property::user_property const& t) {
                                     std::cout << "[server] prop: user_property_ref: " << t.key() << ":" << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::authentication_method::recv const& t) {
+                                [&](mqtt::v5::property::authentication_method const& t) {
                                     std::cout << "[server] prop: authentication_method_ref: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::authentication_data::recv const& t) {
+                                [&](mqtt::v5::property::authentication_data const& t) {
                                     std::cout << "[server] prop: authentication_data_ref: " << t.val() << std::endl;
                                 },
                                 [&](auto&& ...) {

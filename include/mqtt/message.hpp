@@ -187,9 +187,8 @@ struct basic_pubrel_message : detail_v3_1_1::basic_header_packet_id_message<Pack
     {
     }
 
-    template <typename Iterator>
-    basic_pubrel_message(Iterator b, Iterator e)
-        : base(b, e)
+    basic_pubrel_message(buffer buf)
+        : base(buf.begin(), buf.end())
     {
     }
 
@@ -245,7 +244,7 @@ class connack_message {
 public:
     connack_message(bool session_present, std::uint8_t return_code)
         : message_ {
-                    static_cast<char>(make_fixed_header(control_packet_type::connack, 0b0000)),
+              static_cast<char>(make_fixed_header(control_packet_type::connack, 0b0000)),
               0b0010,
               static_cast<char>(session_present ? 1 : 0),
               static_cast<char>(return_code)
@@ -343,13 +342,13 @@ public:
             connect_flags::set_will_qos(connect_flags_, w.value().qos());
 
             utf8string_check(w.value().topic());
-            will_topic_name_ = as::buffer(w.value().topic());
+            will_topic_name_ = as::buffer(w.value().topic().data(), w.value().topic().size());
             add_uint16_t_to_buf(
                 will_topic_name_length_buf_,
                 static_cast<std::uint16_t>(get_size(will_topic_name_))
             );
             if (w.value().message().size() > 0xffffL) throw will_message_length_error();
-            will_message_ = as::buffer(w.value().message());
+            will_message_ = as::buffer(w.value().message().data(), w.value().message().size());
             add_uint16_t_to_buf(
                 will_message_length_buf_,
                 static_cast<std::uint16_t>(get_size(will_message_)));
@@ -529,46 +528,48 @@ public:
         }
     }
 
-    template <typename Iterator>
-    basic_publish_message(Iterator b, Iterator e) {
-        if (b + 1 > e) throw remaining_length_error();
-        fixed_header_ = static_cast<std::uint8_t>(*b);
+    basic_publish_message(buffer buf) {
+        if (buf.empty())  throw remaining_length_error();
+        fixed_header_ = static_cast<std::uint8_t>(buf.front());
         auto qos = publish::get_qos(fixed_header_);
-        ++b;
+        buf = buf.substr(1);
 
-        if (b + 1 > e) throw remaining_length_error();
-        auto len_consumed = remaining_length(b, e);
+        if (buf.empty()) throw remaining_length_error();
+        auto len_consumed = remaining_length(buf.begin(), buf.end());
         remaining_length_ = std::get<0>(len_consumed);
-        auto consumed = static_cast<std::string::difference_type>(std::get<1>(len_consumed));
+        auto consumed = std::get<1>(len_consumed);
 
-        std::copy(b, b + consumed, std::back_inserter(remaining_length_buf_));
-        b += consumed;
+        std::copy(
+            buf.begin(),
+            buf.begin() + consumed,
+            std::back_inserter(remaining_length_buf_));
+        buf = buf.substr(consumed);
 
-        if (b + 2 > e) throw remaining_length_error();
-        std::copy(b, b + 2, std::back_inserter(topic_name_length_buf_));
-        auto topic_name_length = make_uint16_t(b, b + 2);
-        b += 2;
+        if (buf.size() < 2) throw remaining_length_error();
+        std::copy(buf.begin(), buf.begin() + 2, std::back_inserter(topic_name_length_buf_));
+        auto topic_name_length = make_uint16_t(buf.begin(), buf.begin() + 2);
+        buf = buf.substr(2);
 
-        if (b + topic_name_length > e) throw remaining_length_error();
-        utf8string_check(string_view(&*b, topic_name_length));
-        topic_name_ = as::buffer(&*b, topic_name_length);
-        b += topic_name_length;
+        if (buf.size() < topic_name_length) throw remaining_length_error();
+        utf8string_check(buf.substr(0, topic_name_length));
+        topic_name_ = as::buffer(&buf.front(), topic_name_length);
+        buf = buf.substr(topic_name_length);
 
         switch (qos) {
         case qos::at_most_once:
             break;
         case qos::at_least_once:
         case qos::exactly_once:
-            if (b + PacketIdBytes > e) throw remaining_length_error();
-            std::copy(b, b + PacketIdBytes, std::back_inserter(packet_id_));
-            b += PacketIdBytes;
+            if (buf.size() < PacketIdBytes) throw remaining_length_error();
+            std::copy(buf.begin(), buf.begin() + PacketIdBytes, std::back_inserter(packet_id_));
+            buf = buf.substr(PacketIdBytes);
             break;
         default:
             throw protocol_error();
             break;
         };
 
-        payload_ = as::buffer(&*b, static_cast<std::size_t>(std::distance(b, e)));
+        payload_ = as::buffer(buf.data(), buf.size());
     }
 
     /**
