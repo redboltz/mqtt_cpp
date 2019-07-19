@@ -1,3 +1,7 @@
+## 5.0.1
+* Improved CI. (#330)
+* Fixed invalid std::any inclusion on mqtt::any. (#328)
+
 ## 5.0.0
 * Fixed invalid pointer comparison. (#324)
 * Fixed user_property value length. (#323)
