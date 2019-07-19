@@ -7,22 +7,26 @@
 #if !defined(MQTT_ANY_HPP)
 #define MQTT_ANY_HPP
 
-namespace mqtt {
-
 #ifdef MQTT_STD_ANY
 
 #include <any>
 
+namespace mqtt {
+
 using std::any;
+
+} // namespace mqtt
 
 #else  // MQTT_STD_ANY
 
 #include <boost/any.hpp>
 
+namespace mqtt {
+
 using boost::any;
 
-#endif // !defined(MQTT_STD_ANY)
-
 } // namespace mqtt
+
+#endif // !defined(MQTT_STD_ANY)
 
 #endif // MQTT_ANY_HPP
