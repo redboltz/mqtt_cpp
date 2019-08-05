@@ -72,7 +72,7 @@ ELSE ()
     MESSAGE (STATUS "Using boost::string_view instead of std::string_view")
 ENDIF ()
 
-IF (MQTT_STD_ANY_VIEW)
+IF (MQTT_STD_ANY)
     SET(CMAKE_CXX_STANDARD 17)
     SET(CMAKE_CXX_STANDARD_REQUIRED ON)
     MESSAGE (STATUS "Using std::any instead of boost::any. Enables C++17!!!")
