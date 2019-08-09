@@ -73,6 +73,7 @@ struct n_bytes_property {
      */
     template <typename It>
     void fill(It b, It e) const {
+        (void)e;
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
         *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         std::copy(buf_.begin(), buf_.end(), b);
@@ -129,6 +130,7 @@ struct binary_property {
      */
     template <typename It>
     void fill(It b, It e) const {
+        (void)e;
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
         *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         std::copy(length_.begin(), length_.end(), b);
@@ -190,6 +192,7 @@ struct binary_property_ref {
      */
     template <typename It>
     void fill(It b, It e) const {
+        (void)e;
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
         *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         std::copy(length_.begin(), length_.end(), b);
@@ -286,6 +289,7 @@ struct variable_property {
      */
     template <typename It>
     void fill(It b, It e) const {
+        (void)e;
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
         *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         std::copy(value_.begin(), value_.end(), b);
@@ -876,6 +880,7 @@ public:
 
     template <typename It>
     void fill(It b, It e) const {
+        (void)e;
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
 
         *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
@@ -957,6 +962,7 @@ public:
 
     template <typename It>
     void fill(It b, It e) const {
+        (void)e;
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
 
         *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
