@@ -8760,7 +8760,7 @@ private:
                         as::buffer(result.address, result.len),
                         [
                             this,
-                            self = this->shared_from_this(),
+                            self,
                             func = std::move(func),
                             handler = std::move(handler),
                             property_length,
@@ -8783,7 +8783,7 @@ private:
                     socket_->post(
                         [
                             this,
-                            self = this->shared_from_this(),
+                            self,
                             func = std::move(func),
                             buf = std::move(buf),
                             handler = std::move(handler),
@@ -9536,7 +9536,7 @@ private:
                         std::move(buf),
                         [
                             this,
-                            self = this->shared_from_this(),
+                            self,
                             props = std::move(props),
                             handler = std::move(handler),
                             key = std::move(key),
@@ -9956,7 +9956,7 @@ private:
                                 std::move(buf),
                                 [
                                     this,
-                                    self = this->shared_from_this(),
+                                    self,
                                     info = std::move(info)
                                 ]
                                 (buffer will_payload, buffer buf, async_handler_t func) mutable {
@@ -11229,7 +11229,7 @@ private:
                         1, // requested_qos
                         [
                             this,
-                            self = this->shared_from_this(),
+                            self,
                             info = std::move(info),
                             topic_filter = std::move(topic_filter)
                         ]
