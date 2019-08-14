@@ -17,6 +17,8 @@
 template <typename Client>
 void client_proc(Client& c) {
 
+    using namespace mqtt::literals; // for ""_mb
+
     // Setup client
     c->set_client_id("cid1");
     c->set_clean_session(true);
@@ -115,10 +117,10 @@ void client_proc(Client& c) {
         mqtt::v5::property::topic_alias_maximum(0x1234U),
         mqtt::v5::property::request_response_information(true),
         mqtt::v5::property::request_problem_information(false),
-        mqtt::v5::property::user_property("key1", "val1"),
-        mqtt::v5::property::user_property("key2", "val2"),
-        mqtt::v5::property::authentication_method("test authentication method"),
-        mqtt::v5::property::authentication_data("test authentication data")
+        mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+        mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
+        mqtt::v5::property::authentication_method("test authentication method"_mb),
+        mqtt::v5::property::authentication_data("test authentication data"_mb)
     };
 
     // Connect with properties
@@ -138,6 +140,9 @@ using con_sp_t = std::shared_ptr<con_t>;
 
 template <typename Server>
 void server_proc(Server& s, std::set<con_sp_t>& connections) {
+
+    using namespace mqtt::literals; // for ""_mb
+
     s.set_error_handler( // this handler doesn't depend on MQTT protocol version
         [](boost::system::error_code const& ec) {
             std::cout << "[server] error: " << ec.message() << std::endl;
@@ -232,19 +237,19 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                         mqtt::v5::property::maximum_qos(2),
                         mqtt::v5::property::retain_available(true),
                         mqtt::v5::property::maximum_packet_size(0),
-                        mqtt::v5::property::assigned_client_identifier("test cid"),
+                        mqtt::v5::property::assigned_client_identifier("test cid"_mb),
                         mqtt::v5::property::topic_alias_maximum(0),
-                        mqtt::v5::property::reason_string("test connect success"),
-                        mqtt::v5::property::user_property("key1", "val1"),
-                        mqtt::v5::property::user_property("key2", "val2"),
+                        mqtt::v5::property::reason_string("test connect success"_mb),
+                        mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+                        mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
                         mqtt::v5::property::wildcard_subscription_available(false),
                         mqtt::v5::property::subscription_identifier_available(false),
                         mqtt::v5::property::shared_subscription_available(false),
                         mqtt::v5::property::server_keep_alive(0),
-                        mqtt::v5::property::response_information("test response information"),
-                        mqtt::v5::property::server_reference("test server reference"),
-                        mqtt::v5::property::authentication_method("test authentication method"),
-                        mqtt::v5::property::authentication_data("test authentication data")
+                        mqtt::v5::property::response_information("test response information"_mb),
+                        mqtt::v5::property::server_reference("test server reference"_mb),
+                        mqtt::v5::property::authentication_method("test authentication method"_mb),
+                        mqtt::v5::property::authentication_data("test authentication data"_mb)
                     };
                     ep.connack(false, mqtt::connect_return_code::accepted, std::move(connack_ps));
                     return true;

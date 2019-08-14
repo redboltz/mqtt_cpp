@@ -12,6 +12,8 @@
 
 BOOST_AUTO_TEST_SUITE(test_retain)
 
+using namespace mqtt::literals;
+
 BOOST_AUTO_TEST_CASE( simple ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
@@ -645,10 +647,10 @@ BOOST_AUTO_TEST_CASE( prop ) {
             mqtt::v5::property::payload_format_indicator(mqtt::v5::property::payload_format_indicator::string),
             mqtt::v5::property::message_expiry_interval(0x12345678UL),
             mqtt::v5::property::topic_alias(0x1234U),
-            mqtt::v5::property::response_topic("response topic"),
-            mqtt::v5::property::correlation_data("correlation data"),
-            mqtt::v5::property::user_property("key1", "val1"),
-            mqtt::v5::property::user_property("key2", "val2"),
+            mqtt::v5::property::response_topic("response topic"_mb),
+            mqtt::v5::property::correlation_data("correlation data"_mb),
+            mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+            mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
             mqtt::v5::property::subscription_identifier(123),
         };
 

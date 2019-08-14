@@ -29,6 +29,8 @@ std::ostream& operator<<(std::ostream& o, validation e) {
 
 BOOST_AUTO_TEST_SUITE(test_utf8string_validate)
 
+using namespace mqtt::literals;
+
 BOOST_AUTO_TEST_CASE( one_byte ) {
 #if defined(MQTT_USE_STR_CHECK)
     using namespace mqtt::utf8string;
@@ -520,7 +522,7 @@ BOOST_AUTO_TEST_CASE( connect_overlength_will_topic ) {
         if (c->get_protocol_version() != mqtt::protocol_version::v3_1_1) return;
         try {
             std::string wt(0x10000, 'a');
-            c->set_will(mqtt::will(mqtt::buffer(wt), ""));
+            c->set_will(mqtt::will(mqtt::buffer(wt), ""_mb));
             c->set_clean_session(true);
             c->connect();
             ios.run();
@@ -540,7 +542,7 @@ BOOST_AUTO_TEST_CASE( connect_invalid_will_topic ) {
         if (c->get_protocol_version() != mqtt::protocol_version::v3_1_1) return;
         try {
             std::string wt(1, '\0');
-            c->set_will(mqtt::will(mqtt::buffer(wt), ""));
+            c->set_will(mqtt::will(mqtt::buffer(wt), ""_mb));
             c->set_clean_session(true);
             c->connect();
             ios.run();

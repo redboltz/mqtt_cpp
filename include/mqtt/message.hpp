@@ -552,7 +552,7 @@ public:
 
         if (buf.size() < topic_name_length) throw remaining_length_error();
         utf8string_check(buf.substr(0, topic_name_length));
-        topic_name_ = as::buffer(&buf.front(), topic_name_length);
+        topic_name_ = as::buffer(buf.data(), topic_name_length);
         buf = buf.substr(topic_name_length);
 
         switch (qos) {

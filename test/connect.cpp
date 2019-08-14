@@ -10,6 +10,8 @@
 
 BOOST_AUTO_TEST_SUITE(test_connect)
 
+using namespace mqtt::literals;
+
 BOOST_AUTO_TEST_CASE( connect ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
         c->set_client_id("cid1");
@@ -883,20 +885,20 @@ BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
             mqtt::v5::property::topic_alias_maximum(0x1234U),
             mqtt::v5::property::request_response_information(true),
             mqtt::v5::property::request_problem_information(false),
-            mqtt::v5::property::user_property("key1", "val1"),
-            mqtt::v5::property::user_property("key2", "val2"),
-            mqtt::v5::property::authentication_method("test authentication method"),
-            mqtt::v5::property::authentication_data("test authentication data")
+            mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+            mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
+            mqtt::v5::property::authentication_method("test authentication method"_mb),
+            mqtt::v5::property::authentication_data("test authentication data"_mb)
         };
 
         std::size_t con_user_prop_count = 0;
 
         std::vector<mqtt::v5::property_variant> discon_ps {
             mqtt::v5::property::session_expiry_interval(0x12345678UL),
-            mqtt::v5::property::reason_string("test reason string"),
-            mqtt::v5::property::user_property("key1", "val1"),
-            mqtt::v5::property::user_property("key2", "val2"),
-            mqtt::v5::property::server_reference("test server reference"),
+            mqtt::v5::property::reason_string("test reason string"_mb),
+            mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+            mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
+            mqtt::v5::property::server_reference("test server reference"_mb),
         };
 
         std::size_t discon_user_prop_count = 0;
@@ -1050,19 +1052,19 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
             mqtt::v5::property::maximum_qos(2),
             mqtt::v5::property::retain_available(true),
             mqtt::v5::property::maximum_packet_size(0),
-            mqtt::v5::property::assigned_client_identifier("test cid"),
+            mqtt::v5::property::assigned_client_identifier("test cid"_mb),
             mqtt::v5::property::topic_alias_maximum(0),
-            mqtt::v5::property::reason_string("test connect success"),
-            mqtt::v5::property::user_property("key1", "val1"),
-            mqtt::v5::property::user_property("key2", "val2"),
+            mqtt::v5::property::reason_string("test connect success"_mb),
+            mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+            mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
             mqtt::v5::property::wildcard_subscription_available(false),
             mqtt::v5::property::subscription_identifier_available(false),
             mqtt::v5::property::shared_subscription_available(false),
             mqtt::v5::property::server_keep_alive(0),
-            mqtt::v5::property::response_information("test response information"),
-            mqtt::v5::property::server_reference("test server reference"),
-            mqtt::v5::property::authentication_method("test authentication method"),
-            mqtt::v5::property::authentication_data("test authentication data")
+            mqtt::v5::property::response_information("test response information"_mb),
+            mqtt::v5::property::server_reference("test server reference"_mb),
+            mqtt::v5::property::authentication_method("test authentication method"_mb),
+            mqtt::v5::property::authentication_data("test authentication data"_mb)
         };
 
         auto prop_size = ps.size();

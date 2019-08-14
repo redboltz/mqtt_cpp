@@ -10,6 +10,8 @@
 
 BOOST_AUTO_TEST_SUITE(test_resend_serialize)
 
+using namespace mqtt::literals;
+
 template <typename Client, typename Packet>
 inline
 typename std::enable_if<
@@ -769,10 +771,10 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
         mqtt::v5::property::payload_format_indicator(mqtt::v5::property::payload_format_indicator::string),
         mqtt::v5::property::message_expiry_interval(0x12345678UL),
         mqtt::v5::property::topic_alias(0x1234U),
-        mqtt::v5::property::response_topic("response topic"),
-        mqtt::v5::property::correlation_data("correlation data"),
-        mqtt::v5::property::user_property("key1", "val1"),
-        mqtt::v5::property::user_property("key2", "val2"),
+        mqtt::v5::property::response_topic("response topic"_mb),
+        mqtt::v5::property::correlation_data("correlation data"_mb),
+        mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+        mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
         mqtt::v5::property::subscription_identifier(123),
     };
 
@@ -1105,9 +1107,9 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
     };
 
     std::vector<mqtt::v5::property_variant> ps {
-        mqtt::v5::property::reason_string("test success"),
-        mqtt::v5::property::user_property("key1", "val1"),
-        mqtt::v5::property::user_property("key2", "val2"),
+        mqtt::v5::property::reason_string("test success"_mb),
+        mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+        mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
     };
     std::size_t user_prop_count = 0;
 

@@ -100,18 +100,9 @@ struct n_bytes_property {
 };
 
 struct binary_property {
-    template <
-        typename Buffer,
-        typename = std::enable_if_t<
-            !std::is_same<
-                std::decay_t<Buffer>,
-                binary_property
-            >::value
-        >
-    >
-    binary_property(property::id id, Buffer&& buf)
+    binary_property(property::id id, buffer buf)
         :id_(id),
-         buf_(std::forward<Buffer>(buf)),
+         buf_(std::move(buf)),
          length_{ num_to_2bytes(static_cast<std::uint16_t>(buf_.size())) } {
              if (buf_.size() > 0xffff) throw property_length_error();
          }
@@ -168,17 +159,8 @@ struct binary_property {
 };
 
 struct string_property : binary_property {
-    template <
-        typename Buffer,
-        typename = std::enable_if_t<
-            !std::is_same<
-                std::decay_t<Buffer>,
-                string_property
-            >::value
-        >
-    >
-    string_property(property::id id, Buffer&& buf, bool already_checked)
-        :binary_property(id, std::forward<Buffer>(buf)) {
+    string_property(property::id id, buffer buf, bool already_checked)
+        :binary_property(id, std::move(buf)) {
         if (!already_checked) {
             auto r = utf8string::validate_contents(this->val());
             if (r != utf8string::validation::well_formed) throw utf8string_contents_error(r);
@@ -287,47 +269,20 @@ public:
 
 class content_type : public detail::string_property {
 public:
-    template <
-        typename Buffer,
-        typename = std::enable_if_t<
-            !std::is_same<
-                std::decay_t<Buffer>,
-                content_type
-            >::value
-        >
-    >
-    explicit content_type(Buffer&& val, bool already_checked = false)
-        : detail::string_property(id::content_type, std::forward<Buffer>(val), already_checked) {}
+    explicit content_type(buffer val, bool already_checked = false)
+        : detail::string_property(id::content_type, std::move(val), already_checked) {}
 };
 
 class response_topic : public detail::string_property {
 public:
-    template <
-        typename Buffer,
-        typename = std::enable_if_t<
-            !std::is_same<
-                std::decay_t<Buffer>,
-                response_topic
-            >::value
-        >
-    >
-    explicit response_topic(Buffer&& val, bool already_checked = false)
-        : detail::string_property(id::response_topic, std::forward<Buffer>(val), already_checked) {}
+    explicit response_topic(buffer val, bool already_checked = false)
+        : detail::string_property(id::response_topic, std::move(val), already_checked) {}
 };
 
 class correlation_data : public detail::string_property {
 public:
-    template <
-        typename Buffer,
-        typename = std::enable_if_t<
-            !std::is_same<
-                std::decay_t<Buffer>,
-                correlation_data
-            >::value
-        >
-    >
-    explicit correlation_data(Buffer&& val, bool already_checked = false)
-        : detail::string_property(id::correlation_data, std::forward<Buffer>(val), already_checked) {}
+    explicit correlation_data(buffer val, bool already_checked = false)
+        : detail::string_property(id::correlation_data, std::move(val), already_checked) {}
 };
 
 class subscription_identifier : public detail::variable_property {
@@ -356,17 +311,8 @@ public:
 
 class assigned_client_identifier : public detail::string_property {
 public:
-    template <
-        typename Buffer,
-        typename = std::enable_if_t<
-            !std::is_same<
-                std::decay_t<Buffer>,
-                assigned_client_identifier
-            >::value
-        >
-    >
-    explicit assigned_client_identifier(Buffer&& val, bool already_checked = false)
-        : detail::string_property(id::assigned_client_identifier, std::forward<Buffer>(val), already_checked) {}
+    explicit assigned_client_identifier(buffer val, bool already_checked = false)
+        : detail::string_property(id::assigned_client_identifier, std::move(val), already_checked) {}
 };
 
 class server_keep_alive : public detail::n_bytes_property<2> {
@@ -387,32 +333,14 @@ public:
 
 class authentication_method : public detail::string_property {
 public:
-    template <
-        typename Buffer,
-        typename = std::enable_if_t<
-            !std::is_same<
-                std::decay_t<Buffer>,
-                authentication_method
-            >::value
-        >
-    >
-    explicit authentication_method(Buffer&& val, bool already_checked = false)
-        : detail::string_property(id::authentication_method, std::forward<Buffer>(val), already_checked) {}
+    explicit authentication_method(buffer val, bool already_checked = false)
+        : detail::string_property(id::authentication_method, std::move(val), already_checked) {}
 };
 
 class authentication_data : public detail::binary_property {
 public:
-    template <
-        typename Buffer,
-        typename = std::enable_if_t<
-            !std::is_same<
-                std::decay_t<Buffer>,
-                authentication_data
-            >::value
-        >
-    >
-    explicit authentication_data(Buffer&& val)
-        : detail::binary_property(id::authentication_data, std::forward<Buffer>(val)) {}
+    explicit authentication_data(buffer val)
+        : detail::binary_property(id::authentication_data, std::move(val)) {}
 };
 
 class request_problem_information : public detail::n_bytes_property<1> {
@@ -465,47 +393,20 @@ public:
 
 class response_information : public detail::string_property {
 public:
-    template <
-        typename Buffer,
-        typename = std::enable_if_t<
-            !std::is_same<
-                std::decay_t<Buffer>,
-                response_information
-            >::value
-        >
-    >
-    explicit response_information(Buffer&& val, bool already_checked = false)
-        : detail::string_property(id::response_information, std::forward<Buffer>(val), already_checked) {}
+    explicit response_information(buffer val, bool already_checked = false)
+        : detail::string_property(id::response_information, std::move(val), already_checked) {}
 };
 
 class server_reference : public detail::string_property {
 public:
-    template <
-        typename Buffer,
-        typename = std::enable_if_t<
-            !std::is_same<
-                std::decay_t<Buffer>,
-                server_reference
-            >::value
-        >
-    >
-    explicit server_reference(Buffer&& val, bool already_checked = false)
-        : detail::string_property(id::server_reference, std::forward<Buffer>(val), already_checked) {}
+    explicit server_reference(buffer val, bool already_checked = false)
+        : detail::string_property(id::server_reference, std::move(val), already_checked) {}
 };
 
 class reason_string : public detail::string_property {
 public:
-    template <
-        typename Buffer,
-        typename = std::enable_if_t<
-            !std::is_same<
-                std::decay_t<Buffer>,
-                reason_string
-            >::value
-        >
-    >
-    explicit reason_string(Buffer&& val, bool already_checked = false)
-        : detail::string_property(id::reason_string, std::forward<Buffer>(val), already_checked) {}
+    explicit reason_string(buffer val, bool already_checked = false)
+        : detail::string_property(id::reason_string, std::move(val), already_checked) {}
 };
 
 class receive_maximum : public detail::n_bytes_property<2> {
@@ -597,42 +498,10 @@ public:
 };
 
 
-namespace detail {
-
-struct len_str {
-    template <
-        typename Buffer,
-        typename = std::enable_if_t<
-            !std::is_same<
-                std::decay_t<Buffer>,
-                len_str
-            >::value
-        >
-    >
-    explicit len_str(Buffer&& b, bool already_checked = false)
-        : buf(std::forward<Buffer>(b)),
-          len{ num_to_2bytes(static_cast<std::uint16_t>(buf.size())) }
-    {
-        if (!already_checked) {
-            auto r = utf8string::validate_contents(buf);
-            if (r != utf8string::validation::well_formed) throw utf8string_contents_error(r);
-        }
-    }
-
-    std::size_t size() const {
-        return len.size() + buf.size();
-    }
-    buffer buf;
-    boost::container::static_vector<char, 2> len;
-};
-
-} // namespace detail
-
 class user_property {
 public:
-    template <typename Key, typename Val>
-    user_property(Key&& key, Val&& val, bool key_already_checked = false, bool val_already_checked = false)
-        : key_(std::forward<Key>(key), key_already_checked), val_(std::forward<Val>(val), val_already_checked) {}
+    user_property(buffer key, buffer val, bool key_already_checked = false, bool val_already_checked = false)
+        : key_(std::move(key), key_already_checked), val_(std::move(val), val_already_checked) {}
 
     /**
      * @brief Add const buffer sequence into the given buffer.
@@ -700,11 +569,30 @@ public:
     }
 
     static constexpr detail::ostream_format const of_ = detail::ostream_format::key_val;
+
 private:
-    friend class user_property_ref;
+    struct len_str {
+        explicit len_str(buffer b, bool already_checked = false)
+            : buf(std::move(b)),
+              len{ num_to_2bytes(static_cast<std::uint16_t>(buf.size())) }
+        {
+            if (!already_checked) {
+                auto r = utf8string::validate_contents(buf);
+                if (r != utf8string::validation::well_formed) throw utf8string_contents_error(r);
+            }
+        }
+
+        std::size_t size() const {
+            return len.size() + buf.size();
+        }
+        buffer buf;
+        boost::container::static_vector<char, 2> len;
+    };
+
+private:
     property::id id_ = id::user_property;
-    detail::len_str key_;
-    detail::len_str val_;
+    len_str key_;
+    len_str val_;
 };
 
 class maximum_packet_size : public detail::n_bytes_property<4> {

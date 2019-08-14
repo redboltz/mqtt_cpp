@@ -15,6 +15,8 @@
 
 BOOST_AUTO_TEST_SUITE(test_property)
 
+using namespace mqtt::literals;
+
 BOOST_AUTO_TEST_CASE( payload_format_indicator ) {
     mqtt::v5::property::payload_format_indicator v1 { mqtt::v5::property::payload_format_indicator::binary };
     mqtt::v5::property::payload_format_indicator v2 { mqtt::v5::property::payload_format_indicator::string };
@@ -122,53 +124,53 @@ BOOST_AUTO_TEST_CASE( shared_subscription_available ) {
 // property has _ref
 
 BOOST_AUTO_TEST_CASE( content_type ) {
-    mqtt::v5::property::content_type v1 { "abc" };
+    mqtt::v5::property::content_type v1 { "abc"_mb };
     BOOST_TEST(boost::lexical_cast<std::string>(v1) == "abc");
 }
 
 BOOST_AUTO_TEST_CASE( response_topic ) {
-    mqtt::v5::property::response_topic v1 { "abc" };
+    mqtt::v5::property::response_topic v1 { "abc"_mb };
 
     BOOST_TEST(boost::lexical_cast<std::string>(v1) == "abc");
 }
 
 BOOST_AUTO_TEST_CASE( correlation_data ) {
-    mqtt::v5::property::correlation_data v1 { "abc" };
+    mqtt::v5::property::correlation_data v1 { "abc"_mb };
     BOOST_TEST(boost::lexical_cast<std::string>(v1) == "abc");
 }
 
 BOOST_AUTO_TEST_CASE( assigned_client_identifier ) {
-    mqtt::v5::property::assigned_client_identifier v1 { "abc" };
+    mqtt::v5::property::assigned_client_identifier v1 { "abc"_mb };
     BOOST_TEST(boost::lexical_cast<std::string>(v1) == "abc");
 }
 
 BOOST_AUTO_TEST_CASE( authentication_method ) {
-    mqtt::v5::property::authentication_method v1 { "abc" };
+    mqtt::v5::property::authentication_method v1 { "abc"_mb };
     BOOST_TEST(boost::lexical_cast<std::string>(v1) == "abc");
 }
 
 BOOST_AUTO_TEST_CASE( authentication_data ) {
-    mqtt::v5::property::authentication_data v1 { "abc" };
+    mqtt::v5::property::authentication_data v1 { "abc"_mb };
     BOOST_TEST(boost::lexical_cast<std::string>(v1) == "abc");
 }
 
 BOOST_AUTO_TEST_CASE( response_information ) {
-    mqtt::v5::property::response_information v1 { "abc" };
+    mqtt::v5::property::response_information v1 { "abc"_mb };
     BOOST_TEST(boost::lexical_cast<std::string>(v1) == "abc");
 }
 
 BOOST_AUTO_TEST_CASE( server_reference ) {
-    mqtt::v5::property::server_reference v1 { "abc" };
+    mqtt::v5::property::server_reference v1 { "abc"_mb };
     BOOST_TEST(boost::lexical_cast<std::string>(v1) == "abc");
 }
 
 BOOST_AUTO_TEST_CASE( reason_string ) {
-    mqtt::v5::property::reason_string v1 { "abc" };
+    mqtt::v5::property::reason_string v1 { "abc"_mb };
     BOOST_TEST(boost::lexical_cast<std::string>(v1) == "abc");
 }
 
 BOOST_AUTO_TEST_CASE( user_property ) {
-    mqtt::v5::property::user_property v1 { "abc", "def" };
+    mqtt::v5::property::user_property v1 { "abc"_mb, "def"_mb };
     BOOST_TEST(boost::lexical_cast<std::string>(v1) == "abc:def");
 }
 

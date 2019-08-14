@@ -14,9 +14,11 @@
 
 BOOST_AUTO_TEST_SUITE(test_message)
 
+using namespace mqtt::literals;
+
 BOOST_AUTO_TEST_CASE( connect_cbuf ) {
     std::string cid = "cid";
-    mqtt::optional<mqtt::will> w = mqtt::will("wt", "wmsg", false, 0);
+    mqtt::optional<mqtt::will> w = mqtt::will("wt"_mb, "wmsg"_mb, false, 0);
     mqtt::optional<std::string> user = std::string("user");
     mqtt::optional<std::string> password = std::string("pw");
     auto m = mqtt::connect_message(

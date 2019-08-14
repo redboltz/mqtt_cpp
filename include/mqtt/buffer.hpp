@@ -35,14 +35,31 @@ public:
           lifetime_(std::move(spa)) {
     }
 
-    buffer substr(std::size_t offset, std::size_t length = mqtt::string_view::npos) {
+    buffer substr(std::size_t offset, std::size_t length = mqtt::string_view::npos) const& {
         // range is checked in mqtt::string_view::substr.
         return buffer(mqtt::string_view::substr(offset, length), lifetime_);
+    }
+
+    buffer substr(std::size_t offset, std::size_t length = mqtt::string_view::npos) && {
+        // range is checked in mqtt::string_view::substr.
+        return buffer(mqtt::string_view::substr(offset, length), std::move(lifetime_));
+    }
+
+    mqtt::string_view view() const {
+        return *this;
     }
 
 private:
     shared_ptr_array lifetime_;
 };
+
+namespace literals {
+
+inline buffer operator""_mb(char const* str, std::size_t length) {
+    return buffer(str, length);
+}
+
+} // namespace literals
 
 } // namespace mqtt
 
