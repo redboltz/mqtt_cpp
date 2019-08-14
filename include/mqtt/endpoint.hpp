@@ -71,6 +71,7 @@ template <typename Socket, typename Mutex = std::mutex, template<typename...> cl
 class endpoint : public std::enable_shared_from_this<endpoint<Socket, Mutex, LockGuard, PacketIdBytes>> {
     using this_type = endpoint<Socket, Mutex, LockGuard, PacketIdBytes>;
 public:
+    using std::enable_shared_from_this<endpoint<Socket, Mutex, LockGuard, PacketIdBytes>>::shared_from_this;
     using async_handler_t = std::function<void(boost::system::error_code const& ec)>;
     using packet_id_t = typename packet_id_type<PacketIdBytes>::type;
 
@@ -7743,7 +7744,7 @@ protected:
         async_read(
             *socket_,
             as::buffer(&buf_[0], 1),
-            [this, self = this->shared_from_this(), func = std::move(func)](
+            [this, self = shared_from_this(), func = std::move(func)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred) {
                 if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
@@ -8243,7 +8244,7 @@ private:
         async_read(
             *socket_,
             as::buffer(&buf_[0], 1),
-            [this, self = this->shared_from_this(), func = std::move(func)](
+            [this, self = shared_from_this(), func = std::move(func)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred){
                 if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
@@ -8264,7 +8265,7 @@ private:
             async_read(
                 *socket_,
                 as::buffer(&buf_[0], 1),
-                [self = this->shared_from_this(), func = std::move(func)](
+                [self = shared_from_this(), func = std::move(func)](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
                     if (self->handle_close_or_error(ec)) {
@@ -8449,7 +8450,7 @@ private:
                 as::buffer(spa.get(), size),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     func = std::move(func),
                     size,
                     handler = std::move(handler),
@@ -8477,7 +8478,7 @@ private:
             }
             socket_->post(
                 [
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     func = std::move(func),
                     buf = std::move(buf),
                     size,
@@ -8512,7 +8513,7 @@ private:
                 as::buffer(&buf_[0], Bytes),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     func = std::move(func),
                     handler = std::move(handler)
                 ]
@@ -8530,7 +8531,7 @@ private:
         else {
             socket_->post(
                [
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     func = std::move(func),
                     buf = std::move(buf),
                     handler = std::move(handler)
@@ -8607,7 +8608,7 @@ private:
                 as::buffer(&buf_[0], 1),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     func = std::move(func),
                     handler = std::move(handler),
                     size,
@@ -8646,7 +8647,7 @@ private:
             std::move(func),
             std::move(buf),
             [
-                self = this->shared_from_this(),
+                self = shared_from_this(),
                 handler = std::move(handler)
             ]
             (std::size_t packet_id, buffer buf, async_handler_t func) mutable {
@@ -8668,7 +8669,7 @@ private:
             std::move(buf),
             [
                 this,
-                self = this->shared_from_this(),
+                self = shared_from_this(),
                 handler = std::move(handler)
             ]
             (std::size_t size,
@@ -8695,7 +8696,7 @@ private:
         process_binary(
             std::move(func),
             std::move(buf),
-            [this, self = this->shared_from_this(), handler = std::move(handler)]
+            [this, self = shared_from_this(), handler = std::move(handler)]
             (buffer str, buffer buf, async_handler_t func) mutable {
                 auto r = utf8string::validate_contents(str);
                 if (r != utf8string::validation::well_formed) {
@@ -8717,7 +8718,7 @@ private:
             std::move(buf),
             [
                 this,
-                self = this->shared_from_this(),
+                self = shared_from_this(),
                 handler = std::move(handler)
             ]
             (std::size_t property_length, buffer buf, async_handler_t func) mutable {
@@ -8823,7 +8824,7 @@ private:
                 as::buffer(&buf_[0], 1),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     func = std::move(func),
                     props = std::move(props),
                     handler = std::move(handler),
@@ -8847,7 +8848,7 @@ private:
             socket_->post(
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     func = std::move(func),
                     buf = std::move(buf),
                     props = std::move(props),
@@ -8896,7 +8897,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -8927,7 +8928,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -8952,7 +8953,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
@@ -8978,7 +8979,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
@@ -9004,7 +9005,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
@@ -9030,7 +9031,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest,
@@ -9063,7 +9064,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9088,7 +9089,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
@@ -9121,7 +9122,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9146,7 +9147,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
@@ -9172,7 +9173,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
@@ -9204,7 +9205,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9235,7 +9236,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9266,7 +9267,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9291,7 +9292,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
@@ -9317,7 +9318,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
@@ -9343,7 +9344,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
@@ -9375,7 +9376,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9406,7 +9407,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9437,7 +9438,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9468,7 +9469,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9499,7 +9500,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9524,7 +9525,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
@@ -9576,7 +9577,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9607,7 +9608,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9638,7 +9639,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9669,7 +9670,7 @@ private:
                 len,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
@@ -9710,7 +9711,7 @@ private:
                 as::buffer(ptr, remaining_length_),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     func = std::move(func),
                     spa = std::move(spa),
                     next_func = std::forward<NextFunc>(next_func),
@@ -9746,7 +9747,7 @@ private:
             as::buffer(&buf_[0], header_len),
             [
                 this,
-                self = this->shared_from_this(),
+                self = shared_from_this(),
                 func = std::move(func),
                 header_len,
                 next_func = std::forward<NextFunc>(next_func),
@@ -9887,7 +9888,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -9907,7 +9908,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer client_id, buffer buf, async_handler_t func) mutable {
@@ -9946,7 +9947,7 @@ private:
                         std::move(buf),
                         [
                             this,
-                            self = this->shared_from_this(),
+                            self = shared_from_this(),
                             info = std::move(info)
                         ]
                         (buffer will_topic, buffer buf, async_handler_t func) mutable {
@@ -9987,7 +9988,7 @@ private:
                     std::move(func),
                     std::move(buf),
                     [
-                        self = this->shared_from_this(),
+                        self = shared_from_this(),
                         info = std::move(info),
                         topic_message_proc
                     ]
@@ -10014,7 +10015,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer user_name, buffer buf, async_handler_t func) mutable {
@@ -10040,7 +10041,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer password, buffer buf, async_handler_t func) mutable {
@@ -10189,7 +10190,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -10255,7 +10256,7 @@ private:
                         auto async_connack_proc =
                             [
                                 this,
-                                self = this->shared_from_this(),
+                                self = shared_from_this(),
                                 func = std::move(func),
                                 connack_proc = std::move(connack_proc),
                                 org = std::move(org),
@@ -10328,7 +10329,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer topic_name, buffer buf, async_handler_t func) mutable {
@@ -10363,7 +10364,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
@@ -10389,7 +10390,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -10410,7 +10411,7 @@ private:
                 remaining_length_,
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer payload, buffer /*buf*/, async_handler_t func) mutable {
@@ -10550,7 +10551,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
@@ -10577,7 +10578,7 @@ private:
                 1, // reason_code
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func) mutable {
@@ -10597,7 +10598,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -10695,7 +10696,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
@@ -10722,7 +10723,7 @@ private:
                 1, // reason_code
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func) mutable {
@@ -10742,7 +10743,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -10868,7 +10869,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
@@ -10895,7 +10896,7 @@ private:
                 1, // reason_code
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func) mutable {
@@ -10915,7 +10916,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -11028,7 +11029,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
@@ -11055,7 +11056,7 @@ private:
                 1, // reason_code
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func) mutable {
@@ -11075,7 +11076,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -11174,7 +11175,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
@@ -11199,7 +11200,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -11219,7 +11220,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer topic_filter, buffer buf, async_handler_t func) mutable {
@@ -11332,7 +11333,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
@@ -11357,7 +11358,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -11378,7 +11379,7 @@ private:
                 remaining_length_, // Reason Codes
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer body, buffer /*buf*/, async_handler_t func) mutable {
@@ -11488,7 +11489,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
@@ -11513,7 +11514,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -11533,7 +11534,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer topic_filter, buffer buf, async_handler_t func) mutable {
@@ -11626,7 +11627,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
@@ -11664,7 +11665,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -11685,7 +11686,7 @@ private:
                 remaining_length_, // Reason Codes
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer body, buffer /*buf*/, async_handler_t func) mutable {
@@ -11816,7 +11817,7 @@ private:
                 1, // reason_code
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func) mutable {
@@ -11836,7 +11837,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -11935,7 +11936,7 @@ private:
                 1, // reason_code
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func) mutable {
@@ -11955,7 +11956,7 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = this->shared_from_this(),
+                    self = shared_from_this(),
                     info = std::move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
@@ -12688,7 +12689,7 @@ private:
 
         auto impl =
             [&] (auto msg) {
-                auto self = this->shared_from_this();
+                auto self = shared_from_this();
                 do_async_write(
                     std::move(msg),
                     [this, self, packet_id, func = std::move(func)]
@@ -12823,7 +12824,7 @@ private:
     ) {
         auto impl =
             [&] (auto msg) {
-                auto self = this->shared_from_this();
+                auto self = shared_from_this();
                 do_async_write(
                     std::move(msg),
                     [this, self, packet_id, func = std::move(func)]
@@ -13356,7 +13357,7 @@ private:
             *socket_,
             std::move(buf),
             write_completion_handler(
-                this->shared_from_this(),
+                shared_from_this(),
                 [handlers = std::move(handlers)]
                 (boost::system::error_code const& ec) {
                     for (auto const& h : handlers) {
@@ -13372,7 +13373,7 @@ private:
     void do_async_write(basic_message_variant<PacketIdBytes> mv, async_handler_t func) {
         // Move this job to the socket's strand so that it can be queued without mutexes.
         socket_->post(
-            [self = this->shared_from_this(), mv = std::move(mv), func = std::move(func)]
+            [self = shared_from_this(), mv = std::move(mv), func = std::move(func)]
             () {
                 if (!self->connected_) {
                     // offline async publish is successfully finished, because there's nothing to do.
