@@ -8877,7 +8877,7 @@ private:
         std::vector<v5::property_variant> props,
         std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t)> handler) {
 
-        constexpr std::size_t const length_bytes = 2;
+        static constexpr std::size_t const length_bytes = 2;
 
         if (property_length_rest == 0) {
             call_message_size_error_handlers(func);
