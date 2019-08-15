@@ -22,18 +22,18 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
     if (buf.empty()) return { mqtt::nullopt, std::move(buf) };
     try {
         auto id = static_cast<property::id>(buf.front());
-        buf = buf.substr(1);
+        buf = std::move(buf).substr(1);
         switch (id) {
         case id::payload_format_indicator: {
             if (buf.size() < 1) return { mqtt::nullopt, std::move(buf) };
             auto p = payload_format_indicator(buf.begin(), buf.begin() + 1);
-            buf = buf.substr(1);
+            buf = std::move(buf).substr(1);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::message_expiry_interval: {
             if (buf.size() < 4) return { mqtt::nullopt, std::move(buf) };
             auto p = message_expiry_interval(buf.begin(), buf.begin() + 4);
-            buf = buf.substr(4);
+            buf = std::move(buf).substr(4);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::content_type: {
@@ -41,7 +41,7 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
             auto len = make_uint16_t(buf.begin(), buf.begin() + 2);
             if (buf.size() < 2U + len) return { mqtt::nullopt, std::move(buf) };
             auto p = content_type(buf.substr(2, len));
-            buf = buf.substr(2 + len);
+            buf = std::move(buf).substr(2 + len);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::response_topic: {
@@ -49,7 +49,7 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
             auto len = make_uint16_t(buf.begin(), buf.begin() + 2);
             if (buf.size() < 2U + len) return { mqtt::nullopt, std::move(buf) };
             auto p = response_topic(buf.substr(2, len));
-            buf = buf.substr(2 + len);
+            buf = std::move(buf).substr(2 + len);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::correlation_data: {
@@ -57,7 +57,7 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
             auto len = make_uint16_t(buf.begin(), buf.begin() + 2);
             if (buf.size() < 2U + len) return { mqtt::nullopt, std::move(buf) };
             auto p = correlation_data(buf.substr(2, len));
-            buf = buf.substr(2 + len);
+            buf = std::move(buf).substr(2 + len);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::subscription_identifier: {
@@ -66,13 +66,13 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
             auto consumed = std::get<1>(val_consumed);
             if (consumed == 0) return { mqtt::nullopt, std::move(buf) };
             auto p = subscription_identifier(val);
-            buf = buf.substr(consumed);
+            buf = std::move(buf).substr(consumed);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::session_expiry_interval: {
             if (buf.size() < 4) return { mqtt::nullopt, std::move(buf) };
             auto p = session_expiry_interval(buf.begin(), buf.begin() + 4);
-            buf = buf.substr(4);
+            buf = std::move(buf).substr(4);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::assigned_client_identifier: {
@@ -80,13 +80,13 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
             auto len = make_uint16_t(buf.begin(), buf.begin() + 2);
             if (buf.size() < 2U + len) return { mqtt::nullopt, std::move(buf) };
             auto p = assigned_client_identifier(buf.substr(2, len));
-            buf = buf.substr(2 + len);
+            buf = std::move(buf).substr(2 + len);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::server_keep_alive: {
             if (buf.size() < 2) return { mqtt::nullopt, std::move(buf) };
             auto p = server_keep_alive(buf.begin(), buf.begin() + 2);
-            buf = buf.substr(2);
+            buf = std::move(buf).substr(2);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::authentication_method: {
@@ -94,7 +94,7 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
             auto len = make_uint16_t(buf.begin(), buf.begin() + 2);
             if (buf.size() < 2U + len) return { mqtt::nullopt, std::move(buf) };
             auto p = authentication_method(buf.substr(2, len));
-            buf = buf.substr(2 + len);
+            buf = std::move(buf).substr(2 + len);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::authentication_data: {
@@ -102,25 +102,25 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
             auto len = make_uint16_t(buf.begin(), buf.begin() + 2);
             if (buf.size() < 2U + len) return { mqtt::nullopt, std::move(buf) };
             auto p = authentication_data(buf.substr(2, len));
-            buf = buf.substr(2 + len);
+            buf = std::move(buf).substr(2 + len);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::request_problem_information: {
             if (buf.size() < 1) return { mqtt::nullopt, std::move(buf) };
             auto p = request_problem_information(buf.begin(), buf.begin() + 1);
-            buf = buf.substr(1);
+            buf = std::move(buf).substr(1);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::will_delay_interval: {
             if (buf.size() < 4) return { mqtt::nullopt, std::move(buf) };
             auto p = will_delay_interval(buf.begin(), buf.begin() + 4);
-            buf = buf.substr(4);
+            buf = std::move(buf).substr(4);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::request_response_information: {
             if (buf.size() < 1) return { mqtt::nullopt, std::move(buf) };
             auto p = request_response_information(buf.begin(), buf.begin() + 1);
-            buf = buf.substr(1);
+            buf = std::move(buf).substr(1);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::response_information: {
@@ -128,7 +128,7 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
             auto len = make_uint16_t(buf.begin(), buf.begin() + 2);
             if (buf.size() < 2U + len) return { mqtt::nullopt, std::move(buf) };
             auto p = response_information(buf.substr(2, len));
-            buf = buf.substr(2 + len);
+            buf = std::move(buf).substr(2 + len);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::server_reference: {
@@ -136,7 +136,7 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
             auto len = make_uint16_t(buf.begin(), buf.begin() + 2);
             if (buf.size() < 2U + len) return { mqtt::nullopt, std::move(buf) };
             auto p = server_reference(buf.substr(2, len));
-            buf = buf.substr(2 + len);
+            buf = std::move(buf).substr(2 + len);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::reason_string: {
@@ -144,37 +144,37 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
             auto len = make_uint16_t(buf.begin(), buf.begin() + 2);
             if (buf.size() < 2U + len) return { mqtt::nullopt, std::move(buf) };
             auto p = reason_string(buf.substr(2, len));
-            buf = buf.substr(2 + len);
+            buf = std::move(buf).substr(2 + len);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::receive_maximum: {
             if (buf.size() < 2) return { mqtt::nullopt, std::move(buf) };
             auto p = receive_maximum(buf.begin(), buf.begin() + 2);
-            buf = buf.substr(2);
+            buf = std::move(buf).substr(2);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::topic_alias_maximum: {
             if (buf.size() < 2) return { mqtt::nullopt, std::move(buf) };
             auto p = topic_alias_maximum(buf.begin(), buf.begin() + 2);
-            buf = buf.substr(2);
+            buf = std::move(buf).substr(2);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::topic_alias: {
             if (buf.size() < 2) return { mqtt::nullopt, std::move(buf) };
             auto p = topic_alias(buf.begin(), buf.begin() + 2);
-            buf = buf.substr(2);
+            buf = std::move(buf).substr(2);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::maximum_qos: {
             if (buf.size() < 1) return { mqtt::nullopt, std::move(buf) };
             auto p = maximum_qos(buf.begin(), buf.begin() + 1);
-            buf = buf.substr(1);
+            buf = std::move(buf).substr(1);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::retain_available: {
             if (buf.size() < 1) return { mqtt::nullopt, std::move(buf) };
             auto p = retain_available(buf.begin(), buf.begin() + 1);
-            buf = buf.substr(1);
+            buf = std::move(buf).substr(1);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::user_property: {
@@ -182,7 +182,7 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
             auto keylen = make_uint16_t(buf.begin(), buf.begin() + 2);
             if (buf.size() < 2U + keylen) return { mqtt::nullopt, std::move(buf) };
             auto key = buf.substr(2, keylen);
-            buf = buf.substr(2 + keylen);
+            buf = std::move(buf).substr(2 + keylen);
 
             if (buf.size() < 2) return { mqtt::nullopt, std::move(buf) };
             auto vallen = make_uint16_t(buf.begin(), buf.begin() + 2);
@@ -190,32 +190,32 @@ std::pair<mqtt::optional<property_variant>, buffer> parse_one(buffer buf) {
             auto val = buf.substr(2, vallen);
 
             auto p = user_property(std::move(key), std::move(val));
-            buf = buf.substr(2 + vallen);
+            buf = std::move(buf).substr(2 + vallen);
 
             return { property_variant(p), std::move(buf) };
         } break;
         case id::maximum_packet_size: {
             if (buf.size() < 4) return { mqtt::nullopt, std::move(buf) };
             auto p = maximum_packet_size(buf.begin(), buf.begin() + 4);
-            buf = buf.substr(4);
+            buf = std::move(buf).substr(4);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::wildcard_subscription_available: {
             if (buf.size() < 1) return { mqtt::nullopt, std::move(buf) };
             auto p = wildcard_subscription_available(buf.begin(), buf.begin() + 1);
-            buf = buf.substr(1);
+            buf = std::move(buf).substr(1);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::subscription_identifier_available: {
             if (buf.size() < 1) return { mqtt::nullopt, std::move(buf) };
             auto p = subscription_identifier_available(buf.begin(), buf.begin() + 1);
-            buf = buf.substr(1);
+            buf = std::move(buf).substr(1);
             return { property_variant(p), std::move(buf) };
         } break;
         case id::shared_subscription_available: {
             if (buf.size() < 1) return { mqtt::nullopt, std::move(buf) };
             auto p = shared_subscription_available(buf.begin(), buf.begin() + 1);
-            buf = buf.substr(1);
+            buf = std::move(buf).substr(1);
             return { property_variant(p), std::move(buf) };
         } break;
         }

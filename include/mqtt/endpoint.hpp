@@ -8537,9 +8537,10 @@ private:
                     handler = std::move(handler)
                ]
                () mutable {
+                    auto packet_id = make_packet_id<Bytes>::apply(&buf[0], &buf[0] + static_cast<buffer::difference_type>(Bytes));
                     handler(
-                        make_packet_id<Bytes>::apply(&buf[0], &buf[0] + static_cast<buffer::difference_type>(Bytes)),
-                        buf.substr(Bytes),
+                        packet_id,
+                        std::move(buf).substr(Bytes),
                         std::move(func)
                     );
                }
@@ -8592,13 +8593,13 @@ private:
                     BOOST_ASSERT(!buf.empty());
                     process_variable_length_impl(
                         std::move(func),
-                        buf.substr(1),
+                        std::move(buf).substr(1),
                         std::move(handler),
                         size,
                         multiplier);
                 }
                 else {
-                    handler(size, buf.substr(1), std::move(func));
+                    handler(size, std::move(buf).substr(1), std::move(func));
                 }
             };
 
@@ -8856,10 +8857,11 @@ private:
                     property_length_rest
                 ]
                 () mutable {
+                    auto id = static_cast<v5::property::id>(buf[0]);
                     process_property_body(
                         std::move(func),
-                        buf.substr(1),
-                        static_cast<v5::property::id>(buf[0]),
+                        std::move(buf).substr(1),
+                        id,
                         property_length_rest - 1,
                         std::move(props),
                         std::move(handler)
@@ -9872,7 +9874,7 @@ private:
 
             process_connect_impl(
                 std::move(func),
-                buf.substr(info.header_len), // consume buffer
+                std::move(buf).substr(info.header_len), // consume buffer
                 [&] {
                     if (version_ == protocol_version::v5) {
                         return connect_phase::properties;
@@ -10174,7 +10176,7 @@ private:
 
             process_connack_impl(
                 std::move(func),
-                buf.substr(info.header_len),
+                std::move(buf).substr(info.header_len),
                 [&] {
                     if (version_ == protocol_version::v5) {
                         return connack_phase::properties;
