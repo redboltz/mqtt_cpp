@@ -57,6 +57,7 @@
 #include <mqtt/subscribe.hpp>
 #include <mqtt/buffer.hpp>
 #include <mqtt/shared_ptr_array.hpp>
+#include <mqtt/type_erased_socket.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -67,11 +68,11 @@ namespace mqtt {
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
-template <typename Socket, typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard, std::size_t PacketIdBytes = 2>
-class endpoint : public std::enable_shared_from_this<endpoint<Socket, Mutex, LockGuard, PacketIdBytes>> {
-    using this_type = endpoint<Socket, Mutex, LockGuard, PacketIdBytes>;
+template <typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard, std::size_t PacketIdBytes = 2>
+class endpoint : public std::enable_shared_from_this<endpoint<Mutex, LockGuard, PacketIdBytes>> {
+    using this_type = endpoint<Mutex, LockGuard, PacketIdBytes>;
 public:
-    using std::enable_shared_from_this<endpoint<Socket, Mutex, LockGuard, PacketIdBytes>>::shared_from_this;
+    using std::enable_shared_from_this<endpoint<Mutex, LockGuard, PacketIdBytes>>::shared_from_this;
     using async_handler_t = std::function<void(boost::system::error_code const& ec)>;
     using packet_id_t = typename packet_id_type<PacketIdBytes>::type;
 
@@ -93,6 +94,7 @@ public:
      * @brief Constructor for server.
      *        socket should have already been connected with another endpoint.
      */
+    template <typename Socket>
     explicit endpoint(std::shared_ptr<Socket> socket, protocol_version version = protocol_version::undetermined, bool async_send_store = false)
         :socket_(std::move(socket)),
          connected_(true),
@@ -7310,23 +7312,6 @@ public:
     }
 
     /**
-     * @brief Get Socket shared_ptr reference.
-     * @return refereence of Socket unique_ptr
-     */
-    std::shared_ptr<Socket>& socket() {
-        return socket_;
-    }
-
-    /**
-     * @brief Get Socket shared_ptr const reference.
-     * @return const refereence of Socket unique_ptr
-     */
-    std::shared_ptr<Socket> const& socket() const {
-        return socket_;
-    }
-
-
-    /**
      * @brief Apply f to stored messages.
      * @param f applying function. f should be void(char const*, std::size_t)
      */
@@ -7738,11 +7723,26 @@ public:
         return version_;
     }
 
+    mqtt::socket const& socket() const {
+        return socket_.value();
+    }
+
+    mqtt::socket& socket() {
+        return socket_.value();
+    }
+
 protected:
 
+    /**
+     * @brief Get shared_any of socket
+     * @return reference of shared_any socket
+     */
+    mqtt::optional<mqtt::socket>& socket_optional() {
+        return socket_;
+    }
+
     void async_read_control_packet_type(async_handler_t func) {
-        async_read(
-            *socket_,
+        socket_->async_read(
             as::buffer(&buf_[0], 1),
             [this, self = shared_from_this(), func = std::move(func)](
                 boost::system::error_code const& ec,
@@ -7758,7 +7758,10 @@ protected:
         if (connected_) {
             connected_ = false;
             mqtt_connected_ = false;
-            shutdown_from_server(*socket_);
+            {
+                boost::system::error_code ec;
+                socket_->close(ec);
+            }
         }
         if (ec == as::error::eof ||
             ec == as::error::connection_reset
@@ -7861,42 +7864,6 @@ private:
         boost::system::error_code ec;
         socket.lowest_layer().close(ec);
     }
-
-    template <typename T>
-    void shutdown_from_server(T& socket) {
-        boost::system::error_code ec;
-        socket.close(ec);
-    }
-
-#if defined(MQTT_USE_WS)
-    template <typename T, typename S>
-    void shutdown_from_server(ws_endpoint<T, S>& /*socket*/) {
-    }
-#endif // defined(MQTT_USE_WS)
-
-#if !defined(MQTT_NO_TLS)
-    template <typename T>
-    void shutdown_from_client(as::ssl::stream<T>& socket) {
-        boost::system::error_code ec;
-        socket.lowest_layer().close(ec);
-    }
-    template <typename T>
-    void shutdown_from_server(as::ssl::stream<T>& socket) {
-        boost::system::error_code ec;
-        socket.lowest_layer().close(ec);
-    }
-#if defined(MQTT_USE_WS)
-    template <typename T, typename S>
-    void shutdown_from_client(ws_endpoint<as::ssl::stream<T>, S>& socket) {
-        boost::system::error_code ec;
-        socket.lowest_layer().close(ec);
-    }
-    template <typename T, typename S>
-    void shutdown_from_server(ws_endpoint<as::ssl::stream<T>, S>& /*socket*/) {
-    }
-#endif // defined(MQTT_USE_WS)
-#endif // defined(MQTT_NO_TLS)
-
 
     template <typename... Args>
     typename std::enable_if<
@@ -8241,8 +8208,7 @@ private:
         fixed_header_ = static_cast<std::uint8_t>(buf_[0]);
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
-        async_read(
-            *socket_,
+        socket_->async_read(
             as::buffer(&buf_[0], 1),
             [this, self = shared_from_this(), func = std::move(func)](
                 boost::system::error_code const& ec,
@@ -8262,8 +8228,7 @@ private:
             return;
         }
         if (buf_[0] & 0b10000000) {
-            async_read(
-                *socket_,
+            socket_->async_read(
                 as::buffer(&buf_[0], 1),
                 [self = shared_from_this(), func = std::move(func)](
                     boost::system::error_code const& ec,
@@ -8356,7 +8321,6 @@ private:
     }
 
     void process_payload(async_handler_t func) {
-
         auto control_packet_type = get_control_packet_type(fixed_header_);
         switch (control_packet_type) {
         case control_packet_type::connect:
@@ -8445,8 +8409,7 @@ private:
 
         if (buf.empty()) {
             shared_ptr_array spa { new char[size] };
-            async_read(
-                *socket_,
+            socket_->async_read(
                 as::buffer(spa.get(), size),
                 [
                     this,
@@ -8508,8 +8471,7 @@ private:
         remaining_length_ -= Bytes;
 
         if (buf.empty()) {
-            async_read(
-                *socket_,
+            socket_->async_read(
                 as::buffer(&buf_[0], Bytes),
                 [
                     this,
@@ -8604,8 +8566,7 @@ private:
             };
 
         if (buf.empty()) {
-            async_read(
-                *socket_,
+            socket_->async_read(
                 as::buffer(&buf_[0], 1),
                 [
                     this,
@@ -8757,8 +8718,7 @@ private:
                                     1
                                 };
                         } ();
-                    async_read(
-                        *socket_,
+                    socket_->async_read(
                         as::buffer(result.address, result.len),
                         [
                             this,
@@ -8820,8 +8780,7 @@ private:
 
         --remaining_length_;
         if (buf.empty()) {
-            async_read(
-                *socket_,
+            socket_->async_read(
                 as::buffer(&buf_[0], 1),
                 [
                     this,
@@ -9708,8 +9667,7 @@ private:
         if (all_read) {
             shared_ptr_array spa { new char[remaining_length_] };
             auto ptr = spa.get();
-            async_read(
-                *socket_,
+            socket_->async_read(
                 as::buffer(ptr, remaining_length_),
                 [
                     this,
@@ -9744,8 +9702,7 @@ private:
             return;
         }
 
-        async_read(
-            *socket_,
+        socket_->async_read(
             as::buffer(&buf_[0], header_len),
             [
                 this,
@@ -12525,7 +12482,7 @@ private:
         boost::system::error_code ec;
         if (!connected_) return;
         if (h_pre_send_) h_pre_send_();
-        write(*socket_, const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
+        socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
         if (ec) handle_error(ec);
     }
 
@@ -13355,8 +13312,7 @@ private:
 
         if (h_pre_send_) h_pre_send_();
 
-        async_write(
-            *socket_,
+        socket_->async_write(
             std::move(buf),
             write_completion_handler(
                 shared_from_this(),
@@ -13402,7 +13358,7 @@ protected:
     bool clean_session_{false};
 
 private:
-    std::shared_ptr<Socket> socket_;
+    mqtt::optional<mqtt::socket> socket_;
     std::atomic<bool> connected_{false};
     std::atomic<bool> mqtt_connected_{false};
 

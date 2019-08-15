@@ -31,21 +31,7 @@ namespace as = boost::asio;
  * Allow the broker to support incoming connections of
  * any supported type of mqtt::server.
  */
-using con_sp_t = mqtt::variant<
-    std::shared_ptr<mqtt::server<>::endpoint_t>
-#if !defined(MQTT_NO_TLS)
-    ,
-    std::shared_ptr<mqtt::server_tls<>::endpoint_t>
-#endif // !defined(MQTT_NO_TLS)
-#if defined(MQTT_USE_WS)
-    ,
-    std::shared_ptr<mqtt::server_ws<>::endpoint_t>
-#if !defined(MQTT_NO_TLS)
-    ,
-    std::shared_ptr<mqtt::server_tls_ws<>::endpoint_t>
-#endif // !defined(MQTT_NO_TLS)
-#endif // defined(MQTT_USE_WS)
->;
+using con_sp_t = std::shared_ptr<mqtt::server<>::endpoint_t>;
 
 class test_broker {
 public:
@@ -88,7 +74,7 @@ public:
     template <typename Endpoint>
     void handle_accept(Endpoint& ep) {
         auto sp = ep.shared_from_this();
-        ep.socket()->lowest_layer().set_option(as::ip::tcp::no_delay(true));
+        ep.socket().lowest_layer().set_option(as::ip::tcp::no_delay(true));
         ep.set_auto_pub_response(false);
         ep.start_session(
             [sp] // keeping ep's lifetime as sp until session finished
@@ -503,31 +489,27 @@ private:
         }
         else {
             // Disconnect the existing connection
-            mqtt::visit(
-                mqtt::make_lambda_visitor<void>(
-                    [&](auto& con) {
-                        // Completely cut this endpoint off from the broker!
-                        con->set_close_handler();
-                        con->set_error_handler();
-                        con->set_v5_connect_handler();
-                        con->set_v5_disconnect_handler();
-                        con->set_v5_puback_handler();
-                        con->set_v5_pubrec_handler();
-                        con->set_v5_pubrel_handler();
-                        con->set_v5_pubcomp_handler();
-                        con->set_v5_publish_handler();
-                        con->set_v5_subscribe_handler();
-                        con->set_v5_unsubscribe_handler();
-                        con->set_pingreq_handler();
-                        con->set_pingresp_handler();
-                        con->set_v5_auth_handler();
 
-                        // Force disconnect the client.
-                        // This shuts down the socket directly.
-                        con->force_disconnect();
-                    }),
-                    act_sess_it->con
-                );
+            // Completely cut this endpoint off from the broker!
+            act_sess_it->con->set_close_handler();
+            act_sess_it->con->set_error_handler();
+            act_sess_it->con->set_v5_connect_handler();
+            act_sess_it->con->set_v5_disconnect_handler();
+            act_sess_it->con->set_v5_puback_handler();
+            act_sess_it->con->set_v5_pubrec_handler();
+            act_sess_it->con->set_v5_pubrel_handler();
+            act_sess_it->con->set_v5_pubcomp_handler();
+            act_sess_it->con->set_v5_publish_handler();
+            act_sess_it->con->set_v5_subscribe_handler();
+            act_sess_it->con->set_v5_unsubscribe_handler();
+            act_sess_it->con->set_pingreq_handler();
+            act_sess_it->con->set_pingresp_handler();
+            act_sess_it->con->set_v5_auth_handler();
+
+            // Force disconnect the client.
+            // This shuts down the socket directly.
+            act_sess_it->con->force_disconnect();
+
             // Replace it with the new connection
             // Nothing more should need to be done
             // ...
@@ -788,26 +770,19 @@ private:
         std::vector<mqtt::v5::property_variant> props) {
         // For each active subscription registered for this topic
         for(auto const& sub : boost::make_iterator_range(subs_.get<tag_topic>().equal_range(*topic))) {
-            mqtt::visit(
-                mqtt::make_lambda_visitor<void>(
-                    [&](auto& con) {
-                        // publish the message to subscribers.
-                        // TODO: Probably this should be switched to async_publish?
-                        //       Given the async_client / sync_client seperation
-                        //       and the way they have different function names,
-                        //       it wouldn't be possible for test_broker.hpp to be
-                        //       used with some hypothetical "async_server" in the future.
-                        con->publish(
-                            as::buffer(*topic),
-                            as::buffer(*contents),
-                            std::make_pair(topic, contents),
-                            std::min(sub.qos, qos),
-                            false,
-                            props // TODO: Copying the properties vector for each subscription.
-                        );
-                    }
-                ),
-                sub.con
+            // publish the message to subscribers.
+            // TODO: Probably this should be switched to async_publish?
+            //       Given the async_client / sync_client seperation
+            //       and the way they have different function names,
+            //       it wouldn't be possible for test_broker.hpp to be
+            //       used with some hypothetical "async_server" in the future.
+            sub.con->publish(
+                as::buffer(*topic),
+                as::buffer(*contents),
+                std::make_pair(topic, contents),
+                std::min(sub.qos, qos),
+                false,
+                props // TODO: Copying the properties vector for each subscription.
             );
         }
 
@@ -948,15 +923,7 @@ private:
             will = state.will;
 
             // TODO: Should yank out the messages from this connection object and store it in the session_state object??
-            mqtt::visit(
-                mqtt::make_lambda_visitor<void>(
-                    [&](auto& con) {
-                        con.reset(); // clear the shared pointer, so it doesn't stay alive after this funciton ends.
-                    }
-                ),
-                state.con
-            );
-
+            state.con.reset(); // clear the shared pointer, so it doesn't stay alive after this funciton ends.
             act_sess_idx.erase(act_sess_it);
             BOOST_ASSERT(active_sessions_.get<tag_client_id>().count(*sp_client_id) == 0);
             BOOST_ASSERT(active_sessions_.get<tag_client_id>().find(*sp_client_id) == active_sessions_.get<tag_client_id>().end());
