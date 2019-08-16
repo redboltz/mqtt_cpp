@@ -31,11 +31,6 @@ using boost::optional;
 using nullopt_t = boost::none_t;
 static const auto nullopt = boost::none;
 
-template <typename T, typename U>
-inline void emplace(optional<T>& o, U&& u) {
-    o.emplace(std::forward<U>(u));
-}
-
 #endif // defined(MQTT_STD_OPTIONAL)
 
 } // namespace mqtt
