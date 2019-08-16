@@ -45,10 +45,6 @@ public:
         return buffer(mqtt::string_view::substr(offset, length), std::move(lifetime_));
     }
 
-    mqtt::string_view view() const {
-        return *this;
-    }
-
 private:
     shared_ptr_array lifetime_;
 };
