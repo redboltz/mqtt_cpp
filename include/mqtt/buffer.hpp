@@ -63,4 +63,16 @@ inline buffer operator""_mb(char const* str, std::size_t length) {
 
 } // namespace mqtt
 
+#include <boost/asio/buffer.hpp>
+
+namespace boost {
+namespace asio {
+
+inline const_buffer buffer(mqtt::buffer const& data) {
+    return buffer(data.data(), data.size());
+}
+
+} // namespace asio
+} // namespace boost
+
 #endif // MQTT_BUFFER_HPP
