@@ -7437,6 +7437,12 @@ public:
             );
         } break;
         case control_packet_type::pubrel: {
+            static_assert(
+                std::is_same<
+                    typename std::iterator_traits<Iterator>::iterator_category,
+                    std::random_access_iterator_tag
+                >::value
+            );
             restore_serialized_message(
                 basic_pubrel_message<PacketIdBytes>(
                     buffer(&*b, static_cast<std::size_t>(std::distance(b, e)))
