@@ -204,13 +204,13 @@ public:
             }
 
             utf8string_check(w.value().topic());
-            will_topic_name_ = as::buffer(w.value().topic().data(), w.value().topic().size());
+            will_topic_name_ = as::buffer(w.value().topic());
             add_uint16_t_to_buf(
                 will_topic_name_length_buf_,
                 static_cast<std::uint16_t>(get_size(will_topic_name_))
             );
             if (w.value().message().size() > 0xffffL) throw will_message_length_error();
-            will_message_ = as::buffer(w.value().message().data(), w.value().message().size());
+            will_message_ = as::buffer(w.value().message());
             add_uint16_t_to_buf(
                 will_message_length_buf_,
                 static_cast<std::uint16_t>(get_size(will_message_)));

@@ -187,7 +187,7 @@ struct basic_pubrel_message : detail_v3_1_1::basic_header_packet_id_message<Pack
     {
     }
 
-    basic_pubrel_message(buffer buf)
+    basic_pubrel_message(mqtt::string_view const& buf)
         : base(buf.begin(), buf.end())
     {
     }
@@ -342,13 +342,13 @@ public:
             connect_flags::set_will_qos(connect_flags_, w.value().qos());
 
             utf8string_check(w.value().topic());
-            will_topic_name_ = as::buffer(w.value().topic().data(), w.value().topic().size());
+            will_topic_name_ = as::buffer(w.value().topic());
             add_uint16_t_to_buf(
                 will_topic_name_length_buf_,
                 static_cast<std::uint16_t>(get_size(will_topic_name_))
             );
             if (w.value().message().size() > 0xffffL) throw will_message_length_error();
-            will_message_ = as::buffer(w.value().message().data(), w.value().message().size());
+            will_message_ = as::buffer(w.value().message());
             add_uint16_t_to_buf(
                 will_message_length_buf_,
                 static_cast<std::uint16_t>(get_size(will_message_)));
@@ -528,11 +528,11 @@ public:
         }
     }
 
-    basic_publish_message(buffer buf) {
+    basic_publish_message(mqtt::string_view buf) {
         if (buf.empty())  throw remaining_length_error();
         fixed_header_ = static_cast<std::uint8_t>(buf.front());
         auto qos = publish::get_qos(fixed_header_);
-        buf = buf.substr(1);
+        buf = std::move(buf).substr(1);
 
         if (buf.empty()) throw remaining_length_error();
         auto len_consumed = remaining_length(buf.begin(), buf.end());
@@ -548,12 +548,12 @@ public:
         if (buf.size() < 2) throw remaining_length_error();
         std::copy(buf.begin(), buf.begin() + 2, std::back_inserter(topic_name_length_buf_));
         auto topic_name_length = make_uint16_t(buf.begin(), buf.begin() + 2);
-        buf = buf.substr(2);
+        buf = std::move(buf).substr(2);
 
         if (buf.size() < topic_name_length) throw remaining_length_error();
         utf8string_check(buf.substr(0, topic_name_length));
         topic_name_ = as::buffer(buf.data(), topic_name_length);
-        buf = buf.substr(topic_name_length);
+        buf = std::move(buf).substr(topic_name_length);
 
         switch (qos) {
         case qos::at_most_once:
@@ -562,7 +562,7 @@ public:
         case qos::exactly_once:
             if (buf.size() < PacketIdBytes) throw remaining_length_error();
             std::copy(buf.begin(), buf.begin() + PacketIdBytes, std::back_inserter(packet_id_));
-            buf = buf.substr(PacketIdBytes);
+            buf = std::move(buf).substr(PacketIdBytes);
             break;
         default:
             throw protocol_error();
