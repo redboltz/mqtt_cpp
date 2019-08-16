@@ -574,7 +574,7 @@ BOOST_AUTO_TEST_CASE( overlength_message ) {
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     std::string wm(0x10000, 'a');
-    c1->set_will(mqtt::will("topic1"_mb, mqtt::buffer(wm)));
+    c1->set_will(mqtt::will("topic1"_mb, mqtt::buffer(mqtt::string_view(wm))));
     c1->set_clean_session(true);
     c1->connect();
     try {

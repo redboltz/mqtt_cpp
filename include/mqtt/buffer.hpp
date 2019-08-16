@@ -21,17 +21,10 @@ public:
     explicit constexpr buffer(mqtt::string_view v = mqtt::string_view())
         : mqtt::string_view(std::move(v)) {}
 
-    constexpr buffer(char const* ptr, std::size_t size)
-        : mqtt::string_view(ptr, size) {
-    }
+    buffer(std::string) = delete; // to avoid misuse
 
     buffer(mqtt::string_view view, shared_ptr_array spa)
         : mqtt::string_view(std::move(view)),
-          lifetime_(std::move(spa)) {
-    }
-
-    buffer(char const* ptr, std::size_t size, shared_ptr_array spa)
-        : mqtt::string_view(ptr, size),
           lifetime_(std::move(spa)) {
     }
 
@@ -49,10 +42,10 @@ private:
     shared_ptr_array lifetime_;
 };
 
-namespace literals {
+inline namespace literals {
 
 inline buffer operator""_mb(char const* str, std::size_t length) {
-    return buffer(str, length);
+    return buffer(mqtt::string_view(str, length));
 }
 
 } // namespace literals

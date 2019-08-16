@@ -7425,7 +7425,8 @@ public:
             std::is_same<
                 typename std::iterator_traits<Iterator>::iterator_category,
                 std::random_access_iterator_tag
-            >::value
+            >::value,
+            "Iterator doesn't support random access"
         );
 
         if (b == e) return;
@@ -7438,7 +7439,7 @@ public:
             std::copy(b, e, spa.get());
             restore_serialized_message(
                 basic_publish_message<PacketIdBytes>(
-                    buffer(spa.get(), size)
+                    buffer(string_view(spa.get(), size))
                 ),
                 spa
             );
@@ -7446,7 +7447,7 @@ public:
         case control_packet_type::pubrel: {
             restore_serialized_message(
                 basic_pubrel_message<PacketIdBytes>(
-                    buffer(&*b, static_cast<std::size_t>(std::distance(b, e)))
+                    buffer(string_view(&*b, static_cast<std::size_t>(std::distance(b, e))))
                 )
             );
         } break;
@@ -7547,7 +7548,7 @@ public:
             std::copy(b, e, spa.get());
             restore_v5_serialized_message(
                 v5::basic_publish_message<PacketIdBytes>(
-                    buffer(spa.get(), size)
+                    buffer(string_view(spa.get(), size))
                 ),
                 spa
             );
@@ -7558,7 +7559,7 @@ public:
             std::copy(b, e, spa.get());
             restore_v5_serialized_message(
                 v5::basic_pubrel_message<PacketIdBytes>(
-                    buffer(spa.get(), size)
+                    buffer(string_view(spa.get(), size))
                 ),
                 spa
             );
@@ -8431,10 +8432,7 @@ private:
                     if (!check_error_and_transferred_length(ec, func, bytes_transferred, size)) return;
                     auto ptr = spa.get();
                     handler(
-                        buffer(
-                            mqtt::string_view(ptr, size),
-                            std::move(spa)
-                        ),
+                        buffer(string_view(ptr, size), std::move(spa)),
                         buffer(),
                         std::move(func)
                     );
@@ -8587,7 +8585,7 @@ private:
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
-                    proc(std::move(func), buffer(&buf_[0], 1), std::move(handler), size, multiplier);
+                    proc(std::move(func), buffer(string_view(buf_.data(), 1)), std::move(handler), size, multiplier);
                 }
             );
         }
@@ -8740,7 +8738,7 @@ private:
                             if (!check_error_and_transferred_length(ec, func, bytes_transferred, result.len)) return;
                             process_property_id(
                                 std::move(func),
-                                buffer(result.address, result.len, result.spa),
+                                buffer(string_view(result.address, result.len), result.spa),
                                 property_length,
                                 std::vector<v5::property_variant>(),
                                 std::move(handler)
@@ -9690,7 +9688,7 @@ private:
                     auto ptr = spa.get();
                     (this->*next_func)(
                         std::move(func),
-                        buffer(ptr, remaining_length_, std::move(spa)),
+                        buffer(string_view(ptr, remaining_length_), std::move(spa)),
                         next_phase,
                         std::move(info)
                     );
@@ -9725,7 +9723,7 @@ private:
                 if (!check_error_and_transferred_length(ec, func, bytes_transferred, header_len)) return;
                 (this->*next_func)(
                     std::move(func),
-                    buffer(&buf_[0], header_len),
+                    buffer(string_view(buf_.data(), header_len)),
                     next_phase,
                     std::move(info)
                 );

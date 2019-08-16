@@ -19,7 +19,7 @@ typename std::enable_if<
 >::type
 restore_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_serialized_message(
-        mqtt::publish_message(mqtt::buffer(&packet.front(), packet.size())),
+        mqtt::publish_message(mqtt::buffer(mqtt::string_view(packet.data(), packet.size()))),
         []{}
     );
 }
@@ -31,7 +31,7 @@ typename std::enable_if<
 >::type
 restore_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_serialized_message(
-        mqtt::publish_32_message(mqtt::buffer(&packet.front(), packet.size())),
+        mqtt::publish_32_message(mqtt::buffer(mqtt::string_view(packet.data(), packet.size()))),
         []{}
     );
 }
@@ -43,7 +43,7 @@ typename std::enable_if<
 >::type
 restore_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_serialized_message(
-        mqtt::pubrel_message(mqtt::buffer(&packet.front(), packet.size()))
+        mqtt::pubrel_message(mqtt::buffer(mqtt::string_view(packet.data(), packet.size())))
     );
 }
 
@@ -54,7 +54,7 @@ typename std::enable_if<
 >::type
 restore_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_serialized_message(
-        mqtt::pubrel_32_message(mqtt::buffer(&packet.front(), packet.size()))
+        mqtt::pubrel_32_message(mqtt::buffer(mqtt::string_view(packet.data(), packet.size())))
     );
 }
 
@@ -634,7 +634,7 @@ typename std::enable_if<
 >::type
 restore_v5_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
-        mqtt::v5::publish_message(mqtt::buffer(&packet.front(), packet.size())),
+        mqtt::v5::publish_message(mqtt::buffer(mqtt::string_view(packet.data(), packet.size()))),
         boost::any()
     );
 }
@@ -646,7 +646,7 @@ typename std::enable_if<
 >::type
 restore_v5_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
-        mqtt::v5::publish_32_message(mqtt::buffer(&packet.front(), packet.size())),
+        mqtt::v5::publish_32_message(mqtt::buffer(mqtt::string_view(packet.data(), packet.size()))),
         boost::any()
     );
 }
@@ -658,7 +658,7 @@ typename std::enable_if<
 >::type
 restore_v5_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
-        mqtt::v5::pubrel_message(mqtt::buffer(&packet.front(), packet.size())),
+        mqtt::v5::pubrel_message(mqtt::buffer(mqtt::string_view(packet.data(), packet.size()))),
         boost::any()
     );
 }
@@ -670,7 +670,7 @@ typename std::enable_if<
 >::type
 restore_v5_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
-        mqtt::v5::pubrel_32_message(mqtt::buffer(&packet.front(), packet.size())),
+        mqtt::v5::pubrel_32_message(mqtt::buffer(mqtt::string_view(packet.data(), packet.size()))),
         boost::any()
     );
 }

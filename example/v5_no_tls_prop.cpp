@@ -17,7 +17,7 @@
 template <typename Client>
 void client_proc(Client& c) {
 
-    using namespace mqtt::literals; // for ""_mb
+    using namespace mqtt; // for ""_mb
 
     // Setup client
     c->set_client_id("cid1");
@@ -185,8 +185,8 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                  std::uint16_t keep_alive,
                  std::vector<mqtt::v5::property_variant> props){
                     std::cout << "[server] client_id    : " << client_id << std::endl;
-                    std::cout << "[server] username     : " << (username ? username.value() : mqtt::buffer("none")) << std::endl;
-                    std::cout << "[server] password     : " << (password ? password.value() : mqtt::buffer("none")) << std::endl;
+                    std::cout << "[server] username     : " << (username ? username.value() : "none"_mb) << std::endl;
+                    std::cout << "[server] password     : " << (password ? password.value() : "none"_mb) << std::endl;
                     std::cout << "[server] clean_session: " << std::boolalpha << clean_session << std::endl;
                     std::cout << "[server] keep_alive   : " << keep_alive << std::endl;
 
