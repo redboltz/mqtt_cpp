@@ -10494,7 +10494,7 @@ private:
                     this,
                     info = std::move(info)
                 ]
-                (buffer payload, buffer /*buf*/, async_handler_t func, this_type_sp self) mutable {
+                (buffer payload, buffer /*buf*/, async_handler_t func, this_type_sp /*self*/) mutable {
                     auto handler_call =
                         [&] {
                             switch (version_) {
