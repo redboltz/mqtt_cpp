@@ -12,7 +12,7 @@ install:
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then ./cmake-3.8.2-Linux-x86_64.sh --prefix=${BASE}/usr --skip-license; fi
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export PATH="${BASE}/usr/bin:$PATH"; fi
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export LD_LIBRARY_PATH="${BASE}/usr/lib:$LD_LIBRARY_PATH"; fi
- - if [ "$CXX" = "g++" ]; then export CXX="g++-9" CC="gcc-9"; fi
+ - if [ "$CXX" = "g++" ]; then export CXX="g++" CC="gcc"; fi
  - if [ "$CXX" = "clang++" ] && [ "$TRAVIS_OS_NAME" == "linux" ]; then export CXX="clang++-8" CC="clang-8"; fi
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export OPENSSL_ROOT_DIR="${BASE}/usr"; fi
  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then export OPENSSL_ROOT_DIR="/usr/local/opt/openssl"; fi
