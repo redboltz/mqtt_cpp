@@ -71,8 +71,9 @@ namespace mi = boost::multi_index;
 template <typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard, std::size_t PacketIdBytes = 2>
 class endpoint : public std::enable_shared_from_this<endpoint<Mutex, LockGuard, PacketIdBytes>> {
     using this_type = endpoint<Mutex, LockGuard, PacketIdBytes>;
+    using this_type_sp = std::shared_ptr<this_type>;
 public:
-    using std::enable_shared_from_this<endpoint<Mutex, LockGuard, PacketIdBytes>>::shared_from_this;
+    using std::enable_shared_from_this<this_type>::shared_from_this;
     using async_handler_t = std::function<void(boost::system::error_code const& ec)>;
     using packet_id_t = typename packet_id_type<PacketIdBytes>::type;
 
@@ -7750,13 +7751,14 @@ protected:
     }
 
     void async_read_control_packet_type(async_handler_t func) {
+        auto self = shared_from_this();
         socket_->async_read(
             as::buffer(&buf_[0], 1),
-            [this, self = shared_from_this(), func = std::move(func)](
+            [this, self = std::move(self), func = std::move(func)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred) {
                 if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
-                handle_control_packet_type(std::move(func));
+                handle_control_packet_type(std::move(func), std::move(self));
             }
         );
     }
@@ -8212,22 +8214,22 @@ private:
         >
     >;
 
-    void handle_control_packet_type(async_handler_t func) {
+    void handle_control_packet_type(async_handler_t func, this_type_sp self) {
         fixed_header_ = static_cast<std::uint8_t>(buf_[0]);
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
         socket_->async_read(
             as::buffer(&buf_[0], 1),
-            [this, self = shared_from_this(), func = std::move(func)](
+            [this, self = std::move(self), func = std::move(func)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred){
                 if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
-                handle_remaining_length(std::move(func));
+                handle_remaining_length(std::move(func), std::move(self));
             }
         );
     }
 
-    void handle_remaining_length(async_handler_t func) {
+    void handle_remaining_length(async_handler_t func, this_type_sp self) {
         remaining_length_ += (buf_[0] & 0b01111111) * remaining_length_multiplier_;
         remaining_length_multiplier_ *= 128;
         if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) {
@@ -8238,7 +8240,7 @@ private:
         if (buf_[0] & 0b10000000) {
             socket_->async_read(
                 as::buffer(&buf_[0], 1),
-                [self = shared_from_this(), func = std::move(func)](
+                [self = std::move(self), func = std::move(func)](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
                     if (self->handle_close_or_error(ec)) {
@@ -8250,7 +8252,7 @@ private:
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
-                    self->handle_remaining_length(std::move(func));
+                    self->handle_remaining_length(std::move(func), std::move(self));
                 }
             );
         }
@@ -8324,62 +8326,62 @@ private:
                 return;
             }
 
-            process_payload(std::move(func));
+            process_payload(std::move(func), std::move(self));
         }
     }
 
-    void process_payload(async_handler_t func) {
+    void process_payload(async_handler_t func, this_type_sp self) {
         auto control_packet_type = get_control_packet_type(fixed_header_);
         switch (control_packet_type) {
         case control_packet_type::connect:
-            process_connect(std::move(func), remaining_length_ < packet_bulk_read_limit_);
+            process_connect(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
             return;
         case control_packet_type::connack:
-            process_connack(std::move(func), remaining_length_ < packet_bulk_read_limit_);
+            process_connack(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
             return;
         case control_packet_type::publish:
             if (mqtt_connected_) {
-                process_publish(std::move(func), remaining_length_ < packet_bulk_read_limit_);
+                process_publish(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
             }
             break;
         case control_packet_type::puback:
             if (mqtt_connected_) {
-                process_puback(std::move(func), remaining_length_ < packet_bulk_read_limit_);
+                process_puback(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
             }
             break;
         case control_packet_type::pubrec:
             if (mqtt_connected_) {
-                process_pubrec(std::move(func), remaining_length_ < packet_bulk_read_limit_);
+                process_pubrec(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
             }
             break;
         case control_packet_type::pubrel:
             if (mqtt_connected_) {
-                process_pubrel(std::move(func), remaining_length_ < packet_bulk_read_limit_);
+                process_pubrel(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
             }
             break;
         case control_packet_type::pubcomp:
             if (mqtt_connected_) {
-                process_pubcomp(std::move(func), remaining_length_ < packet_bulk_read_limit_);
+                process_pubcomp(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
             }
             break;
         case control_packet_type::subscribe:
             if (mqtt_connected_) {
-                process_subscribe(std::move(func), remaining_length_ < packet_bulk_read_limit_);
+                process_subscribe(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
             }
             break;
         case control_packet_type::suback:
             if (mqtt_connected_) {
-                process_suback(std::move(func), remaining_length_ < packet_bulk_read_limit_);
+                process_suback(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
             }
             break;
         case control_packet_type::unsubscribe:
             if (mqtt_connected_) {
-                process_unsubscribe(std::move(func), remaining_length_ < packet_bulk_read_limit_);
+                process_unsubscribe(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
             }
             break;
         case control_packet_type::unsuback:
             if (mqtt_connected_) {
-                process_unsuback(std::move(func), remaining_length_ < packet_bulk_read_limit_);
+                process_unsuback(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
             }
             break;
         case control_packet_type::pingreq:
@@ -8393,10 +8395,10 @@ private:
             }
             break;
         case control_packet_type::disconnect:
-            process_disconnect(func, remaining_length_ < packet_bulk_read_limit_);
+            process_disconnect(func, remaining_length_ < packet_bulk_read_limit_, std::move(self));
             break;
         case control_packet_type::auth:
-            process_auth(func, remaining_length_ < packet_bulk_read_limit_);
+            process_auth(func, remaining_length_ < packet_bulk_read_limit_, std::move(self));
             break;
         default:
             break;
@@ -8408,7 +8410,9 @@ private:
         async_handler_t func,
         buffer buf,
         std::size_t size,
-        std::function<void(buffer, buffer, async_handler_t)> handler) {
+        std::function<void(buffer, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
         if (remaining_length_ < size) {
             call_message_size_error_handlers(func);
             return;
@@ -8421,7 +8425,7 @@ private:
                 as::buffer(spa.get(), size),
                 [
                     this,
-                    self = shared_from_this(),
+                    self = std::move(self),
                     func = std::move(func),
                     size,
                     handler = std::move(handler),
@@ -8434,7 +8438,8 @@ private:
                     handler(
                         buffer(string_view(ptr, size), std::move(spa)),
                         buffer(),
-                        std::move(func)
+                        std::move(func),
+                        std::move(self)
                     );
                 }
             );
@@ -8446,7 +8451,7 @@ private:
             }
             socket_->post(
                 [
-                    self = shared_from_this(),
+                    self = std::move(self),
                     func = std::move(func),
                     buf = std::move(buf),
                     size,
@@ -8456,7 +8461,8 @@ private:
                     handler(
                         buf.substr(0, size),
                         buf.substr(size),
-                        std::move(func)
+                        std::move(func),
+                        std::move(self)
                     );
                 }
             );
@@ -8467,7 +8473,9 @@ private:
     void process_fixed_length(
         async_handler_t func,
         buffer buf,
-        std::function<void(std::size_t, buffer, async_handler_t)> handler) {
+        std::function<void(std::size_t, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
         if (remaining_length_ < Bytes) {
             call_message_size_error_handlers(func);
             return;
@@ -8480,7 +8488,7 @@ private:
                 as::buffer(&buf_[0], Bytes),
                 [
                     this,
-                    self = shared_from_this(),
+                    self = std::move(self),
                     func = std::move(func),
                     handler = std::move(handler)
                 ]
@@ -8490,7 +8498,8 @@ private:
                     handler(
                         make_packet_id<Bytes>::apply(&buf_[0], &buf_[0] + static_cast<buffer::difference_type>(Bytes)),
                         buffer(),
-                        std::move(func)
+                        std::move(func),
+                        std::move(self)
                     );
                 }
             );
@@ -8498,7 +8507,7 @@ private:
         else {
             socket_->post(
                [
-                    self = shared_from_this(),
+                    self = std::move(self),
                     func = std::move(func),
                     buf = std::move(buf),
                     handler = std::move(handler)
@@ -8508,7 +8517,8 @@ private:
                     handler(
                         packet_id,
                         std::move(buf).substr(Bytes),
-                        std::move(func)
+                        std::move(func),
+                        std::move(self)
                     );
                }
             );
@@ -8519,22 +8529,27 @@ private:
     void process_variable_length(
         async_handler_t func,
         buffer buf,
-        std::function<void(std::size_t, buffer, async_handler_t)> handler) {
+        std::function<void(std::size_t, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
         process_variable_length_impl(
             std::move(func),
             std::move(buf),
             std::move(handler),
             0,
-            1
+            1,
+            std::move(self)
         );
     }
 
     void process_variable_length_impl(
         async_handler_t func,
         buffer buf,
-        std::function<void(std::size_t, buffer, async_handler_t)> handler,
+        std::function<void(std::size_t, buffer, async_handler_t, this_type_sp)> handler,
         std::size_t size,
-        std::size_t multiplier) {
+        std::size_t multiplier,
+        this_type_sp self
+    ) {
         if (remaining_length_ == 0) {
             call_message_size_error_handlers(func);
             return;
@@ -8546,9 +8561,10 @@ private:
             (
                 async_handler_t&& func,
                 buffer&& buf,
-                std::function<void(std::size_t, buffer, async_handler_t)>&& handler,
+                std::function<void(std::size_t, buffer, async_handler_t, this_type_sp)>&& handler,
                 std::size_t size,
-                std::size_t multiplier
+                std::size_t multiplier,
+                this_type_sp&& self
             ) mutable {
                 size += (buf[0] & 0b01111111) * multiplier;
                 multiplier *= 128;
@@ -8563,10 +8579,17 @@ private:
                         std::move(buf).substr(1),
                         std::move(handler),
                         size,
-                        multiplier);
+                        multiplier,
+                        std::move(self)
+                    );
                 }
                 else {
-                    handler(size, std::move(buf).substr(1), std::move(func));
+                    handler(
+                        size,
+                        std::move(buf).substr(1),
+                        std::move(func),
+                        std::move(self)
+                    );
                 }
             };
 
@@ -8575,7 +8598,7 @@ private:
                 as::buffer(&buf_[0], 1),
                 [
                     this,
-                    self = shared_from_this(),
+                    self = std::move(self),
                     func = std::move(func),
                     handler = std::move(handler),
                     size,
@@ -8585,7 +8608,14 @@ private:
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
-                    proc(std::move(func), buffer(string_view(buf_.data(), 1)), std::move(handler), size, multiplier);
+                    proc(
+                        std::move(func),
+                        buffer(string_view(buf_.data(), 1)),
+                        std::move(handler),
+                        size,
+                        multiplier,
+                        std::move(self)
+                    );
                 }
             );
         }
@@ -8597,10 +8627,18 @@ private:
                     buf = std::move(buf),
                     size,
                     multiplier,
-                    proc = std::move(proc)
+                    proc = std::move(proc),
+                    self = std::move(self)
                 ]
                 () mutable {
-                    proc(std::move(func), std::move(buf), std::move(handler), size, multiplier);
+                    proc(
+                        std::move(func),
+                        std::move(buf),
+                        std::move(handler),
+                        size,
+                        multiplier,
+                        std::move(self)
+                    );
                 }
             );
         }
@@ -8609,24 +8647,28 @@ private:
     void process_packet_id(
         async_handler_t func,
         buffer buf,
-        std::function<void(packet_id_t, buffer, async_handler_t)> handler) {
+        std::function<void(packet_id_t, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
         process_fixed_length<sizeof(packet_id_t)>(
             std::move(func),
             std::move(buf),
             [
-                self = shared_from_this(),
                 handler = std::move(handler)
             ]
-            (std::size_t packet_id, buffer buf, async_handler_t func) mutable {
-                handler(static_cast<packet_id_t>(packet_id), std::move(buf), std::move(func));
-            }
+            (std::size_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                handler(static_cast<packet_id_t>(packet_id), std::move(buf), std::move(func), std::move(self));
+            },
+            std::move(self)
         );
     }
 
     void process_binary(
         async_handler_t func,
         buffer buf,
-        std::function<void(buffer, buffer, async_handler_t)> handler) {
+        std::function<void(buffer, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
         if (remaining_length_ < 2) {
             call_message_size_error_handlers(func);
             return;
@@ -8636,12 +8678,12 @@ private:
             std::move(buf),
             [
                 this,
-                self = shared_from_this(),
                 handler = std::move(handler)
             ]
             (std::size_t size,
              buffer buf,
-             async_handler_t func) mutable {
+             async_handler_t func,
+             this_type_sp self) mutable {
                 if (remaining_length_ < size) {
                     call_message_size_error_handlers(func);
                     return;
@@ -8650,28 +8692,33 @@ private:
                     std::move(func),
                     std::move(buf),
                     size,
-                    std::move(handler)
+                    std::move(handler),
+                    std::move(self)
                 );
-            }
+            },
+            std::move(self)
         );
     }
 
     void process_string(
         async_handler_t func,
         buffer buf,
-        std::function<void(buffer, buffer, async_handler_t)> handler) {
+        std::function<void(buffer, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
         process_binary(
             std::move(func),
             std::move(buf),
-            [this, self = shared_from_this(), handler = std::move(handler)]
-            (buffer str, buffer buf, async_handler_t func) mutable {
+            [this, handler = std::move(handler)]
+            (buffer str, buffer buf, async_handler_t func, this_type_sp self) mutable {
                 auto r = utf8string::validate_contents(str);
                 if (r != utf8string::validation::well_formed) {
                     call_protocol_error_handlers(func);
                     return;
                 }
-                handler(std::move(str), std::move(buf), std::move(func));
-            }
+                handler(std::move(str), std::move(buf), std::move(func), std::move(self));
+            },
+            std::move(self)
         );
     }
 
@@ -8679,22 +8726,23 @@ private:
     void process_properties(
         async_handler_t func,
         buffer buf,
-        std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t)> handler) {
+        std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
         process_variable_length(
             std::move(func),
             std::move(buf),
             [
                 this,
-                self = shared_from_this(),
                 handler = std::move(handler)
             ]
-            (std::size_t property_length, buffer buf, async_handler_t func) mutable {
+            (std::size_t property_length, buffer buf, async_handler_t func, this_type_sp self) mutable {
                 if (property_length > remaining_length_) {
                     call_message_size_error_handlers(func);
                     return;
                 }
                 if (property_length == 0) {
-                    handler(std::vector<v5::property_variant>(), std::move(buf), std::move(func));
+                    handler(std::vector<v5::property_variant>(), std::move(buf), std::move(func), std::move(self));
                     return;
                 }
 
@@ -8727,7 +8775,7 @@ private:
                         as::buffer(result.address, result.len),
                         [
                             this,
-                            self,
+                            self = std::move(self),
                             func = std::move(func),
                             handler = std::move(handler),
                             property_length,
@@ -8741,7 +8789,8 @@ private:
                                 buffer(string_view(result.address, result.len), result.spa),
                                 property_length,
                                 std::vector<v5::property_variant>(),
-                                std::move(handler)
+                                std::move(handler),
+                                std::move(self)
                             );
                         }
                     );
@@ -8750,7 +8799,7 @@ private:
                     socket_->post(
                         [
                             this,
-                            self,
+                            self = std::move(self),
                             func = std::move(func),
                             buf = std::move(buf),
                             handler = std::move(handler),
@@ -8762,12 +8811,14 @@ private:
                                 std::move(buf),
                                 property_length,
                                 std::vector<v5::property_variant>(),
-                                std::move(handler)
+                                std::move(handler),
+                                std::move(self)
                             );
                         }
                     );
                 }
-            }
+            },
+            std::move(self)
         );
     }
 
@@ -8776,10 +8827,12 @@ private:
         buffer buf,
         std::size_t property_length_rest,
         std::vector<v5::property_variant> props,
-        std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t)> handler) {
+        std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
 
         if (property_length_rest == 0) {
-            handler(std::move(props), std::move(buf), std::move(func));
+            handler(std::move(props), std::move(buf), std::move(func), std::move(self));
             return;
         }
 
@@ -8789,7 +8842,7 @@ private:
                 as::buffer(&buf_[0], 1),
                 [
                     this,
-                    self = shared_from_this(),
+                    self = std::move(self),
                     func = std::move(func),
                     props = std::move(props),
                     handler = std::move(handler),
@@ -8804,7 +8857,8 @@ private:
                         static_cast<v5::property::id>(buf_[0]),
                         property_length_rest - 1,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
                 }
             );
@@ -8813,7 +8867,7 @@ private:
             socket_->post(
                 [
                     this,
-                    self = shared_from_this(),
+                    self = std::move(self),
                     func = std::move(func),
                     buf = std::move(buf),
                     props = std::move(props),
@@ -8828,7 +8882,8 @@ private:
                         id,
                         property_length_rest - 1,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
                 }
             );
@@ -8841,7 +8896,9 @@ private:
         v5::property::id id,
         std::size_t property_length_rest,
         std::vector<v5::property_variant> props,
-        std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t)> handler) {
+        std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t, this_type_sp)> handler,
+        this_type_sp self
+    ) {
 
         static constexpr std::size_t const length_bytes = 2;
 
@@ -8863,12 +8920,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::payload_format_indicator(body.begin(), body.end())
                     );
@@ -8877,9 +8933,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::message_expiry_interval: {
@@ -8894,12 +8952,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::message_expiry_interval(body.begin(), body.end())
                     );
@@ -8908,9 +8965,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::content_type: {
@@ -8919,12 +8978,11 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::content_type(std::move(body), true)
@@ -8934,9 +8992,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::response_topic: {
@@ -8945,12 +9005,11 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::response_topic(std::move(body), true)
@@ -8960,9 +9019,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::correlation_data: {
@@ -8971,12 +9032,11 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::correlation_data(std::move(body), true)
@@ -8986,9 +9046,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::subscription_identifier: {
@@ -8997,13 +9059,12 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest,
                     size_before = buf.size()
                 ]
-                (std::size_t size, buffer buf, async_handler_t func) mutable {
+                (std::size_t size, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - (size_before - buf.size());
                     props.emplace_back(
                         v5::property::subscription_identifier(size)
@@ -9013,9 +9074,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::session_expiry_interval: {
@@ -9030,12 +9093,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::session_expiry_interval(body.begin(), body.end())
                     );
@@ -9044,9 +9106,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::assigned_client_identifier: {
@@ -9055,12 +9119,11 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::assigned_client_identifier(std::move(body), true)
@@ -9070,9 +9133,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
 
         } break;
@@ -9088,12 +9153,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::server_keep_alive(body.begin(), body.end())
                     );
@@ -9102,9 +9166,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::authentication_method: {
@@ -9113,12 +9179,11 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::authentication_method(std::move(body), true)
@@ -9128,9 +9193,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::authentication_data: {
@@ -9139,12 +9206,11 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::authentication_data(std::move(body))
@@ -9154,9 +9220,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::request_problem_information: {
@@ -9171,12 +9239,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::request_problem_information(body.begin(), body.end())
                     );
@@ -9185,9 +9252,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::will_delay_interval: {
@@ -9202,12 +9271,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::will_delay_interval(body.begin(), body.end())
                     );
@@ -9216,9 +9284,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::request_response_information: {
@@ -9233,12 +9303,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::request_response_information(body.begin(), body.end())
                     );
@@ -9247,9 +9316,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::response_information: {
@@ -9258,12 +9329,11 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::response_information(std::move(body), true)
@@ -9273,9 +9343,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::server_reference: {
@@ -9284,12 +9356,11 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::server_reference(std::move(body), true)
@@ -9299,9 +9370,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::reason_string: {
@@ -9310,12 +9383,11 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::reason_string(std::move(body), true)
@@ -9325,9 +9397,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::receive_maximum: {
@@ -9342,12 +9416,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::receive_maximum(body.begin(), body.end())
                     );
@@ -9356,9 +9429,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::topic_alias_maximum: {
@@ -9373,12 +9448,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::topic_alias_maximum(body.begin(), body.end())
                     );
@@ -9387,9 +9461,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::topic_alias: {
@@ -9404,12 +9480,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::topic_alias(body.begin(), body.end())
                     );
@@ -9418,9 +9493,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::maximum_qos: {
@@ -9435,12 +9512,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::maximum_qos(body.begin(), body.end())
                     );
@@ -9449,9 +9525,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::retain_available: {
@@ -9466,12 +9544,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::retain_available(body.begin(), body.end())
                     );
@@ -9480,9 +9557,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::user_property: {
@@ -9491,25 +9570,23 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest
                 ]
-                (buffer key, buffer buf, async_handler_t func) mutable {
+                (buffer key, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - key.size();
                     process_string(
                         std::move(func),
                         std::move(buf),
                         [
                             this,
-                            self,
                             props = std::move(props),
                             handler = std::move(handler),
                             key = std::move(key),
                             property_length_rest = rest
                         ]
-                        (buffer val, buffer buf, async_handler_t func) mutable {
+                        (buffer val, buffer buf, async_handler_t func, this_type_sp self) mutable {
                             auto rest = property_length_rest - length_bytes - val.size();
                             props.emplace_back(
                                 v5::property::user_property(
@@ -9524,11 +9601,14 @@ private:
                                 std::move(buf),
                                 rest,
                                 std::move(props),
-                                std::move(handler)
+                                std::move(handler),
+                                std::move(self)
                             );
-                        }
+                        },
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::maximum_packet_size: {
@@ -9543,12 +9623,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::maximum_packet_size(body.begin(), body.end())
                     );
@@ -9557,9 +9636,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::wildcard_subscription_available: {
@@ -9574,12 +9655,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::wildcard_subscription_available(body.begin(), body.end())
                     );
@@ -9588,9 +9668,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::subscription_identifier_available: {
@@ -9605,12 +9687,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::subscription_identifier_available(body.begin(), body.end())
                     );
@@ -9619,9 +9700,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         case v5::property::id::shared_subscription_available: {
@@ -9636,12 +9719,11 @@ private:
                 len,
                 [
                     this,
-                    self = shared_from_this(),
                     props = std::move(props),
                     handler = std::move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::shared_subscription_available(body.begin(), body.end())
                     );
@@ -9650,9 +9732,11 @@ private:
                         std::move(buf),
                         rest,
                         std::move(props),
-                        std::move(handler)
+                        std::move(handler),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
         } break;
         }
@@ -9667,7 +9751,9 @@ private:
         std::size_t header_len,
         NextFunc&& next_func,
         NextPhase next_phase,
-        Info&& info) {
+        Info&& info,
+        this_type_sp self
+    ) {
 
         if (all_read) {
             shared_ptr_array spa { new char[remaining_length_] };
@@ -9676,12 +9762,12 @@ private:
                 as::buffer(ptr, remaining_length_),
                 [
                     this,
-                    self = shared_from_this(),
                     func = std::move(func),
                     spa = std::move(spa),
                     next_func = std::forward<NextFunc>(next_func),
                     next_phase,
-                    info = std::forward<Info>(info)
+                    info = std::forward<Info>(info),
+                    self = std::move(self)
                 ]
                 (boost::system::error_code const& ec, std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, func, bytes_transferred, remaining_length_)) return;
@@ -9690,7 +9776,8 @@ private:
                         std::move(func),
                         buffer(string_view(ptr, remaining_length_), std::move(spa)),
                         next_phase,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
                 }
             );
@@ -9702,7 +9789,8 @@ private:
                 std::move(func),
                 buffer(),
                 next_phase,
-                std::move(info)
+                std::move(info),
+                std::move(self)
             );
             return;
         }
@@ -9711,12 +9799,12 @@ private:
             as::buffer(&buf_[0], header_len),
             [
                 this,
-                self = shared_from_this(),
                 func = std::move(func),
                 header_len,
                 next_func = std::forward<NextFunc>(next_func),
                 next_phase,
-                info = std::forward<Info>(info)
+                info = std::forward<Info>(info),
+                self = std::move(self)
             ]
             (boost::system::error_code const& ec,
              std::size_t bytes_transferred) mutable {
@@ -9725,7 +9813,8 @@ private:
                     std::move(func),
                     buffer(string_view(buf_.data(), header_len)),
                     next_phase,
-                    std::move(info)
+                    std::move(info),
+                    std::move(self)
                 );
             }
         );
@@ -9758,7 +9847,8 @@ private:
 
     void process_connect(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         std::size_t const header_len =
             2 +  // string length
@@ -9781,7 +9871,8 @@ private:
             header_len,
             &this_type::process_connect_impl,
             connect_phase::header,
-            std::move(info)
+            std::move(info),
+            std::move(self)
         );
     }
 
@@ -9789,7 +9880,8 @@ private:
         async_handler_t func,
         buffer buf,
         connect_phase phase,
-        connect_info&& info = connect_info()
+        connect_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case connect_phase::header: {
@@ -9843,7 +9935,8 @@ private:
                     }
                     return connect_phase::client_id;
                 } (),
-                std::move(info)
+                std::move(info),
+                std::move(self)
             );
         } break;
         case connect_phase::properties:
@@ -9852,18 +9945,24 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (
+                    std::vector<v5::property_variant> props,
+                    buffer buf,
+                    async_handler_t func,
+                    this_type_sp self
+                ) mutable {
                     info.props = std::move(props);
                     process_connect_impl(
                         std::move(func),
                         std::move(buf),
                         connect_phase::client_id,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case connect_phase::client_id:
@@ -9872,10 +9971,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer client_id, buffer buf, async_handler_t func) mutable {
+                (buffer client_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.client_id = std::move(client_id);
                     auto connect_flag = info.connect_flag;
                     process_connect_impl(
@@ -9893,9 +9991,11 @@ private:
                             }
                             return connect_phase::finish;
                         } (),
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case connect_phase::will: {
@@ -9904,27 +10004,26 @@ private:
                 (
                     async_handler_t&& func,
                     buffer&& buf,
-                    connect_info&& info
+                    connect_info&& info,
+                    this_type_sp&& self
                 ) mutable {
                     process_string(
                         std::move(func),
                         std::move(buf),
                         [
                             this,
-                            self = shared_from_this(),
                             info = std::move(info)
                         ]
-                        (buffer will_topic, buffer buf, async_handler_t func) mutable {
+                        (buffer will_topic, buffer buf, async_handler_t func, this_type_sp self) mutable {
                             info.will_topic = std::move(will_topic);
                             process_binary(
                                 std::move(func),
                                 std::move(buf),
                                 [
                                     this,
-                                    self,
                                     info = std::move(info)
                                 ]
-                                (buffer will_payload, buffer buf, async_handler_t func) mutable {
+                                (buffer will_payload, buffer buf, async_handler_t func, this_type_sp self) mutable {
                                     info.will_payload = std::move(will_payload);
                                     auto connect_flag = info.connect_flag;
                                     process_connect_impl(
@@ -9939,11 +10038,14 @@ private:
                                             }
                                             return connect_phase::finish;
                                         } (),
-                                        std::move(info)
+                                        std::move(info),
+                                        std::move(self)
                                     );
-                                }
+                                },
+                                std::move(self)
                             );
-                        }
+                        },
+                        std::move(self)
                     );
                 };
 
@@ -9952,25 +10054,27 @@ private:
                     std::move(func),
                     std::move(buf),
                     [
-                        self = shared_from_this(),
                         info = std::move(info),
                         topic_message_proc
                     ]
-                    (std::vector<v5::property_variant> will_props, buffer buf, async_handler_t func) mutable {
+                    (std::vector<v5::property_variant> will_props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                         info.will_props = std::move(will_props);
                         topic_message_proc(
                             std::move(func),
                             std::move(buf),
-                            std::move(info)
+                            std::move(info),
+                            std::move(self)
                         );
-                    }
+                    },
+                    std::move(self)
                 );
                 return;
             }
             topic_message_proc(
                 std::move(func),
                 std::move(buf),
-                std::move(info)
+                std::move(info),
+                std::move(self)
             );
         } break;
         case connect_phase::user_name:
@@ -9979,10 +10083,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer user_name, buffer buf, async_handler_t func) mutable {
+                (buffer user_name, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.user_name = std::move(user_name);
                     auto connect_flag = info.connect_flag;
                     process_connect_impl(
@@ -9994,9 +10097,11 @@ private:
                             }
                             return connect_phase::finish;
                         } (),
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case connect_phase::password:
@@ -10005,18 +10110,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer password, buffer buf, async_handler_t func) mutable {
+                (buffer password, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.password = std::move(password);
                     process_connect_impl(
                         std::move(func),
                         std::move(buf),
                         connect_phase::finish,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case connect_phase::finish:
@@ -10102,7 +10208,8 @@ private:
 
     void process_connack(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         std::size_t const header_len =
             1 +  // Connect Acknowledge Flags
@@ -10121,7 +10228,8 @@ private:
             header_len,
             &this_type::process_connack_impl,
             connack_phase::header,
-            std::move(info)
+            std::move(info),
+            std::move(self)
         );
     }
 
@@ -10129,7 +10237,8 @@ private:
         async_handler_t func,
         buffer buf,
         connack_phase phase,
-        connack_info&& info = connack_info()
+        connack_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case connack_phase::header:
@@ -10145,7 +10254,8 @@ private:
                     }
                     return connack_phase::finish;
                 } (),
-                std::move(info)
+                std::move(info),
+                std::move(self)
             );
             break;
         case connack_phase::properties:
@@ -10154,18 +10264,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.props = std::move(props);
                     process_connack_impl(
                         std::move(func),
                         std::move(buf),
                         connack_phase::finish,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case connack_phase::finish: {
@@ -10220,7 +10331,7 @@ private:
                         auto async_connack_proc =
                             [
                                 this,
-                                self = shared_from_this(),
+                                self = std::move(self),
                                 func = std::move(func),
                                 connack_proc = std::move(connack_proc),
                                 org = std::move(org),
@@ -10260,7 +10371,8 @@ private:
 
     void process_publish(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         std::size_t const min_len =
             2; // topic name length
@@ -10276,7 +10388,8 @@ private:
             0,
             &this_type::process_publish_impl,
             publish_phase::topic_name,
-            publish_info()
+            publish_info(),
+            std::move(self)
         );
     }
 
@@ -10284,7 +10397,8 @@ private:
         async_handler_t func,
         buffer buf,
         publish_phase phase,
-        publish_info&& info
+        publish_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case publish_phase::topic_name:
@@ -10293,10 +10407,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer topic_name, buffer buf, async_handler_t func) mutable {
+                (buffer topic_name, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.topic_name = std::move(topic_name);
                     auto qos = publish::get_qos(fixed_header_);
                     if (qos != qos::at_most_once &&
@@ -10317,9 +10430,11 @@ private:
                             }
                             return publish_phase::packet_id;
                         } (),
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case publish_phase::packet_id:
@@ -10328,10 +10443,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_publish_impl(
                         std::move(func),
@@ -10342,10 +10456,12 @@ private:
                             }
                             return publish_phase::payload;
                         } (),
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
 
-                }
+                },
+                std::move(self)
             );
             break;
         case publish_phase::properties:
@@ -10354,18 +10470,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.props = std::move(props);
                     process_publish_impl(
                         std::move(func),
                         std::move(buf),
                         publish_phase::payload,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case publish_phase::payload:
@@ -10375,10 +10492,9 @@ private:
                 remaining_length_,
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer payload, buffer /*buf*/, async_handler_t func) mutable {
+                (buffer payload, buffer /*buf*/, async_handler_t func, this_type_sp self) mutable {
                     auto handler_call =
                         [&] {
                             switch (version_) {
@@ -10458,7 +10574,8 @@ private:
                         }
                         break;
                     }
-                }
+                },
+                std::move(self)
             );
             break;
         }
@@ -10481,7 +10598,8 @@ private:
 
     void process_puback(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         std::size_t const header_len =
             sizeof(packet_id_t);    // Packet Id
@@ -10498,7 +10616,8 @@ private:
             header_len,
             &this_type::process_puback_impl,
             puback_phase::packet_id,
-            std::move(info)
+            std::move(info),
+            std::move(self)
         );
     }
 
@@ -10506,7 +10625,8 @@ private:
         async_handler_t func,
         buffer buf,
         puback_phase phase,
-        puback_info&& info = puback_info()
+        puback_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case puback_phase::packet_id:
@@ -10515,10 +10635,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_puback_impl(
                         std::move(func),
@@ -10530,9 +10649,11 @@ private:
                             }
                             return puback_phase::reason_code;
                         } (),
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case puback_phase::reason_code:
@@ -10542,18 +10663,19 @@ private:
                 1, // reason_code
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.reason_code = static_cast<std::uint8_t>(body[0]);
                     process_puback_impl(
                         std::move(func),
                         std::move(buf),
                         puback_phase::properties,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case puback_phase::properties:
@@ -10562,18 +10684,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.props = std::move(props);
                     process_puback_impl(
                         std::move(func),
                         std::move(buf),
                         puback_phase::finish,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case puback_phase::finish:
@@ -10626,7 +10749,8 @@ private:
 
     void process_pubrec(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         std::size_t const header_len =
             sizeof(packet_id_t);    // Packet Id
@@ -10643,7 +10767,8 @@ private:
             header_len,
             &this_type::process_pubrec_impl,
             pubrec_phase::packet_id,
-            std::move(info)
+            std::move(info),
+            std::move(self)
         );
     }
 
@@ -10651,7 +10776,8 @@ private:
         async_handler_t func,
         buffer buf,
         pubrec_phase phase,
-        pubrec_info&& info = pubrec_info()
+        pubrec_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case pubrec_phase::packet_id:
@@ -10660,10 +10786,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_pubrec_impl(
                         std::move(func),
@@ -10675,9 +10800,11 @@ private:
                             }
                             return pubrec_phase::reason_code;
                         } (),
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case pubrec_phase::reason_code:
@@ -10687,18 +10814,19 @@ private:
                 1, // reason_code
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.reason_code = static_cast<std::uint8_t>(body[0]);
                     process_pubrec_impl(
                         std::move(func),
                         std::move(buf),
                         pubrec_phase::properties,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case pubrec_phase::properties:
@@ -10707,18 +10835,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.props = std::move(props);
                     process_pubrec_impl(
                         std::move(func),
                         std::move(buf),
                         pubrec_phase::finish,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case pubrec_phase::finish: {
@@ -10799,7 +10928,8 @@ private:
 
     void process_pubrel(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         std::size_t const header_len =
             sizeof(packet_id_t);    // Packet Id
@@ -10816,7 +10946,8 @@ private:
             header_len,
             &this_type::process_pubrel_impl,
             pubrel_phase::packet_id,
-            std::move(info)
+            std::move(info),
+            std::move(self)
         );
     }
 
@@ -10824,7 +10955,8 @@ private:
         async_handler_t func,
         buffer buf,
         pubrel_phase phase,
-        pubrel_info&& info = pubrel_info()
+        pubrel_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case pubrel_phase::packet_id:
@@ -10833,10 +10965,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_pubrel_impl(
                         std::move(func),
@@ -10848,9 +10979,11 @@ private:
                             }
                             return pubrel_phase::reason_code;
                         } (),
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case pubrel_phase::reason_code:
@@ -10860,18 +10993,19 @@ private:
                 1, // reason_code
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.reason_code = static_cast<std::uint8_t>(body[0]);
                     process_pubrel_impl(
                         std::move(func),
                         std::move(buf),
                         pubrel_phase::properties,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case pubrel_phase::properties:
@@ -10880,18 +11014,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.props = std::move(props);
                     process_pubrel_impl(
                         std::move(func),
                         std::move(buf),
                         pubrel_phase::finish,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case pubrel_phase::finish: {
@@ -10959,7 +11094,8 @@ private:
 
     void process_pubcomp(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         std::size_t const header_len =
             sizeof(packet_id_t);    // Packet Id
@@ -10976,7 +11112,8 @@ private:
             header_len,
             &this_type::process_pubcomp_impl,
             pubcomp_phase::packet_id,
-            std::move(info)
+            std::move(info),
+            std::move(self)
         );
     }
 
@@ -10984,7 +11121,8 @@ private:
         async_handler_t func,
         buffer buf,
         pubcomp_phase phase,
-        pubcomp_info&& info = pubcomp_info()
+        pubcomp_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case pubcomp_phase::packet_id:
@@ -10993,10 +11131,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_pubcomp_impl(
                         std::move(func),
@@ -11008,9 +11145,11 @@ private:
                             }
                             return pubcomp_phase::reason_code;
                         } (),
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case pubcomp_phase::reason_code:
@@ -11020,18 +11159,19 @@ private:
                 1, // reason_code
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.reason_code = static_cast<std::uint8_t>(body[0]);
                     process_pubcomp_impl(
                         std::move(func),
                         std::move(buf),
                         pubcomp_phase::properties,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case pubcomp_phase::properties:
@@ -11040,18 +11180,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.props = std::move(props);
                     process_pubcomp_impl(
                         std::move(func),
                         std::move(buf),
                         pubcomp_phase::finish,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case pubcomp_phase::finish:
@@ -11105,7 +11246,8 @@ private:
 
     void process_subscribe(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         std::size_t const header_len =
             sizeof(packet_id_t);    // Packet Id
@@ -11122,7 +11264,8 @@ private:
             header_len,
             &this_type::process_subscribe_impl,
             subscribe_phase::packet_id,
-            std::move(info)
+            std::move(info),
+            std::move(self)
         );
     }
 
@@ -11130,7 +11273,8 @@ private:
         async_handler_t func,
         buffer buf,
         subscribe_phase phase,
-        subscribe_info&& info = subscribe_info()
+        subscribe_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case subscribe_phase::packet_id:
@@ -11139,10 +11283,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_subscribe_impl(
                         std::move(func),
@@ -11153,9 +11296,11 @@ private:
                             }
                             return subscribe_phase::topic;
                         } (),
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case subscribe_phase::properties:
@@ -11164,18 +11309,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.props = std::move(props);
                     process_subscribe_impl(
                         std::move(func),
                         std::move(buf),
                         subscribe_phase::topic,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case subscribe_phase::topic:
@@ -11184,21 +11330,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer topic_filter, buffer buf, async_handler_t func) mutable {
+                (buffer topic_filter, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     process_nbytes(
                         std::move(func),
                         std::move(buf),
                         1, // requested_qos
                         [
                             this,
-                            self,
                             info = std::move(info),
                             topic_filter = std::move(topic_filter)
                         ]
-                        (buffer body, buffer buf, async_handler_t func) mutable {
+                        (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                             auto requested_qos = static_cast<std::uint8_t>(body[0]);
                             if (requested_qos != qos::at_most_once &&
                                 requested_qos != qos::at_least_once &&
@@ -11216,11 +11360,14 @@ private:
                                     }
                                     return subscribe_phase::topic;
                                 } (),
-                                std::move(info)
+                                std::move(info),
+                                std::move(self)
                             );
-                        }
+                        },
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case subscribe_phase::finish:
@@ -11263,7 +11410,8 @@ private:
 
     void process_suback(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         std::size_t const header_len =
             sizeof(packet_id_t);    // Packet Id
@@ -11280,7 +11428,8 @@ private:
             header_len,
             &this_type::process_suback_impl,
             suback_phase::packet_id,
-            std::move(info)
+            std::move(info),
+            std::move(self)
         );
     }
 
@@ -11288,7 +11437,8 @@ private:
         async_handler_t func,
         buffer buf,
         suback_phase phase,
-        suback_info&& info = suback_info()
+        suback_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case suback_phase::packet_id:
@@ -11297,10 +11447,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_suback_impl(
                         std::move(func),
@@ -11311,9 +11460,11 @@ private:
                             }
                             return suback_phase::reasons;
                         } (),
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case suback_phase::properties:
@@ -11322,18 +11473,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.props = std::move(props);
                     process_suback_impl(
                         std::move(func),
                         std::move(buf),
                         suback_phase::reasons,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case suback_phase::reasons:
@@ -11343,10 +11495,9 @@ private:
                 remaining_length_, // Reason Codes
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer body, buffer /*buf*/, async_handler_t func) mutable {
+                (buffer body, buffer /*buf*/, async_handler_t func, this_type_sp /*self*/) mutable {
                     {
                         LockGuard<Mutex> lck (store_mtx_);
                         packet_id_.erase(info.packet_id);
@@ -11396,7 +11547,8 @@ private:
                     default:
                         BOOST_ASSERT(false);
                     }
-                }
+                },
+                std::move(self)
             );
             break;
         }
@@ -11419,7 +11571,8 @@ private:
 
     void process_unsubscribe(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         std::size_t const header_len =
             sizeof(packet_id_t);    // Packet Id
@@ -11436,7 +11589,8 @@ private:
             header_len,
             &this_type::process_unsubscribe_impl,
             unsubscribe_phase::packet_id,
-            std::move(info)
+            std::move(info),
+            std::move(self)
         );
     }
 
@@ -11444,7 +11598,8 @@ private:
         async_handler_t func,
         buffer buf,
         unsubscribe_phase phase,
-        unsubscribe_info&& info = unsubscribe_info()
+        unsubscribe_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case unsubscribe_phase::packet_id:
@@ -11453,10 +11608,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_unsubscribe_impl(
                         std::move(func),
@@ -11467,9 +11621,11 @@ private:
                             }
                             return unsubscribe_phase::topic;
                         } (),
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case unsubscribe_phase::properties:
@@ -11478,18 +11634,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.props = std::move(props);
                     process_unsubscribe_impl(
                         std::move(func),
                         std::move(buf),
                         unsubscribe_phase::topic,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case unsubscribe_phase::topic:
@@ -11498,10 +11655,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer topic_filter, buffer buf, async_handler_t func) mutable {
+                (buffer topic_filter, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.entries.emplace_back(std::move(topic_filter));
                     process_unsubscribe_impl(
                         std::move(func),
@@ -11512,9 +11668,11 @@ private:
                             }
                             return unsubscribe_phase::topic;
                         } (),
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case unsubscribe_phase::finish:
@@ -11557,7 +11715,8 @@ private:
 
     void process_unsuback(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         std::size_t const header_len =
             sizeof(packet_id_t);    // Packet Id
@@ -11574,7 +11733,8 @@ private:
             header_len,
             &this_type::process_unsuback_impl,
             unsuback_phase::packet_id,
-            std::move(info)
+            std::move(info),
+            std::move(self)
         );
     }
 
@@ -11582,7 +11742,8 @@ private:
         async_handler_t func,
         buffer buf,
         unsuback_phase phase,
-        unsuback_info&& info = unsuback_info()
+        unsuback_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case unsuback_phase::packet_id:
@@ -11591,10 +11752,9 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func) mutable {
+                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     {
                         LockGuard<Mutex> lck (store_mtx_);
@@ -11614,13 +11774,15 @@ private:
                             std::move(func),
                             std::move(buf),
                             unsuback_phase::properties,
-                            std::move(info)
+                            std::move(info),
+                            std::move(self)
                         );
                         break;
                     default:
                         BOOST_ASSERT(false);
                     }
-                }
+                },
+                std::move(self)
             );
             break;
         case unsuback_phase::properties:
@@ -11629,18 +11791,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.props = std::move(props);
                     process_unsuback_impl(
                         std::move(func),
                         std::move(buf),
                         unsuback_phase::reasons,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case unsuback_phase::reasons:
@@ -11650,10 +11813,9 @@ private:
                 remaining_length_, // Reason Codes
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer body, buffer /*buf*/, async_handler_t func) mutable {
+                (buffer body, buffer /*buf*/, async_handler_t func, this_type_sp /*self*/) mutable {
                     BOOST_ASSERT(version_ == protocol_version::v5);
                     {
                         LockGuard<Mutex> lck (store_mtx_);
@@ -11675,7 +11837,8 @@ private:
                         }
                         h_mqtt_message_processed_(std::move(func));
                     }
-                }
+                },
+                std::move(self)
             );
             break;
         }
@@ -11730,7 +11893,8 @@ private:
 
     void process_disconnect(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         if (remaining_length_ == 0) {
             disconnect_info info { v5::reason_code::normal_disconnection, std::vector<v5::property_variant>() };
@@ -11738,7 +11902,8 @@ private:
                 std::move(func),
                 buffer(),
                 disconnect_phase::finish,
-                std::move(info)
+                std::move(info),
+                std::move(self)
             );
             return;
         }
@@ -11763,7 +11928,8 @@ private:
             header_len,
             &this_type::process_disconnect_impl,
             disconnect_phase::reason_code,
-            std::move(info)
+            std::move(info),
+            std::move(self)
         );
     }
 
@@ -11771,7 +11937,8 @@ private:
         async_handler_t func,
         buffer buf,
         disconnect_phase phase,
-        disconnect_info&& info = disconnect_info()
+        disconnect_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case disconnect_phase::reason_code:
@@ -11781,18 +11948,19 @@ private:
                 1, // reason_code
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.reason_code = static_cast<std::uint8_t>(body[0]);
                     process_disconnect_impl(
                         std::move(func),
                         std::move(buf),
                         disconnect_phase::properties,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case disconnect_phase::properties:
@@ -11801,18 +11969,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.props = std::move(props);
                     process_disconnect_impl(
                         std::move(func),
                         std::move(buf),
                         disconnect_phase::finish,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case disconnect_phase::finish:
@@ -11849,7 +12018,8 @@ private:
 
     void process_auth(
         async_handler_t func,
-        bool all_read
+        bool all_read,
+        this_type_sp self
     ) {
         if (version_ != protocol_version::v5) {
             call_protocol_error_handlers(func);
@@ -11862,7 +12032,8 @@ private:
                 std::move(func),
                 buffer(),
                 auth_phase::finish,
-                std::move(info)
+                std::move(info),
+                std::move(self)
             );
             return;
         }
@@ -11882,7 +12053,8 @@ private:
             header_len,
             &this_type::process_auth_impl,
             auth_phase::reason_code,
-            std::move(info)
+            std::move(info),
+            std::move(self)
         );
     }
 
@@ -11890,7 +12062,8 @@ private:
         async_handler_t func,
         buffer buf,
         auth_phase phase,
-        auth_info&& info = auth_info()
+        auth_info&& info,
+        this_type_sp self
     ) {
         switch (phase) {
         case auth_phase::reason_code:
@@ -11900,18 +12073,19 @@ private:
                 1, // reason_code
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (buffer body, buffer buf, async_handler_t func) mutable {
+                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.reason_code = static_cast<std::uint8_t>(body[0]);
                     process_auth_impl(
                         std::move(func),
                         std::move(buf),
                         auth_phase::properties,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case auth_phase::properties:
@@ -11920,18 +12094,19 @@ private:
                 std::move(buf),
                 [
                     this,
-                    self = shared_from_this(),
                     info = std::move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.props = std::move(props);
                     process_auth_impl(
                         std::move(func),
                         std::move(buf),
                         auth_phase::finish,
-                        std::move(info)
+                        std::move(info),
+                        std::move(self)
                     );
-                }
+                },
+                std::move(self)
             );
             break;
         case auth_phase::finish:
@@ -12791,7 +12966,7 @@ private:
                 auto self = shared_from_this();
                 do_async_write(
                     std::move(msg),
-                    [this, self, packet_id, func = std::move(func)]
+                    [this, self = std::move(self), packet_id, func = std::move(func)]
                     (boost::system::error_code const& ec){
                         if (func) func(ec);
                         if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
@@ -13334,9 +13509,10 @@ private:
     }
 
     void do_async_write(basic_message_variant<PacketIdBytes> mv, async_handler_t func) {
+        auto self = shared_from_this();
         // Move this job to the socket's strand so that it can be queued without mutexes.
         socket_->post(
-            [self = shared_from_this(), mv = std::move(mv), func = std::move(func)]
+            [self = std::move(self), mv = std::move(mv), func = std::move(func)]
             () {
                 if (!self->connected_) {
                     // offline async publish is successfully finished, because there's nothing to do.
