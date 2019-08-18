@@ -451,6 +451,9 @@ BOOST_AUTO_TEST_CASE( connect_overlength_client_id ) {
         catch (mqtt::utf8string_length_error const&) {
             BOOST_CHECK(true);
         }
+        catch (boost::bad_numeric_cast const&) {
+            BOOST_CHECK(true);
+        }
     };
     do_combi_test(test);
 #endif // MQTT_USE_STR_CHECK
@@ -571,6 +574,12 @@ BOOST_AUTO_TEST_CASE( publish_overlength_topic ) {
                     return true;
                 }
                 catch (mqtt::utf8string_length_error const&) {
+                    BOOST_CHECK(true);
+                    s.close();
+                    c->force_disconnect();
+                    return false;
+                }
+                catch (boost::bad_numeric_cast const&) {
                     BOOST_CHECK(true);
                     s.close();
                     c->force_disconnect();
