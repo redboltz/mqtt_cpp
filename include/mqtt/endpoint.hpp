@@ -7436,7 +7436,7 @@ public:
         switch (get_control_packet_type(fixed_header)) {
         case control_packet_type::publish: {
             auto size = static_cast<std::size_t>(std::distance(b, e));
-            shared_ptr_array spa { new char[size] };
+            auto spa = make_shared_ptr_array(size);
             std::copy(b, e, spa.get());
             restore_serialized_message(
                 basic_publish_message<PacketIdBytes>(
@@ -7545,7 +7545,7 @@ public:
         switch (get_control_packet_type(fixed_header)) {
         case control_packet_type::publish: {
             auto size = static_cast<std::size_t>(std::distance(b, e));
-            shared_ptr_array spa { new char[size] };
+            auto spa = make_shared_ptr_array(size);
             std::copy(b, e, spa.get());
             restore_v5_serialized_message(
                 v5::basic_publish_message<PacketIdBytes>(
@@ -7556,7 +7556,7 @@ public:
         } break;
         case control_packet_type::pubrel: {
             auto size = static_cast<std::size_t>(std::distance(b, e));
-            shared_ptr_array spa { new char[size] };
+            auto spa = make_shared_ptr_array(size);
             std::copy(b, e, spa.get());
             restore_v5_serialized_message(
                 v5::basic_pubrel_message<PacketIdBytes>(
@@ -8420,7 +8420,7 @@ private:
         remaining_length_ -= size;
 
         if (buf.empty()) {
-            shared_ptr_array spa { new char[size] };
+            auto spa = make_shared_ptr_array(size);
             socket_->async_read(
                 as::buffer(spa.get(), size),
                 [
@@ -8755,7 +8755,7 @@ private:
                     auto result =
                         [&] () -> spa_address_len {
                             if (property_length < props_bulk_read_limit_) {
-                                auto spa = shared_ptr_array(new char[property_length]);
+                                auto spa = make_shared_ptr_array(property_length);
                                 auto ptr = spa.get();
                                 return
                                     {
@@ -9756,7 +9756,7 @@ private:
     ) {
 
         if (all_read) {
-            shared_ptr_array spa { new char[remaining_length_] };
+            auto spa = make_shared_ptr_array(remaining_length_);
             auto ptr = spa.get();
             socket_->async_read(
                 as::buffer(ptr, remaining_length_),
