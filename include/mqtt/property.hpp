@@ -103,7 +103,7 @@ struct binary_property {
     binary_property(property::id id, buffer buf)
         :id_(id),
          buf_(std::move(buf)),
-         length_{ num_to_2bytes(static_cast<std::uint16_t>(buf_.size())) } {
+         length_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(buf_.size())) } {
              if (buf_.size() > 0xffff) throw property_length_error();
          }
 
@@ -298,7 +298,7 @@ public:
     using recv = session_expiry_interval;
     using store = session_expiry_interval;
     session_expiry_interval(std::uint32_t val)
-        : detail::n_bytes_property<4>(id::session_expiry_interval, { num_to_4bytes(static_cast<std::uint32_t>(val)) } ) {}
+        : detail::n_bytes_property<4>(id::session_expiry_interval, { num_to_4bytes(val) } ) {}
 
     template <typename It>
     session_expiry_interval(It b, It e)
@@ -320,7 +320,7 @@ public:
     using recv = server_keep_alive;
     using store = server_keep_alive;
     server_keep_alive(std::uint16_t val)
-        : detail::n_bytes_property<2>(id::server_keep_alive, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
+        : detail::n_bytes_property<2>(id::server_keep_alive, { num_to_2bytes(val) } ) {}
 
     template <typename It>
     server_keep_alive(It b, It e)
@@ -364,7 +364,7 @@ public:
     using recv = will_delay_interval;
     using store = will_delay_interval;
     will_delay_interval(std::uint32_t val)
-        : detail::n_bytes_property<4>(id::will_delay_interval, { num_to_4bytes(static_cast<std::uint32_t>(val)) } ) {}
+        : detail::n_bytes_property<4>(id::will_delay_interval, { num_to_4bytes(val) } ) {}
 
     template <typename It>
     will_delay_interval(It b, It e)
@@ -414,7 +414,7 @@ public:
     using recv = receive_maximum;
     using store = receive_maximum;
     receive_maximum(std::uint16_t val)
-        : detail::n_bytes_property<2>(id::receive_maximum, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
+        : detail::n_bytes_property<2>(id::receive_maximum, { num_to_2bytes(val) } ) {}
 
     template <typename It>
     receive_maximum(It b, It e)
@@ -431,7 +431,7 @@ public:
     using recv = topic_alias_maximum;
     using store = topic_alias_maximum;
     topic_alias_maximum(std::uint16_t val)
-        : detail::n_bytes_property<2>(id::topic_alias_maximum, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
+        : detail::n_bytes_property<2>(id::topic_alias_maximum, { num_to_2bytes(val) } ) {}
 
     template <typename It>
     topic_alias_maximum(It b, It e)
@@ -448,7 +448,7 @@ public:
     using recv = topic_alias;
     using store = topic_alias;
     topic_alias(std::uint16_t val)
-        : detail::n_bytes_property<2>(id::topic_alias, { num_to_2bytes(static_cast<std::uint16_t>(val)) } ) {}
+        : detail::n_bytes_property<2>(id::topic_alias, { num_to_2bytes(val) } ) {}
 
     template <typename It>
     topic_alias(It b, It e)
@@ -574,7 +574,7 @@ private:
     struct len_str {
         explicit len_str(buffer b, bool already_checked = false)
             : buf(std::move(b)),
-              len{ num_to_2bytes(static_cast<std::uint16_t>(buf.size())) }
+              len{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(buf.size())) }
         {
             if (!already_checked) {
                 auto r = utf8string::validate_contents(buf);
@@ -600,7 +600,7 @@ public:
     using recv = maximum_packet_size;
     using store = maximum_packet_size;
     maximum_packet_size(std::uint32_t val)
-        : detail::n_bytes_property<4>(id::maximum_packet_size, { num_to_4bytes(static_cast<std::uint32_t>(val)) } ) {}
+        : detail::n_bytes_property<4>(id::maximum_packet_size, { num_to_4bytes(val) } ) {}
 
     template <typename It>
     maximum_packet_size(It b, It e)

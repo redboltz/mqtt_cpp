@@ -16,6 +16,7 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/optional.hpp>
 #include <boost/container/static_vector.hpp>
+#include <boost/numeric/conversion/cast.hpp>
 
 #include <mqtt/two_byte_util.hpp>
 #include <mqtt/fixed_header.hpp>
@@ -119,7 +120,7 @@ public:
           ),
           protocol_name_and_level_ { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x05 },
           client_id_(as::buffer(client_id.data(), client_id.size())),
-          client_id_length_buf_{ num_to_2bytes(static_cast<std::uint16_t>(client_id.size())) },
+          client_id_length_buf_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(client_id.size())) },
           will_property_length_(
               w ?
               std::accumulate(
@@ -137,7 +138,7 @@ public:
               std::move(w.value().props())
               : properties()
           ),
-          keep_alive_buf_ ({ num_to_2bytes(static_cast<std::uint16_t>(keep_alive_sec )) }),
+          keep_alive_buf_ ({ num_to_2bytes(keep_alive_sec ) }),
           property_length_(
               std::accumulate(
                   props.begin(),
@@ -180,7 +181,7 @@ public:
             utf8string_check(user_name.value());
             connect_flags_ |= connect_flags::user_name_flag;
             user_name_ = as::buffer(user_name.value());
-            add_uint16_t_to_buf(user_name_length_buf_, static_cast<std::uint16_t>(get_size(user_name_)));
+            add_uint16_t_to_buf(user_name_length_buf_, boost::numeric_cast<std::uint16_t>(get_size(user_name_)));
 
             remaining_length_ += 2 + get_size(user_name_);
             num_of_const_buffer_sequence_ += 2; // user name length, user name
@@ -188,7 +189,7 @@ public:
         if (password) {
             connect_flags_ |= connect_flags::password_flag;
             password_ = as::buffer(password.value());
-            add_uint16_t_to_buf(password_length_buf_, static_cast<std::uint16_t>(get_size(password_)));
+            add_uint16_t_to_buf(password_length_buf_, boost::numeric_cast<std::uint16_t>(get_size(password_)));
 
             remaining_length_ += 2 + get_size(password_);
             num_of_const_buffer_sequence_ += 2; // password length, password
@@ -207,13 +208,13 @@ public:
             will_topic_name_ = as::buffer(w.value().topic());
             add_uint16_t_to_buf(
                 will_topic_name_length_buf_,
-                static_cast<std::uint16_t>(get_size(will_topic_name_))
+                boost::numeric_cast<std::uint16_t>(get_size(will_topic_name_))
             );
             if (w.value().message().size() > 0xffffL) throw will_message_length_error();
             will_message_ = as::buffer(w.value().message());
             add_uint16_t_to_buf(
                 will_message_length_buf_,
-                static_cast<std::uint16_t>(get_size(will_message_)));
+                boost::numeric_cast<std::uint16_t>(get_size(will_message_)));
 
             remaining_length_ +=
                 will_property_length_buf_.size() +
@@ -549,7 +550,7 @@ public:
     )
         : fixed_header_(make_fixed_header(control_packet_type::publish, 0b0000)),
           topic_name_(topic_name),
-          topic_name_length_buf_ { num_to_2bytes(static_cast<std::uint16_t>(get_size(topic_name))) },
+          topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(get_size(topic_name))) },
           property_length_(
               std::accumulate(
                   props.begin(),
@@ -1543,7 +1544,7 @@ private:
     struct entry {
         entry(as::const_buffer const& topic_filter, std::uint8_t options)
             : topic_filter(topic_filter),
-              topic_filter_length_buf { num_to_2bytes(static_cast<std::uint16_t>(get_size(topic_filter))) },
+              topic_filter_length_buf { num_to_2bytes(boost::numeric_cast<std::uint16_t>(get_size(topic_filter))) },
               options(options)
         {}
 
@@ -1863,7 +1864,7 @@ private:
     struct entry {
         entry(as::const_buffer const& topic_filter)
             : topic_filter(topic_filter),
-              topic_filter_length_buf { num_to_2bytes(static_cast<std::uint16_t>(get_size(topic_filter))) }
+              topic_filter_length_buf { num_to_2bytes(boost::numeric_cast<std::uint16_t>(get_size(topic_filter))) }
         {}
 
         as::const_buffer topic_filter;
