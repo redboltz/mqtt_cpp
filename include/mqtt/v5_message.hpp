@@ -629,7 +629,13 @@ public:
         buf.remove_prefix(2);
 
         if (buf.size() < topic_name_length) throw remaining_length_error();
+
+        // mqtt::string_view is a base class of mqtt::buffer (buf's type).
+        // The reason the explicit static_cast is to avoid buffer's lifetime copy.
+        // mqtt::buffer::substr() copies internal lifetime. But mqtt::string::view::substr()
+        // doesn't copy lifetime.
         utf8string_check(static_cast<mqtt::string_view>(buf).substr(0, topic_name_length));
+
         topic_name_ = as::buffer(buf.data(), topic_name_length);
         buf.remove_prefix(topic_name_length);
 

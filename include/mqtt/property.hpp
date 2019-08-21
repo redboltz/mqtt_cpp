@@ -90,7 +90,7 @@ struct n_bytes_property {
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() const {
         return 2;
     }
 
@@ -146,7 +146,7 @@ struct binary_property {
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() const {
         return 2;
     }
 
@@ -210,7 +210,7 @@ struct variable_property {
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() const {
         return 2;
     }
 
@@ -556,7 +556,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() const {
         return
             1 + // header
             2 + // key (len, buf)

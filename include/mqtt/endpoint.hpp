@@ -7427,7 +7427,7 @@ public:
                 typename std::iterator_traits<Iterator>::iterator_category,
                 std::random_access_iterator_tag
             >::value,
-            "Iterator doesn't support random access"
+            "Iterators provided to restore_serialized_message() must be random access iterators."
         );
 
         if (b == e) return;
