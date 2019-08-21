@@ -2,7 +2,7 @@ sudo: false
 language: cpp
 dist: trusty
 
-if: type != push OR branch = master OR branch =~ /^v\d+\.\d+(\.\d+)?(-\S*)?$/
+#if: type != push OR branch = master OR branch =~ /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 
 install:
  - export BASE=`pwd`
