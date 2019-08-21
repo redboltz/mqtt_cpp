@@ -7446,6 +7446,10 @@ public:
         case control_packet_type::pubrel: {
             restore_serialized_message(
                 basic_pubrel_message<PacketIdBytes>(
+                    // basic_pubrel_message have no member variable that type is mqtt::buffer.
+                    // When creating basic_pubrel_message, the constructor just read mqtt::buffer
+                    // and convert to some values.
+                    // So the argument buffer(...) doesn't need to hold the lifetime.
                     buffer(string_view(&*b, static_cast<std::size_t>(std::distance(b, e))))
                 )
             );
@@ -8231,7 +8235,7 @@ private:
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return;
         }
-        if (buf_.front() & 0b10000000) {
+        if (buf_.front() & variable_length_continue_flag) {
             socket_->async_read(
                 as::buffer(buf_.data(), 1),
                 [self = std::move(self), func = std::move(func)](
@@ -8557,9 +8561,9 @@ private:
         }
         --remaining_length_;
 
-        // I use rvalue reference paramter to reduce move constructor calling.
+        // I use rvalue reference parameter to reduce move constructor calling.
         // This is a local lambda expression invoked from this function, so
-        // I can controll all callers.
+        // I can control all callers.
         auto proc =
             [this]
             (
@@ -8574,7 +8578,7 @@ private:
                     call_message_size_error_handlers(func);
                     return;
                 }
-                if (buf.front() & 0b10000000) {
+                if (buf.front() & variable_length_continue_flag) {
                     BOOST_ASSERT(!buf.empty());
                     buf.remove_prefix(1);
                     process_variable_length_impl(
@@ -8614,7 +8618,7 @@ private:
                     if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
                     proc(
                         std::move(func),
-                        buffer(string_view(buf_.data(), 1)),
+                        buffer(string_view(buf_.data(), 1)), // buf_'s lifetime is handled by `self`
                         std::move(handler),
                         size,
                         multiplier,
@@ -10000,9 +10004,9 @@ private:
             );
             break;
         case connect_phase::will: {
-            // I use rvalue reference paramter to reduce move constructor calling.
+            // I use rvalue reference parameter to reduce move constructor calling.
             // This is a local lambda expression invoked from this function, so
-            // I can controll all callers.
+            // I can control all callers.
             auto topic_message_proc =
                 [this]
                 (
@@ -10286,9 +10290,9 @@ private:
             break;
         case connack_phase::finish: {
             mqtt_connected_ = true;
-            // I use rvalue reference paramter to reduce move constructor calling.
+            // I use rvalue reference parameter to reduce move constructor calling.
             // This is a local lambda expression invoked from this function, so
-            // I can controll all callers.
+            // I can control all callers.
             auto connack_proc =
                 [this]
                 (
@@ -11520,7 +11524,7 @@ private:
                                 body.end(),
                                 results.begin(),
                                 [&](auto const& e) -> mqtt::optional<std::uint8_t> {
-                                    if (e & 0b10000000) {
+                                    if (e & variable_length_continue_flag) {
                                         return mqtt::nullopt;
                                     }
                                     else {
@@ -13618,6 +13622,7 @@ private:
     protocol_version version_{protocol_version::undetermined};
     std::size_t packet_bulk_read_limit_ = 256;
     std::size_t props_bulk_read_limit_ = packet_bulk_read_limit_;
+    static constexpr std::uint8_t variable_length_continue_flag = 0b10000000;
 };
 
 } // namespace mqtt

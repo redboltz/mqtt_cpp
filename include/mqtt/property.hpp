@@ -90,7 +90,7 @@ struct n_bytes_property {
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    static constexpr std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() {
         return 2;
     }
 
@@ -146,7 +146,7 @@ struct binary_property {
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    static constexpr std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() {
         return 2;
     }
 
@@ -210,7 +210,7 @@ struct variable_property {
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    static constexpr std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() {
         return 2;
     }
 
@@ -512,9 +512,9 @@ public:
     void add_const_buffer_sequence(std::vector<as::const_buffer>& v) const {
         v.emplace_back(as::buffer(&id_, 1));
         v.emplace_back(as::buffer(key_.len.data(), key_.len.size()));
-        v.emplace_back(as::buffer(key_.buf.data(), key_.buf.size()));
+        v.emplace_back(as::buffer(key_.buf));
         v.emplace_back(as::buffer(val_.len.data(), val_.len.size()));
-        v.emplace_back(as::buffer(val_.buf.data(), val_.buf.size()));
+        v.emplace_back(as::buffer(val_.buf));
     }
 
     template <typename It>
@@ -556,7 +556,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    static constexpr std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() {
         return
             1 + // header
             2 + // key (len, buf)
