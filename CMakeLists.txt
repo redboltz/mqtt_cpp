@@ -136,6 +136,7 @@ IF (DOXYGEN_FOUND)
         COMMAND ${CMAKE_COMMAND} -E echo "PROJECT_NAME       = \"mqtt_cpp\"" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         COMMAND ${CMAKE_COMMAND} -E echo "EXTRACT_ALL        = YES" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         COMMAND ${CMAKE_COMMAND} -E echo "RECURSIVE          = YES" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+        COMMAND ${CMAKE_COMMAND} -E echo "PREDEFINED         = _DOXYGEN_" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         COMMAND ${CMAKE_COMMAND} -E echo "INPUT              = ${CMAKE_CURRENT_SOURCE_DIR}/include" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
     )
     IF (DOXYGEN_DOT_FOUND)

@@ -9,8 +9,6 @@
 
 #include <cstdint>
 
-#include <mqtt/deprecated.hpp>
-
 namespace mqtt {
 
 namespace connect_flags {

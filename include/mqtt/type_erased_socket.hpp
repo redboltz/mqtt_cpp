@@ -29,6 +29,15 @@ BOOST_TYPE_ERASURE_MEMBER(has_close, close)
 
 using namespace boost::type_erasure;
 
+/**
+ * @brief type alias of the type erased socket
+ * - mqtt::socket is a type erased socket.
+ * - shared_ptr of any classes that have listed functions (or matching funtion template)
+ *   can be used as the initializer of mqtt::socket.
+ * - The class template endpoint uses mqtt::socket via listed interface.
+ * - lowest_layer is provided for users to configure the socket (e.g. set delay, buffer size, etc)
+ *
+ */
 using socket = shared_any<
     mpl::vector<
         destructible<>,

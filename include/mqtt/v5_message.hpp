@@ -610,7 +610,7 @@ public:
         if (buf.empty())  throw remaining_length_error();
         fixed_header_ = static_cast<std::uint8_t>(buf.front());
         auto qos = publish::get_qos(fixed_header_);
-        buf = buf.substr(1);
+        buf.remove_prefix(1);
 
         if (buf.empty()) throw remaining_length_error();
         auto len_consumed = remaining_length(buf.begin(), buf.end());
@@ -619,19 +619,19 @@ public:
 
         std::copy(
             buf.begin(),
-            buf.begin() + consumed,
+            std::next(buf.begin(), static_cast<buffer::difference_type>(consumed)),
             std::back_inserter(remaining_length_buf_));
-        buf = buf.substr(consumed);
+        buf.remove_prefix(consumed);
 
         if (buf.size() < 2) throw remaining_length_error();
-        std::copy(buf.begin(), buf.begin() + 2, std::back_inserter(topic_name_length_buf_));
-        auto topic_name_length = make_uint16_t(buf.begin(), buf.begin() + 2);
-        buf = buf.substr(2);
+        std::copy(buf.begin(), std::next(buf.begin(), 2), std::back_inserter(topic_name_length_buf_));
+        auto topic_name_length = make_uint16_t(buf.begin(), std::next(buf.begin(), 2));
+        buf.remove_prefix(2);
 
         if (buf.size() < topic_name_length) throw remaining_length_error();
-        utf8string_check(buf.substr(0, topic_name_length));
-        topic_name_ = as::buffer(&buf.front(), topic_name_length);
-        buf = buf.substr(topic_name_length);
+        utf8string_check(static_cast<mqtt::string_view>(buf).substr(0, topic_name_length));
+        topic_name_ = as::buffer(buf.data(), topic_name_length);
+        buf.remove_prefix(topic_name_length);
 
         switch (qos) {
         case qos::at_most_once:
@@ -639,8 +639,8 @@ public:
         case qos::at_least_once:
         case qos::exactly_once:
             if (buf.size() < PacketIdBytes) throw remaining_length_error();
-            std::copy(buf.begin(), buf.begin() + PacketIdBytes, std::back_inserter(packet_id_));
-            buf = buf.substr(PacketIdBytes);
+            std::copy(buf.begin(), std::next(buf.begin(), PacketIdBytes), std::back_inserter(packet_id_));
+            buf.remove_prefix(PacketIdBytes);
             break;
         default:
             throw protocol_error();
@@ -654,13 +654,16 @@ public:
         property_length_ = std::get<0>(len_consume);
         auto consume = std::get<1>(len_consume);
         if (consume == 0) throw property_length_error();
-        std::copy(buf.begin(), buf.begin() + consume, std::back_inserter(property_length_buf_));
-        buf = buf.substr(consume);
+        std::copy(
+            buf.begin(),
+            std::next(buf.begin(), static_cast<buffer::difference_type>(consume)),
+            std::back_inserter(property_length_buf_)
+        );
+        buf.remove_prefix(consume);
         if (buf.size() < property_length_) throw property_length_error();
 
-        auto props_buf = property::parse(buf);
-        props_ = std::move(props_buf.first);
-        buf = std::move(props_buf.second);
+        props_ = property::parse(buf.substr(0, property_length_));
+        buf.remove_prefix(property_length_);
         payload_ = as::buffer(buf.data(), buf.size());
         num_of_const_buffer_sequence_ =
             1 +                   // fixed header
@@ -1226,7 +1229,7 @@ struct basic_pubrel_message {
     basic_pubrel_message(buffer buf) {
         if (buf.empty())  throw remaining_length_error();
         fixed_header_ = static_cast<std::uint8_t>(buf.front());
-        buf = buf.substr(1);
+        buf.remove_prefix(1);
 
         if (buf.empty()) throw remaining_length_error();
         auto len_consumed = remaining_length(buf.begin(), buf.end());
@@ -1235,13 +1238,13 @@ struct basic_pubrel_message {
 
         std::copy(
             buf.begin(),
-            buf.begin() + consumed,
+            std::next(buf.begin(), static_cast<buffer::difference_type>(consumed)),
             std::back_inserter(remaining_length_buf_));
-        buf = buf.substr(consumed);
+        buf.remove_prefix(consumed);
 
         if (buf.size() < PacketIdBytes) throw remaining_length_error();
-        std::copy(buf.begin(), buf.begin() + PacketIdBytes, std::back_inserter(packet_id_));
-        buf = buf.substr(PacketIdBytes);
+        std::copy(buf.begin(), std::next(buf.begin(), PacketIdBytes), std::back_inserter(packet_id_));
+        buf.remove_prefix(PacketIdBytes);
 
         if (buf.empty()) {
             num_of_const_buffer_sequence_ =
@@ -1252,7 +1255,7 @@ struct basic_pubrel_message {
         }
 
         reason_code_ = static_cast<std::uint8_t>(buf.front());
-        buf = buf.substr(1);
+        buf.remove_prefix(1);
 
         auto len_consume = variable_length(
             buf.begin(),
@@ -1261,13 +1264,16 @@ struct basic_pubrel_message {
         property_length_ = std::get<0>(len_consume);
         auto consume = std::get<1>(len_consume);
         if (consume == 0) throw property_length_error();
-        std::copy(buf.begin(), buf.begin() + consume, std::back_inserter(property_length_buf_));
-        buf = buf.substr(consume);
+        std::copy(
+            buf.begin(),
+            std::next(buf.begin(), static_cast<buffer::difference_type>(consume)),
+            std::back_inserter(property_length_buf_)
+        );
+        buf.remove_prefix(consume);
         if (buf.size() != property_length_) throw property_length_error();
 
-        auto props_buf = property::parse(buf);
-        props_ = std::move(props_buf.first);
-        buf = std::move(props_buf.second);
+        props_ = property::parse(buf);
+        buf.remove_prefix(property_length_);
         num_of_const_buffer_sequence_ =
             1 +                   // fixed header
             1 +                   // remaining length

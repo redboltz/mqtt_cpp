@@ -7435,14 +7435,12 @@ public:
         auto fixed_header = static_cast<std::uint8_t>(*b);
         switch (get_control_packet_type(fixed_header)) {
         case control_packet_type::publish: {
-            auto size = static_cast<std::size_t>(std::distance(b, e));
-            auto spa = make_shared_ptr_array(size);
-            std::copy(b, e, spa.get());
+            auto buf = allocate_buffer(b, e);
             restore_serialized_message(
                 basic_publish_message<PacketIdBytes>(
-                    buffer(string_view(spa.get(), size))
+                    buf
                 ),
-                spa
+                buf
             );
         } break;
         case control_packet_type::pubrel: {
@@ -7544,25 +7542,17 @@ public:
         auto fixed_header = static_cast<std::uint8_t>(*b);
         switch (get_control_packet_type(fixed_header)) {
         case control_packet_type::publish: {
-            auto size = static_cast<std::size_t>(std::distance(b, e));
-            auto spa = make_shared_ptr_array(size);
-            std::copy(b, e, spa.get());
+            auto buf = allocate_buffer(b, e);
             restore_v5_serialized_message(
-                v5::basic_publish_message<PacketIdBytes>(
-                    buffer(string_view(spa.get(), size))
-                ),
-                spa
+                v5::basic_publish_message<PacketIdBytes>(buf),
+                buf
             );
         } break;
         case control_packet_type::pubrel: {
-            auto size = static_cast<std::size_t>(std::distance(b, e));
-            auto spa = make_shared_ptr_array(size);
-            std::copy(b, e, spa.get());
+            auto buf = allocate_buffer(b, e);
             restore_v5_serialized_message(
-                v5::basic_pubrel_message<PacketIdBytes>(
-                    buffer(string_view(spa.get(), size))
-                ),
-                spa
+                v5::basic_pubrel_message<PacketIdBytes>(buf),
+                buf
             );
         } break;
         default:
@@ -7753,7 +7743,7 @@ protected:
     void async_read_control_packet_type(async_handler_t func) {
         auto self = shared_from_this();
         socket_->async_read(
-            as::buffer(&buf_[0], 1),
+            as::buffer(buf_.data(), 1),
             [this, self = std::move(self), func = std::move(func)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred) {
@@ -8215,11 +8205,11 @@ private:
     >;
 
     void handle_control_packet_type(async_handler_t func, this_type_sp self) {
-        fixed_header_ = static_cast<std::uint8_t>(buf_[0]);
+        fixed_header_ = static_cast<std::uint8_t>(buf_.front());
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
         socket_->async_read(
-            as::buffer(&buf_[0], 1),
+            as::buffer(buf_.data(), 1),
             [this, self = std::move(self), func = std::move(func)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred){
@@ -8229,17 +8219,21 @@ private:
         );
     }
 
+    bool calc_variable_length(std::size_t& v, std::size_t& multiplier, char buf) {
+        v += (buf & 0b01111111) * multiplier;
+        multiplier *= 128;
+        return multiplier <= 128 * 128 * 128 * 128;
+    }
+
     void handle_remaining_length(async_handler_t func, this_type_sp self) {
-        remaining_length_ += (buf_[0] & 0b01111111) * remaining_length_multiplier_;
-        remaining_length_multiplier_ *= 128;
-        if (remaining_length_multiplier_ > 128 * 128 * 128 * 128) {
+        if (!calc_variable_length(remaining_length_, remaining_length_multiplier_, buf_.front())) {
             handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return;
         }
-        if (buf_[0] & 0b10000000) {
+        if (buf_.front() & 0b10000000) {
             socket_->async_read(
-                as::buffer(&buf_[0], 1),
+                as::buffer(buf_.data(), 1),
                 [self = std::move(self), func = std::move(func)](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
@@ -8335,10 +8329,10 @@ private:
         switch (control_packet_type) {
         case control_packet_type::connect:
             process_connect(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
-            return;
+            break;
         case control_packet_type::connack:
             process_connack(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
-            return;
+            break;
         case control_packet_type::publish:
             if (mqtt_connected_) {
                 process_publish(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
@@ -8421,22 +8415,21 @@ private:
 
         if (buf.empty()) {
             auto spa = make_shared_ptr_array(size);
+            auto ptr = spa.get();
             socket_->async_read(
-                as::buffer(spa.get(), size),
+                as::buffer(ptr, size),
                 [
                     this,
                     self = std::move(self),
                     func = std::move(func),
-                    size,
                     handler = std::move(handler),
-                    spa
+                    buf = buffer(string_view(ptr, size), std::move(spa))
                 ]
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) mutable {
-                    if (!check_error_and_transferred_length(ec, func, bytes_transferred, size)) return;
-                    auto ptr = spa.get();
+                    if (!check_error_and_transferred_length(ec, func, bytes_transferred, buf.size())) return;
                     handler(
-                        buffer(string_view(ptr, size), std::move(spa)),
+                        std::move(buf),
                         buffer(),
                         std::move(func),
                         std::move(self)
@@ -8485,7 +8478,7 @@ private:
 
         if (buf.empty()) {
             socket_->async_read(
-                as::buffer(&buf_[0], Bytes),
+                as::buffer(buf_.data(), Bytes),
                 [
                     this,
                     self = std::move(self),
@@ -8496,7 +8489,10 @@ private:
                  std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, func, bytes_transferred, Bytes)) return;
                     handler(
-                        make_packet_id<Bytes>::apply(&buf_[0], &buf_[0] + static_cast<buffer::difference_type>(Bytes)),
+                        make_packet_id<Bytes>::apply(
+                            buf_.data(),
+                            std::next(buf_.data(), boost::numeric_cast<buffer::difference_type>(Bytes))
+                        ),
                         buffer(),
                         std::move(func),
                         std::move(self)
@@ -8513,10 +8509,15 @@ private:
                     handler = std::move(handler)
                ]
                () mutable {
-                    auto packet_id = make_packet_id<Bytes>::apply(&buf[0], &buf[0] + static_cast<buffer::difference_type>(Bytes));
+                    auto packet_id =
+                        make_packet_id<Bytes>::apply(
+                            buf.data(),
+                            std::next(buf.data(), boost::numeric_cast<buffer::difference_type>(Bytes))
+                        );
+                    buf.remove_prefix(Bytes);
                     handler(
                         packet_id,
-                        std::move(buf).substr(Bytes),
+                        std::move(buf),
                         std::move(func),
                         std::move(self)
                     );
@@ -8556,6 +8557,9 @@ private:
         }
         --remaining_length_;
 
+        // I use rvalue reference paramter to reduce move constructor calling.
+        // This is a local lambda expression invoked from this function, so
+        // I can controll all callers.
         auto proc =
             [this]
             (
@@ -8566,17 +8570,16 @@ private:
                 std::size_t multiplier,
                 this_type_sp&& self
             ) mutable {
-                size += (buf[0] & 0b01111111) * multiplier;
-                multiplier *= 128;
-                if (multiplier > 128 * 128 * 128 * 128) {
+                if (!calc_variable_length(size, multiplier, buf.front())) {
                     call_message_size_error_handlers(func);
                     return;
                 }
-                if (buf[0] & 0b10000000) {
+                if (buf.front() & 0b10000000) {
                     BOOST_ASSERT(!buf.empty());
+                    buf.remove_prefix(1);
                     process_variable_length_impl(
                         std::move(func),
-                        std::move(buf).substr(1),
+                        std::move(buf),
                         std::move(handler),
                         size,
                         multiplier,
@@ -8584,9 +8587,10 @@ private:
                     );
                 }
                 else {
+                    buf.remove_prefix(1);
                     handler(
                         size,
-                        std::move(buf).substr(1),
+                        std::move(buf),
                         std::move(func),
                         std::move(self)
                     );
@@ -8595,7 +8599,7 @@ private:
 
         if (buf.empty()) {
             socket_->async_read(
-                as::buffer(&buf_[0], 1),
+                as::buffer(buf_.data(), 1),
                 [
                     this,
                     self = std::move(self),
@@ -8767,7 +8771,7 @@ private:
                             return
                                 {
                                     nullptr,
-                                    &buf_[0],
+                                    buf_.data(),
                                     1
                                 };
                         } ();
@@ -8839,7 +8843,7 @@ private:
         --remaining_length_;
         if (buf.empty()) {
             socket_->async_read(
-                as::buffer(&buf_[0], 1),
+                as::buffer(buf_.data(), 1),
                 [
                     this,
                     self = std::move(self),
@@ -8854,7 +8858,7 @@ private:
                     process_property_body(
                         std::move(func),
                         buffer(),
-                        static_cast<v5::property::id>(buf_[0]),
+                        static_cast<v5::property::id>(buf_.front()),
                         property_length_rest - 1,
                         std::move(props),
                         std::move(handler),
@@ -8875,10 +8879,11 @@ private:
                     property_length_rest
                 ]
                 () mutable {
-                    auto id = static_cast<v5::property::id>(buf[0]);
+                    auto id = static_cast<v5::property::id>(buf.front());
+                    buf.remove_prefix(1);
                     process_property_body(
                         std::move(func),
-                        std::move(buf).substr(1),
+                        std::move(buf),
                         id,
                         property_length_rest - 1,
                         std::move(props),
@@ -9763,7 +9768,7 @@ private:
                 [
                     this,
                     func = std::move(func),
-                    spa = std::move(spa),
+                    buf = buffer(string_view(ptr, remaining_length_), std::move(spa)),
                     next_func = std::forward<NextFunc>(next_func),
                     next_phase,
                     info = std::forward<Info>(info),
@@ -9771,10 +9776,9 @@ private:
                 ]
                 (boost::system::error_code const& ec, std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, func, bytes_transferred, remaining_length_)) return;
-                    auto ptr = spa.get();
                     (this->*next_func)(
                         std::move(func),
-                        buffer(string_view(ptr, remaining_length_), std::move(spa)),
+                        std::move(buf),
                         next_phase,
                         std::move(info),
                         std::move(self)
@@ -9796,7 +9800,7 @@ private:
         }
 
         socket_->async_read(
-            as::buffer(&buf_[0], header_len),
+            as::buffer(buf_.data(), header_len),
             [
                 this,
                 func = std::move(func),
@@ -9850,7 +9854,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        std::size_t const header_len =
+        static constexpr std::size_t const header_len =
             2 +  // string length
             4 +  // "MQTT" string
             1 +  // ProtocolVersion
@@ -9885,16 +9889,12 @@ private:
     ) {
         switch (phase) {
         case connect_phase::header: {
-            std::size_t i = 0;
-            if (buf[i++] != 0x00 ||
-                buf[i++] != 0x04 ||
-                buf[i++] != 'M' ||
-                buf[i++] != 'Q' ||
-                buf[i++] != 'T' ||
-                buf[i++] != 'T') {
+            static constexpr char protocol_name[] = { 0x00, 0x04, 'M', 'Q', 'T', 'T' };
+            if (std::memcmp(buf.data(), protocol_name, sizeof(protocol_name)) != 0) {
                 call_protocol_error_handlers(func);
                 return;
             }
+            std::size_t i = sizeof(protocol_name);
             auto version = static_cast<protocol_version>(buf[i++]);
             if (version != protocol_version::v3_1_1 && version != protocol_version::v5) {
                 if (func) {
@@ -9926,9 +9926,10 @@ private:
             info.keep_alive = make_uint16_t(buf[i], buf[i + 1]);
             clean_session_ = connect_flags::has_clean_session(info.connect_flag);
 
+            buf.remove_prefix(info.header_len); // consume buffer
             process_connect_impl(
                 std::move(func),
-                std::move(buf).substr(info.header_len), // consume buffer
+                std::move(buf),
                 [&] {
                     if (version_ == protocol_version::v5) {
                         return connect_phase::properties;
@@ -9999,6 +10000,9 @@ private:
             );
             break;
         case connect_phase::will: {
+            // I use rvalue reference paramter to reduce move constructor calling.
+            // This is a local lambda expression invoked from this function, so
+            // I can controll all callers.
             auto topic_message_proc =
                 [this]
                 (
@@ -10211,7 +10215,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        std::size_t const header_len =
+        static constexpr std::size_t const header_len =
             1 +  // Connect Acknowledge Flags
             1;   // Reason Code
 
@@ -10245,9 +10249,10 @@ private:
             info.session_present = is_session_present(buf[0]);
             info.reason_code = static_cast<std::uint8_t>(buf[1]);
 
+            buf.remove_prefix(info.header_len); // consume buffer
             process_connack_impl(
                 std::move(func),
-                std::move(buf).substr(info.header_len),
+                std::move(buf),
                 [&] {
                     if (version_ == protocol_version::v5) {
                         return connack_phase::properties;
@@ -10281,6 +10286,9 @@ private:
             break;
         case connack_phase::finish: {
             mqtt_connected_ = true;
+            // I use rvalue reference paramter to reduce move constructor calling.
+            // This is a local lambda expression invoked from this function, so
+            // I can controll all callers.
             auto connack_proc =
                 [this]
                 (

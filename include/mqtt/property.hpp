@@ -125,10 +125,12 @@ struct binary_property {
      */
     template <typename It>
     void fill(It b, It e) const {
+        using dt = typename It::difference_type;
+
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
         *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         std::copy(length_.begin(), length_.end(), b);
-        b += static_cast<typename It::difference_type>(length_.size());
+        std::advance(b, static_cast<dt>(length_.size()));
         std::copy(buf_.begin(), buf_.end(), b);
     }
 
@@ -148,7 +150,7 @@ struct binary_property {
         return 2;
     }
 
-     buffer const& val() const {
+    buffer const& val() const {
         return buf_;
     }
 
@@ -242,7 +244,7 @@ public:
     payload_format val() const {
         return
             [this] {
-                if (buf_[0] == 0) return binary;
+                if (buf_.front() == 0) return binary;
                 else return string;
             }();
     }
@@ -355,7 +357,7 @@ public:
         : detail::n_bytes_property<1>(id::request_problem_information, b, e) {}
 
     bool val() const {
-        return buf_[0] == 1;
+        return buf_.front() == 1;
     }
 };
 
@@ -387,7 +389,7 @@ public:
         : detail::n_bytes_property<1>(id::request_response_information, b, e) {}
 
     bool val() const {
-        return buf_[0] == 1;
+        return buf_.front() == 1;
     }
 };
 
@@ -475,7 +477,7 @@ public:
         : detail::n_bytes_property<1>(id::maximum_qos, b, e) {}
 
     std::uint8_t val() const {
-        return static_cast<std::uint8_t>(buf_[0]);
+        return static_cast<std::uint8_t>(buf_.front());
     }
 
     static constexpr const detail::ostream_format of_ = detail::ostream_format::int_cast;
@@ -493,7 +495,7 @@ public:
         : detail::n_bytes_property<1>(id::retain_available, b, e) {}
 
     bool val() const {
-        return buf_[0] == 1;
+        return buf_.front() == 1;
     }
 };
 
@@ -517,24 +519,25 @@ public:
 
     template <typename It>
     void fill(It b, It e) const {
+        using dt = typename It::difference_type;
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
 
         *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         {
             std::copy(key_.len.begin(), key_.len.end(), b);
-            b += static_cast<typename It::difference_type>(key_.len.size());
+            std::advance(b, static_cast<dt>(key_.len.size()));
             auto ptr = key_.buf.data();
             auto size = key_.buf.size();
-            std::copy(ptr, ptr + size, b);
-            b += static_cast<typename It::difference_type>(size);
+            std::copy(ptr, std::next(ptr, static_cast<dt>(size)), b);
+            std::advance(b, static_cast<dt>(size));
         }
         {
             std::copy(val_.len.begin(), val_.len.end(), b);
-            b += static_cast<typename It::difference_type>(val_.len.size());
+            std::advance(b, static_cast<dt>(val_.len.size()));
             auto ptr = val_.buf.data();
             auto size = val_.buf.size();
-            std::copy(ptr, ptr + size, b);
-            b += static_cast<typename It::difference_type>(size);
+            std::copy(ptr, std::next(ptr, static_cast<dt>(size)), b);
+            std::advance(b, static_cast<dt>(size));
         }
     }
 
@@ -624,7 +627,7 @@ public:
         : detail::n_bytes_property<1>(id::wildcard_subscription_available, b, e) {}
 
     bool val() const {
-        return buf_[0] == 1;
+        return buf_.front() == 1;
     }
 };
 
@@ -641,7 +644,7 @@ public:
         : detail::n_bytes_property<1>(id::subscription_identifier_available, b, e) {}
 
     bool val() const {
-        return buf_[0] == 1;
+        return buf_.front() == 1;
     }
 };
 
@@ -658,7 +661,7 @@ public:
         : detail::n_bytes_property<1>(id::shared_subscription_available, b, e) {}
 
     bool val() const {
-        return buf_[0] == 1;
+        return buf_.front() == 1;
     }
 };
 
