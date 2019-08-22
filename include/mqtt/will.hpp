@@ -29,8 +29,8 @@ public:
      * @param qos
      *        mqtt::qos
      */
-    will(std::string topic,
-         std::string message,
+    will(buffer topic,
+         buffer message,
          bool retain,
          std::uint8_t qos,
          std::vector<v5::property_variant> props = {})
@@ -52,8 +52,8 @@ public:
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
      */
-    will(std::string topic,
-         std::string message,
+    will(buffer topic,
+         buffer message,
          bool retain = false,
          std::vector<v5::property_variant> props = {})
         :will(std::move(topic), std::move(message), retain, qos::at_most_once, std::move(props))
@@ -68,22 +68,23 @@ public:
      * @param qos
      *        mqtt::qos
      */
-    will(std::string topic,
-         std::string message,
+    will(buffer topic,
+         buffer message,
          std::uint8_t qos,
          std::vector<v5::property_variant> props = {})
         :will(std::move(topic), std::move(message), false, qos, std::move(props))
     {}
-    std::string const& topic() const {
+
+    buffer const& topic() const {
         return topic_;
     }
-    std::string& topic() {
+    buffer& topic() {
         return topic_;
     }
-    std::string const& message() const {
+    buffer const& message() const {
         return message_;
     }
-    std::string& message() {
+    buffer& message() {
         return message_;
     }
     bool retain() const {
@@ -100,8 +101,8 @@ public:
     }
 
 private:
-    std::string topic_;
-    std::string message_;
+    buffer topic_;
+    buffer message_;
     bool retain_ = false;
     std::uint8_t qos_ = 0;
     std::vector<v5::property_variant> props_;

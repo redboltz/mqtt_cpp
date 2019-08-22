@@ -11,6 +11,7 @@ OPTION(MQTT_STD_VARIANT "Use std::variant from C++17 instead of boost::variant" 
 OPTION(MQTT_STD_OPTIONAL "Use std::optional from C++17 instead of boost::optional" OFF)
 OPTION(MQTT_STD_STRING_VIEW "Use std::string_view from C++17 instead of boost::string_view" OFF)
 OPTION(MQTT_STD_ANY "Use std::any from C++17 instead of boost::any" OFF)
+OPTION(MQTT_STD_SHARED_PTR_ARRAY "Use std::shared_ptr<char[]> from C++17 instead of boost::shared_ptr<char[]>" OFF)
 
 IF ((CMAKE_VERSION VERSION_GREATER 3.1) OR
     (CMAKE_VERSION VERSION_EQUAL 3.1))
@@ -81,6 +82,15 @@ ELSE ()
     MESSAGE (STATUS "Using boost::any instead of std::any")
 ENDIF ()
 
+IF (MQTT_STD_SHARED_PTR_ARRAY)
+    SET(CMAKE_CXX_STANDARD 17)
+    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+    MESSAGE (STATUS "Using std::shared_ptr<char []> instead of boost::shared_ptr<char []>. Enables C++17!!!")
+    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_SHARED_PTR_ARRAY ${CMAKE_CXX_FLAGS}")
+ELSE ()
+    MESSAGE (STATUS "Using boost::shared_ptr<char []> instead of boost::shared_ptr<char []>")
+ENDIF ()
+
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     SET (CMAKE_CXX_FLAGS "/bigobj ${CMAKE_CXX_FLAGS}")
 ENDIF ()
@@ -136,6 +146,7 @@ IF (DOXYGEN_FOUND)
         COMMAND ${CMAKE_COMMAND} -E echo "PROJECT_NAME       = \"mqtt_cpp\"" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         COMMAND ${CMAKE_COMMAND} -E echo "EXTRACT_ALL        = YES" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         COMMAND ${CMAKE_COMMAND} -E echo "RECURSIVE          = YES" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+        COMMAND ${CMAKE_COMMAND} -E echo "PREDEFINED         = _DOXYGEN_" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         COMMAND ${CMAKE_COMMAND} -E echo "INPUT              = ${CMAKE_CURRENT_SOURCE_DIR}/include" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
     )
     IF (DOXYGEN_DOT_FOUND)

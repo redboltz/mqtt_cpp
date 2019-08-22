@@ -14,9 +14,11 @@
 
 BOOST_AUTO_TEST_SUITE(test_message)
 
+using namespace mqtt::literals;
+
 BOOST_AUTO_TEST_CASE( connect_cbuf ) {
     std::string cid = "cid";
-    mqtt::optional<mqtt::will> w = mqtt::will("wt", "wmsg", false, 0);
+    mqtt::optional<mqtt::will> w = mqtt::will("wt"_mb, "wmsg"_mb, false, 0);
     mqtt::optional<std::string> user = std::string("user");
     mqtt::optional<std::string> password = std::string("pw");
     auto m = mqtt::connect_message(
@@ -96,7 +98,7 @@ BOOST_AUTO_TEST_CASE( connack_num_of_cbs ) {
 BOOST_AUTO_TEST_CASE( publish_empty ) {
     std::string buf;
     try {
-        auto m = mqtt::publish_message(buf.begin(), buf.end());
+        auto m = mqtt::publish_message(buf);
         BOOST_TEST(false);
     }
     catch (mqtt::remaining_length_error const&) {
@@ -109,7 +111,7 @@ BOOST_AUTO_TEST_CASE( publish_fixed_header ) {
         0b00110100 // fixed header
     };
     try {
-        auto m = mqtt::publish_message(buf.begin(), buf.end());
+        auto m = mqtt::publish_message(buf);
         BOOST_TEST(false);
     }
     catch (mqtt::remaining_length_error const&) {
@@ -123,7 +125,7 @@ BOOST_AUTO_TEST_CASE( publish_remaining_length ) {
         0b00000000  // remaining length
     };
     try {
-        auto m = mqtt::publish_message(buf.begin(), buf.end());
+        auto m = mqtt::publish_message(buf);
         BOOST_TEST(false);
     }
     catch (mqtt::remaining_length_error const&) {
@@ -141,7 +143,7 @@ BOOST_AUTO_TEST_CASE( publish_topic_name_length ) {
         '1'
     };
     try {
-        auto m = mqtt::publish_message(buf.begin(), buf.end());
+        auto m = mqtt::publish_message(buf);
         BOOST_TEST(false);
     }
     catch (mqtt::remaining_length_error const&) {
@@ -164,7 +166,7 @@ BOOST_AUTO_TEST_CASE( publish_packet_id ) {
         0x01        // packet_id (half)
     };
     try {
-        auto m = mqtt::publish_message(buf.begin(), buf.end());
+        auto m = mqtt::publish_message(buf);
         BOOST_TEST(false);
     }
     catch (mqtt::remaining_length_error const&) {
@@ -187,7 +189,7 @@ BOOST_AUTO_TEST_CASE( publish_bad_qos ) {
         0x02        //
     };
     try {
-        auto m = mqtt::publish_message(buf.begin(), buf.end());
+        auto m = mqtt::publish_message(buf);
         BOOST_TEST(false);
     }
     catch (mqtt::protocol_error const&) {
@@ -210,7 +212,7 @@ BOOST_AUTO_TEST_CASE( publish_packet_id_ok ) {
         0x02        //
     };
     try {
-        auto m = mqtt::publish_message(buf.begin(), buf.end());
+        auto m = mqtt::publish_message(buf);
         BOOST_TEST(true);
     }
     catch (mqtt::remaining_length_error const&) {
@@ -231,7 +233,7 @@ BOOST_AUTO_TEST_CASE( publish_packet_id_ok_qos0 ) {
         '4',
     };
     try {
-        auto m = mqtt::publish_message(buf.begin(), buf.end());
+        auto m = mqtt::publish_message(buf);
         BOOST_TEST(true);
     }
     catch (mqtt::remaining_length_error const&) {
@@ -254,7 +256,7 @@ BOOST_AUTO_TEST_CASE( publish_get_attributes1 ) {
         0x02        //
     };
     try {
-        auto m = mqtt::publish_message(buf.begin(), buf.end());
+        auto m = mqtt::publish_message(buf);
         BOOST_TEST(m.is_retain() == true);
         BOOST_TEST(m.is_dup() == false);
         auto t = m.topic();
@@ -286,7 +288,7 @@ BOOST_AUTO_TEST_CASE( publish_get_attributes2 ) {
         'B'
     };
     try {
-        auto m = mqtt::publish_message(buf.begin(), buf.end());
+        auto m = mqtt::publish_message(buf);
         BOOST_TEST(m.is_retain() == false);
         BOOST_TEST(m.is_dup() == true);
         auto t = m.topic();

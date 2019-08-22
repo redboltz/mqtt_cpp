@@ -10,10 +10,12 @@
 #include "test_ctx_init.hpp"
 #include "checker.hpp"
 
-
 BOOST_AUTO_TEST_SUITE(test_underlying_timeout)
 
 namespace as = boost::asio;
+
+BOOST_AUTO_TEST_CASE( dummy ) {
+}
 
 #if defined(MQTT_USE_WS)
 

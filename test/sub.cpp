@@ -12,6 +12,8 @@
 
 BOOST_AUTO_TEST_SUITE(test_sub)
 
+using namespace mqtt::literals;
+
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
@@ -639,13 +641,13 @@ BOOST_AUTO_TEST_CASE( sub_unsub_prop ) {
 
         std::vector<mqtt::v5::property_variant> subps {
             mqtt::v5::property::subscription_identifier(268435455UL),
-            mqtt::v5::property::user_property("key1", "val1"),
-            mqtt::v5::property::user_property("key2", "val2")
+            mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+            mqtt::v5::property::user_property("key2"_mb, "val2"_mb)
         };
 
         std::vector<mqtt::v5::property_variant> unsubps {
-            mqtt::v5::property::user_property("key1", "val1"),
-            mqtt::v5::property::user_property("key2", "val2")
+            mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+            mqtt::v5::property::user_property("key2"_mb, "val2"_mb)
         };
 
         std::size_t sub_user_prop_count = 0;
@@ -657,10 +659,10 @@ BOOST_AUTO_TEST_CASE( sub_unsub_prop ) {
                 for (auto const& p : props) {
                     mqtt::visit(
                         mqtt::make_lambda_visitor<void>(
-                            [&](mqtt::v5::property::subscription_identifier::recv const& t) {
+                            [&](mqtt::v5::property::subscription_identifier const& t) {
                                 BOOST_TEST(t.val() == 268435455UL);
                             },
-                            [&](mqtt::v5::property::user_property::recv const& t) {
+                            [&](mqtt::v5::property::user_property const& t) {
                                 switch (sub_user_prop_count++) {
                                 case 0:
                                     BOOST_TEST(t.key() == "key1");
@@ -691,7 +693,7 @@ BOOST_AUTO_TEST_CASE( sub_unsub_prop ) {
                 for (auto const& p : props) {
                     mqtt::visit(
                         mqtt::make_lambda_visitor<void>(
-                            [&](mqtt::v5::property::user_property::recv const& t) {
+                            [&](mqtt::v5::property::user_property const& t) {
                                 switch (unsub_user_prop_count++) {
                                 case 0:
                                     BOOST_TEST(t.key() == "key1");
@@ -777,17 +779,17 @@ BOOST_AUTO_TEST_CASE( suback_unsuback_prop ) {
         };
 
         std::vector<mqtt::v5::property_variant> subackps {
-            mqtt::v5::property::reason_string("test success"),
-            mqtt::v5::property::user_property("key1", "val1"),
-            mqtt::v5::property::user_property("key2", "val2"),
+            mqtt::v5::property::reason_string("test success"_mb),
+            mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+            mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
         };
         auto suback_prop_size = subackps.size();
         b.set_suback_props(std::move(subackps));
 
         std::vector<mqtt::v5::property_variant> unsubackps {
-            mqtt::v5::property::reason_string("test success"),
-            mqtt::v5::property::user_property("key1", "val1"),
-            mqtt::v5::property::user_property("key2", "val2"),
+            mqtt::v5::property::reason_string("test success"_mb),
+            mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
+            mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
         };
         auto unsuback_prop_size = unsubackps.size();
         b.set_unsuback_props(std::move(unsubackps));
@@ -812,10 +814,10 @@ BOOST_AUTO_TEST_CASE( suback_unsuback_prop ) {
                 for (auto const& p : props) {
                     mqtt::visit(
                         mqtt::make_lambda_visitor<void>(
-                            [&](mqtt::v5::property::reason_string::recv const& t) {
+                            [&](mqtt::v5::property::reason_string const& t) {
                                 BOOST_TEST(t.val() == "test success");
                             },
-                            [&](mqtt::v5::property::user_property::recv const& t) {
+                            [&](mqtt::v5::property::user_property const& t) {
                                 switch (sub_user_prop_count++) {
                                 case 0:
                                     BOOST_TEST(t.key() == "key1");
@@ -849,10 +851,10 @@ BOOST_AUTO_TEST_CASE( suback_unsuback_prop ) {
                 for (auto const& p : props) {
                     mqtt::visit(
                         mqtt::make_lambda_visitor<void>(
-                            [&](mqtt::v5::property::reason_string::recv const& t) {
+                            [&](mqtt::v5::property::reason_string const& t) {
                                 BOOST_TEST(t.val() == "test success");
                             },
-                            [&](mqtt::v5::property::user_property::recv const& t) {
+                            [&](mqtt::v5::property::user_property const& t) {
                                 switch (unsub_user_prop_count++) {
                                 case 0:
                                     BOOST_TEST(t.key() == "key1");
