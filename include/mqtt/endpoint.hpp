@@ -9071,10 +9071,11 @@ private:
                     props = std::move(props),
                     handler = std::move(handler),
                     property_length_rest,
-                    size_before = buf.size()
+                    remaining_length_before = remaining_length_
                 ]
                 (std::size_t size, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    auto rest = property_length_rest - (size_before - buf.size());
+                    auto consumed = remaining_length_before - remaining_length_;
+                    auto rest = property_length_rest - consumed;
                     props.emplace_back(
                         v5::property::subscription_identifier(size)
                     );
