@@ -16,10 +16,11 @@
 
 #include <mqtt/shared_any.hpp>
 
+#if BOOST_VERSION >= 106700
+
 namespace mqtt {
 
-namespace as = boost::asio;
-
+// New style boost type_erasure member fucntion concept definition
 BOOST_TYPE_ERASURE_MEMBER(has_async_read, async_read)
 BOOST_TYPE_ERASURE_MEMBER(has_async_write, async_write)
 BOOST_TYPE_ERASURE_MEMBER(has_write, write)
@@ -27,6 +28,23 @@ BOOST_TYPE_ERASURE_MEMBER(has_post, post)
 BOOST_TYPE_ERASURE_MEMBER(has_lowest_layer, lowest_layer)
 BOOST_TYPE_ERASURE_MEMBER(has_close, close)
 
+} // namespace mqtt
+
+#else //  BOOST_VERSION >= 106700
+
+// Old style boost type_erasure member fucntion concept definition
+BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_async_read), async_read, 3)
+BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_async_write), async_write, 3)
+BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_write), write, 2)
+BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_post), post, 1)
+BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_lowest_layer), lowest_layer, 0)
+BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_close), close, 1)
+
+#endif // BOOST_VERSION >= 106700
+
+namespace mqtt {
+
+namespace as = boost::asio;
 using namespace boost::type_erasure;
 
 /**
@@ -45,7 +63,7 @@ using socket = shared_any<
         has_async_write<void(std::vector<as::const_buffer>, std::function<void(boost::system::error_code const&, std::size_t)>)>,
         has_write<std::size_t(std::vector<as::const_buffer>, boost::system::error_code&)>,
         has_post<void(std::function<void()>)>,
-        has_lowest_layer<as::basic_socket<as::ip::tcp>&()>,
+        has_lowest_layer<as::ip::tcp::socket::lowest_layer_type&()>,
         has_close<void(boost::system::error_code&)>
     >
 >;
