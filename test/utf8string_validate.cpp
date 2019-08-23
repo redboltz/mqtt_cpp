@@ -455,7 +455,7 @@ BOOST_AUTO_TEST_CASE( connect_overlength_client_id ) {
             BOOST_CHECK(true);
         }
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 #endif // MQTT_USE_STR_CHECK
 }
 
@@ -475,7 +475,7 @@ BOOST_AUTO_TEST_CASE( connect_invalid_client_id ) {
             BOOST_CHECK(true);
         }
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 #endif // MQTT_USE_STR_CHECK
 }
 
@@ -495,7 +495,7 @@ BOOST_AUTO_TEST_CASE( connect_overlength_user_name ) {
             BOOST_CHECK(true);
         }
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 #endif // MQTT_USE_STR_CHECK
 }
 
@@ -515,7 +515,7 @@ BOOST_AUTO_TEST_CASE( connect_invalid_user_name ) {
             BOOST_CHECK(true);
         }
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 #endif // MQTT_USE_STR_CHECK
 }
 
@@ -535,7 +535,7 @@ BOOST_AUTO_TEST_CASE( connect_overlength_will_topic ) {
             BOOST_CHECK(true);
         }
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 #endif // MQTT_USE_STR_CHECK
 }
 
@@ -555,7 +555,7 @@ BOOST_AUTO_TEST_CASE( connect_invalid_will_topic ) {
             BOOST_CHECK(true);
         }
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 #endif // MQTT_USE_STR_CHECK
 }
 
@@ -589,7 +589,7 @@ BOOST_AUTO_TEST_CASE( publish_overlength_topic ) {
         );
         ios.run();
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 #endif // MQTT_USE_STR_CHECK
 }
 
@@ -617,7 +617,7 @@ BOOST_AUTO_TEST_CASE( publish_invalid_topic ) {
         );
         ios.run();
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 #endif // MQTT_USE_STR_CHECK
 }
 
@@ -645,7 +645,7 @@ BOOST_AUTO_TEST_CASE( subscribe_overlength_topic ) {
         );
         ios.run();
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 #endif // MQTT_USE_STR_CHECK
 }
 
@@ -673,7 +673,7 @@ BOOST_AUTO_TEST_CASE( subscribe_invalid_topic ) {
         );
         ios.run();
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 #endif // MQTT_USE_STR_CHECK
 }
 
@@ -701,7 +701,7 @@ BOOST_AUTO_TEST_CASE( unsubscribe_overlength_topic ) {
         );
         ios.run();
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 #endif // MQTT_USE_STR_CHECK
 }
 
@@ -729,7 +729,7 @@ BOOST_AUTO_TEST_CASE( unsubscribe_invalid_topic ) {
         );
         ios.run();
     };
-    do_combi_test(test);
+    do_combi_test_sync(test);
 #endif // MQTT_USE_STR_CHECK
 }
 
