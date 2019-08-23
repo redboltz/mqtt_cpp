@@ -99,14 +99,16 @@ inline buffer operator""_mb(char const* str, std::size_t length) {
     return buffer(mqtt::string_view(str, length));
 }
 
+} // namespace literals
+
 /**
  * @brief create buffer from the pair of iterators
  * It copies string that from b to e into shared_ptr_array.
  * Then create buffer and return it.
  * The buffer holds the lifetime of shared_ptr_array.
  *
- * @param str     the address of the string literal
- * @param length  the length of the string literal
+ * @param b  begin position iterator
+ * @param e  end position iterator
  * @return buffer
  */
 template <typename Iterator>
@@ -117,7 +119,19 @@ inline buffer allocate_buffer(Iterator b, Iterator e) {
     return buffer(string_view(spa.get(), size), spa);
 }
 
-} // namespace literals
+/**
+ * @brief create buffer from the string_view
+ * It copies string that from string_view into shared_ptr_array.
+ * Then create buffer and return it.
+ * The buffer holds the lifetime of shared_ptr_array.
+ *
+ * @param sv  the source string_view
+ * @return buffer
+ */
+inline buffer allocate_buffer(string_view sv) {
+    return allocate_buffer(sv.begin(), sv.end());
+}
+
 
 } // namespace mqtt
 
