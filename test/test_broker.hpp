@@ -677,7 +677,7 @@ private:
             mqtt::buffer topic = std::get<0>(e);
             std::uint8_t qos = std::get<1>(e);
             // Publish any retained messages that match the newly subscribed topic.
-            auto it = retains_.find(std::string(topic));
+            auto it = retains_.find(topic);
             if (it != retains_.end()) {
                 ep.publish(
                     as::buffer(it->topic),
@@ -1010,8 +1010,6 @@ private:
         session_state& operator=(session_state &&) = default;
         session_state& operator=(session_state const&) = default;
 
-        mqtt::string_view get_client_id() const { return client_id; }
-
         mqtt::buffer client_id;
         con_sp_t con;
 
@@ -1031,7 +1029,7 @@ private:
         mi::indexed_by<
             mi::ordered_unique<
                 mi::tag<tag_client_id>,
-                BOOST_MULTI_INDEX_CONST_MEM_FUN(session_state, mqtt::string_view, session_state::get_client_id)
+                BOOST_MULTI_INDEX_MEMBER(session_state, mqtt::buffer, client_id)
             >,
             mi::ordered_unique<
                 mi::tag<tag_con>,
@@ -1047,7 +1045,7 @@ private:
         mi::indexed_by<
             mi::ordered_unique<
                 mi::tag<tag_client_id>,
-                BOOST_MULTI_INDEX_CONST_MEM_FUN(session_state, mqtt::string_view, session_state::get_client_id)
+                BOOST_MULTI_INDEX_MEMBER(session_state, mqtt::buffer, client_id)
             >
         >
     >;
@@ -1059,9 +1057,6 @@ private:
             con_sp_t con,
             std::uint8_t qos)
             :topic(std::move(topic)), con(std::move(con)), qos(qos) {}
-        mqtt::string_view get_topic() const {
-            return topic;
-        }
         mqtt::buffer topic;
         con_sp_t con;
         std::uint8_t qos;
@@ -1071,7 +1066,7 @@ private:
         mi::indexed_by<
             mi::ordered_non_unique<
                 mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_CONST_MEM_FUN(sub_con, mqtt::string_view, sub_con::get_topic)
+                BOOST_MULTI_INDEX_MEMBER(sub_con, mqtt::buffer, topic)
             >,
             mi::ordered_non_unique<
                 mi::tag<tag_con>,
@@ -1085,7 +1080,7 @@ private:
                 mi::composite_key<
                     sub_con,
                     BOOST_MULTI_INDEX_MEMBER(sub_con, con_sp_t, con),
-                    BOOST_MULTI_INDEX_CONST_MEM_FUN(sub_con, mqtt::string_view, sub_con::get_topic)
+                    BOOST_MULTI_INDEX_MEMBER(sub_con, mqtt::buffer, topic)
                 >
             >
         >
@@ -1100,9 +1095,6 @@ private:
             std::vector<mqtt::v5::property_variant> props,
             std::uint8_t qos)
             :topic(std::move(topic)), contents(std::move(contents)), props(std::move(props)), qos(qos) {}
-        mqtt::string_view get_topic() const {
-            return topic;
-        }
         mqtt::buffer topic;
         mqtt::buffer contents;
         std::vector<mqtt::v5::property_variant> props;
@@ -1113,7 +1105,7 @@ private:
         mi::indexed_by<
             mi::ordered_unique<
                 mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_CONST_MEM_FUN(retain, mqtt::string_view, retain::get_topic)
+                BOOST_MULTI_INDEX_MEMBER(retain, mqtt::buffer, topic)
             >
         >
     >;
@@ -1141,12 +1133,6 @@ private:
             mqtt::buffer topic,
             std::uint8_t qos)
             :client_id(std::move(client_id)), topic(std::move(topic)), qos(qos) {}
-        mqtt::string_view get_client_id() const {
-            return client_id;
-        }
-        mqtt::string_view get_topic() const {
-            return topic;
-        }
         mqtt::buffer client_id;
         mqtt::buffer topic;
         std::vector<saved_message> messages;
@@ -1159,12 +1145,12 @@ private:
             // Allow multiple client id's for the same topic
             mi::ordered_non_unique<
                 mi::tag<tag_client_id>,
-                BOOST_MULTI_INDEX_CONST_MEM_FUN(session_subscription, mqtt::string_view, session_subscription::get_client_id)
+                BOOST_MULTI_INDEX_MEMBER(session_subscription, mqtt::buffer, client_id)
             >,
             // Allow multiple topics for the same client id
             mi::ordered_non_unique<
                 mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_CONST_MEM_FUN(session_subscription, mqtt::string_view, session_subscription::get_topic)
+                BOOST_MULTI_INDEX_MEMBER(session_subscription, mqtt::buffer, topic)
             >,
             // Don't allow the same client id to have the same topic multiple times.
             // Note that this index does not get used by any code in the broker
@@ -1173,8 +1159,8 @@ private:
             mi::ordered_unique<
                 mi::composite_key<
                     session_subscription,
-                    BOOST_MULTI_INDEX_CONST_MEM_FUN(session_subscription, mqtt::string_view, session_subscription::get_client_id),
-                    BOOST_MULTI_INDEX_CONST_MEM_FUN(session_subscription, mqtt::string_view, session_subscription::get_topic)
+                    BOOST_MULTI_INDEX_MEMBER(session_subscription, mqtt::buffer, topic),
+                    BOOST_MULTI_INDEX_MEMBER(session_subscription, mqtt::buffer, client_id)
                 >
             >
         >
