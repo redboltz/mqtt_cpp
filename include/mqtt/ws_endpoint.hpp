@@ -45,9 +45,19 @@ public:
         return ws_.get_io_service();
     }
 
+#if BOOST_VERSION >= 107000
+
+    auto& lowest_layer() {
+        return boost::beast::get_lowest_layer(ws_);
+    }
+
+#else  // BOOST_VERSION >= 107000
+
     typename boost::beast::websocket::stream<Socket>::lowest_layer_type& lowest_layer() {
         return ws_.lowest_layer();
     }
+
+#endif // BOOST_VERSION >= 107000
 
     typename boost::beast::websocket::stream<Socket>::next_layer_type& next_layer() {
         return ws_.next_layer();
