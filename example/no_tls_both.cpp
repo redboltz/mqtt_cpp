@@ -125,9 +125,9 @@ using con_t = mqtt::server<>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
 
 struct sub_con {
-    sub_con(std::string topic, con_sp_t con, std::uint8_t qos)
+    sub_con(mqtt::buffer topic, con_sp_t con, std::uint8_t qos)
         :topic(std::move(topic)), con(std::move(con)), qos(qos) {}
-    std::string topic;
+    mqtt::buffer topic;
     con_sp_t con;
     std::uint8_t qos;
 };
@@ -140,7 +140,7 @@ using mi_sub_con = mi::multi_index_container<
     mi::indexed_by<
         mi::ordered_non_unique<
             mi::tag<tag_topic>,
-            BOOST_MULTI_INDEX_MEMBER(sub_con, std::string, topic)
+            BOOST_MULTI_INDEX_MEMBER(sub_con, mqtt::buffer, topic)
         >,
         mi::ordered_non_unique<
             mi::tag<tag_con>,
@@ -259,11 +259,12 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     std::cout << "[server] topic_name: " << topic_name << std::endl;
                     std::cout << "[server] contents: " << contents << std::endl;
                     auto const& idx = subs.get<tag_topic>();
-                    auto r = idx.equal_range(std::string(topic_name)); // TODO: Fix need to construct string
+                    auto r = idx.equal_range(topic_name);
                     for (; r.first != r.second; ++r.first) {
                         r.first->con->publish(
-                            std::string(topic_name),
-                            std::string(contents),
+                            boost::asio::buffer(topic_name),
+                            boost::asio::buffer(contents),
+                            std::make_pair(topic_name, contents),
                             std::min(r.first->qos, qos),
                             retain
                         );
@@ -282,7 +283,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                         std::uint8_t qos = std::get<1>(e);
                         std::cout << "[server] topic: " << topic  << " qos: " << static_cast<int>(qos) << std::endl;
                         res.emplace_back(qos);
-                        subs.emplace(std::string(topic), ep.shared_from_this(), qos); // TODO: Fix need to construct string
+                        subs.emplace(std::move(topic), ep.shared_from_this(), qos);
                     }
                     ep.suback(packet_id, res);
                     return true;
@@ -294,7 +295,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                  std::vector<mqtt::buffer> topics) {
                     std::cout << "[server]unsubscribe received. packet_id: " << packet_id << std::endl;
                     for (auto const& topic : topics) {
-                        subs.erase(std::string(topic)); // TODO: Fix need to construct string
+                        subs.erase(topic);
                     }
                     ep.unsuback(packet_id);
                     return true;
