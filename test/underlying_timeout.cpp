@@ -59,7 +59,12 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
     char buf;
 
     as::async_connect(
-        socket.lowest_layer(), it, end,
+#if BOOST_VERSION >= 107000
+        boost::beast::get_lowest_layer(socket),
+#else  // BOOST_VERSION >= 107000
+        socket.lowest_layer(),
+#endif // BOOST_VERSION >= 107000
+        it, end,
         [&]
         (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {
             if (ec) {
@@ -130,7 +135,12 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
     char buf;
 
     as::async_connect(
-        socket.lowest_layer(), it, end,
+#if BOOST_VERSION >= 107000
+        boost::beast::get_lowest_layer(socket),
+#else  // BOOST_VERSION >= 107000
+        socket.lowest_layer(),
+#endif // BOOST_VERSION >= 107000
+        it, end,
         [&]
         (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {
             if (ec) {
@@ -199,7 +209,12 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
     char buf;
 
     as::async_connect(
-        socket.lowest_layer(), it, end,
+#if BOOST_VERSION >= 107000
+        boost::beast::get_lowest_layer(socket),
+#else  // BOOST_VERSION >= 107000
+        socket.lowest_layer(),
+#endif // BOOST_VERSION >= 107000
+        it, end,
         [&]
         (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {
             if (ec) {
@@ -285,7 +300,12 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
     char buf;
 
     as::async_connect(
-        socket.lowest_layer(), it, end,
+#if BOOST_VERSION >= 107000
+        boost::beast::get_lowest_layer(socket),
+#else  // BOOST_VERSION >= 107000
+        socket.lowest_layer(),
+#endif // BOOST_VERSION >= 107000
+        it, end,
         [&]
         (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {
             if (ec) {
