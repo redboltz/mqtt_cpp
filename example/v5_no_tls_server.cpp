@@ -21,9 +21,9 @@ using con_t = mqtt::server<>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
 
 struct sub_con {
-    sub_con(std::string const& topic, con_sp_t const& con, std::uint8_t qos)
-        :topic(topic), con(con), qos(qos) {}
-    std::string topic;
+    sub_con(mqtt::buffer topic, con_sp_t con, std::uint8_t qos)
+        :topic(std::move(topic)), con(std::move(con)), qos(qos) {}
+    mqtt::buffer topic;
     con_sp_t con;
     std::uint8_t qos;
 };
@@ -36,7 +36,7 @@ using mi_sub_con = mi::multi_index_container<
     mi::indexed_by<
         mi::ordered_non_unique<
             mi::tag<tag_topic>,
-            BOOST_MULTI_INDEX_MEMBER(sub_con, std::string, topic)
+            BOOST_MULTI_INDEX_MEMBER(sub_con, mqtt::buffer, topic)
         >,
         mi::ordered_non_unique<
             mi::tag<tag_con>,
@@ -184,11 +184,12 @@ int main(int argc, char** argv) {
                     std::cout << "[server]topic_name: " << topic_name << std::endl;
                     std::cout << "[server]contents: " << contents << std::endl;
                     auto const& idx = subs.get<tag_topic>();
-                    auto r = idx.equal_range(std::string(topic_name));
+                    auto r = idx.equal_range(topic_name);
                     for (; r.first != r.second; ++r.first) {
                         r.first->con->publish(
-                            boost::asio::buffer(topic_name.data(), topic_name.size()),
-                            boost::asio::buffer(contents.data(), contents.size()),
+                            boost::asio::buffer(topic_name),
+                            boost::asio::buffer(contents),
+                            std::make_pair(topic_name, contents),
                             std::min(r.first->qos, qos),
                             retain
                         );
@@ -204,11 +205,11 @@ int main(int argc, char** argv) {
                     std::vector<std::uint8_t> res;
                     res.reserve(entries.size());
                     for (auto const& e : entries) {
-                        mqtt::buffer const& topic = std::get<0>(e);
+                        mqtt::buffer topic = std::get<0>(e);
                         std::uint8_t qos = std::get<1>(e);
                         std::cout << "[server]topic: " << topic  << " qos: " << static_cast<int>(qos) << std::endl;
                         res.emplace_back(qos);
-                        subs.emplace(std::string(topic), ep.shared_from_this(), qos);
+                        subs.emplace(std::move(topic), ep.shared_from_this(), qos);
                     }
                     ep.suback(packet_id, res);
                     return true;
@@ -221,7 +222,7 @@ int main(int argc, char** argv) {
                  std::vector<mqtt::v5::property_variant> /*props*/) {
                     std::cout << "[server]unsubscribe received. packet_id: " << packet_id << std::endl;
                     for (auto const& topic : topics) {
-                        subs.erase(std::string(topic));
+                        subs.erase(topic);
                     }
                     ep.unsuback(packet_id);
                     return true;

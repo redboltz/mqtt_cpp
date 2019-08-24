@@ -657,7 +657,7 @@ private:
             res.emplace_back(qos);
             // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
             // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
-            subs_.emplace(topic, ep.shared_from_this(), qos);
+            subs_.emplace(std::move(topic), ep.shared_from_this(), qos);
         }
         switch (ep.get_protocol_version()) {
         case mqtt::protocol_version::v3_1_1:
@@ -674,7 +674,7 @@ private:
             break;
         }
         for (auto const& e : entries) {
-            mqtt::buffer topic = std::get<0>(e);
+            mqtt::buffer const& topic = std::get<0>(e);
             std::uint8_t qos = std::get<1>(e);
             // Publish any retained messages that match the newly subscribed topic.
             auto it = retains_.find(topic);
