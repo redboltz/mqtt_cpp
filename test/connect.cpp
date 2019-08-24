@@ -78,6 +78,7 @@ BOOST_AUTO_TEST_CASE( connect ) {
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
+    do_combi_test(test); // for mqtt::client factory test
 }
 
 BOOST_AUTO_TEST_CASE( connect_no_strand ) {
