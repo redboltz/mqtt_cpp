@@ -21,7 +21,6 @@
 #endif // !defined(MQTT_NO_TLS)
 #endif // defined(MQTT_USE_WS)
 
-#include <mqtt/client.hpp>
 #include <mqtt/sync_client.hpp>
 #include <mqtt/async_client.hpp>
 
@@ -56,6 +55,17 @@ inline void do_combi_test(Test const& test) {
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
+    {
+        boost::asio::io_service ios;
+        test_broker b(ios);
+        test_server_tls s(ios, b);
+        auto c = mqtt::make_tls_client(ios, broker_url, broker_tls_port, mqtt::protocol_version::v5);
+        std::string path = boost::unit_test::framework::master_test_suite().argv[0];
+        std::size_t pos = path.find_last_of("/\\");
+        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        c->set_ca_cert_file(base + "cacert.pem");
+        test(ios, c, s, b);
+    }
 #endif // !defined(MQTT_NO_TLS)
 #if defined(MQTT_USE_WS)
     {
@@ -63,6 +73,13 @@ inline void do_combi_test(Test const& test) {
         test_broker b(ios);
         test_server_no_tls_ws s(ios, b);
         auto c = mqtt::make_client_ws(ios, broker_url, broker_notls_ws_port);
+        test(ios, c, s, b);
+    }
+    {
+        boost::asio::io_service ios;
+        test_broker b(ios);
+        test_server_no_tls_ws s(ios, b);
+        auto c = mqtt::make_client_ws(ios, broker_url, broker_notls_ws_port, "/", mqtt::protocol_version::v5);
         test(ios, c, s, b);
     }
 #if !defined(MQTT_NO_TLS)
@@ -77,19 +94,35 @@ inline void do_combi_test(Test const& test) {
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
+    {
+        boost::asio::io_service ios;
+        test_broker b(ios);
+        test_server_tls_ws s(ios, b);
+        auto c = mqtt::make_tls_client_ws(ios, broker_url, broker_tls_ws_port, "/", mqtt::protocol_version::v5);
+        std::string path = boost::unit_test::framework::master_test_suite().argv[0];
+        std::size_t pos = path.find_last_of("/\\");
+        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        c->set_ca_cert_file(base + "cacert.pem");
+        test(ios, c, s, b);
+    }
 #endif // !defined(MQTT_NO_TLS)
 #endif // defined(MQTT_USE_WS)
 }
 
 template <typename Test>
 inline void do_combi_test_sync(Test const& test) {
-    do_combi_test(test);
-
     {
         boost::asio::io_service ios;
         test_broker b(ios);
         test_server_no_tls s(ios, b);
         auto c = mqtt::make_sync_client(ios, broker_url, broker_notls_port);
+        test(ios, c, s, b);
+    }
+    {
+        boost::asio::io_service ios;
+        test_broker b(ios);
+        test_server_no_tls s(ios, b);
+        auto c = mqtt::make_sync_client(ios, broker_url, broker_notls_port, mqtt::protocol_version::v5);
         test(ios, c, s, b);
     }
 #if !defined(MQTT_NO_TLS)
@@ -98,6 +131,17 @@ inline void do_combi_test_sync(Test const& test) {
         test_broker b(ios);
         test_server_tls s(ios, b);
         auto c = mqtt::make_tls_sync_client(ios, broker_url, broker_tls_port);
+        std::string path = boost::unit_test::framework::master_test_suite().argv[0];
+        std::size_t pos = path.find_last_of("/\\");
+        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        c->set_ca_cert_file(base + "cacert.pem");
+        test(ios, c, s, b);
+    }
+    {
+        boost::asio::io_service ios;
+        test_broker b(ios);
+        test_server_tls s(ios, b);
+        auto c = mqtt::make_tls_sync_client(ios, broker_url, broker_tls_port, mqtt::protocol_version::v5);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
@@ -113,6 +157,13 @@ inline void do_combi_test_sync(Test const& test) {
         auto c = mqtt::make_sync_client_ws(ios, broker_url, broker_notls_ws_port);
         test(ios, c, s, b);
     }
+    {
+        boost::asio::io_service ios;
+        test_broker b(ios);
+        test_server_no_tls_ws s(ios, b);
+        auto c = mqtt::make_sync_client_ws(ios, broker_url, broker_notls_ws_port, "/", mqtt::protocol_version::v5);
+        test(ios, c, s, b);
+    }
 #if !defined(MQTT_NO_TLS)
     {
         boost::asio::io_service ios;
@@ -125,19 +176,35 @@ inline void do_combi_test_sync(Test const& test) {
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
+    {
+        boost::asio::io_service ios;
+        test_broker b(ios);
+        test_server_tls_ws s(ios, b);
+        auto c = mqtt::make_tls_sync_client_ws(ios, broker_url, broker_tls_ws_port, "/", mqtt::protocol_version::v5);
+        std::string path = boost::unit_test::framework::master_test_suite().argv[0];
+        std::size_t pos = path.find_last_of("/\\");
+        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        c->set_ca_cert_file(base + "cacert.pem");
+        test(ios, c, s, b);
+    }
 #endif // !defined(MQTT_NO_TLS)
 #endif // defined(MQTT_USE_WS)
 }
 
 template <typename Test>
 inline void do_combi_test_async(Test const& test) {
-    do_combi_test(test);
-
     {
         boost::asio::io_service ios;
         test_broker b(ios);
         test_server_no_tls s(ios, b);
         auto c = mqtt::make_async_client(ios, broker_url, broker_notls_port);
+        test(ios, c, s, b);
+    }
+    {
+        boost::asio::io_service ios;
+        test_broker b(ios);
+        test_server_no_tls s(ios, b);
+        auto c = mqtt::make_async_client(ios, broker_url, broker_notls_port, mqtt::protocol_version::v5);
         test(ios, c, s, b);
     }
 #if !defined(MQTT_NO_TLS)
@@ -146,6 +213,17 @@ inline void do_combi_test_async(Test const& test) {
         test_broker b(ios);
         test_server_tls s(ios, b);
         auto c = mqtt::make_tls_async_client(ios, broker_url, broker_tls_port);
+        std::string path = boost::unit_test::framework::master_test_suite().argv[0];
+        std::size_t pos = path.find_last_of("/\\");
+        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        c->set_ca_cert_file(base + "cacert.pem");
+        test(ios, c, s, b);
+    }
+    {
+        boost::asio::io_service ios;
+        test_broker b(ios);
+        test_server_tls s(ios, b);
+        auto c = mqtt::make_tls_async_client(ios, broker_url, broker_tls_port, mqtt::protocol_version::v5);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
@@ -161,12 +239,30 @@ inline void do_combi_test_async(Test const& test) {
         auto c = mqtt::make_async_client_ws(ios, broker_url, broker_notls_ws_port);
         test(ios, c, s, b);
     }
+    {
+        boost::asio::io_service ios;
+        test_broker b(ios);
+        test_server_no_tls_ws s(ios, b);
+        auto c = mqtt::make_async_client_ws(ios, broker_url, broker_notls_ws_port, "/", mqtt::protocol_version::v5);
+        test(ios, c, s, b);
+    }
 #if !defined(MQTT_NO_TLS)
     {
         boost::asio::io_service ios;
         test_broker b(ios);
         test_server_tls_ws s(ios, b);
         auto c = mqtt::make_tls_async_client_ws(ios, broker_url, broker_tls_ws_port);
+        std::string path = boost::unit_test::framework::master_test_suite().argv[0];
+        std::size_t pos = path.find_last_of("/\\");
+        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        c->set_ca_cert_file(base + "cacert.pem");
+        test(ios, c, s, b);
+    }
+    {
+        boost::asio::io_service ios;
+        test_broker b(ios);
+        test_server_tls_ws s(ios, b);
+        auto c = mqtt::make_tls_async_client_ws(ios, broker_url, broker_tls_ws_port, "/", mqtt::protocol_version::v5);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
