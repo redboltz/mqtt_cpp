@@ -11,7 +11,9 @@
 
 #include <boost/type_erasure/any.hpp>
 
-namespace mqtt {
+#include <mqtt/namespace.hpp>
+
+namespace MQTT_NS {
 
 namespace mpl = boost::mpl;
 
@@ -30,7 +32,7 @@ using shared_any_base = boost::type_erasure::any<Concept, boost::type_erasure::_
  *   mqtt_cpp treats four different kind of sockets.
  *   They are tcp, tcp(tls), websocket, and websocket(tls).
  *   They are not copyable.
- *   They used to be a template argument of the class template mqtt::endpoint.
+ *   They used to be a template argument of the class template MQTT_NS::endpoint.
  *   It causes template bloat and as the result of that, compile times
  *   become longer.
  *   In order to avoid that, type erasure mechanism is required.
@@ -69,10 +71,10 @@ using shared_any_base = boost::type_erasure::any<Concept, boost::type_erasure::_
  *
  * ## Where is shared_any used?
  *
- *    shared_any is used by mqtt::socket in the file type_erased_socket.hpp.
+ *    shared_any is used by MQTT_NS::socket in the file type_erased_socket.hpp.
  *    It creates type erased socket using `boost::type_erasure::any` mannar.
- *    mqtt::socket is a member variable of the class template mqtt::endpoint.
- *    So mqtt::endpoint no longer has four different kind of sockets.
+ *    MQTT_NS::socket is a member variable of the class template MQTT_NS::endpoint.
+ *    So MQTT_NS::endpoint no longer has four different kind of sockets.
  *    As the result of that the compile times are decreased.
  */
 template <typename Concept>
@@ -85,6 +87,6 @@ public:
         : base_type(*p), ownership_(p) {}
 };
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_SHARED_ANY_HPP

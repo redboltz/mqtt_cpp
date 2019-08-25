@@ -4,13 +4,15 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
+#if !defined(MQTT_SERVER_HPP)
+#define MQTT_SERVER_HPP
+
 #include <mqtt/variant.hpp> // should be top to configure variant limit
 
 #include <memory>
 #include <boost/asio.hpp>
 
-#if !defined(MQTT_SERVER_HPP)
-#define MQTT_SERVER_HPP
+#include <mqtt/namespace.hpp>
 
 #if !defined(MQTT_NO_TLS)
 #include <boost/asio/ssl.hpp>
@@ -25,7 +27,7 @@
 #include <mqtt/endpoint.hpp>
 #include <mqtt/null_strand.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace as = boost::asio;
 
@@ -160,12 +162,12 @@ private:
     as::ip::tcp::endpoint ep_;
     as::io_service& ios_accept_;
     as::io_service& ios_con_;
-    mqtt::optional<as::ip::tcp::acceptor> acceptor_;
+    MQTT_NS::optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
-    mqtt::protocol_version version_ = protocol_version::undetermined;
+    MQTT_NS::protocol_version version_ = protocol_version::undetermined;
 };
 
 #if !defined(MQTT_NO_TLS)
@@ -341,13 +343,13 @@ private:
     as::ip::tcp::endpoint ep_;
     as::io_service& ios_accept_;
     as::io_service& ios_con_;
-    mqtt::optional<as::ip::tcp::acceptor> acceptor_;
+    MQTT_NS::optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
     as::ssl::context ctx_;
-    mqtt::protocol_version version_ = protocol_version::undetermined;
+    MQTT_NS::protocol_version version_ = protocol_version::undetermined;
     boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
 };
 
@@ -564,12 +566,12 @@ private:
     as::ip::tcp::endpoint ep_;
     as::io_service& ios_accept_;
     as::io_service& ios_con_;
-    mqtt::optional<as::ip::tcp::acceptor> acceptor_;
+    MQTT_NS::optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
-    mqtt::protocol_version version_ = protocol_version::undetermined;
+    MQTT_NS::protocol_version version_ = protocol_version::undetermined;
     boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
 };
 
@@ -584,7 +586,7 @@ template <
 >
 class server_tls_ws {
 public:
-    using socket_t = mqtt::ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
+    using socket_t = MQTT_NS::ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
     using endpoint_t = endpoint<Mutex, LockGuard, PacketIdBytes>;
 
     /**
@@ -785,13 +787,13 @@ private:
     as::ip::tcp::endpoint ep_;
     as::io_service& ios_accept_;
     as::io_service& ios_con_;
-    mqtt::optional<as::ip::tcp::acceptor> acceptor_;
+    MQTT_NS::optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
     as::ssl::context ctx_;
-    mqtt::protocol_version version_ = protocol_version::undetermined;
+    MQTT_NS::protocol_version version_ = protocol_version::undetermined;
     boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
 };
 
@@ -799,6 +801,6 @@ private:
 
 #endif // defined(MQTT_USE_WS)
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_SERVER_HPP

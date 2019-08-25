@@ -8,8 +8,9 @@
 #define MQTT_REASON_CODE_HPP
 
 #include <cstdint>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 namespace v5 {
 namespace reason_code {
 
@@ -61,6 +62,6 @@ constexpr std::uint8_t const wildcard_subscriptions_not_supported          = 0xa
 
 } // namespace reason_code
 } // v5
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_CONNECT_RETURN_CODE_HPP

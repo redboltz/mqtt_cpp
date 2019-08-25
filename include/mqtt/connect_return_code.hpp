@@ -8,8 +8,9 @@
 #define MQTT_CONNECT_RETURN_CODE_HPP
 
 #include <cstdint>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace connect_return_code {
 
@@ -22,6 +23,6 @@ constexpr std::uint8_t const not_authorized                = 5;
 
 } // namespace connect_return_code
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_CONNECT_RETURN_CODE_HPP

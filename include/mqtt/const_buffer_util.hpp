@@ -8,8 +8,9 @@
 #define MQTT_CONST_BUFFER_UTIL_HPP
 
 #include <boost/asio/buffer.hpp>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace as = boost::asio;
 
@@ -29,6 +30,6 @@ inline std::size_t get_size(as::const_buffer const& cb) {
 #endif // BOOST_VERION >= 106600
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_CONST_BUFFER_UTIL_HPP

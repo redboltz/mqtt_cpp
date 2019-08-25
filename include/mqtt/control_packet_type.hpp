@@ -8,8 +8,9 @@
 #define MQTT_CONTROL_PACKET_TYPE_HPP
 
 #include <cstdint>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace control_packet_type {
  // reserved    =  0,
@@ -36,6 +37,6 @@ constexpr std::uint8_t get_control_packet_type(std::uint8_t v) {
     return static_cast<std::uint8_t>(v >> 4);
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_CONTROL_PACKET_TYPE_HPP

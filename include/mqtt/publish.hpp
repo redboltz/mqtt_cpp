@@ -11,9 +11,10 @@
 
 #include <boost/assert.hpp>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/qos.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace publish {
 
@@ -52,6 +53,6 @@ constexpr void set_retain(std::uint8_t& fixed_header, bool retain) {
 
 } // namespace publish
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_PUBLISH_HPP

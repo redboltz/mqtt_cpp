@@ -17,13 +17,13 @@
 
 namespace mi = boost::multi_index;
 
-using con_t = mqtt::server_ws<>::endpoint_t;
+using con_t = MQTT_NS::server_ws<>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
 
 struct sub_con {
-    sub_con(mqtt::buffer topic, con_sp_t con, std::uint8_t qos)
+    sub_con(MQTT_NS::buffer topic, con_sp_t con, std::uint8_t qos)
         :topic(std::move(topic)), con(std::move(con)), qos(qos) {}
-    mqtt::buffer topic;
+    MQTT_NS::buffer topic;
     con_sp_t con;
     std::uint8_t qos;
 };
@@ -36,7 +36,7 @@ using mi_sub_con = mi::multi_index_container<
     mi::indexed_by<
         mi::ordered_non_unique<
             mi::tag<tag_topic>,
-            BOOST_MULTI_INDEX_MEMBER(sub_con, mqtt::buffer, topic)
+            BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, topic)
         >,
         mi::ordered_non_unique<
             mi::tag<tag_con>,
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
     }
     boost::asio::io_service ios;
 
-    auto s = mqtt::server_ws<>(
+    auto s = MQTT_NS::server_ws<>(
         boost::asio::ip::tcp::endpoint(
             boost::asio::ip::tcp::v4(),
             boost::lexical_cast<std::uint16_t>(argv[1])
@@ -107,20 +107,20 @@ int main(int argc, char** argv) {
             // set MQTT level handlers
             ep.set_connect_handler(
                 [&]
-                (mqtt::buffer client_id,
-                 mqtt::optional<mqtt::buffer> username,
-                 mqtt::optional<mqtt::buffer> password,
-                 mqtt::optional<mqtt::will>,
+                (MQTT_NS::buffer client_id,
+                 MQTT_NS::optional<MQTT_NS::buffer> username,
+                 MQTT_NS::optional<MQTT_NS::buffer> password,
+                 MQTT_NS::optional<MQTT_NS::will>,
                  bool clean_session,
                  std::uint16_t keep_alive) {
-                    using namespace mqtt::literals;
+                    using namespace MQTT_NS::literals;
                     std::cout << "client_id    : " << client_id << std::endl;
                     std::cout << "username     : " << (username ? username.value() : "none"_mb) << std::endl;
                     std::cout << "password     : " << (password ? password.value() : "none"_mb) << std::endl;
                     std::cout << "clean_session: " << std::boolalpha << clean_session << std::endl;
                     std::cout << "keep_alive   : " << keep_alive << std::endl;
                     connections.insert(ep.shared_from_this());
-                    ep.connack(false, mqtt::connect_return_code::accepted);
+                    ep.connack(false, MQTT_NS::connect_return_code::accepted);
                     return true;
                 }
             );
@@ -157,14 +157,14 @@ int main(int argc, char** argv) {
             ep.set_publish_handler(
                 [&]
                 (std::uint8_t header,
-                 mqtt::optional<packet_id_t> packet_id,
-                 mqtt::buffer topic_name,
-                 mqtt::buffer contents){
-                    std::uint8_t qos = mqtt::publish::get_qos(header);
-                    bool retain = mqtt::publish::is_retain(header);
+                 MQTT_NS::optional<packet_id_t> packet_id,
+                 MQTT_NS::buffer topic_name,
+                 MQTT_NS::buffer contents){
+                    std::uint8_t qos = MQTT_NS::publish::get_qos(header);
+                    bool retain = MQTT_NS::publish::is_retain(header);
                     std::cout << "publish received."
-                              << " dup: " << std::boolalpha << mqtt::publish::is_dup(header)
-                              << " qos: " << mqtt::qos::to_str(qos)
+                              << " dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
+                              << " qos: " << MQTT_NS::qos::to_str(qos)
                               << " retain: " << retain << std::endl;
                     if (packet_id)
                         std::cout << "packet_id: " << *packet_id << std::endl;
@@ -186,12 +186,12 @@ int main(int argc, char** argv) {
             ep.set_subscribe_handler(
                 [&]
                 (packet_id_t packet_id,
-                 std::vector<std::tuple<mqtt::buffer, std::uint8_t>> entries) {
+                 std::vector<std::tuple<MQTT_NS::buffer, std::uint8_t>> entries) {
                     std::cout << "subscribe received. packet_id: " << packet_id << std::endl;
                     std::vector<std::uint8_t> res;
                     res.reserve(entries.size());
                     for (auto const& e : entries) {
-                        mqtt::buffer topic = std::get<0>(e);
+                        MQTT_NS::buffer topic = std::get<0>(e);
                         std::uint8_t qos = std::get<1>(e);
                         std::cout << "topic: " << topic  << " qos: " << static_cast<int>(qos) << std::endl;
                         res.emplace_back(qos);
@@ -204,7 +204,7 @@ int main(int argc, char** argv) {
             ep.set_unsubscribe_handler(
                 [&]
                 (packet_id_t packet_id,
-                 std::vector<mqtt::buffer> topics) {
+                 std::vector<MQTT_NS::buffer> topics) {
                     std::cout << "unsubscribe received. packet_id: " << packet_id << std::endl;
                     for (auto const& topic : topics) {
                         subs.erase(topic);

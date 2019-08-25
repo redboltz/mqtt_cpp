@@ -14,11 +14,12 @@
 #include <boost/system/error_code.hpp>
 #include <boost/asio.hpp>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/shared_any.hpp>
 
 #if BOOST_VERSION >= 106700
 
-namespace mqtt {
+namespace MQTT_NS {
 
 // New style boost type_erasure member fucntion concept definition
 BOOST_TYPE_ERASURE_MEMBER(has_async_read, async_read)
@@ -28,7 +29,7 @@ BOOST_TYPE_ERASURE_MEMBER(has_post, post)
 BOOST_TYPE_ERASURE_MEMBER(has_lowest_layer, lowest_layer)
 BOOST_TYPE_ERASURE_MEMBER(has_close, close)
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #else //  BOOST_VERSION >= 106700
 
@@ -42,17 +43,17 @@ BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_close), close, 1)
 
 #endif // BOOST_VERSION >= 106700
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace as = boost::asio;
 using namespace boost::type_erasure;
 
 /**
  * @brief type alias of the type erased socket
- * - mqtt::socket is a type erased socket.
+ * - MQTT_NS::socket is a type erased socket.
  * - shared_ptr of any classes that have listed functions (or matching funtion template)
- *   can be used as the initializer of mqtt::socket.
- * - The class template endpoint uses mqtt::socket via listed interface.
+ *   can be used as the initializer of MQTT_NS::socket.
+ * - The class template endpoint uses MQTT_NS::socket via listed interface.
  * - lowest_layer is provided for users to configure the socket (e.g. set delay, buffer size, etc)
  *
  */
@@ -68,6 +69,6 @@ using socket = shared_any<
     >
 >;
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_TYPE_ERASED_SOCKET_HPP

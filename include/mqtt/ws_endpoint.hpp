@@ -13,10 +13,11 @@
 
 #include <boost/beast/websocket.hpp>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/utility.hpp>
 #include <mqtt/string_view.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace as = boost::asio;
 
@@ -222,6 +223,6 @@ inline void async_write(
     ep.async_write(buffers, std::forward<WriteHandler>(handler));
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_WS_ENDPOINT_HPP

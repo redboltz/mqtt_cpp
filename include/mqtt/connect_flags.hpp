@@ -8,8 +8,9 @@
 #define MQTT_CONNECT_FLAGS_HPP
 
 #include <cstdint>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace connect_flags {
 
@@ -49,6 +50,6 @@ inline constexpr std::uint8_t will_qos(char v) {
 
 } // namespace connect_flags
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_CONNECT_FLAGS_HPP

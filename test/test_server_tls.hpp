@@ -43,7 +43,7 @@ public:
         );
 
         server_.set_accept_handler(
-            [&](mqtt::server_tls<>::endpoint_t& ep) {
+            [&](MQTT_NS::server_tls<>::endpoint_t& ep) {
                 b_.handle_accept(ep);
             }
         );
@@ -60,7 +60,7 @@ public:
     }
 
 private:
-    mqtt::server_tls<> server_;
+    MQTT_NS::server_tls<> server_;
     test_broker& b_;
 };
 

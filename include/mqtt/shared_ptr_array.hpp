@@ -34,11 +34,13 @@ inline shared_ptr_array make_shared_ptr_array(std::size_t size);
 
 #else  // defined(_DOXYGEN_)
 
+#include <mqtt/namespace.hpp>
+
 #ifdef MQTT_STD_SHARED_PTR_ARRAY
 
 #include <memory>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 using shared_ptr_array = std::shared_ptr<char []>;
 
@@ -50,14 +52,14 @@ inline shared_ptr_array make_shared_ptr_array(std::size_t size) {
 #endif // __cplusplus > 201703L
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #else  // MQTT_STD_SHARED_PTR_ARRAY
 
 #include <boost/shared_ptr.hpp>
 #include <boost/smart_ptr/make_shared.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 using shared_ptr_array = boost::shared_ptr<char []>;
 
@@ -65,7 +67,7 @@ inline shared_ptr_array make_shared_ptr_array(std::size_t size) {
     return boost::make_shared<char[]>(size);
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_STD_SHARED_PTR_ARRAY
 

@@ -13,6 +13,7 @@
 #include <vector>
 #include <functional>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/optional.hpp>
 
 #include <boost/lexical_cast.hpp>
@@ -31,7 +32,7 @@
 #include <mqtt/endpoint.hpp>
 #include <mqtt/null_strand.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
@@ -529,7 +530,7 @@ public:
      */
     void disconnect(
         boost::posix_time::time_duration const& timeout,
-        mqtt::optional<std::uint8_t> reason_code = mqtt::nullopt,
+        MQTT_NS::optional<std::uint8_t> reason_code = MQTT_NS::nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -565,7 +566,7 @@ public:
      *        3.14.2.2 DISCONNECT Properties
      */
     void disconnect(
-        mqtt::optional<std::uint8_t> reason_code = mqtt::nullopt,
+        MQTT_NS::optional<std::uint8_t> reason_code = MQTT_NS::nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -622,7 +623,7 @@ public:
      */
     void async_disconnect(
         boost::posix_time::time_duration const& timeout,
-        mqtt::optional<std::uint8_t> reason_code,
+        MQTT_NS::optional<std::uint8_t> reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -675,7 +676,7 @@ public:
      * @param func A callback function that is called when async operation will finish.
      */
     void async_disconnect(
-        mqtt::optional<std::uint8_t> reason_code,
+        MQTT_NS::optional<std::uint8_t> reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -952,9 +953,9 @@ private:
     std::uint16_t keep_alive_sec_{0};
     std::size_t ping_duration_ms_{0};
     std::string client_id_;
-    mqtt::optional<will> will_;
-    mqtt::optional<std::string> user_name_;
-    mqtt::optional<std::string> password_;
+    MQTT_NS::optional<will> will_;
+    MQTT_NS::optional<std::string> user_name_;
+    MQTT_NS::optional<std::string> password_;
     bool async_pingreq_ = false;
 #if !defined(MQTT_NO_TLS)
     as::ssl::context ctx_{as::ssl::context::tlsv12};
@@ -1385,6 +1386,6 @@ make_tls_client_no_strand_ws_32(as::io_service& ios, std::string host, std::uint
 
 #endif // !defined(MQTT_NO_TLS)
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_CLIENT_HPP

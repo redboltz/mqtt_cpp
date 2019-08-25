@@ -8,8 +8,9 @@
 #define MQTT_QOS_HPP
 
 #include <cstdint>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace qos {
 
@@ -19,6 +20,6 @@ constexpr std::uint8_t const exactly_once  = 2;
 
 } // namespace qos
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_QOS_HPP

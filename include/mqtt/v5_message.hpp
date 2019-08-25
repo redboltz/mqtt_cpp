@@ -18,6 +18,7 @@
 #include <boost/container/static_vector.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/two_byte_util.hpp>
 #include <mqtt/fixed_header.hpp>
 #include <mqtt/remaining_length.hpp>
@@ -36,7 +37,7 @@
 
 #include <mqtt/packet_id_type.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace as = boost::asio;
 
@@ -99,11 +100,11 @@ class connect_message {
 public:
     connect_message(
         std::uint16_t keep_alive_sec,
-        mqtt::string_view client_id,
+        MQTT_NS::string_view client_id,
         bool clean_session,
-        mqtt::optional<will> const& w,
-        mqtt::optional<std::string> const& user_name,
-        mqtt::optional<std::string> const& password,
+        MQTT_NS::optional<will> const& w,
+        MQTT_NS::optional<std::string> const& user_name,
+        MQTT_NS::optional<std::string> const& password,
         properties props
     )
         : fixed_header_(make_fixed_header(control_packet_type::connect, 0b0000)),
@@ -630,11 +631,11 @@ public:
 
         if (buf.size() < topic_name_length) throw remaining_length_error();
 
-        // mqtt::string_view is a base class of mqtt::buffer (buf's type).
+        // MQTT_NS::string_view is a base class of MQTT_NS::buffer (buf's type).
         // The reason the explicit static_cast is to avoid buffer's lifetime copy.
-        // mqtt::buffer::substr() copies internal lifetime. But mqtt::string::view::substr()
+        // MQTT_NS::buffer::substr() copies internal lifetime. But MQTT_NS::string::view::substr()
         // doesn't copy lifetime.
-        utf8string_check(static_cast<mqtt::string_view>(buf).substr(0, topic_name_length));
+        utf8string_check(static_cast<MQTT_NS::string_view>(buf).substr(0, topic_name_length));
 
         topic_name_ = as::buffer(buf.data(), topic_name_length);
         buf.remove_prefix(topic_name_length);
@@ -867,7 +868,7 @@ template <std::size_t PacketIdBytes>
 struct basic_puback_message {
     basic_puback_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        mqtt::optional<std::uint8_t> reason_code,
+        MQTT_NS::optional<std::uint8_t> reason_code,
         properties props)
         : fixed_header_(make_fixed_header(control_packet_type::puback, 0b0000)),
           reason_code_(reason_code),
@@ -1006,7 +1007,7 @@ struct basic_puback_message {
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    mqtt::optional<std::uint8_t> reason_code_;
+    MQTT_NS::optional<std::uint8_t> reason_code_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
@@ -1019,7 +1020,7 @@ template <std::size_t PacketIdBytes>
 struct basic_pubrec_message {
     basic_pubrec_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        mqtt::optional<std::uint8_t> reason_code,
+        MQTT_NS::optional<std::uint8_t> reason_code,
         properties props)
         : fixed_header_(make_fixed_header(control_packet_type::pubrec, 0b0000)),
           reason_code_(reason_code),
@@ -1158,7 +1159,7 @@ struct basic_pubrec_message {
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    mqtt::optional<std::uint8_t> reason_code_;
+    MQTT_NS::optional<std::uint8_t> reason_code_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
@@ -1171,7 +1172,7 @@ template <std::size_t PacketIdBytes>
 struct basic_pubrel_message {
     basic_pubrel_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        mqtt::optional<std::uint8_t> reason_code,
+        MQTT_NS::optional<std::uint8_t> reason_code,
         properties props)
         : fixed_header_(make_fixed_header(control_packet_type::pubrel, 0b0000)),
           reason_code_(reason_code),
@@ -1388,7 +1389,7 @@ struct basic_pubrel_message {
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    mqtt::optional<std::uint8_t> reason_code_;
+    MQTT_NS::optional<std::uint8_t> reason_code_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
@@ -1402,7 +1403,7 @@ template <std::size_t PacketIdBytes>
 struct basic_pubcomp_message {
     basic_pubcomp_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        mqtt::optional<std::uint8_t> reason_code,
+        MQTT_NS::optional<std::uint8_t> reason_code,
         properties props)
         : fixed_header_(make_fixed_header(control_packet_type::pubcomp, 0b0000)),
           reason_code_(reason_code),
@@ -1541,7 +1542,7 @@ struct basic_pubcomp_message {
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    mqtt::optional<std::uint8_t> reason_code_;
+    MQTT_NS::optional<std::uint8_t> reason_code_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
@@ -2192,7 +2193,7 @@ struct pingresp_message : detail::header_only_message {
 
 struct disconnect_message {
     disconnect_message(
-        mqtt::optional<std::uint8_t> reason_code,
+        MQTT_NS::optional<std::uint8_t> reason_code,
         properties props
     )
         : fixed_header_(make_fixed_header(control_packet_type::disconnect, 0b0000)),
@@ -2322,7 +2323,7 @@ private:
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 
-    mqtt::optional<std::uint8_t> reason_code_;
+    MQTT_NS::optional<std::uint8_t> reason_code_;
 
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
@@ -2332,7 +2333,7 @@ private:
 
 struct auth_message {
     auth_message(
-        mqtt::optional<std::uint8_t> reason_code,
+        MQTT_NS::optional<std::uint8_t> reason_code,
         properties props
     )
         : fixed_header_(make_fixed_header(control_packet_type::auth, 0b0000)),
@@ -2464,7 +2465,7 @@ private:
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 
-    mqtt::optional<std::uint8_t> reason_code_;
+    MQTT_NS::optional<std::uint8_t> reason_code_;
 
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
@@ -2474,6 +2475,6 @@ private:
 
 } // namespace v5
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_V5_MESSAGE_HPP

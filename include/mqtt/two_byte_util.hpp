@@ -11,8 +11,9 @@
 #include <cstdint>
 #include <boost/assert.hpp>
 #include <boost/container/static_vector.hpp>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 inline boost::container::static_vector<char, 2> num_to_2bytes(std::uint16_t val) {
     return {
@@ -39,6 +40,6 @@ std::uint16_t make_uint16_t(It b, It e) {
         );
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_TWO_BYTE_UTIL_HPP

@@ -9,10 +9,11 @@
 
 #include <string>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/qos.hpp>
 #include <mqtt/property_variant.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 class will {
 public:
@@ -27,7 +28,7 @@ public:
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
      * @param qos
-     *        mqtt::qos
+     *        MQTT_NS::qos
      */
     will(buffer topic,
          buffer message,
@@ -66,7 +67,7 @@ public:
      * @param message
      *        The contents to publish as a will
      * @param qos
-     *        mqtt::qos
+     *        MQTT_NS::qos
      */
     will(buffer topic,
          buffer message,
@@ -108,6 +109,6 @@ private:
     std::vector<v5::property_variant> props_;
 };
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_WILL_HPP

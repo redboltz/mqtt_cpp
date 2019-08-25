@@ -7,6 +7,8 @@
 #if !defined(MQTT_VARIANT_HPP)
 #define MQTT_VARIANT_HPP
 
+#include <mqtt/namespace.hpp>
+
 #if defined(MQTT_STD_VARIANT)
 
 #include <variant>
@@ -36,7 +38,7 @@
 
 #endif // defined(MQTT_STD_VARIANT)
 
-namespace mqtt {
+namespace MQTT_NS {
 
 #if defined(MQTT_STD_VARIANT)
 
@@ -57,6 +59,6 @@ constexpr decltype(auto) visit(Visitor&& vis, Variants&&... vars)
 #endif // defined(MQTT_STD_VARIANT)
 
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_VARIANT_HPP

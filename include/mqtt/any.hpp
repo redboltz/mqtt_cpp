@@ -7,27 +7,29 @@
 #if !defined(MQTT_ANY_HPP)
 #define MQTT_ANY_HPP
 
+#include <mqtt/namespace.hpp>
+
 #ifdef MQTT_STD_ANY
 
 #include <any>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 using std::any;
 using std::any_cast;
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #else  // MQTT_STD_ANY
 
 #include <boost/any.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 using boost::any;
 using boost::any_cast;
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // !defined(MQTT_STD_ANY)
 

@@ -7,9 +7,10 @@
 #if !defined(MQTT_VISITOR_UTIL_HPP)
 #define MQTT_VISITOR_UTIL_HPP
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/variant.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 template <typename ReturnType, typename... Lambdas>
 struct lambda_visitor;
@@ -55,6 +56,6 @@ inline lambda_visitor<ReturnType, Lambdas...> make_lambda_visitor(Lambdas&&... l
     return { std::forward<Lambdas>(lambdas)... };
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_VISITOR_UTIL_HPP

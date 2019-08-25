@@ -7,13 +7,15 @@
 #if !defined(MQTT_SESSION_PRESENT_HPP)
 #define MQTT_SESSION_PRESENT_HPP
 
-namespace mqtt {
+#include <mqtt/namespace.hpp>
+
+namespace MQTT_NS {
 
 inline
 constexpr bool is_session_present(char v) {
     return v & 0b00000001;
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_SESSION_PRESENT_HPP

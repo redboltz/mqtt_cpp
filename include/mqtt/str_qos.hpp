@@ -8,8 +8,9 @@
 #define MQTT_STR_QOS_HPP
 
 #include <cstdint>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace qos {
 
@@ -26,6 +27,6 @@ char const* to_str(std::uint8_t v) {
 
 } // namespace qos
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_STR_QOS_HPP

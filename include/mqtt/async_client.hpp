@@ -7,9 +7,10 @@
 #if !defined(MQTT_ASYNC_CLIENT_HPP)
 #define MQTT_ASYNC_CLIENT_HPP
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/client.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 template <typename Socket, std::size_t PacketIdBytes = 2>
 class async_client : public client<Socket, PacketIdBytes> {
@@ -691,6 +692,6 @@ make_tls_async_client_no_strand_ws_32(as::io_service& ios, std::string host, std
 
 #endif // !defined(MQTT_NO_TLS)
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_ASYNC_CLIENT_HPP

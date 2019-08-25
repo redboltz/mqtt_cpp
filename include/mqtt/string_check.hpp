@@ -7,10 +7,11 @@
 #if !defined(MQTT_STRING_CHECK_HPP)
 #define MQTT_STRING_CHECK_HPP
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
 #include <mqtt/exception.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 inline void utf8string_check(string_view str) {
     if (!utf8string::is_valid_length(str)) throw utf8string_length_error();
@@ -20,6 +21,6 @@ inline void utf8string_check(string_view str) {
     }
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_STRING_CHECK_HPP

@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     int count = 0;
     // Create no TLS client
     // You can set the protocol_version to connect. If you don't set it, v3_1_1 is used.
-    auto c = mqtt::make_sync_client(ios, argv[1], argv[2], mqtt::protocol_version::v5);
+    auto c = MQTT_NS::make_sync_client(ios, argv[1], argv[2], MQTT_NS::protocol_version::v5);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
 
     auto disconnect = [&] {
@@ -38,15 +38,15 @@ int main(int argc, char** argv) {
     // Setup handlers
     c->set_v5_connack_handler( // use v5 handler
         [&c, &pid_sub1, &pid_sub2]
-        (bool sp, std::uint8_t reason_code, std::vector<mqtt::v5::property_variant> /*props*/){
+        (bool sp, std::uint8_t reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout << "[client] Connack handler called" << std::endl;
             std::cout << "[client] Clean Session: " << std::boolalpha << sp << std::endl;
             std::cout << "[client] Connect Reason Code: "
                       << static_cast<int>(reason_code) << std::endl;
-            if (reason_code == mqtt::v5::reason_code::success) {
-                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", mqtt::qos::at_most_once);
-                pid_sub2 = c->subscribe("mqtt_client_cpp/topic2_1", mqtt::qos::at_least_once,
-                                       "mqtt_client_cpp/topic2_2", mqtt::qos::exactly_once);
+            if (reason_code == MQTT_NS::v5::reason_code::success) {
+                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", MQTT_NS::qos::at_most_once);
+                pid_sub2 = c->subscribe("mqtt_client_cpp/topic2_1", MQTT_NS::qos::at_least_once,
+                                       "mqtt_client_cpp/topic2_2", MQTT_NS::qos::exactly_once);
             }
             return true;
         });
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
         });
     c->set_v5_puback_handler( // use v5 handler
         [&]
-        (packet_id_t packet_id, std::uint8_t reason_code, std::vector<mqtt::v5::property_variant> /*props*/){
+        (packet_id_t packet_id, std::uint8_t reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout <<
                 "[client] puback received. packet_id: " << packet_id <<
                 " reason_code: " << static_cast<int>(reason_code) << std::endl;
@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
         });
     c->set_v5_pubrec_handler( // use v5 handler
         [&]
-        (packet_id_t packet_id, std::uint8_t reason_code, std::vector<mqtt::v5::property_variant> /*props*/){
+        (packet_id_t packet_id, std::uint8_t reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout <<
                 "[client] pubrec received. packet_id: " << packet_id <<
                 " reason_code: " << static_cast<int>(reason_code) << std::endl;
@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
         });
     c->set_v5_pubcomp_handler( // use v5 handler
         [&]
-        (packet_id_t packet_id, std::uint8_t reason_code, std::vector<mqtt::v5::property_variant> /*props*/){
+        (packet_id_t packet_id, std::uint8_t reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout <<
                 "[client] pubcomp received. packet_id: " << packet_id <<
                 " reason_code: " << static_cast<int>(reason_code) << std::endl;
@@ -90,17 +90,17 @@ int main(int argc, char** argv) {
         [&]
         (packet_id_t packet_id,
          std::vector<std::uint8_t> reasons,
-         std::vector<mqtt::v5::property_variant> /*props*/){
+         std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout << "[client] suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : reasons) {
                 switch (e) {
-                case mqtt::v5::reason_code::granted_qos_0:
+                case MQTT_NS::v5::reason_code::granted_qos_0:
                     std::cout << "[client] subscribe success: qos0" << std::endl;
                     break;
-                case mqtt::v5::reason_code::granted_qos_1:
+                case MQTT_NS::v5::reason_code::granted_qos_1:
                     std::cout << "[client] subscribe success: qos1" << std::endl;
                     break;
-                case mqtt::v5::reason_code::granted_qos_2:
+                case MQTT_NS::v5::reason_code::granted_qos_2:
                     std::cout << "[client] subscribe success: qos2" << std::endl;
                     break;
                 default:
@@ -120,14 +120,14 @@ int main(int argc, char** argv) {
     c->set_v5_publish_handler( // use v5 handler
         [&]
         (std::uint8_t header,
-         mqtt::optional<packet_id_t> packet_id,
-         mqtt::string_view topic_name,
-         mqtt::string_view contents,
-         std::vector<mqtt::v5::property_variant> /*props*/){
+         MQTT_NS::optional<packet_id_t> packet_id,
+         MQTT_NS::string_view topic_name,
+         MQTT_NS::string_view contents,
+         std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout << "[client] publish received. "
-                      << "dup: " << std::boolalpha << mqtt::publish::is_dup(header)
-                      << " pos: " << mqtt::qos::to_str(mqtt::publish::get_qos(header))
-                      << " retain: " << mqtt::publish::is_retain(header) << std::endl;
+                      << "dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
+                      << " pos: " << MQTT_NS::qos::to_str(MQTT_NS::publish::get_qos(header))
+                      << " retain: " << MQTT_NS::publish::is_retain(header) << std::endl;
             if (packet_id)
                 std::cout << "[client] packet_id: " << *packet_id << std::endl;
             std::cout << "[client] topic_name: " << topic_name << std::endl;

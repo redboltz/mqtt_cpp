@@ -16,6 +16,7 @@
 #include <boost/container/static_vector.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/two_byte_util.hpp>
 #include <mqtt/fixed_header.hpp>
 #include <mqtt/remaining_length.hpp>
@@ -34,7 +35,7 @@
 #include <mqtt/property.hpp>
 #include <mqtt/string_check.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace as = boost::asio;
 
@@ -188,7 +189,7 @@ struct basic_pubrel_message : detail_v3_1_1::basic_header_packet_id_message<Pack
     {
     }
 
-    basic_pubrel_message(mqtt::string_view buf)
+    basic_pubrel_message(MQTT_NS::string_view buf)
         : base(buf.begin(), buf.end())
     {
     }
@@ -297,11 +298,11 @@ class connect_message {
 public:
     connect_message(
         std::uint16_t keep_alive_sec,
-        mqtt::string_view client_id,
+        MQTT_NS::string_view client_id,
         bool clean_session,
-        mqtt::optional<will> const& w,
-        mqtt::optional<std::string> const& user_name,
-        mqtt::optional<std::string> const& password
+        MQTT_NS::optional<will> const& w,
+        MQTT_NS::optional<std::string> const& user_name,
+        MQTT_NS::optional<std::string> const& password
     )
         : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::connect, 0b0000))),
           connect_flags_(0),
@@ -529,7 +530,7 @@ public:
         }
     }
 
-    basic_publish_message(mqtt::string_view buf) {
+    basic_publish_message(MQTT_NS::string_view buf) {
         if (buf.empty())  throw remaining_length_error();
         fixed_header_ = static_cast<std::uint8_t>(buf.front());
         auto qos = publish::get_qos(fixed_header_);
@@ -542,7 +543,7 @@ public:
 
         std::copy(
             buf.begin(),
-            std::next(buf.begin(), static_cast<mqtt::string_view::difference_type>(consumed)),
+            std::next(buf.begin(), static_cast<MQTT_NS::string_view::difference_type>(consumed)),
             std::back_inserter(remaining_length_buf_));
         buf.remove_prefix(consumed);
 
@@ -1067,6 +1068,6 @@ using unsubscribe_message = basic_unsubscribe_message<2>;
 
 } // inline namespace v3_1_1
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_MESSAGE_HPP
