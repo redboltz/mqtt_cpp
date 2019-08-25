@@ -7,10 +7,11 @@
 #if !defined(MQTT_UTF8ENCODED_STRINGS_HPP)
 #define MQTT_UTF8ENCODED_STRINGS_HPP
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/utility.hpp>
 #include <mqtt/string_view.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace utf8string {
 
@@ -144,6 +145,6 @@ validate_contents(string_view str) {
 
 } // namespace utf8string
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_UTF8ENCODED_STRINGS_HPP

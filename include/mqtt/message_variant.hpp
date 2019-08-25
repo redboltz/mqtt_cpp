@@ -7,11 +7,12 @@
 #if !defined(MQTT_MESSAGE_VARIANT_HPP)
 #define MQTT_MESSAGE_VARIANT_HPP
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/message.hpp>
 #include <mqtt/v5_message.hpp>
 #include <mqtt/variant.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 //  message_variant
 
@@ -114,23 +115,23 @@ struct continuous_buffer_visitor
 template <std::size_t PacketIdBytes>
 inline std::vector<as::const_buffer> const_buffer_sequence(
     basic_message_variant<PacketIdBytes> const& mv) {
-    return mqtt::visit(detail::const_buffer_sequence_visitor(), mv);
+    return MQTT_NS::visit(detail::const_buffer_sequence_visitor(), mv);
 }
 
 template <std::size_t PacketIdBytes>
 inline std::size_t size(basic_message_variant<PacketIdBytes> const& mv) {
-    return mqtt::visit(detail::size_visitor(), mv);
+    return MQTT_NS::visit(detail::size_visitor(), mv);
 }
 
 template <std::size_t PacketIdBytes>
 inline std::size_t num_of_const_buffer_sequence(
     basic_message_variant<PacketIdBytes> const& mv) {
-    return mqtt::visit(detail::num_of_const_buffer_sequence_visitor(), mv);
+    return MQTT_NS::visit(detail::num_of_const_buffer_sequence_visitor(), mv);
 }
 
 template <std::size_t PacketIdBytes>
 inline std::string continuous_buffer(basic_message_variant<PacketIdBytes> const& mv) {
-    return mqtt::visit(detail::continuous_buffer_visitor(), mv);
+    return MQTT_NS::visit(detail::continuous_buffer_visitor(), mv);
 }
 
 
@@ -168,9 +169,9 @@ template <std::size_t PacketIdBytes>
 inline
 basic_message_variant<PacketIdBytes> get_basic_message_variant(
     basic_store_message_variant<PacketIdBytes> const& smv) {
-    return mqtt::visit(detail::basic_message_variant_visitor<PacketIdBytes>(), smv);
+    return MQTT_NS::visit(detail::basic_message_variant_visitor<PacketIdBytes>(), smv);
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_MESSAGE_VARIANT_HPP

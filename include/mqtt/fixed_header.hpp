@@ -7,9 +7,10 @@
 #if !defined(MQTT_FIXED_HEADER_HPP)
 #define MQTT_FIXED_HEADER_HPP
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/control_packet_type.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 inline constexpr
 std::uint8_t make_fixed_header(std::uint8_t type, std::uint8_t flags) {
@@ -20,6 +21,6 @@ std::uint8_t make_fixed_header(std::uint8_t type, std::uint8_t flags) {
         );
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_FIXED_HEADER_HPP

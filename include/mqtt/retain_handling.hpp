@@ -8,8 +8,9 @@
 #define MQTT_RETAIN_HANDLING_HPP
 
 #include <cstdint>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace retain_handling {
 
@@ -19,6 +20,6 @@ constexpr std::uint8_t const not_send  = 2;
 
 } // namespace retain_handling
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_RETAIN_HANDLING_HPP

@@ -11,7 +11,9 @@
 
 #include <boost/assert.hpp>
 
-namespace mqtt {
+#include <mqtt/namespace.hpp>
+
+namespace MQTT_NS {
 
 namespace subscribe {
 
@@ -61,6 +63,6 @@ constexpr void set_retain_handling(std::uint8_t& fixed_header, std::uint8_t reta
 
 } // namespace subscribe
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_SUBSCRIBE_HPP

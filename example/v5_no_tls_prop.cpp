@@ -17,7 +17,7 @@
 template <typename Client>
 void client_proc(Client& c) {
 
-    using namespace mqtt; // for ""_mb
+    using namespace MQTT_NS; // for ""_mb
 
     // Setup client
     c->set_client_id("cid1");
@@ -26,64 +26,64 @@ void client_proc(Client& c) {
     // Setup handlers
     c->set_v5_connack_handler( // use v5 handler
         [&c]
-        (bool sp, std::uint8_t reason_code, std::vector<mqtt::v5::property_variant> props){
+        (bool sp, std::uint8_t reason_code, std::vector<MQTT_NS::v5::property_variant> props){
             std::cout << "[client] Connack handler called" << std::endl;
             std::cout << "[client] Clean Session: " << std::boolalpha << sp << std::endl;
             std::cout << "[client] Connect Reason Code: "
                       << static_cast<int>(reason_code) << std::endl;
 
             for (auto const& p : props) {
-                mqtt::visit(
-                    mqtt::make_lambda_visitor<void>(
-                        [&](mqtt::v5::property::session_expiry_interval const& t) {
+                MQTT_NS::visit(
+                    MQTT_NS::make_lambda_visitor<void>(
+                        [&](MQTT_NS::v5::property::session_expiry_interval const& t) {
                             std::cout << "[client] prop: session_expiry_interval: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::receive_maximum const& t) {
+                        [&](MQTT_NS::v5::property::receive_maximum const& t) {
                             std::cout << "[client] prop: receive_maximum: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::maximum_qos const& t) {
+                        [&](MQTT_NS::v5::property::maximum_qos const& t) {
                             std::cout << "[client] prop: maximum_qos: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::retain_available const& t) {
+                        [&](MQTT_NS::v5::property::retain_available const& t) {
                             std::cout << "[client] prop: retain_available: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::maximum_packet_size const& t) {
+                        [&](MQTT_NS::v5::property::maximum_packet_size const& t) {
                             std::cout << "[client] prop: maximum_packet_size: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::assigned_client_identifier const& t) {
+                        [&](MQTT_NS::v5::property::assigned_client_identifier const& t) {
                             std::cout << "[client] prop: assigned_client_identifier_ref: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::topic_alias_maximum const& t) {
+                        [&](MQTT_NS::v5::property::topic_alias_maximum const& t) {
                             std::cout << "[client] prop: topic_alias_maximum: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::reason_string const& t) {
+                        [&](MQTT_NS::v5::property::reason_string const& t) {
                             std::cout << "[client] prop: reason_string_ref: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::user_property const& t) {
+                        [&](MQTT_NS::v5::property::user_property const& t) {
                             std::cout << "[client] prop: user_property_ref: " << t.key() << ":" << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::wildcard_subscription_available const& t) {
+                        [&](MQTT_NS::v5::property::wildcard_subscription_available const& t) {
                             std::cout << "[client] prop: wildcard_subscription_available: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::subscription_identifier_available const& t) {
+                        [&](MQTT_NS::v5::property::subscription_identifier_available const& t) {
                             std::cout << "[client] prop: subscription_identifier_available: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::shared_subscription_available const& t) {
+                        [&](MQTT_NS::v5::property::shared_subscription_available const& t) {
                             std::cout << "[client] prop: shared_subscription_available: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::server_keep_alive const& t) {
+                        [&](MQTT_NS::v5::property::server_keep_alive const& t) {
                             std::cout << "[client] prop: server_keep_alive: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::response_information const& t) {
+                        [&](MQTT_NS::v5::property::response_information const& t) {
                             std::cout << "[client] prop: response_information_ref: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::server_reference const& t) {
+                        [&](MQTT_NS::v5::property::server_reference const& t) {
                             std::cout << "[client] prop: server_reference_ref: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::authentication_method const& t) {
+                        [&](MQTT_NS::v5::property::authentication_method const& t) {
                             std::cout << "[client] prop: authentication_method_ref: " << t.val() << std::endl;
                         },
-                        [&](mqtt::v5::property::authentication_data const& t) {
+                        [&](MQTT_NS::v5::property::authentication_data const& t) {
                             std::cout << "[client] prop: authentication_data_ref: " << t.val() << std::endl;
                         },
                         [&](auto&& ...) {
@@ -110,17 +110,17 @@ void client_proc(Client& c) {
         });
 
     // prepare connect properties
-    std::vector<mqtt::v5::property_variant> con_ps {
-        mqtt::v5::property::session_expiry_interval(0x12345678UL),
-        mqtt::v5::property::receive_maximum(0x1234U),
-        mqtt::v5::property::maximum_packet_size(0x12345678UL),
-        mqtt::v5::property::topic_alias_maximum(0x1234U),
-        mqtt::v5::property::request_response_information(true),
-        mqtt::v5::property::request_problem_information(false),
-        mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
-        mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
-        mqtt::v5::property::authentication_method("test authentication method"_mb),
-        mqtt::v5::property::authentication_data("test authentication data"_mb)
+    std::vector<MQTT_NS::v5::property_variant> con_ps {
+        MQTT_NS::v5::property::session_expiry_interval(0x12345678UL),
+        MQTT_NS::v5::property::receive_maximum(0x1234U),
+        MQTT_NS::v5::property::maximum_packet_size(0x12345678UL),
+        MQTT_NS::v5::property::topic_alias_maximum(0x1234U),
+        MQTT_NS::v5::property::request_response_information(true),
+        MQTT_NS::v5::property::request_problem_information(false),
+        MQTT_NS::v5::property::user_property("key1"_mb, "val1"_mb),
+        MQTT_NS::v5::property::user_property("key2"_mb, "val2"_mb),
+        MQTT_NS::v5::property::authentication_method("test authentication method"_mb),
+        MQTT_NS::v5::property::authentication_data("test authentication data"_mb)
     };
 
     // Connect with properties
@@ -134,14 +134,14 @@ void client_proc(Client& c) {
 
 namespace mi = boost::multi_index;
 
-using con_t = mqtt::server<>::endpoint_t;
+using con_t = MQTT_NS::server<>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
 
 
 template <typename Server>
 void server_proc(Server& s, std::set<con_sp_t>& connections) {
 
-    using namespace mqtt::literals; // for ""_mb
+    using namespace MQTT_NS::literals; // for ""_mb
 
     s.set_error_handler( // this handler doesn't depend on MQTT protocol version
         [](boost::system::error_code const& ec) {
@@ -177,13 +177,13 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
             // set MQTT level handlers
             ep.set_v5_connect_handler( // use v5 handler
                 [&]
-                (mqtt::buffer client_id,
-                 mqtt::optional<mqtt::buffer> const& username,
-                 mqtt::optional<mqtt::buffer> const& password,
-                 mqtt::optional<mqtt::will>,
+                (MQTT_NS::buffer client_id,
+                 MQTT_NS::optional<MQTT_NS::buffer> const& username,
+                 MQTT_NS::optional<MQTT_NS::buffer> const& password,
+                 MQTT_NS::optional<MQTT_NS::will>,
                  bool clean_session,
                  std::uint16_t keep_alive,
-                 std::vector<mqtt::v5::property_variant> props){
+                 std::vector<MQTT_NS::v5::property_variant> props){
                     std::cout << "[server] client_id    : " << client_id << std::endl;
                     std::cout << "[server] username     : " << (username ? username.value() : "none"_mb) << std::endl;
                     std::cout << "[server] password     : " << (password ? password.value() : "none"_mb) << std::endl;
@@ -192,33 +192,33 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
 
                     // check properties
                     for (auto const& p : props) {
-                        mqtt::visit(
-                            mqtt::make_lambda_visitor<void>(
-                                [&](mqtt::v5::property::session_expiry_interval const& t) {
+                        MQTT_NS::visit(
+                            MQTT_NS::make_lambda_visitor<void>(
+                                [&](MQTT_NS::v5::property::session_expiry_interval const& t) {
                                     std::cout << "[server] prop: session_expiry_interval: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::receive_maximum const& t) {
+                                [&](MQTT_NS::v5::property::receive_maximum const& t) {
                                     std::cout << "[server] prop: receive_maximum: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::maximum_packet_size const& t) {
+                                [&](MQTT_NS::v5::property::maximum_packet_size const& t) {
                                     std::cout << "[server] prop: maximum_packet_size: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::topic_alias_maximum const& t) {
+                                [&](MQTT_NS::v5::property::topic_alias_maximum const& t) {
                                     std::cout << "[server] prop: topic_alias_maximum: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::request_response_information const& t) {
+                                [&](MQTT_NS::v5::property::request_response_information const& t) {
                                     std::cout << "[server] prop: request_response_information: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::request_problem_information const& t) {
+                                [&](MQTT_NS::v5::property::request_problem_information const& t) {
                                     std::cout << "[server] prop: request_problem_information: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::user_property const& t) {
+                                [&](MQTT_NS::v5::property::user_property const& t) {
                                     std::cout << "[server] prop: user_property_ref: " << t.key() << ":" << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::authentication_method const& t) {
+                                [&](MQTT_NS::v5::property::authentication_method const& t) {
                                     std::cout << "[server] prop: authentication_method_ref: " << t.val() << std::endl;
                                 },
-                                [&](mqtt::v5::property::authentication_data const& t) {
+                                [&](MQTT_NS::v5::property::authentication_data const& t) {
                                     std::cout << "[server] prop: authentication_data_ref: " << t.val() << std::endl;
                                 },
                                 [&](auto&& ...) {
@@ -231,33 +231,33 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
 
                     connections.insert(ep.shared_from_this());
 
-                    std::vector<mqtt::v5::property_variant> connack_ps {
-                        mqtt::v5::property::session_expiry_interval(0),
-                        mqtt::v5::property::receive_maximum(0),
-                        mqtt::v5::property::maximum_qos(2),
-                        mqtt::v5::property::retain_available(true),
-                        mqtt::v5::property::maximum_packet_size(0),
-                        mqtt::v5::property::assigned_client_identifier("test cid"_mb),
-                        mqtt::v5::property::topic_alias_maximum(0),
-                        mqtt::v5::property::reason_string("test connect success"_mb),
-                        mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
-                        mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
-                        mqtt::v5::property::wildcard_subscription_available(false),
-                        mqtt::v5::property::subscription_identifier_available(false),
-                        mqtt::v5::property::shared_subscription_available(false),
-                        mqtt::v5::property::server_keep_alive(0),
-                        mqtt::v5::property::response_information("test response information"_mb),
-                        mqtt::v5::property::server_reference("test server reference"_mb),
-                        mqtt::v5::property::authentication_method("test authentication method"_mb),
-                        mqtt::v5::property::authentication_data("test authentication data"_mb)
+                    std::vector<MQTT_NS::v5::property_variant> connack_ps {
+                        MQTT_NS::v5::property::session_expiry_interval(0),
+                        MQTT_NS::v5::property::receive_maximum(0),
+                        MQTT_NS::v5::property::maximum_qos(2),
+                        MQTT_NS::v5::property::retain_available(true),
+                        MQTT_NS::v5::property::maximum_packet_size(0),
+                        MQTT_NS::v5::property::assigned_client_identifier("test cid"_mb),
+                        MQTT_NS::v5::property::topic_alias_maximum(0),
+                        MQTT_NS::v5::property::reason_string("test connect success"_mb),
+                        MQTT_NS::v5::property::user_property("key1"_mb, "val1"_mb),
+                        MQTT_NS::v5::property::user_property("key2"_mb, "val2"_mb),
+                        MQTT_NS::v5::property::wildcard_subscription_available(false),
+                        MQTT_NS::v5::property::subscription_identifier_available(false),
+                        MQTT_NS::v5::property::shared_subscription_available(false),
+                        MQTT_NS::v5::property::server_keep_alive(0),
+                        MQTT_NS::v5::property::response_information("test response information"_mb),
+                        MQTT_NS::v5::property::server_reference("test server reference"_mb),
+                        MQTT_NS::v5::property::authentication_method("test authentication method"_mb),
+                        MQTT_NS::v5::property::authentication_data("test authentication data"_mb)
                     };
-                    ep.connack(false, mqtt::connect_return_code::accepted, std::move(connack_ps));
+                    ep.connack(false, MQTT_NS::connect_return_code::accepted, std::move(connack_ps));
                     return true;
                 }
             );
             ep.set_v5_disconnect_handler( // use v5 handler
                 [&]
-                (std::uint8_t reason_code, std::vector<mqtt::v5::property_variant> /*props*/) {
+                (std::uint8_t reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     std::cout <<
                         "[server] disconnect received." <<
                         " reason_code: " << static_cast<int>(reason_code) << std::endl;
@@ -279,7 +279,7 @@ int main(int argc, char** argv) {
     std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[1]);
 
     // server
-    auto s = mqtt::server<>(
+    auto s = MQTT_NS::server<>(
         boost::asio::ip::tcp::endpoint(
             boost::asio::ip::tcp::v4(),
             boost::lexical_cast<std::uint16_t>(argv[1])
@@ -289,7 +289,7 @@ int main(int argc, char** argv) {
 
     // You can set a specific protocol_version if you want to limit accepting version.
     // Otherwise, all protocols are accepted.
-    s.set_protocol_version(mqtt::protocol_version::v5);
+    s.set_protocol_version(MQTT_NS::protocol_version::v5);
 
     std::set<con_sp_t> connections;
     server_proc(s, connections);
@@ -297,7 +297,7 @@ int main(int argc, char** argv) {
 
     // client
     // You can set the protocol_version to connect. If you don't set it, v3_1_1 is used.
-    auto c = mqtt::make_sync_client(ios, "localhost", port, mqtt::protocol_version::v5);
+    auto c = MQTT_NS::make_sync_client(ios, "localhost", port, MQTT_NS::protocol_version::v5);
 
     client_proc(c);
 

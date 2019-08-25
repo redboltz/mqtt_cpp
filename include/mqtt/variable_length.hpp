@@ -8,9 +8,10 @@
 #define MQTT_VARIABLE_LENGTH_HPP
 
 #include <string>
+#include <mqtt/namespace.hpp>
 #include <mqtt/exception.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 inline std::string
 variable_bytes(std::size_t size) {
@@ -67,6 +68,6 @@ variable_length(Iterator b, Iterator e) {
     return std::make_tuple(len, consumed);
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_VARIABLE_LENGTH_HPP

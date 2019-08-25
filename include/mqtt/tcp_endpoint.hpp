@@ -13,9 +13,10 @@
 #include <boost/asio/ssl.hpp>
 #endif // !defined(MQTT_NO_TLS)
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/utility.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace as = boost::asio;
 
@@ -128,6 +129,6 @@ inline void async_write(
     ep.async_write(std::forward<ConstBufferSequence>(buffers), std::forward<WriteHandler>(handler));
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_TCP_ENDPOINT_HPP

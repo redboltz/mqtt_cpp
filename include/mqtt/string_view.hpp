@@ -7,17 +7,19 @@
 #if !defined(MQTT_STRING_VIEW_HPP)
 #define MQTT_STRING_VIEW_HPP
 
+#include <mqtt/namespace.hpp>
+
 #ifdef MQTT_STD_STRING_VIEW
 
 #include <string_view>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 using std::string_view;
 
 using std::basic_string_view;
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #else  // MQTT_STD_STRING_VIEW
 
@@ -31,14 +33,14 @@ using std::basic_string_view;
 
 #include <boost/utility/string_view.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 using string_view = boost::string_view;
 
 template<class CharT, class Traits = std::char_traits<CharT> >
 using basic_string_view = boost::basic_string_view<CharT, Traits>;
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #else  // BOOST_VERSION >= 106100
 
@@ -46,14 +48,14 @@ using basic_string_view = boost::basic_string_view<CharT, Traits>;
 
 #include <boost/utility/string_ref.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 using string_view = boost::string_ref;
 
 template<class CharT, class Traits = std::char_traits<CharT> >
 using basic_string_view = boost::basic_string_ref<CharT, Traits>;
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // BOOST_VERSION >= 106100
 

@@ -10,10 +10,11 @@
 #include <cstdint>
 #include <cstdlib>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/two_byte_util.hpp>
 #include <mqtt/four_byte_util.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 template <std::size_t PacketIdBytes>
 struct packet_id_type;
@@ -66,6 +67,6 @@ struct add_packet_id_to_buf<4> {
     }
 };
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_PACKET_ID_TYPE_HPP

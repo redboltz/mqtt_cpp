@@ -11,7 +11,9 @@
 
 #include <boost/asio.hpp>
 
-namespace mqtt {
+#include <mqtt/namespace.hpp>
+
+namespace MQTT_NS {
 
 namespace as = boost::asio;
 
@@ -33,6 +35,6 @@ private:
     as::io_service& ios_;
 };
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_NULL_STRAND_HPP

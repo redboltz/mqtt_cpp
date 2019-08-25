@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 
     int count = 0;
     // Create TLS client
-    auto c = mqtt::make_tls_sync_client(ios, host, port);
+    auto c = MQTT_NS::make_tls_sync_client(ios, host, port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
 
     auto disconnect = [&] {
@@ -56,11 +56,11 @@ int main(int argc, char** argv) {
             std::cout << "Connack handler called" << std::endl;
             std::cout << "Clean Session: " << std::boolalpha << sp << std::endl;
             std::cout << "Connack Return Code: "
-                      << mqtt::connect_return_code_to_str(connack_return_code) << std::endl;
-            if (connack_return_code == mqtt::connect_return_code::accepted) {
-                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", mqtt::qos::at_most_once);
-                pid_sub2 = c->subscribe("mqtt_client_cpp/topic2_1", mqtt::qos::at_least_once,
-                                       "mqtt_client_cpp/topic2_2", mqtt::qos::exactly_once);
+                      << MQTT_NS::connect_return_code_to_str(connack_return_code) << std::endl;
+            if (connack_return_code == MQTT_NS::connect_return_code::accepted) {
+                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", MQTT_NS::qos::at_most_once);
+                pid_sub2 = c->subscribe("mqtt_client_cpp/topic2_1", MQTT_NS::qos::at_least_once,
+                                       "mqtt_client_cpp/topic2_2", MQTT_NS::qos::exactly_once);
             }
             return true;
         });
@@ -96,11 +96,11 @@ int main(int argc, char** argv) {
         });
     c->set_suback_handler(
         [&]
-        (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results){
+        (packet_id_t packet_id, std::vector<MQTT_NS::optional<std::uint8_t>> results){
             std::cout << "suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : results) {
                 if (e) {
-                    std::cout << "subscribe success: " << mqtt::qos::to_str(*e) << std::endl;
+                    std::cout << "subscribe success: " << MQTT_NS::qos::to_str(*e) << std::endl;
                 }
                 else {
                     std::cout << "subscribe failed" << std::endl;
@@ -118,13 +118,13 @@ int main(int argc, char** argv) {
     c->set_publish_handler(
         [&]
         (std::uint8_t header,
-         mqtt::optional<packet_id_t> packet_id,
-         mqtt::string_view topic_name,
-         mqtt::string_view contents){
+         MQTT_NS::optional<packet_id_t> packet_id,
+         MQTT_NS::string_view topic_name,
+         MQTT_NS::string_view contents){
             std::cout << "publish received. "
-                      << "dup: " << std::boolalpha << mqtt::publish::is_dup(header)
-                      << " pos: " << mqtt::qos::to_str(mqtt::publish::get_qos(header))
-                      << " retain: " << mqtt::publish::is_retain(header) << std::endl;
+                      << "dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
+                      << " pos: " << MQTT_NS::qos::to_str(MQTT_NS::publish::get_qos(header))
+                      << " retain: " << MQTT_NS::publish::is_retain(header) << std::endl;
             if (packet_id)
                 std::cout << "packet_id: " << *packet_id << std::endl;
             std::cout << "topic_name: " << topic_name << std::endl;

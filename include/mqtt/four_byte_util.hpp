@@ -12,8 +12,9 @@
 #include <algorithm>
 #include <boost/assert.hpp>
 #include <boost/container/static_vector.hpp>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 inline boost::container::static_vector<char, 4> num_to_4bytes(std::uint32_t val) {
     return {
@@ -48,6 +49,6 @@ std::uint32_t make_uint32_t(It b, It e) {
         );
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_FOUR_BYTE_UTIL_HPP

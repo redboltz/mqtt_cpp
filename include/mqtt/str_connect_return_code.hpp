@@ -8,8 +8,9 @@
 #define MQTT_STR_CONNECT_RETURN_CODE_HPP
 
 #include <cstdint>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 inline
 char const* connect_return_code_to_str(std::uint8_t v) {
@@ -25,6 +26,6 @@ char const* connect_return_code_to_str(std::uint8_t v) {
     return "unknown_connect_return_code";
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_STR_CONNECT_RETURN_CODE_HPP

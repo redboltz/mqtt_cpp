@@ -10,7 +10,7 @@
 
 BOOST_AUTO_TEST_SUITE(test_resend)
 
-using namespace mqtt::literals;
+using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& b) {
@@ -39,41 +39,41 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             cont("h_close2"),
         };
 
-        std::vector<mqtt::v5::property_variant> ps {
-            mqtt::v5::property::payload_format_indicator(mqtt::v5::property::payload_format_indicator::string),
-            mqtt::v5::property::message_expiry_interval(0x12345678UL),
-            mqtt::v5::property::topic_alias(0x1234U),
-            mqtt::v5::property::response_topic("response topic"_mb),
-            mqtt::v5::property::correlation_data("correlation data"_mb),
-            mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
-            mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
-            mqtt::v5::property::subscription_identifier(123),
+        std::vector<MQTT_NS::v5::property_variant> ps {
+            MQTT_NS::v5::property::payload_format_indicator(MQTT_NS::v5::property::payload_format_indicator::string),
+            MQTT_NS::v5::property::message_expiry_interval(0x12345678UL),
+            MQTT_NS::v5::property::topic_alias(0x1234U),
+            MQTT_NS::v5::property::response_topic("response topic"_mb),
+            MQTT_NS::v5::property::correlation_data("correlation data"_mb),
+            MQTT_NS::v5::property::user_property("key1"_mb, "val1"_mb),
+            MQTT_NS::v5::property::user_property("key2"_mb, "val2"_mb),
+            MQTT_NS::v5::property::subscription_identifier(123),
         };
 
         std::size_t user_prop_count = 0;
         b.set_publish_props_handler(
-            [&user_prop_count, size = ps.size()] (std::vector<mqtt::v5::property_variant> const& props) {
+            [&user_prop_count, size = ps.size()] (std::vector<MQTT_NS::v5::property_variant> const& props) {
                 BOOST_TEST(props.size() == size);
 
                 for (auto const& p : props) {
-                    mqtt::visit(
-                        mqtt::make_lambda_visitor<void>(
-                            [&](mqtt::v5::property::payload_format_indicator const& t) {
-                                BOOST_TEST(t.val() == mqtt::v5::property::payload_format_indicator::string);
+                    MQTT_NS::visit(
+                        MQTT_NS::make_lambda_visitor<void>(
+                            [&](MQTT_NS::v5::property::payload_format_indicator const& t) {
+                                BOOST_TEST(t.val() == MQTT_NS::v5::property::payload_format_indicator::string);
                             },
-                            [&](mqtt::v5::property::message_expiry_interval const& t) {
+                            [&](MQTT_NS::v5::property::message_expiry_interval const& t) {
                                 BOOST_TEST(t.val() == 0x12345678UL);
                             },
-                            [&](mqtt::v5::property::topic_alias const& t) {
+                            [&](MQTT_NS::v5::property::topic_alias const& t) {
                                 BOOST_TEST(t.val() == 0x1234U);
                             },
-                            [&](mqtt::v5::property::response_topic const& t) {
+                            [&](MQTT_NS::v5::property::response_topic const& t) {
                                 BOOST_TEST(t.val() == "response topic");
                             },
-                            [&](mqtt::v5::property::correlation_data const& t) {
+                            [&](MQTT_NS::v5::property::correlation_data const& t) {
                                 BOOST_TEST(t.val() == "correlation data");
                             },
-                            [&](mqtt::v5::property::user_property const& t) {
+                            [&](MQTT_NS::v5::property::user_property const& t) {
                                 switch (user_prop_count++) {
                                 case 0:
                                     BOOST_TEST(t.key() == "key1");
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                                     break;
                                 }
                             },
-                            [&](mqtt::v5::property::subscription_identifier const& t) {
+                            [&](MQTT_NS::v5::property::subscription_identifier const& t) {
                                 BOOST_TEST(t.val() == 123U);
                             },
                             [&](auto&& ...) {
@@ -110,11 +110,11 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
         );
 
         switch (c->get_protocol_version()) {
-        case mqtt::protocol_version::v3_1_1:
+        case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_pub]
                 (bool sp, std::uint8_t connack_return_code) {
-                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto ret = chk.match(
                         "start",
                         [&] {
@@ -147,11 +147,11 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                     return true;
                 });
             break;
-        case mqtt::protocol_version::v5:
+        case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c, &pid_pub, ps = std::move(ps)]
-                (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto ret = chk.match(
                         "start",
                         [&] {
@@ -183,7 +183,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 });
             c->set_v5_puback_handler(
                 [&chk, &c, &pid_pub]
-                (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
@@ -256,11 +256,11 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         };
 
         switch (c->get_protocol_version()) {
-        case mqtt::protocol_version::v3_1_1:
+        case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_pub]
                 (bool sp, std::uint8_t connack_return_code) {
-                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto ret = chk.match(
                         "start",
                         [&] {
@@ -300,11 +300,11 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                     return true;
                 });
             break;
-        case mqtt::protocol_version::v5:
+        case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c, &pid_pub]
-                (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto ret = chk.match(
                         "start",
                         [&] {
@@ -336,14 +336,14 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 });
             c->set_v5_pubrec_handler(
                 [&chk, &pid_pub]
-                (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_pubrec");
                     BOOST_TEST(packet_id == pid_pub);
                     return true;
                 });
             c->set_v5_pubcomp_handler(
                 [&chk, &c, &pid_pub]
-                (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
@@ -415,23 +415,23 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             cont("h_close2"),
         };
 
-        std::vector<mqtt::v5::property_variant> ps {
-            mqtt::v5::property::reason_string("test success"_mb),
-            mqtt::v5::property::user_property("key1"_mb, "val1"_mb),
-            mqtt::v5::property::user_property("key2"_mb, "val2"_mb),
+        std::vector<MQTT_NS::v5::property_variant> ps {
+            MQTT_NS::v5::property::reason_string("test success"_mb),
+            MQTT_NS::v5::property::user_property("key1"_mb, "val1"_mb),
+            MQTT_NS::v5::property::user_property("key2"_mb, "val2"_mb),
         };
         std::size_t user_prop_count = 0;
 
         b.set_pubrel_props_handler(
-            [&user_prop_count, size = ps.size()] (std::vector<mqtt::v5::property_variant> const& props) {
+            [&user_prop_count, size = ps.size()] (std::vector<MQTT_NS::v5::property_variant> const& props) {
                 BOOST_TEST(props.size() == size);
                 for (auto const& p : props) {
-                    mqtt::visit(
-                        mqtt::make_lambda_visitor<void>(
-                            [&](mqtt::v5::property::reason_string const& t) {
+                    MQTT_NS::visit(
+                        MQTT_NS::make_lambda_visitor<void>(
+                            [&](MQTT_NS::v5::property::reason_string const& t) {
                                 BOOST_TEST(t.val() == "test success");
                             },
-                            [&](mqtt::v5::property::user_property const& t) {
+                            [&](MQTT_NS::v5::property::user_property const& t) {
                                 switch (user_prop_count++) {
                                 case 0:
                                     BOOST_TEST(t.key() == "key1");
@@ -465,11 +465,11 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
         );
 
         switch (c->get_protocol_version()) {
-        case mqtt::protocol_version::v3_1_1:
+        case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_pub]
                 (bool sp, std::uint8_t connack_return_code) {
-                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto ret = chk.match(
                         "start",
                         [&] {
@@ -509,12 +509,12 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                     return true;
                 });
             break;
-        case mqtt::protocol_version::v5:
+        case MQTT_NS::protocol_version::v5:
             c->set_auto_pub_response(false);
             c->set_v5_connack_handler(
                 [&chk, &c, &pid_pub]
-                (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto ret = chk.match(
                         "start",
                         [&] {
@@ -545,16 +545,16 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 });
             c->set_v5_pubrec_handler(
                 [&chk, &c, &pid_pub, ps = std::move(ps)]
-                (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_pubrec");
                     BOOST_TEST(packet_id == pid_pub);
-                    c->pubrel(packet_id, mqtt::v5::reason_code::success, std::move(ps));
+                    c->pubrel(packet_id, MQTT_NS::v5::reason_code::success, std::move(ps));
                     c->force_disconnect();
                     return true;
                 });
             c->set_v5_pubcomp_handler(
                 [&chk, &c]
-                (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == 1);
                     c->disconnect();
@@ -631,11 +631,11 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
         };
 
         switch (c->get_protocol_version()) {
-        case mqtt::protocol_version::v3_1_1:
+        case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, & pid_pub]
                 (bool sp, std::uint8_t connack_return_code) {
-                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto ret = chk.match(
                         "start",
                         [&] {
@@ -681,11 +681,11 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                     return true;
                 });
             break;
-        case mqtt::protocol_version::v5:
+        case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c, & pid_pub]
-                (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto ret = chk.match(
                         "start",
                         [&] {
@@ -722,7 +722,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                 });
             c->set_v5_pubrec_handler(
                 [&chk, &c, &pid_pub]
-                (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_pubrec");
                     BOOST_TEST(packet_id == pid_pub);
                     c->force_disconnect();
@@ -730,7 +730,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                 });
             c->set_v5_pubcomp_handler(
                 [&chk, &c, &pid_pub]
-                (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
@@ -816,11 +816,11 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
         };
 
         switch (c->get_protocol_version()) {
-        case mqtt::protocol_version::v3_1_1:
+        case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &pid_pub1, &pid_pub2]
                 (bool sp, std::uint8_t connack_return_code) {
-                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto ret = chk.match(
                         "start",
                         [&] {
@@ -865,11 +865,11 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                     return true;
                 });
             break;
-        case mqtt::protocol_version::v5:
+        case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c, &pid_pub1, &pid_pub2]
-                (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-                    BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto ret = chk.match(
                         "start",
                         [&] {
@@ -902,7 +902,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 });
             c->set_v5_puback_handler(
                 [&chk, &c, &pid_pub1, &pid_pub2]
-                (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     auto ret = chk.match(
                         "h_connack3",
                         [&] {

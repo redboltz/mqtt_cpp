@@ -12,6 +12,7 @@
 #include <memory>
 #include <algorithm>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/optional.hpp>
 
 #include <boost/asio/buffer.hpp>
@@ -27,7 +28,7 @@
 #include <mqtt/qos.hpp>
 #include <mqtt/variable_length.hpp>
 #include <mqtt/buffer.hpp>
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace as = boost::asio;
 
@@ -708,6 +709,6 @@ operator<<(std::ostream& o, Property const& p) {
 
 } // namespace property
 } // namespace v5
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_PROPERTY_HPP

@@ -7,10 +7,11 @@
 #if !defined(MQTT_PROPERTY_VARIANT_HPP)
 #define MQTT_PROPERTY_VARIANT_HPP
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/property.hpp>
 #include <mqtt/variant.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace v5 {
 //  property_variant
@@ -119,26 +120,26 @@ inline fill_visitor<Iterator> make_fill_visitor(Iterator b, Iterator e) {
 } // namespace property
 
 inline void add_const_buffer_sequence(std::vector<as::const_buffer>& v, property_variant const& pv) {
-    mqtt::visit(property::detail::add_const_buffer_sequence_visitor(v), pv);
+    MQTT_NS::visit(property::detail::add_const_buffer_sequence_visitor(v), pv);
 }
 
 inline std::size_t size(property_variant const& pv) {
-    return mqtt::visit(property::detail::size_visitor(), pv);
+    return MQTT_NS::visit(property::detail::size_visitor(), pv);
 }
 
 inline std::size_t num_of_const_buffer_sequence(property_variant const& pv) {
-    return mqtt::visit(property::detail::num_of_const_buffer_sequence_visitor(), pv);
+    return MQTT_NS::visit(property::detail::num_of_const_buffer_sequence_visitor(), pv);
 }
 
 
 template <typename Iterator>
 inline void fill(property_variant const& pv, Iterator b, Iterator e) {
     auto vis = property::detail::make_fill_visitor(b, e);
-    mqtt::visit(vis, pv);
+    MQTT_NS::visit(vis, pv);
 }
 
 } // namespace v5
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_PROPERTY_VARIANT_HPP

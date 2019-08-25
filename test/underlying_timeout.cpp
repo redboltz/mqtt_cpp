@@ -23,14 +23,14 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
     as::io_service ios;
 
     // server
-    mqtt::server_ws<> server(
+    MQTT_NS::server_ws<> server(
         as::ip::tcp::endpoint(
             as::ip::tcp::v4(),
             broker_notls_ws_port),
         ios);
 
     server.set_accept_handler(
-        [&](mqtt::server_ws<>::endpoint_t& /*ep*/) {
+        [&](MQTT_NS::server_ws<>::endpoint_t& /*ep*/) {
             BOOST_TEST(false);
         }
     );
@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
 
     // server
     ctx_init ci;
-    mqtt::server_tls_ws<> server(
+    MQTT_NS::server_tls_ws<> server(
         as::ip::tcp::endpoint(
             as::ip::tcp::v4(),
             broker_tls_ws_port),
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
         ios);
 
     server.set_accept_handler(
-        [&](mqtt::server_tls_ws<>::endpoint_t& /*ep*/) {
+        [&](MQTT_NS::server_tls_ws<>::endpoint_t& /*ep*/) {
             BOOST_TEST(false);
         }
     );
@@ -169,7 +169,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
 
     // server
     ctx_init ci;
-    mqtt::server_tls_ws<> server(
+    MQTT_NS::server_tls_ws<> server(
         as::ip::tcp::endpoint(
             as::ip::tcp::v4(),
             broker_tls_ws_port),
@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
         ios);
 
     server.set_accept_handler(
-        [&](mqtt::server_tls_ws<>::endpoint_t& /*ep*/) {
+        [&](MQTT_NS::server_tls_ws<>::endpoint_t& /*ep*/) {
             BOOST_TEST(false);
         }
     );
@@ -260,7 +260,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
 
     // server
     ctx_init ci;
-    mqtt::server_tls<> server(
+    MQTT_NS::server_tls<> server(
         as::ip::tcp::endpoint(
             as::ip::tcp::v4(),
             broker_tls_port),
@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
         ios);
 
     server.set_accept_handler(
-        [&](mqtt::server_tls<>::endpoint_t& /*ep*/) {
+        [&](MQTT_NS::server_tls<>::endpoint_t& /*ep*/) {
             BOOST_TEST(false);
         }
     );

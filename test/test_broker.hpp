@@ -29,9 +29,9 @@ namespace as = boost::asio;
 
 /**
  * Allow the broker to support incoming connections of
- * any supported type of mqtt::server.
+ * any supported type of MQTT_NS::server.
  */
-using con_sp_t = std::shared_ptr<mqtt::server<>::endpoint_t>;
+using con_sp_t = std::shared_ptr<MQTT_NS::server<>::endpoint_t>;
 
 class test_broker {
 public:
@@ -58,18 +58,18 @@ public:
     /**
      * @brief handle_accept
      *
-     * Call this function when an mqtt::server (of whatever kind) has accepted a raw
+     * Call this function when an MQTT_NS::server (of whatever kind) has accepted a raw
      * connection from an MQTT client. By 'raw connection', this might be raw TCP sockets
      * or websockets, or completed a TLS handshake, or any other underlying transport
      * type, but what is not meant is that the mqtt client on the other end of the endpoint
      * has initiated the MQTT application protocol connection sequence with CONNECT or CONACK
      * messages being sent or received.
      *
-     * This function will assign several event handlers into mqtt::server (of whatever kind)
+     * This function will assign several event handlers into MQTT_NS::server (of whatever kind)
      * that is provided as a parameter. This includes connection handlers, disconnection handlers
      * and various handlers for a variety of of MQTT message types.
      *
-     * @param ep - The mqtt::server (of whichever kind) to accept a connection on.
+     * @param ep - The MQTT_NS::server (of whichever kind) to accept a connection on.
      */
     template <typename Endpoint>
     void handle_accept(Endpoint& ep) {
@@ -97,10 +97,10 @@ public:
         // set MQTT level handlers
         ep.set_connect_handler(
             [&]
-            (mqtt::buffer client_id,
-             mqtt::optional<mqtt::buffer> username,
-             mqtt::optional<mqtt::buffer> password,
-             mqtt::optional<mqtt::will> will,
+            (MQTT_NS::buffer client_id,
+             MQTT_NS::optional<MQTT_NS::buffer> username,
+             MQTT_NS::optional<MQTT_NS::buffer> password,
+             MQTT_NS::optional<MQTT_NS::will> will,
              bool clean_session,
              std::uint16_t keep_alive) {
                 return
@@ -118,13 +118,13 @@ public:
         );
         ep.set_v5_connect_handler(
             [&]
-            (mqtt::buffer client_id,
-             mqtt::optional<mqtt::buffer> username,
-             mqtt::optional<mqtt::buffer> password,
-             mqtt::optional<mqtt::will> will,
+            (MQTT_NS::buffer client_id,
+             MQTT_NS::optional<MQTT_NS::buffer> username,
+             MQTT_NS::optional<MQTT_NS::buffer> password,
+             MQTT_NS::optional<MQTT_NS::will> will,
              bool clean_session,
              std::uint16_t keep_alive,
-             std::vector<mqtt::v5::property_variant> props) {
+             std::vector<MQTT_NS::v5::property_variant> props) {
                 return
                     connect_handler(
                         ep,
@@ -147,7 +147,7 @@ public:
         );
         ep.set_v5_disconnect_handler(
             [&]
-            (std::uint8_t /*reason_code*/, std::vector<mqtt::v5::property_variant> props) {
+            (std::uint8_t /*reason_code*/, std::vector<MQTT_NS::v5::property_variant> props) {
                 if (h_disconnect_props_) h_disconnect_props_(std::move(props));
                 return
                     disconnect_handler(ep);
@@ -162,7 +162,7 @@ public:
             [&]
             (typename Endpoint::packet_id_t /*packet_id*/,
              std::uint8_t /*reason_code*/,
-             std::vector<mqtt::v5::property_variant> /*props*/){
+             std::vector<MQTT_NS::v5::property_variant> /*props*/){
                 return true;
             });
         ep.set_pubrec_handler(
@@ -175,8 +175,8 @@ public:
             [&]
             (typename Endpoint::packet_id_t packet_id,
              std::uint8_t /*reason_code*/,
-             std::vector<mqtt::v5::property_variant> /*props*/){
-                ep.pubrel(packet_id, mqtt::v5::reason_code::success, pubrel_props_);
+             std::vector<MQTT_NS::v5::property_variant> /*props*/){
+                ep.pubrel(packet_id, MQTT_NS::v5::reason_code::success, pubrel_props_);
                 return true;
             });
         ep.set_pubrel_handler(
@@ -189,8 +189,8 @@ public:
             [&]
             (typename Endpoint::packet_id_t packet_id,
              std::uint8_t /*reason_code*/,
-             std::vector<mqtt::v5::property_variant> /*props*/){
-                ep.pubcomp(packet_id, mqtt::v5::reason_code::success, pubcomp_props_);
+             std::vector<MQTT_NS::v5::property_variant> /*props*/){
+                ep.pubcomp(packet_id, MQTT_NS::v5::reason_code::success, pubcomp_props_);
                 return true;
             });
         ep.set_pubcomp_handler(
@@ -202,15 +202,15 @@ public:
             [&]
             (typename Endpoint::packet_id_t /*packet_id*/,
              std::uint8_t /*reason_code*/,
-             std::vector<mqtt::v5::property_variant> /*props*/){
+             std::vector<MQTT_NS::v5::property_variant> /*props*/){
                 return true;
             });
         ep.set_publish_handler(
             [&]
             (std::uint8_t header,
-             mqtt::optional<typename Endpoint::packet_id_t> packet_id,
-             mqtt::buffer topic_name,
-             mqtt::buffer contents){
+             MQTT_NS::optional<typename Endpoint::packet_id_t> packet_id,
+             MQTT_NS::buffer topic_name,
+             MQTT_NS::buffer contents){
                 return publish_handler(
                     ep,
                     header,
@@ -223,10 +223,10 @@ public:
         ep.set_v5_publish_handler(
             [&]
             (std::uint8_t header,
-             mqtt::optional<typename Endpoint::packet_id_t> packet_id,
-             mqtt::buffer topic_name,
-             mqtt::buffer contents,
-             std::vector<mqtt::v5::property_variant> props
+             MQTT_NS::optional<typename Endpoint::packet_id_t> packet_id,
+             MQTT_NS::buffer topic_name,
+             MQTT_NS::buffer contents,
+             std::vector<MQTT_NS::v5::property_variant> props
             ) {
                 if (h_publish_props_) h_publish_props_(props);
                 return publish_handler(
@@ -241,7 +241,7 @@ public:
         ep.set_subscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::vector<std::tuple<mqtt::buffer, std::uint8_t>> entries) {
+             std::vector<std::tuple<MQTT_NS::buffer, std::uint8_t>> entries) {
                 return subscribe_handler(
                     ep,
                     packet_id,
@@ -253,8 +253,8 @@ public:
         ep.set_v5_subscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::vector<std::tuple<mqtt::buffer, std::uint8_t>> entries,
-             std::vector<mqtt::v5::property_variant> props
+             std::vector<std::tuple<MQTT_NS::buffer, std::uint8_t>> entries,
+             std::vector<MQTT_NS::v5::property_variant> props
             ) {
                 return subscribe_handler(
                     ep,
@@ -267,7 +267,7 @@ public:
         ep.set_unsubscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::vector<mqtt::buffer> topics) {
+             std::vector<MQTT_NS::buffer> topics) {
                 return unsubscribe_handler(
                     ep,
                     packet_id,
@@ -279,8 +279,8 @@ public:
         ep.set_v5_unsubscribe_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::vector<mqtt::buffer> topics,
-             std::vector<mqtt::v5::property_variant> props
+             std::vector<MQTT_NS::buffer> topics,
+             std::vector<MQTT_NS::v5::property_variant> props
             ) {
                 return unsubscribe_handler(
                     ep,
@@ -299,7 +299,7 @@ public:
         ep.set_v5_auth_handler(
             [&]
             (std::uint8_t /*reason_code*/,
-             std::vector<mqtt::v5::property_variant> props
+             std::vector<MQTT_NS::v5::property_variant> props
             ) {
                 if (h_auth_props_) h_auth_props_(std::move(props));
                 return true;
@@ -307,71 +307,71 @@ public:
         );
     }
 
-    void set_connack_props(std::vector<mqtt::v5::property_variant> props) {
+    void set_connack_props(std::vector<MQTT_NS::v5::property_variant> props) {
         connack_props_ = std::move(props);
     }
 
-    void set_suback_props(std::vector<mqtt::v5::property_variant> props) {
+    void set_suback_props(std::vector<MQTT_NS::v5::property_variant> props) {
         suback_props_ = std::move(props);
     }
 
-    void set_unsuback_props(std::vector<mqtt::v5::property_variant> props) {
+    void set_unsuback_props(std::vector<MQTT_NS::v5::property_variant> props) {
         unsuback_props_ = std::move(props);
     }
 
-    void set_puback_props(std::vector<mqtt::v5::property_variant> props) {
+    void set_puback_props(std::vector<MQTT_NS::v5::property_variant> props) {
         puback_props_ = std::move(props);
     }
 
-    void set_pubrec_props(std::vector<mqtt::v5::property_variant> props) {
+    void set_pubrec_props(std::vector<MQTT_NS::v5::property_variant> props) {
         pubrec_props_ = std::move(props);
     }
 
-    void set_pubrel_props(std::vector<mqtt::v5::property_variant> props) {
+    void set_pubrel_props(std::vector<MQTT_NS::v5::property_variant> props) {
         pubrel_props_ = std::move(props);
     }
 
-    void set_pubcomp_props(std::vector<mqtt::v5::property_variant> props) {
+    void set_pubcomp_props(std::vector<MQTT_NS::v5::property_variant> props) {
         pubcomp_props_ = std::move(props);
     }
 
-    void set_connect_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+    void set_connect_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
         h_connect_props_ = std::move(h);
     }
 
-    void set_disconnect_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+    void set_disconnect_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
         h_disconnect_props_ = std::move(h);
     }
 
-    void set_publish_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+    void set_publish_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
         h_publish_props_ = std::move(h);
     }
 
-    void set_puback_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+    void set_puback_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
         h_puback_props_ = std::move(h);
     }
 
-    void set_pubrec_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+    void set_pubrec_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
         h_pubrec_props_ = std::move(h);
     }
 
-    void set_pubrel_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+    void set_pubrel_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
         h_pubrel_props_ = std::move(h);
     }
 
-    void set_pubcomp_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+    void set_pubcomp_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
         h_pubcomp_props_ = std::move(h);
     }
 
-    void set_subscribe_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+    void set_subscribe_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
         h_subscribe_props_ = std::move(h);
     }
 
-    void set_unsubscribe_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+    void set_unsubscribe_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
         h_unsubscribe_props_ = std::move(h);
     }
 
-    void set_auth_props_handler(std::function<void(std::vector<mqtt::v5::property_variant> const&)> h) {
+    void set_auth_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
         h_auth_props_ = std::move(h);
     }
 
@@ -389,28 +389,28 @@ private:
      * class needs to handle the connection and process subscriptions and publishing.
      *
      * @param clean_session - if the clean-session flag is set on the CONNECT message.
-     * @param spep - mqtt::varient of shared pointers to underlying connection type.
+     * @param spep - MQTT_NS::varient of shared pointers to underlying connection type.
      * @param client_id - the id that the client wants to use
      * @param will - the last-will-and-testiment of the connection, if any.
      */
     template <typename Endpoint>
     bool connect_handler(
         Endpoint& ep,
-        mqtt::buffer client_id,
-        mqtt::optional<mqtt::buffer> const& /*username*/,
-        mqtt::optional<mqtt::buffer> const& /*password*/,
-        mqtt::optional<mqtt::will> will,
+        MQTT_NS::buffer client_id,
+        MQTT_NS::optional<MQTT_NS::buffer> const& /*username*/,
+        MQTT_NS::optional<MQTT_NS::buffer> const& /*password*/,
+        MQTT_NS::optional<MQTT_NS::will> will,
         bool clean_session,
         std::uint16_t /*keep_alive*/,
-        std::vector<mqtt::v5::property_variant> props
+        std::vector<MQTT_NS::v5::property_variant> props
     ) {
-        if (ep.get_protocol_version() == mqtt::protocol_version::v5 && h_connect_props_) h_connect_props_(props);
+        if (ep.get_protocol_version() == MQTT_NS::protocol_version::v5 && h_connect_props_) h_connect_props_(props);
 
         // If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1 [MQTT-3.1.3-7].
         // If it's a not a clean session, but no client id is provided, we would have no way to map this
         // connection's session to a new connection later. So the connection must be rejected.
         if (client_id.empty() && !clean_session) {
-            ep.connack(false, mqtt::connect_return_code::identifier_rejected);
+            ep.connack(false, MQTT_NS::connect_return_code::identifier_rejected);
             return false;
         }
 
@@ -429,16 +429,16 @@ private:
 
         // Reply to the connect message.
         switch (ep.get_protocol_version()) {
-        case mqtt::protocol_version::v3_1_1:
+        case MQTT_NS::protocol_version::v3_1_1:
             ep.connack(
                 !clean_session && ((act_sess_idx.end() != act_sess_it) || (non_act_sess_idx.end() != non_act_sess_it)),
-                mqtt::connect_return_code::accepted
+                MQTT_NS::connect_return_code::accepted
             );
             break;
-        case mqtt::protocol_version::v5:
+        case MQTT_NS::protocol_version::v5:
             ep.connack(
                 !clean_session && ((act_sess_idx.end() != act_sess_it) || (non_act_sess_idx.end() != non_act_sess_it)),
-                mqtt::v5::reason_code::success,
+                MQTT_NS::v5::reason_code::success,
                 connack_props_
             );
             break;
@@ -590,13 +590,13 @@ private:
     bool publish_handler(
         Endpoint& ep,
         std::uint8_t header,
-        mqtt::optional<typename Endpoint::packet_id_t> packet_id,
-        mqtt::buffer topic_name,
-        mqtt::buffer contents,
-        std::vector<mqtt::v5::property_variant> props) {
+        MQTT_NS::optional<typename Endpoint::packet_id_t> packet_id,
+        MQTT_NS::buffer topic_name,
+        MQTT_NS::buffer contents,
+        std::vector<MQTT_NS::v5::property_variant> props) {
 
-        std::uint8_t qos = mqtt::publish::get_qos(header);
-        bool is_retain = mqtt::publish::is_retain(header);
+        std::uint8_t qos = MQTT_NS::publish::get_qos(header);
+        bool is_retain = MQTT_NS::publish::is_retain(header);
         do_publish(
             std::move(topic_name),
             std::move(contents),
@@ -605,25 +605,25 @@ private:
             std::move(props));
 
         switch (ep.get_protocol_version()) {
-        case mqtt::protocol_version::v3_1_1:
+        case MQTT_NS::protocol_version::v3_1_1:
             switch (qos) {
-            case mqtt::qos::at_least_once:
+            case MQTT_NS::qos::at_least_once:
                 ep.puback(packet_id.value());
                 break;
-            case mqtt::qos::exactly_once:
+            case MQTT_NS::qos::exactly_once:
                 ep.pubrec(packet_id.value());
                 break;
             default:
                 break;
             }
             break;
-        case mqtt::protocol_version::v5:
+        case MQTT_NS::protocol_version::v5:
             switch (qos) {
-            case mqtt::qos::at_least_once:
-                ep.puback(packet_id.value(), mqtt::v5::reason_code::success, puback_props_);
+            case MQTT_NS::qos::at_least_once:
+                ep.puback(packet_id.value(), MQTT_NS::v5::reason_code::success, puback_props_);
                 break;
-            case mqtt::qos::exactly_once:
-                ep.pubrec(packet_id.value(), mqtt::v5::reason_code::success, pubrec_props_);
+            case MQTT_NS::qos::exactly_once:
+                ep.pubrec(packet_id.value(), MQTT_NS::v5::reason_code::success, pubrec_props_);
                 break;
             default:
                 break;
@@ -641,8 +641,8 @@ private:
     bool subscribe_handler(
         Endpoint& ep,
         typename Endpoint::packet_id_t packet_id,
-        std::vector<std::tuple<mqtt::buffer, std::uint8_t>> entries,
-        std::vector<mqtt::v5::property_variant> props) {
+        std::vector<std::tuple<MQTT_NS::buffer, std::uint8_t>> entries,
+        std::vector<MQTT_NS::v5::property_variant> props) {
 
         // An in-order list of qos settings, used to send the reply.
         // The MQTT protocol 3.1.1 - 3.8.4 Response - paragraph 6
@@ -652,7 +652,7 @@ private:
         std::vector<std::uint8_t> res;
         res.reserve(entries.size());
         for (auto const& e : entries) {
-            mqtt::buffer topic = std::get<0>(e);
+            MQTT_NS::buffer topic = std::get<0>(e);
             std::uint8_t qos = std::get<1>(e);
             res.emplace_back(qos);
             // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
@@ -660,11 +660,11 @@ private:
             subs_.emplace(std::move(topic), ep.shared_from_this(), qos);
         }
         switch (ep.get_protocol_version()) {
-        case mqtt::protocol_version::v3_1_1:
+        case MQTT_NS::protocol_version::v3_1_1:
             // Acknowledge the subscriptions, and the registered QOS settings
             ep.suback(packet_id, res);
             break;
-        case mqtt::protocol_version::v5:
+        case MQTT_NS::protocol_version::v5:
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
             ep.suback(packet_id, res, suback_props_);
@@ -674,7 +674,7 @@ private:
             break;
         }
         for (auto const& e : entries) {
-            mqtt::buffer const& topic = std::get<0>(e);
+            MQTT_NS::buffer const& topic = std::get<0>(e);
             std::uint8_t qos = std::get<1>(e);
             // Publish any retained messages that match the newly subscribed topic.
             auto it = retains_.find(topic);
@@ -695,8 +695,8 @@ private:
     bool unsubscribe_handler(
         Endpoint& ep,
         typename Endpoint::packet_id_t packet_id,
-        std::vector<mqtt::buffer> topics,
-        std::vector<mqtt::v5::property_variant> props) {
+        std::vector<MQTT_NS::buffer> topics,
+        std::vector<MQTT_NS::v5::property_variant> props) {
 
         auto spep = ep.shared_from_this();
 
@@ -738,12 +738,12 @@ private:
             }
         }
         switch (ep.get_protocol_version()) {
-        case mqtt::protocol_version::v3_1_1:
+        case MQTT_NS::protocol_version::v3_1_1:
             ep.unsuback(packet_id);
             break;
-        case mqtt::protocol_version::v5:
+        case MQTT_NS::protocol_version::v5:
             if (h_unsubscribe_props_) h_unsubscribe_props_(props);
-            ep.unsuback(packet_id, std::vector<std::uint8_t>(topics.size(), mqtt::v5::reason_code::success), unsuback_props_);
+            ep.unsuback(packet_id, std::vector<std::uint8_t>(topics.size(), MQTT_NS::v5::reason_code::success), unsuback_props_);
             break;
         default:
             BOOST_ASSERT(false);
@@ -762,11 +762,11 @@ private:
      *                    be sent to newly added subscriptions in the future.\
      */
     void do_publish(
-        mqtt::buffer topic,
-        mqtt::buffer contents,
+        MQTT_NS::buffer topic,
+        MQTT_NS::buffer contents,
         std::uint8_t qos,
         bool is_retain,
-        std::vector<mqtt::v5::property_variant> props) {
+        std::vector<MQTT_NS::v5::property_variant> props) {
         // For each active subscription registered for this topic
         for(auto const& sub : boost::make_iterator_range(subs_.get<tag_topic>().equal_range(topic))) {
             // publish the message to subscribers.
@@ -794,7 +794,7 @@ private:
             auto & idx = saved_subs_.get<tag_topic>();
             auto range = boost::make_iterator_range(idx.equal_range(topic));
             if( ! range.empty()) {
-                auto sp_props = std::make_shared<std::vector<mqtt::v5::property_variant>>(props);
+                auto sp_props = std::make_shared<std::vector<MQTT_NS::v5::property_variant>>(props);
                 for(auto it = range.begin(); it != range.end(); std::advance(it, 1)) {
                     idx.modify(it,
                                [&](session_subscription & val)
@@ -866,7 +866,7 @@ private:
     /**
      * @brief close_proc - clean up a connection that has been closed.
      *
-     * @param ep - The underlying mqtt::server (of whichever type) that is disconnecting.
+     * @param ep - The underlying MQTT_NS::server (of whichever type) that is disconnecting.
      * @param send_will - Whether to publish this connections last will
      */
     // TODO: Maybe change the name of this function.
@@ -899,9 +899,9 @@ private:
         // this endpoint's connection with the broker above.
         BOOST_ASSERT(act_sess_it != act_sess_idx.end());
 
-        mqtt::buffer client_id;
-        mqtt::optional<mqtt::will> will;
-        if(ep.clean_session() && (ep.get_protocol_version() == mqtt::protocol_version::v3_1_1)) {
+        MQTT_NS::buffer client_id;
+        MQTT_NS::optional<MQTT_NS::will> will;
+        if(ep.clean_session() && (ep.get_protocol_version() == MQTT_NS::protocol_version::v3_1_1)) {
             client_id = std::move(act_sess_it->client_id);
             will = std::move(act_sess_it->will);
             act_sess_idx.erase(act_sess_it);
@@ -947,7 +947,7 @@ private:
             auto const& range = boost::make_iterator_range(idx.equal_range(spep));
             // In v3_1_1, we need to clear any subscriptions at the end of the session.
             // In v5, we always save them, and clear them at the beginning of a session.
-            if (ep.clean_session() && (ep.get_protocol_version() == mqtt::protocol_version::v3_1_1)) {
+            if (ep.clean_session() && (ep.get_protocol_version() == MQTT_NS::protocol_version::v3_1_1)) {
                 // Remove all subscriptions for this clientid
                 idx.erase(range.begin(), range.end());
             }
@@ -1001,7 +1001,7 @@ private:
      */
     struct session_state {
         // TODO: Currently not fully implemented...
-        session_state(mqtt::buffer client_id, con_sp_t con, mqtt::optional<mqtt::will> will)
+        session_state(MQTT_NS::buffer client_id, con_sp_t con, MQTT_NS::optional<MQTT_NS::will> will)
             :client_id(std::move(client_id)), con(std::move(con)), will(std::move(will)) {}
 
         session_state() = default;
@@ -1010,16 +1010,16 @@ private:
         session_state& operator=(session_state &&) = default;
         session_state& operator=(session_state const&) = default;
 
-        mqtt::buffer client_id;
+        MQTT_NS::buffer client_id;
         con_sp_t con;
 
         // TODO:
         // Messages sent to client, but not acknowledged.
         // Messages pending transmission to client
         // messages received from client, but not acknowledged
-        mqtt::optional<mqtt::will> will;
-        mqtt::optional<boost::posix_time::time_duration> will_delay;
-        mqtt::optional<boost::posix_time::time_duration> session_expiry_interval;
+        MQTT_NS::optional<MQTT_NS::will> will;
+        MQTT_NS::optional<boost::posix_time::time_duration> will_delay;
+        MQTT_NS::optional<boost::posix_time::time_duration> session_expiry_interval;
     };
 
     // The mi_active_sessions container holds the relevant data about an active connection with the broker.
@@ -1029,7 +1029,7 @@ private:
         mi::indexed_by<
             mi::ordered_unique<
                 mi::tag<tag_client_id>,
-                BOOST_MULTI_INDEX_MEMBER(session_state, mqtt::buffer, client_id)
+                BOOST_MULTI_INDEX_MEMBER(session_state, MQTT_NS::buffer, client_id)
             >,
             mi::ordered_unique<
                 mi::tag<tag_con>,
@@ -1045,7 +1045,7 @@ private:
         mi::indexed_by<
             mi::ordered_unique<
                 mi::tag<tag_client_id>,
-                BOOST_MULTI_INDEX_MEMBER(session_state, mqtt::buffer, client_id)
+                BOOST_MULTI_INDEX_MEMBER(session_state, MQTT_NS::buffer, client_id)
             >
         >
     >;
@@ -1053,11 +1053,11 @@ private:
     // Mapping between connection object and subscription topics
     struct sub_con {
         sub_con(
-            mqtt::buffer topic,
+            MQTT_NS::buffer topic,
             con_sp_t con,
             std::uint8_t qos)
             :topic(std::move(topic)), con(std::move(con)), qos(qos) {}
-        mqtt::buffer topic;
+        MQTT_NS::buffer topic;
         con_sp_t con;
         std::uint8_t qos;
     };
@@ -1066,7 +1066,7 @@ private:
         mi::indexed_by<
             mi::ordered_non_unique<
                 mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_MEMBER(sub_con, mqtt::buffer, topic)
+                BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, topic)
             >,
             mi::ordered_non_unique<
                 mi::tag<tag_con>,
@@ -1080,7 +1080,7 @@ private:
                 mi::composite_key<
                     sub_con,
                     BOOST_MULTI_INDEX_MEMBER(sub_con, con_sp_t, con),
-                    BOOST_MULTI_INDEX_MEMBER(sub_con, mqtt::buffer, topic)
+                    BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, topic)
                 >
             >
         >
@@ -1090,14 +1090,14 @@ private:
     // case clients add a new subscription to the topic.
     struct retain {
         retain(
-            mqtt::buffer topic,
-            mqtt::buffer contents,
-            std::vector<mqtt::v5::property_variant> props,
+            MQTT_NS::buffer topic,
+            MQTT_NS::buffer contents,
+            std::vector<MQTT_NS::v5::property_variant> props,
             std::uint8_t qos)
             :topic(std::move(topic)), contents(std::move(contents)), props(std::move(props)), qos(qos) {}
-        mqtt::buffer topic;
-        mqtt::buffer contents;
-        std::vector<mqtt::v5::property_variant> props;
+        MQTT_NS::buffer topic;
+        MQTT_NS::buffer contents;
+        std::vector<MQTT_NS::v5::property_variant> props;
         std::uint8_t qos;
     };
     using mi_retain = mi::multi_index_container<
@@ -1105,7 +1105,7 @@ private:
         mi::indexed_by<
             mi::ordered_unique<
                 mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_MEMBER(retain, mqtt::buffer, topic)
+                BOOST_MULTI_INDEX_MEMBER(retain, MQTT_NS::buffer, topic)
             >
         >
     >;
@@ -1116,12 +1116,12 @@ private:
     // these messages will be published to that client, and only that client.
     struct saved_message {
         saved_message(
-            mqtt::buffer contents,
-            std::shared_ptr<std::vector<mqtt::v5::property_variant>> props,
+            MQTT_NS::buffer contents,
+            std::shared_ptr<std::vector<MQTT_NS::v5::property_variant>> props,
             std::uint8_t qos)
             : contents(std::move(contents)), props(std::move(props)), qos(qos) {}
-        mqtt::buffer contents;
-        std::shared_ptr<std::vector<mqtt::v5::property_variant>> props;
+        MQTT_NS::buffer contents;
+        std::shared_ptr<std::vector<MQTT_NS::v5::property_variant>> props;
         std::uint8_t qos;
     };
 
@@ -1129,12 +1129,12 @@ private:
     // and a collection of data associated with that subscription to be sent when the client reconnects.
     struct session_subscription {
         session_subscription(
-            mqtt::buffer client_id,
-            mqtt::buffer topic,
+            MQTT_NS::buffer client_id,
+            MQTT_NS::buffer topic,
             std::uint8_t qos)
             :client_id(std::move(client_id)), topic(std::move(topic)), qos(qos) {}
-        mqtt::buffer client_id;
-        mqtt::buffer topic;
+        MQTT_NS::buffer client_id;
+        MQTT_NS::buffer topic;
         std::vector<saved_message> messages;
         std::uint8_t qos;
     };
@@ -1145,12 +1145,12 @@ private:
             // Allow multiple client id's for the same topic
             mi::ordered_non_unique<
                 mi::tag<tag_client_id>,
-                BOOST_MULTI_INDEX_MEMBER(session_subscription, mqtt::buffer, client_id)
+                BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, client_id)
             >,
             // Allow multiple topics for the same client id
             mi::ordered_non_unique<
                 mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_MEMBER(session_subscription, mqtt::buffer, topic)
+                BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, topic)
             >,
             // Don't allow the same client id to have the same topic multiple times.
             // Note that this index does not get used by any code in the broker
@@ -1159,8 +1159,8 @@ private:
             mi::ordered_unique<
                 mi::composite_key<
                     session_subscription,
-                    BOOST_MULTI_INDEX_MEMBER(session_subscription, mqtt::buffer, topic),
-                    BOOST_MULTI_INDEX_MEMBER(session_subscription, mqtt::buffer, client_id)
+                    BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, topic),
+                    BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, client_id)
                 >
             >
         >
@@ -1168,7 +1168,7 @@ private:
 
     as::io_service& ios_; ///< The boost asio context to run this broker on.
     as::deadline_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
-    mqtt::optional<boost::posix_time::time_duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
+    MQTT_NS::optional<boost::posix_time::time_duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
 
     mi_active_sessions active_sessions_; ///< Map of active client id and connections
     mi_non_active_sessions non_active_sessions_; ///< Storage for sessions not currently active. Indexed by client id.
@@ -1177,23 +1177,23 @@ private:
     mi_retain retains_; ///< A list of messages retained so they can be sent to newly subscribed clients.
 
     // MQTTv5 members
-    std::vector<mqtt::v5::property_variant> connack_props_;
-    std::vector<mqtt::v5::property_variant> suback_props_;
-    std::vector<mqtt::v5::property_variant> unsuback_props_;
-    std::vector<mqtt::v5::property_variant> puback_props_;
-    std::vector<mqtt::v5::property_variant> pubrec_props_;
-    std::vector<mqtt::v5::property_variant> pubrel_props_;
-    std::vector<mqtt::v5::property_variant> pubcomp_props_;
-    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_connect_props_;
-    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_disconnect_props_;
-    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_publish_props_;
-    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_puback_props_;
-    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_pubrec_props_;
-    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_pubrel_props_;
-    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_pubcomp_props_;
-    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_subscribe_props_;
-    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_unsubscribe_props_;
-    std::function<void(std::vector<mqtt::v5::property_variant> const&)> h_auth_props_;
+    std::vector<MQTT_NS::v5::property_variant> connack_props_;
+    std::vector<MQTT_NS::v5::property_variant> suback_props_;
+    std::vector<MQTT_NS::v5::property_variant> unsuback_props_;
+    std::vector<MQTT_NS::v5::property_variant> puback_props_;
+    std::vector<MQTT_NS::v5::property_variant> pubrec_props_;
+    std::vector<MQTT_NS::v5::property_variant> pubrel_props_;
+    std::vector<MQTT_NS::v5::property_variant> pubcomp_props_;
+    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_connect_props_;
+    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_disconnect_props_;
+    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_publish_props_;
+    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_puback_props_;
+    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_pubrec_props_;
+    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_pubrel_props_;
+    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_pubcomp_props_;
+    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_subscribe_props_;
+    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_unsubscribe_props_;
+    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_auth_props_;
 };
 
 #endif // MQTT_TEST_BROKER_HPP
