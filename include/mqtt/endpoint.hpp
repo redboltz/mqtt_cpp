@@ -1484,15 +1484,20 @@ public:
      *        3.3.2.3 PUBLISH Properties
      */
     void publish_at_most_once(
-        MQTT_NS::string_view topic_name,
-        MQTT_NS::string_view contents,
+        string_view topic_name,
+        string_view contents,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        publish_at_most_once(as::buffer(topic_name.data(), topic_name.size()),
-                             as::buffer(contents.data(), contents.size()),
-                             retain,
-                             std::move(props));
+        acquired_publish(
+            0,
+            as::buffer(topic_name.data(), topic_name.size()),
+            as::buffer(contents.data(), contents.size()),
+            any(),
+            qos::at_most_once,
+            retain,
+            std::move(props)
+        );
     }
 
     /**
@@ -1516,7 +1521,7 @@ public:
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        acquired_publish(0, topic_name, contents, MQTT_NS::any(), qos::at_most_once, retain, std::move(props));
+        acquired_publish(0, topic_name, contents, any(), qos::at_most_once, retain, std::move(props));
     }
 
     /**
@@ -1577,7 +1582,7 @@ public:
     packet_id_t publish_at_least_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
@@ -1644,7 +1649,7 @@ public:
     packet_id_t publish_exactly_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
@@ -1660,7 +1665,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -1683,13 +1688,19 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        if(qos == qos::at_most_once)
-        {
-            publish_at_most_once(std::move(topic_name), std::move(contents), retain, std::move(props));
+        if(qos == qos::at_most_once) {
+            acquired_publish(
+                0,
+                as::buffer(topic_name.data(), topic_name.size()),
+                as::buffer(contents.data(), contents.size()),
+                any(),
+                qos::at_most_once,
+                retain,
+                std::move(props)
+            );
             return 0;
         }
-        else
-        {
+        else {
             auto sp_topic    = std::make_shared<std::string>(std::move(topic_name));
             auto sp_contents = std::make_shared<std::string>(std::move(contents));
 
@@ -1711,7 +1722,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -1729,23 +1740,58 @@ public:
     packet_id_t publish(
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        if(qos == qos::at_most_once)
-        {
-            publish_at_most_once(topic_name, contents, retain, std::move(props));
+        if(qos == qos::at_most_once) {
+            acquired_publish(0, topic_name, contents, any(), qos::at_most_once, retain, std::move(props));
             return 0;
         }
-        else
-        {
+        else {
             packet_id_t packet_id = acquire_unique_packet_id();
             acquired_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props));
             return packet_id;
         }
+    }
+
+    /**
+     * @brief Publish
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
+     * @return packet_id. If qos is set to at_most_once, return 0.
+     * packet_id is automatically generated.
+     *
+     * @note If you know ahead of time that qos will be at_most_once, then prefer
+     *       publish_at_most_once() over publish() as it is slightly more efficent.
+     */
+    packet_id_t publish(
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
+        acquired_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(props));
+        return packet_id;
     }
 
     /**
@@ -1768,10 +1814,12 @@ public:
      */
     template <typename... Args>
     packet_id_t subscribe(
-        MQTT_NS::string_view topic_name,
+        string_view topic_name,
         std::uint8_t option,
         Args&&... args) {
-        return subscribe(as::buffer(topic_name.data(), topic_name.size()), option, std::forward<Args>(args)...);
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_subscribe(packet_id, topic_name, option, std::forward<Args>(args)...);
+        return packet_id;
     }
 
     /**
@@ -1804,6 +1852,27 @@ public:
 
     /**
      * @brief Subscribe
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    packet_id_t subscribe(
+        buffer topic_name,
+        std::uint8_t option) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_subscribe(packet_id, std::move(topic_name), option);
+        return packet_id;
+    }
+
+    /**
+     * @brief Subscribe
      * @param params a vector of the topic_filter and option pair.
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
@@ -1817,17 +1886,17 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t subscribe(
-        std::vector<std::tuple<MQTT_NS::string_view, std::uint8_t>> const& params,
+        std::vector<std::tuple<string_view, std::uint8_t>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> asio_params;
-        asio_params.reserve(params.size());
-        for(auto const& p : params)
+        std::vector<std::tuple<buffer, std::uint8_t>> buf_params;
+        buf_params.reserve(params.size());
+        for(auto&& p : params)
         {
-            asio_params.emplace_back(as::buffer(std::get<0>(p).data(), std::get<0>(p).size()), std::get<1>(p));
+            buf_params.emplace_back(buffer(std::move(std::get<0>(p))), std::get<1>(p));
         }
-        acquired_subscribe(packet_id, std::move(asio_params), std::move(props));
+        acquired_subscribe(packet_id, std::move(buf_params), std::move(props));
         return packet_id;
     }
 
@@ -1855,48 +1924,25 @@ public:
     }
 
     /**
-     * @brief Unsubscribe
-     * @param params a collection of topic_filter.
+     * @brief Subscribe
+     * @param params a vector of the topic_filter and option pair.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
      * @param props
      *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    packet_id_t unsubscribe(
-        std::vector<MQTT_NS::string_view> const& params,
-        std::vector<v5::property_variant> props = {}
-    ) {
-        std::vector<as::const_buffer> asio_params;
-        asio_params.reserve(params.size());
-        for(auto const& p : params)
-        {
-           asio_params.emplace_back(as::buffer(p.data(), p.size()));
-        }
-        return unsubscribe(std::move(asio_params), std::move(props));
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param params a collection of topic_filter.
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t unsubscribe(
-        std::vector<as::const_buffer> params,
+    packet_id_t subscribe(
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_unsubscribe(packet_id, std::move(params), std::move(props));
+        acquired_subscribe(packet_id, std::move(params), std::move(props));
         return packet_id;
     }
 
@@ -1916,7 +1962,7 @@ public:
      */
     template <typename... Args>
     packet_id_t unsubscribe(
-        MQTT_NS::string_view topic_name,
+        string_view topic_name,
         Args&&... args) {
         return unsubscribe(as::buffer(topic_name.data(), topic_name.size()), std::forward<Args>(args)...);
     }
@@ -1945,6 +1991,91 @@ public:
     }
 
     /**
+     * @brief Unsubscribe
+     * @param topic_name
+     *        A topic name to unsubscribe
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    packet_id_t unsubscribe(
+        buffer topic_name) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_unsubscribe(packet_id, std::move(topic_name));
+        return packet_id;
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param params a collection of topic_filter.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    packet_id_t unsubscribe(
+        std::vector<string_view> params,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        std::vector<buffer> buf_params;
+        buf_params.reserve(params.size());
+        for(auto&& p : params)
+        {
+            buf_params.emplace_back(buffer(std::move(p)));
+        }
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_unsubscribe(packet_id, std::move(buf_params), std::move(props));
+        return packet_id;
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param params a collection of topic_filter.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    packet_id_t unsubscribe(
+        std::vector<as::const_buffer> params,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_unsubscribe(packet_id, std::move(params), std::move(props));
+        return packet_id;
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param params a collection of topic_filter.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    packet_id_t unsubscribe(
+        std::vector<buffer> params,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_unsubscribe(packet_id, std::move(params), std::move(props));
+        return packet_id;
+    }
+
+    /**
      * @brief Disconnect
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
@@ -1960,7 +2091,7 @@ public:
      *        3.14.2.2 DISCONNECT Properties
      */
     void disconnect(
-        MQTT_NS::optional<std::uint8_t> reason = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         if (connected_ && mqtt_connected_) {
@@ -1981,62 +2112,6 @@ public:
     }
 
     // packet_id manual setting version
-
-
-    /**
-     * @brief Publish QoS0
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     */
-    bool publish_at_most_once(
-        packet_id_t packet_id,
-        MQTT_NS::string_view topic_name,
-        MQTT_NS::string_view contents,
-        bool retain = false,
-        std::vector<v5::property_variant> props = {}
-    ) {
-        return publish_at_most_once(packet_id,
-                                    as::buffer(topic_name.data(), topic_name.size()),
-                                    as::buffer(contents.data(), contents.size()),
-                                    retain,
-                                    std::move(props));
-    }
-
-    /**
-     * @brief Publish QoS0
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     *        3.3.1.3 RETAIN
-     */
-    bool publish_at_most_once(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        bool retain = false,
-        std::vector<v5::property_variant> props = {}
-    ) {
-        acquired_publish_at_most_once(packet_id, topic_name, contents, MQTT_NS::any(), retain, std::move(props));
-        return true;
-    }
 
     /**
      * @brief Publish QoS1 with a manual set packet identifier
@@ -2098,7 +2173,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
@@ -2169,7 +2244,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
@@ -2189,7 +2264,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2229,7 +2304,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2245,7 +2320,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
@@ -2253,6 +2328,46 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
             acquired_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Publish with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         contents don't publish, otherwise return true and contents publish.
+     */
+    bool publish(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        any life_keeper,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        if (register_packet_id(packet_id)) {
+            acquired_publish(packet_id, std::move(topic_name), std::move(contents), std::move(life_keeper), qos, retain, std::move(props));
             return true;
         }
         return false;
@@ -2267,7 +2382,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2307,7 +2422,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2323,7 +2438,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
@@ -2331,6 +2446,43 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
             acquired_publish_dup(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Publish as dup with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         contents don't publish, otherwise return true and contents publish.
+     */
+    bool publish_dup(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        if (register_packet_id(packet_id)) {
+            acquired_publish_dup(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(props));
             return true;
         }
         return false;
@@ -2378,17 +2530,17 @@ public:
      */
     bool subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<MQTT_NS::string_view, std::uint8_t>> const& params,
+        std::vector<std::tuple<string_view, std::uint8_t>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::tuple<as::const_buffer, std::uint8_t>> asio_params;
-            asio_params.reserve(params.size());
+            std::vector<std::tuple<buffer, std::uint8_t>> buf_params;
+            buf_params.reserve(params.size());
             for(auto const& p : params)
             {
-                asio_params.emplace_back(as::buffer(std::get<0>(p).data(), std::get<0>(p).size()), std::get<1>(p));
+                buf_params.emplace_back(buffer(std::move(std::get<0>(p))));
             }
-            acquired_subscribe(packet_id, std::move(asio_params), std::move(props));
+            acquired_subscribe(packet_id, std::move(buf_params), std::move(props));
             return true;
         }
         return false;
@@ -2411,6 +2563,32 @@ public:
     bool subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        if (register_packet_id(packet_id)) {
+            acquired_subscribe(packet_id, std::move(params), std::move(props));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Subscribe with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param params a vector of the topic_filter and qos pair.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't subscribe, otherwise return true and subscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
+     */
+    bool subscribe(
+        packet_id_t packet_id,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
@@ -2461,17 +2639,17 @@ public:
      */
     bool unsubscribe(
         packet_id_t packet_id,
-        std::vector<MQTT_NS::string_view> const& params,
+        std::vector<string_view> params,
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
-            std::vector<as::const_buffer> asio_params;
-            asio_params.reserve(params.size());
-            for(auto const& p : params)
+            std::vector<buffer> buf_params;
+            buf_params.reserve(params.size());
+            for(auto&& p : params)
             {
-               asio_params.emplace_back(as::buffer(p.data(), p.size()));
+                buf_params.emplace_back(buffer(std::move(p)));
             }
-            acquired_unsubscribe(packet_id, std::move(asio_params), std::move(props));
+            acquired_unsubscribe(packet_id, std::move(buf_params), std::move(props));
             return true;
         }
         return false;
@@ -2503,13 +2681,36 @@ public:
         return false;
     }
 
+    /**
+     * @brief Unsubscribe with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param params a collection of topic_filter
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't unsubscribe, otherwise return true and unsubscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    bool unsubscribe(
+        packet_id_t packet_id,
+        std::vector<buffer> params,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        if (register_packet_id(packet_id)) {
+            acquired_unsubscribe(packet_id, std::move(params), std::move(props));
+            return true;
+        }
+        return false;
+    }
+
     // packet_id has already been acquired version
 
     /**
      * @brief Publish QoS0 with already acquired packet identifier
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
      * @param topic_name
      *        A topic name to publish
      * @param contents
@@ -2524,17 +2725,15 @@ public:
      *        3.3.2.3 PUBLISH Properties
      */
     void acquired_publish_at_most_once(
-        packet_id_t packet_id,
-        MQTT_NS::string_view topic_name,
-        MQTT_NS::string_view contents,
+        string_view topic_name,
+        string_view contents,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
         acquired_publish_at_most_once(
-            packet_id,
             as::buffer(topic_name.data(), topic_name.size()),
             as::buffer(contents.data(), contents.size()),
-            MQTT_NS::any(),
+            any(),
             retain,
             std::move(props)
         );
@@ -2542,9 +2741,6 @@ public:
 
     /**
      * @brief Publish QoS0 with already acquired packet identifier
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
      * @param topic_name
      *        A topic name to publish
      * @param contents
@@ -2561,22 +2757,20 @@ public:
      *        3.3.2.3 PUBLISH Properties
      */
     void acquired_publish_at_most_once(
-        packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        BOOST_ASSERT(packet_id == 0);
         send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos::at_most_once,
             retain,
             false,
-            packet_id,
+            0,
             std::move(props),
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(life_keeper)
         );
     }
@@ -2645,19 +2839,19 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
         BOOST_ASSERT(packet_id != 0);
         send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos::at_least_once,
             retain,
             false,
             packet_id,
             std::move(props),
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(life_keeper)
         );
     }
@@ -2727,19 +2921,19 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
         BOOST_ASSERT(packet_id != 0);
         send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos::exactly_once,
             retain,
             false,
             packet_id,
             std::move(props),
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(life_keeper)
         );
     }
@@ -2755,7 +2949,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2773,19 +2967,17 @@ public:
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        if(qos == qos::at_most_once)
-        {
+        if(qos == qos::at_most_once) {
             // In the at_most_once case, we know a priori that send_publish won't track the lifetime.
             acquired_publish(packet_id,
                              as::buffer(topic_name),
                              as::buffer(contents),
-                             MQTT_NS::any(),
+                             any(),
                              qos,
                              retain,
                              std::move(props));
         }
-        else
-        {
+        else {
             auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
             auto sp_contents   = std::make_shared<std::string>(std::move(contents));
 
@@ -2815,7 +3007,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2829,7 +3021,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
@@ -2838,14 +3030,58 @@ public:
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
         send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos,
             retain,
             false,
             packet_id,
             std::move(props),
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(life_keeper)
+        );
+    }
+
+    /**
+     * @brief Publish with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
+     */
+    void acquired_publish(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+
+        send_publish(
+            std::move(topic_name),
+            qos,
+            retain,
+            false,
+            packet_id,
+            std::move(props),
+            std::move(contents),
+            any()
         );
     }
 
@@ -2860,7 +3096,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2884,7 +3120,7 @@ public:
             acquired_publish_dup(packet_id,
                                  as::buffer(topic_name),
                                  as::buffer(contents),
-                                 MQTT_NS::any(),
+                                 any(),
                                  qos,
                                  retain,
                                  std::move(props));
@@ -2920,7 +3156,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2934,7 +3170,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
@@ -2943,14 +3179,58 @@ public:
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
         send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos,
             retain,
             true,
             packet_id,
             std::move(props),
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(life_keeper)
+        );
+    }
+
+    /**
+     * @brief Publish as dup with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
+     */
+    void acquired_publish_dup(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+
+        send_publish(
+            std::move(topic_name),
+            qos,
+            retain,
+            true,
+            packet_id,
+            std::move(props),
+            std::move(contents),
+            any()
         );
     }
 
@@ -2972,7 +3252,7 @@ public:
     void acquired_subscribe(
         packet_id_t packet_id,
         Args&&... args) {
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
+        std::vector<std::tuple<buffer, std::uint8_t>> params;
         params.reserve(sizeof...(args) / 2);
         send_subscribe(std::move(params), packet_id, std::forward<Args>(args)...);
     }
@@ -2992,10 +3272,10 @@ public:
      */
     void acquired_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<MQTT_NS::string_view, std::uint8_t>> params,
+        std::vector<std::tuple<string_view, std::uint8_t>> params,
         std::vector<v5::property_variant> props = {}
     ) {
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> cb_params;
+        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
         cb_params.reserve(params.size());
         for (auto const& e : params) {
             cb_params.emplace_back(as::buffer(std::get<0>(e).data(), std::get<0>(e).size()), std::get<1>(e));
@@ -3018,7 +3298,7 @@ public:
      */
     void acquired_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         send_subscribe(std::move(params), packet_id, std::move(props));
@@ -3043,7 +3323,7 @@ public:
         packet_id_t packet_id,
         Args&&... args) {
 
-        std::vector<as::const_buffer> params;
+        std::vector<buffer> params;
         params.reserve(sizeof...(args));
 
         send_unsubscribe(std::move(params), packet_id, std::forward<Args>(args)...);
@@ -3064,14 +3344,14 @@ public:
      */
     void acquired_unsubscribe(
         packet_id_t packet_id,
-        std::vector<MQTT_NS::string_view> params,
+        std::vector<string_view> params,
         std::vector<v5::property_variant> props = {}
     ) {
-        std::vector<as::const_buffer> cb_params;
+        std::vector<buffer> cb_params;
         cb_params.reserve(params.size());
 
-        for (auto const& e : params) {
-            cb_params.emplace_back(as::buffer(e.data(), e.size()));
+        for (auto&& e : params) {
+            cb_params.emplace_back(buffer(std::move(e)));
         }
         send_unsubscribe(std::move(cb_params), packet_id, std::move(props));
     }
@@ -3092,6 +3372,33 @@ public:
     void acquired_unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        std::vector<buffer> cb_params;
+        cb_params.reserve(params.size());
+
+        for (auto&& e : params) {
+            cb_params.emplace_back(buffer(string_view(get_pointer(e), get_size(e))));
+        }
+        send_unsubscribe(std::move(cb_params), packet_id, std::move(props));
+    }
+
+    /**
+     * @brief Unsubscribe with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param params a collection of topic_filter
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    void acquired_unsubscribe(
+        packet_id_t packet_id,
+        std::vector<buffer> params,
         std::vector<v5::property_variant> props = {}
     ) {
         send_unsubscribe(std::move(params), packet_id, std::move(props));
@@ -3126,7 +3433,7 @@ public:
      *        3.15.2.2 AUTH Properties
      */
     void auth(
-        MQTT_NS::optional<std::uint8_t> reason_code = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         send_auth(reason_code, std::move(props));
@@ -3164,14 +3471,84 @@ public:
      */
     void connect(
         std::string const& client_id,
-        MQTT_NS::optional<std::string> const& user_name,
-        MQTT_NS::optional<std::string> const& password,
-        MQTT_NS::optional<will> const& w,
+        optional<std::string> const& user_name,
+        optional<std::string> const& password,
+        optional<will> w,
         std::uint16_t keep_alive_sec,
         std::vector<v5::property_variant> props = {}
     ) {
         connect_requested_ = true;
-        send_connect(client_id, user_name, password, w, keep_alive_sec, std::move(props));
+        send_connect(
+            buffer(string_view(client_id)),
+            [&] {
+                if (user_name) {
+                    return buffer(string_view(user_name.value()));
+                }
+                else {
+                    return buffer();
+                }
+            } (),
+            [&] {
+                if (password) {
+                    return buffer(string_view(password.value()));
+                }
+                else {
+                    return buffer();
+                }
+            } (),
+            std::move(w),
+            keep_alive_sec,
+            std::move(props)
+        );
+    }
+
+    /**
+     * @brief Send connect packet.
+     * @param client_id
+     *        The client id to use for this connection<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
+     *        3.1.3.1 Client Identifier (ClientID)
+     * @param user_name
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
+     *        3.1.3.5 User Name
+     * @param password
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901072<BR>
+     *        3.1.3.6 Password
+     * @param w
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc479576982<BR>
+     *        3.1.2.5 Will Flag
+     * @param clean_session
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901039<BR>
+     *        3.1.2.4 Clean Start<BR>
+     * @param keep_alive_sec
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349238
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
+     * @param keep_alive_sec
+     *        Keep Alive<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
+     *        3.1.2.10 Keep Alive
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
+     */
+    void connect(
+        buffer client_id,
+        optional<buffer> user_name,
+        optional<buffer> password,
+        optional<will> w,
+        std::uint16_t keep_alive_sec,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        connect_requested_ = true;
+        send_connect(
+            std::move(client_id),
+            std::move(user_name),
+            std::move(password),
+            std::move(w),
+            keep_alive_sec,
+            std::move(props)
+        );
     }
 
     /**
@@ -3206,7 +3583,7 @@ public:
      */
     void puback(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason_code = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         send_puback(packet_id, reason_code, std::move(props));
@@ -3226,7 +3603,7 @@ public:
      */
     void pubrec(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason_code = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         send_pubrec(packet_id, reason_code, std::move(props));
@@ -3249,9 +3626,9 @@ public:
      */
     void pubrel(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason_code = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {},
-        MQTT_NS::any life_keeper = MQTT_NS::any()
+        any life_keeper = any()
     ) {
         send_pubrel(packet_id, reason_code, std::move(props), std::move(life_keeper));
     }
@@ -3270,7 +3647,7 @@ public:
      */
     void pubcomp(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason_code = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         send_pubcomp(packet_id, reason_code, std::move(props));
@@ -3437,7 +3814,7 @@ public:
     void async_publish_at_most_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
@@ -3468,7 +3845,7 @@ public:
     void async_publish_at_most_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
@@ -3553,7 +3930,7 @@ public:
     packet_id_t async_publish_at_least_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
@@ -3586,7 +3963,7 @@ public:
     packet_id_t async_publish_at_least_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
@@ -3673,7 +4050,7 @@ public:
     packet_id_t async_publish_exactly_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
@@ -3706,7 +4083,7 @@ public:
     packet_id_t async_publish_exactly_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
@@ -3723,7 +4100,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -3753,7 +4130,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -3790,7 +4167,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -3803,7 +4180,7 @@ public:
     packet_id_t async_publish(
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
@@ -3823,7 +4200,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -3840,7 +4217,7 @@ public:
     packet_id_t async_publish(
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
@@ -3849,6 +4226,71 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
         acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props), std::move(func));
+        return packet_id;
+    }
+
+    /**
+     * @brief Publish
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return packet_id. If qos is set to at_most_once, return 0.
+     * packet_id is automatically generated.
+     */
+    packet_id_t async_publish(
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        async_handler_t func = async_handler_t()
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
+        acquired_async_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(func));
+        return packet_id;
+    }
+
+    /**
+     * @brief Publish
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return packet_id. If qos is set to at_most_once, return 0.
+     * packet_id is automatically generated.
+     */
+    packet_id_t async_publish(
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos,
+        bool retain,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
+        acquired_async_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -4027,6 +4469,61 @@ public:
 
     /**
      * @brief Subscribe
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    packet_id_t async_subscribe(
+        buffer topic_name,
+        std::uint8_t option,
+        async_handler_t func = async_handler_t()
+    ) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_async_subscribe(packet_id, std::move(topic_name), option, std::move(func));
+        return packet_id;
+    }
+
+    /**
+     * @brief Subscribe
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    packet_id_t async_subscribe(
+        buffer topic_name,
+        std::uint8_t option,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_async_subscribe(packet_id, std::move(topic_name), option, std::move(props), std::move(func));
+        return packet_id;
+    }
+
+    /**
+     * @brief Subscribe
      * @param params
      *        A collection of the pair of topic_name and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
@@ -4120,6 +4617,55 @@ public:
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_async_subscribe(packet_id, params, std::move(props), std::move(func));
+        return packet_id;
+    }
+
+    /**
+     * @brief Subscribe
+     * @param params
+     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    packet_id_t async_subscribe(
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        async_handler_t func = async_handler_t()
+    ) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_async_subscribe(packet_id, std::move(params), std::move(func));
+        return packet_id;
+    }
+
+    /**
+     * @brief Subscribe
+     * @param params
+     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    packet_id_t async_subscribe(
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_async_subscribe(packet_id, std::move(params), std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -4267,6 +4813,51 @@ public:
 
     /**
      * @brief Unsubscribe
+     * @param topic_name
+     *        A topic name to unsubscribe
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    packet_id_t async_unsubscribe(
+        buffer topic_name,
+        async_handler_t func = async_handler_t()
+    ) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_async_unsubscribe(packet_id, std::move(topic_name), std::move(func));
+        return packet_id;
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param topic_name
+     *        A topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    packet_id_t async_unsubscribe(
+        buffer topic_name,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_async_unsubscribe(packet_id, std::move(topic_name), std::move(props), std::move(func));
+        return packet_id;
+    }
+
+    /**
+     * @brief Unsubscribe
      * @param params
      *        A collection of the topic name to unsubscribe
      * @param func
@@ -4352,6 +4943,51 @@ public:
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_async_unsubscribe(packet_id, params, std::move(props), std::move(func));
+        return packet_id;
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param params
+     *        A collection of the topic name to unsubscribe
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    packet_id_t async_unsubscribe(
+        std::vector<buffer> params,
+        async_handler_t func = async_handler_t()
+    ) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_async_unsubscribe(packet_id, std::move(params), std::move(func));
+        return packet_id;
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param params
+     *        A collection of the topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    packet_id_t async_unsubscribe(
+        std::vector<buffer> params,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_async_unsubscribe(packet_id, std::move(params), std::move(props), std::move(func));
         return packet_id;
     }
 
@@ -4491,7 +5127,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
@@ -4529,7 +5165,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
@@ -4631,7 +5267,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
@@ -4669,7 +5305,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
@@ -4690,7 +5326,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4725,7 +5361,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4767,7 +5403,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4780,7 +5416,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
@@ -4804,7 +5440,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4822,7 +5458,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
@@ -4837,6 +5473,80 @@ public:
     }
 
     /**
+     * @brief Publish with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param life_keeper A object that stays alive until the async operation is finished.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         contents don't publish, otherwise return true and contents publish.
+     */
+    bool async_publish(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        async_handler_t func = async_handler_t()
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        if (register_packet_id(packet_id)) {
+            acquired_async_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(func));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Publish with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         contents don't publish, otherwise return true and contents publish.
+     */
+    bool async_publish(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos,
+        bool retain,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        if (register_packet_id(packet_id)) {
+            acquired_async_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(props), std::move(func));
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * @brief Publish as dup with a manual set packet identifier
      * @param packet_id
      *        packet identifier
@@ -4845,7 +5555,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4880,7 +5590,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4922,7 +5632,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4935,7 +5645,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
@@ -4959,7 +5669,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4977,7 +5687,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
@@ -4986,6 +5696,80 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
             acquired_async_publish_dup(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props), std::move(func));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Publish as dup with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param life_keeper A object that stays alive until the async operation is finished.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         contents don't publish, otherwise return true and contents publish.
+     */
+    bool async_publish_dup(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        async_handler_t func = async_handler_t()
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        if (register_packet_id(packet_id)) {
+            acquired_async_publish_dup(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(func));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Publish as dup with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         contents don't publish, otherwise return true and contents publish.
+     */
+    bool async_publish_dup(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos,
+        bool retain,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        if (register_packet_id(packet_id)) {
+            acquired_async_publish_dup(packet_id, std::move(topic_name), std::move(contents),  qos, retain, std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -5197,6 +5981,71 @@ public:
      * @brief Subscribe
      * @param packet_id
      *        packet identifier
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't subscribe, otherwise return true and subscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    bool async_subscribe(
+        packet_id_t packet_id,
+        buffer topic_name,
+        std::uint8_t option,
+        async_handler_t func = async_handler_t()
+    ) {
+        if (register_packet_id(packet_id)) {
+            acquired_async_subscribe(packet_id, std::move(topic_name), option, std::move(func));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't subscribe, otherwise return true and subscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    bool async_subscribe(
+        packet_id_t packet_id,
+        buffer topic_name,
+        std::uint8_t option,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        if (register_packet_id(packet_id)) {
+            acquired_async_subscribe(packet_id, std::move(topic_name), option, std::move(props), std::move(func));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier
      * @param params A collection of the pair of topic_name and option to subscribe.
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
@@ -5302,6 +6151,63 @@ public:
     ) {
         if (register_packet_id(packet_id)) {
             acquired_async_subscribe(packet_id, params, std::move(props), std::move(func));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier
+     * @param params A collection of the pair of topic_name and option to subscribe.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't subscribe, otherwise return true and subscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    bool async_subscribe(
+        packet_id_t packet_id,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        async_handler_t func = async_handler_t()
+    ) {
+        if (register_packet_id(packet_id)) {
+            acquired_async_subscribe(packet_id, std::move(params), std::move(func));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier
+     * @param params A collection of the pair of topic_name and option to subscribe.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't subscribe, otherwise return true and subscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    bool async_subscribe(
+        packet_id_t packet_id,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        if (register_packet_id(packet_id)) {
+            acquired_async_subscribe(packet_id, std::move(params), std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -5370,6 +6276,61 @@ public:
     }
 
     /**
+     * @brief Unsubscribe with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't unsubscribe, otherwise return true and unsubscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    bool async_unsubscribe(
+        packet_id_t packet_id,
+        buffer topic_name,
+        async_handler_t func = async_handler_t()
+    ) {
+        if (register_packet_id(packet_id)) {
+            acquired_async_unsubscribe(packet_id, std::move(topic_name), std::move(func));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Unsubscribe with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't unsubscribe, otherwise return true and unsubscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    bool async_unsubscribe(
+        packet_id_t packet_id,
+        buffer topic_name,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        if (register_packet_id(packet_id)) {
+            acquired_async_unsubscribe(packet_id, std::move(topic_name), std::move(props), std::move(func));
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * @brief Unsubscribe
      * @param packet_id
      *        packet identifier
@@ -5474,6 +6435,61 @@ public:
     ) {
         if (register_packet_id(packet_id)) {
             acquired_async_unsubscribe(packet_id, params, std::move(props), std::move(func));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier
+     * @param params
+     *        A collection of the topic names to unsubscribe
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't unsubscribe, otherwise return true and unsubscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    bool async_unsubscribe(
+        packet_id_t packet_id,
+        std::vector<buffer> params,
+        async_handler_t func = async_handler_t()
+    ) {
+        if (register_packet_id(packet_id)) {
+            acquired_async_unsubscribe(packet_id, std::move(params), std::move(func));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier
+     * @param params
+     *        A collection of the topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't unsubscribe, otherwise return true and unsubscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    bool async_unsubscribe(
+        packet_id_t packet_id,
+        std::vector<buffer> params,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        if (register_packet_id(packet_id)) {
+            acquired_async_unsubscribe(packet_id, std::move(params), std::move(props), std::move(func));
             return true;
         }
         return false;
@@ -5507,17 +6523,19 @@ public:
 
         auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
         auto sp_contents = std::make_shared<std::string>(std::move(contents));
+        auto sv_topic_name = string_view(*sp_topic_name);
+        auto sv_contents = string_view(*sp_contents);
 
         async_send_publish(
-            as::buffer(*sp_topic_name),
+            buffer(sv_topic_name),
             qos::at_least_once,
             retain,
             false,
             packet_id,
             std::vector<v5::property_variant>{},
-            as::buffer(*sp_contents),
+            buffer(sv_contents),
             std::move(func),
-            [sp_topic_name, sp_contents] {}
+            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
 
@@ -5552,17 +6570,19 @@ public:
 
         auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
         auto sp_contents = std::make_shared<std::string>(std::move(contents));
+        auto sv_topic_name = string_view(*sp_topic_name);
+        auto sv_contents = string_view(*sp_contents);
 
         async_send_publish(
-            as::buffer(*sp_topic_name),
+            buffer(sv_topic_name),
             qos::at_least_once,
             retain,
             false,
             packet_id,
             std::move(props),
-            as::buffer(*sp_contents),
+            buffer(sv_contents),
             std::move(func),
-            [sp_topic_name, sp_contents] {}
+            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
 
@@ -5588,19 +6608,19 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
 
         async_send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos::at_least_once,
             retain,
             false,
             packet_id,
             std::vector<v5::property_variant>{},
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(func),
             std::move(life_keeper)
         );
@@ -5632,20 +6652,20 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
 
         async_send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos::at_least_once,
             retain,
             false,
             packet_id,
             std::move(props),
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(func),
             std::move(life_keeper)
         );
@@ -5677,17 +6697,19 @@ public:
 
         auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
         auto sp_contents = std::make_shared<std::string>(std::move(contents));
+        auto sv_topic_name = string_view(*sp_topic_name);
+        auto sv_contents = string_view(*sp_contents);
 
         async_send_publish(
-            as::buffer(*sp_topic_name),
+            buffer(sv_topic_name),
             qos::exactly_once,
             retain,
             false,
             packet_id,
             std::vector<v5::property_variant>{},
-            as::buffer(*sp_contents),
+            buffer(sv_contents),
             std::move(func),
-            [sp_topic_name, sp_contents] {}
+            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
 
@@ -5722,18 +6744,17 @@ public:
 
         auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
         auto sp_contents   = std::make_shared<std::string>(std::move(contents));
-
-        auto topic_buf   = as::buffer(*sp_topic_name);
-        auto contents_buf = as::buffer(*sp_contents);
+        auto sv_topic_name = string_view(*sp_topic_name);
+        auto sv_contents = string_view(*sp_contents);
 
         async_send_publish(
-            topic_buf,
+            buffer(sv_topic_name),
             qos::at_least_once,
             retain,
             false,
             std::move(props),
             packet_id,
-            contents_buf,
+            buffer(sv_contents),
             std::move(func),
             std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
@@ -5761,19 +6782,19 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
 
         async_send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos::exactly_once,
             retain,
             false,
             packet_id,
             std::vector<v5::property_variant>{},
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(func),
             std::move(life_keeper)
         );
@@ -5805,20 +6826,20 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
 
         async_send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos::exactly_once,
             retain,
             false,
             packet_id,
             std::move(props),
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(func),
             std::move(life_keeper)
         );
@@ -5835,7 +6856,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -5856,18 +6877,17 @@ public:
 
         auto sp_topic_name = std::make_shared<std::string>(topic_name);
         auto sp_contents   = std::make_shared<std::string>(contents);
-
-        auto topic_buf   = as::buffer(*sp_topic_name);
-        auto contents_buf = as::buffer(*sp_contents);
+        auto sv_topic_name = string_view(*sp_topic_name);
+        auto sv_contents = string_view(*sp_contents);
 
         async_send_publish(
-            topic_buf,
+            buffer(sv_topic_name),
             qos,
             retain,
             false,
             packet_id,
             std::vector<v5::property_variant>{},
-            contents_buf,
+            buffer(sv_contents),
             std::move(func),
             std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
@@ -5884,7 +6904,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -5910,18 +6930,17 @@ public:
 
         auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
         auto sp_contents   = std::make_shared<std::string>(std::move(contents));
-
-        auto topic_buf    = as::buffer(*sp_topic_name);
-        auto contents_buf = as::buffer(*sp_contents);
+        auto sv_topic_name = string_view(*sp_topic_name);
+        auto sv_contents = string_view(*sp_contents);
 
         async_send_publish(
-            topic_buf,
+            buffer(sv_topic_name),
             qos,
             retain,
             false,
             packet_id,
             std::move(props),
-            contents_buf,
+            buffer(sv_contents),
             std::move(func),
             std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
@@ -5940,7 +6959,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -5952,7 +6971,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
@@ -5961,13 +6980,13 @@ public:
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos,
             retain,
             false,
             packet_id,
             std::vector<v5::property_variant>{},
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(func),
             std::move(life_keeper)
         );
@@ -5986,7 +7005,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -6002,7 +7021,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
@@ -6012,15 +7031,106 @@ public:
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos,
             retain,
             false,
             packet_id,
             std::move(props),
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(func),
             std::move(life_keeper)
+        );
+    }
+
+    /**
+     * @brief Publish with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     */
+    void acquired_async_publish(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        async_handler_t func = async_handler_t()
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+
+        async_send_publish(
+            std::move(topic_name),
+            qos,
+            retain,
+            false,
+            packet_id,
+            std::vector<v5::property_variant>{},
+            std::move(contents),
+            std::move(func),
+            any()
+        );
+    }
+
+    /**
+     * @brief Publish with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     */
+    void acquired_async_publish(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos,
+        bool retain,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+
+        async_send_publish(
+            std::move(topic_name),
+            qos,
+            retain,
+            false,
+            packet_id,
+            std::move(props),
+            std::move(contents),
+            std::move(func),
+            any()
         );
     }
 
@@ -6035,7 +7145,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -6056,17 +7166,19 @@ public:
 
         auto sp_topic_name = std::make_shared<std::string>(topic_name);
         auto sp_contents = std::make_shared<std::string>(contents);
+        auto sv_topic_name = string_view(*sp_topic_name);
+        auto sv_contents = string_view(*sp_contents);
 
         async_send_publish(
-            as::buffer(*sp_topic_name),
+            buffer(sv_topic_name),
             qos,
             retain,
             true,
             packet_id,
             std::vector<v5::property_variant>{},
-            as::buffer(*sp_contents),
+            buffer(sv_contents),
             std::move(func),
-            [sp_topic_name, sp_contents] {}
+            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
     }
 
@@ -6081,7 +7193,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -6107,18 +7219,17 @@ public:
 
         auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
         auto sp_contents   = std::make_shared<std::string>(std::move(contents));
-
-        auto topic_buf    = as::buffer(*sp_topic_name);
-        auto contents_buf = as::buffer(*sp_contents);
+        auto sv_topic_name = string_view(*sp_topic_name);
+        auto sv_contents = string_view(*sp_contents);
 
         async_send_publish(
-            topic_buf,
+            buffer(sv_topic_name),
             qos,
             retain,
             true,
             packet_id,
             std::move(props),
-            contents_buf,
+            buffer(sv_contents),
             std::move(func),
             std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
         );
@@ -6137,7 +7248,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -6148,7 +7259,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
@@ -6157,13 +7268,13 @@ public:
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos,
             retain,
             true,
             packet_id,
             std::vector<v5::property_variant>{},
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(func),
             std::move(life_keeper)
         );
@@ -6182,7 +7293,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -6198,7 +7309,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        MQTT_NS::any life_keeper,
+        any life_keeper,
         std::uint8_t qos,
         bool retain,
         std::vector<v5::property_variant> props,
@@ -6208,15 +7319,105 @@ public:
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
-            topic_name,
+            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
             qos,
             retain,
             true,
             packet_id,
             std::move(props),
-            contents,
+            buffer(string_view(get_pointer(contents), get_size(contents))),
             std::move(func),
             std::move(life_keeper)
+        );
+    }
+
+    /**
+     * @brief Publish as dup with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param life_keeper A object that stays alive until the async operation is finished.
+     */
+    void acquired_async_publish_dup(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos = qos::at_most_once,
+        bool retain = false,
+        async_handler_t func = async_handler_t()
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+
+        async_send_publish(
+            std::move(topic_name),
+            qos,
+            retain,
+            true,
+            packet_id,
+            std::vector<v5::property_variant>{},
+            std::move(contents),
+            std::move(func)
+        );
+    }
+
+    /**
+     * @brief Publish as dup with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param life_keeper
+     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     * @param qos
+     *        qos
+     * @param retain
+     *        A retain flag. If set it to true, the contents is retained.<BR>
+     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
+     *        3.3.1.3 RETAIN
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     */
+    void acquired_async_publish_dup(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        std::uint8_t qos,
+        bool retain,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+
+        async_send_publish(
+            std::move(topic_name),
+            qos,
+            retain,
+            true,
+            packet_id,
+            std::move(props),
+            std::move(contents),
+            std::move(func)
         );
     }
 
@@ -6307,10 +7508,10 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
-        auto topic_buf = as::buffer(*sp_topic_name);
+        auto sv_topic_name = string_view(*sp_topic_name);
 
         async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, std::uint8_t>>({std::make_tuple(topic_buf, option)}),
+            std::vector<std::tuple<buffer, std::uint8_t>>({std::make_tuple(buffer(sv_topic_name), option)}),
             std::move(sp_topic_name),
             packet_id,
             std::move(func)
@@ -6345,10 +7546,10 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
-        auto topic_buf = as::buffer(*sp_topic_name);
+        auto sv_topic_name = string_view(*sp_topic_name);
 
         async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, std::uint8_t>>({std::make_tuple(topic_buf, option)}),
+            std::vector<std::tuple<buffer, std::uint8_t>>({std::make_tuple(buffer(sv_topic_name), option)}),
             std::move(sp_topic_name),
             packet_id,
             std::move(props),
@@ -6379,8 +7580,13 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, std::uint8_t>>({std::make_tuple(topic_name, option)}),
-            MQTT_NS::any(),
+            std::vector<std::tuple<buffer, std::uint8_t>>({
+                std::make_tuple(
+                    buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
+                    option
+                )
+            }),
+            any(),
             packet_id,
             std::move(func)
         );
@@ -6415,8 +7621,90 @@ public:
     ) {
 
         async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, std::uint8_t>>({std::make_tuple(topic_name, option)}),
-            MQTT_NS::any(),
+            std::vector<std::tuple<buffer, std::uint8_t>>({
+                std::make_tuple(
+                    buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
+                    option
+                )
+            }),
+            any(),
+            packet_id,
+            std::move(props),
+            std::move(func)
+        );
+    }
+
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    void acquired_async_subscribe(
+        packet_id_t packet_id,
+        buffer topic_name,
+        std::uint8_t option,
+        async_handler_t func = async_handler_t()
+    ) {
+        async_send_subscribe(
+            std::vector<std::tuple<buffer, std::uint8_t>>({
+                std::make_tuple(
+                    std::move(topic_name),
+                    option
+                )
+            }),
+            any(),
+            packet_id,
+            std::move(func)
+        );
+    }
+
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    void acquired_async_subscribe(
+        packet_id_t packet_id,
+        buffer topic_name,
+        std::uint8_t option,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+
+        async_send_subscribe(
+            std::vector<std::tuple<buffer, std::uint8_t>>({
+                std::make_tuple(
+                    std::move(topic_name),
+                    option
+                )
+            }),
+            any(),
             packet_id,
             std::move(props),
             std::move(func)
@@ -6443,7 +7731,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> cb_params;
+        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
         cb_params.reserve(params.size());
 
         std::vector<std::shared_ptr<std::string>> life_keepers;
@@ -6451,7 +7739,7 @@ public:
 
         for (auto const& e : params) {
             auto sp_topic_name = std::make_shared<std::string>(std::move(std::get<0>(e)));
-            cb_params.emplace_back(as::buffer(*sp_topic_name), std::get<1>(e));
+            cb_params.emplace_back(buffer(string_view(*sp_topic_name)), std::get<1>(e));
             life_keepers.emplace_back(std::move(sp_topic_name));
         }
         async_send_subscribe(
@@ -6487,7 +7775,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> cb_params;
+        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
         cb_params.reserve(params.size());
 
         std::vector<std::shared_ptr<std::string>> life_keepers;
@@ -6495,7 +7783,7 @@ public:
 
         for (auto const& e : params) {
             auto sp_topic_name = std::make_shared<std::string>(std::move(std::get<0>(e)));
-            cb_params.emplace_back(as::buffer(*sp_topic_name), std::get<1>(e));
+            cb_params.emplace_back(buffer(string_view(*sp_topic_name)), std::get<1>(e));
             life_keepers.emplace_back(std::move(sp_topic_name));
         }
         async_send_subscribe(
@@ -6523,9 +7811,25 @@ public:
         std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
         async_handler_t func = async_handler_t()
     ) {
+
+        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
+        cb_params.reserve(params.size());
+
+        for (auto const& e : params) {
+            cb_params.emplace_back(
+                buffer(
+                    string_view(
+                        get_pointer(std::get<0>(e)),
+                        get_size(std::get<0>(e))
+                    )
+                ),
+                std::get<1>(e)
+            );
+        }
+
         async_send_subscribe(
-            std::move(params),
-            MQTT_NS::any(),
+            std::move(cb_params),
+            any(),
             packet_id,
             std::move(func)
         );
@@ -6551,9 +7855,100 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
+
+        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
+        cb_params.reserve(params.size());
+
+        for (auto const& e : params) {
+            cb_params.emplace_back(
+                buffer(
+                    string_view(
+                        get_pointer(std::get<0>(e)),
+                        get_size(std::get<0>(e))
+                    )
+                ),
+                std::get<1>(e)
+            );
+        }
+
         async_send_subscribe(
-            std::move(params),
-            MQTT_NS::any(),
+            std::move(cb_params),
+            any(),
+            packet_id,
+            std::move(props),
+            std::move(func)
+        );
+    }
+
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    void acquired_async_subscribe(
+        packet_id_t packet_id,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        async_handler_t func = async_handler_t()
+    ) {
+
+        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
+        cb_params.reserve(params.size());
+
+        for (auto const& e : params) {
+            cb_params.emplace_back(
+                std::move(std::get<0>(e)),
+                std::get<1>(e)
+            );
+        }
+
+        async_send_subscribe(
+            std::move(cb_params),
+            any(),
+            packet_id,
+            std::move(func)
+        );
+    }
+
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param params
+     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    void acquired_async_subscribe(
+        packet_id_t packet_id,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+
+        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
+        cb_params.reserve(params.size());
+
+        for (auto const& e : params) {
+            cb_params.emplace_back(
+                std::move(std::get<0>(e)),
+                std::get<1>(e)
+            );
+        }
+
+        async_send_subscribe(
+            std::move(cb_params),
+            any(),
             packet_id,
             std::move(props),
             std::move(func)
@@ -6615,6 +8010,51 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
+     * @param topic_name topic_name
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    void acquired_async_unsubscribe(
+        packet_id_t packet_id,
+        buffer topic_name,
+        async_handler_t func = async_handler_t()
+    ) {
+        std::vector<buffer> params { std::move(topic_name) };
+        async_send_unsubscribe(std::move(params), any(), packet_id, std::move(func));
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name topic_name
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    void acquired_async_unsubscribe(
+        packet_id_t packet_id,
+        buffer topic_name,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+        std::vector<buffer> params { std::move(topic_name) };
+        async_send_unsubscribe(std::move(params), any(), packet_id, std::move(props), std::move(func));
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
      * @param params
      *        A collection of the topic name to unsubscribe
      * @param func
@@ -6628,7 +8068,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<as::const_buffer> cb_params;
+        std::vector<buffer> cb_params;
         cb_params.reserve(params.size());
 
         std::vector<std::shared_ptr<std::string>> life_keepers;
@@ -6636,7 +8076,7 @@ public:
 
         for (auto const& e : params) {
             life_keepers.emplace_back(std::make_shared<std::string>(std::move(e)));
-            cb_params.emplace_back(as::buffer(*life_keepers.back()));
+            cb_params.emplace_back(buffer(string_view(*life_keepers.back())));
         }
 
         async_send_unsubscribe(
@@ -6678,7 +8118,7 @@ public:
 
         for (auto const& e : params) {
             life_keepers.emplace_back(std::make_shared<std::string>(std::move(e)));
-            cb_params.emplace_back(as::buffer(*life_keepers.back()));
+            cb_params.emplace_back(buffer(string_view(*life_keepers.back())));
         }
 
         async_send_unsubscribe(
@@ -6708,10 +8148,23 @@ public:
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<std::shared_ptr<std::string>> life_keepers;
+        std::vector<buffer> cb_params;
+        cb_params.reserve(params.size());
+
+        for (auto const& e : params) {
+            cb_params.emplace_back(
+                buffer(
+                    string_view(
+                        get_pointer(e),
+                        get_size(e)
+                    )
+                )
+            );
+        }
+
         async_send_unsubscribe(
-            std::move(params),
-            life_keepers,
+            std::move(cb_params),
+            any(),
             packet_id,
             std::move(func)
         );
@@ -6740,10 +8193,67 @@ public:
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<std::shared_ptr<std::string>> life_keepers;
         async_send_unsubscribe(
             std::move(params),
-            life_keepers,
+            any(),
+            packet_id,
+            std::move(props),
+            std::move(func)
+        );
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param params
+     *        A collection of the topic name to unsubscribe
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    void acquired_async_unsubscribe(
+        packet_id_t packet_id,
+        std::vector<buffer> params,
+        async_handler_t func = async_handler_t()
+    ) {
+
+        async_send_unsubscribe(
+            std::move(params),
+            any(),
+            packet_id,
+            std::move(func)
+        );
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param params
+     *        A collection of the topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    void acquired_async_unsubscribe(
+        packet_id_t packet_id,
+        std::vector<buffer> params,
+        std::vector<v5::property_variant> props,
+        async_handler_t func = async_handler_t()
+    ) {
+
+        async_send_unsubscribe(
+            std::move(params),
+            any(),
             packet_id,
             std::move(props),
             std::move(func)
@@ -6785,7 +8295,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718086
      */
     void async_auth(
-        MQTT_NS::optional<std::uint8_t> reason_code = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {},
         async_handler_t func = async_handler_t()) {
         async_send_auth(reason_code, std::move(props), std::move(func));
@@ -6814,20 +8324,21 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
      */
     void async_connect(
-        std::string const& client_id,
-        MQTT_NS::optional<std::string> const& user_name,
-        MQTT_NS::optional<std::string> const& password,
-        MQTT_NS::optional<will> const& w,
+        buffer client_id,
+        optional<buffer> user_name,
+        optional<buffer> password,
+        optional<will> w,
         std::uint16_t keep_alive_sec,
         async_handler_t func = async_handler_t()
     ) {
-        async_connect(client_id,
-                      user_name,
-                      password,
-                      w,
-                      keep_alive_sec,
-                      std::vector<v5::property_variant>{},
-                      std::move(func));
+        async_connect(
+            std::move(client_id),
+            std::move(user_name),
+            std::move(password),
+            std::move(w),
+            keep_alive_sec,
+            std::vector<v5::property_variant>{},
+            std::move(func));
     }
 
     /**
@@ -6858,22 +8369,23 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
      */
     void async_connect(
-        std::string const& client_id,
-        MQTT_NS::optional<std::string> const& user_name,
-        MQTT_NS::optional<std::string> const& password,
-        MQTT_NS::optional<will> const& w,
+        buffer client_id,
+        optional<buffer> user_name,
+        optional<buffer> password,
+        optional<will> w,
         std::uint16_t keep_alive_sec,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
         connect_requested_ = true;
-        async_send_connect(client_id,
-                           user_name,
-                           password,
-                           w,
-                           keep_alive_sec,
-                           std::move(props),
-                           std::move(func));
+        async_send_connect(
+            std::move(client_id),
+            std::move(user_name),
+            std::move(password),
+            std::move(w),
+            keep_alive_sec,
+            std::move(props),
+            std::move(func));
     }
     /**
      * @brief Send connack packet. This function is for broker.
@@ -6923,7 +8435,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_puback(packet_id, MQTT_NS::nullopt, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_puback(packet_id, nullopt, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -6961,7 +8473,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrec(packet_id, MQTT_NS::nullopt, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_pubrec(packet_id, nullopt, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -6999,7 +8511,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrel(packet_id, MQTT_NS::nullopt, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_pubrel(packet_id, nullopt, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -7024,7 +8536,7 @@ public:
         std::uint8_t reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t(),
-        MQTT_NS::any life_keeper = MQTT_NS::any()
+        any life_keeper = any()
     ) {
         async_send_pubrel(packet_id, reason_code, std::move(props), std::move(func), std::move(life_keeper));
     }
@@ -7040,7 +8552,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubcomp(packet_id, MQTT_NS::nullopt, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_pubcomp(packet_id, nullopt, std::vector<v5::property_variant>{}, std::move(func));
     }
 
     /**
@@ -7447,8 +8959,8 @@ public:
         case control_packet_type::pubrel: {
             restore_serialized_message(
                 basic_pubrel_message<PacketIdBytes>(
-                    // basic_pubrel_message have no member variable that type is MQTT_NS::buffer.
-                    // When creating basic_pubrel_message, the constructor just read MQTT_NS::buffer
+                    // basic_pubrel_message have no member variable that type is buffer.
+                    // When creating basic_pubrel_message, the constructor just read buffer
                     // and convert to some values.
                     // So the argument buffer(...) doesn't need to hold the lifetime.
                     buffer(string_view(&*b, static_cast<std::size_t>(std::distance(b, e))))
@@ -7468,7 +8980,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the stored message is sent.
      */
-    void restore_serialized_message(basic_publish_message<PacketIdBytes> msg, MQTT_NS::any life_keeper) {
+    void restore_serialized_message(basic_publish_message<PacketIdBytes> msg, any life_keeper) {
         auto packet_id = msg.packet_id();
         auto qos = msg.qos();
         LockGuard<Mutex> lck (store_mtx_);
@@ -7573,7 +9085,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the stored message is sent.
      */
-    void restore_v5_serialized_message(v5::basic_publish_message<PacketIdBytes> msg, MQTT_NS::any life_keeper) {
+    void restore_v5_serialized_message(v5::basic_publish_message<PacketIdBytes> msg, any life_keeper) {
         auto packet_id = msg.packet_id();
         auto qos = msg.qos();
         LockGuard<Mutex> lck (store_mtx_);
@@ -7612,7 +9124,7 @@ public:
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the stored message is sent.
      */
-    void restore_v5_serialized_message(v5::basic_pubrel_message<PacketIdBytes> msg, MQTT_NS::any life_keeper) {
+    void restore_v5_serialized_message(v5::basic_pubrel_message<PacketIdBytes> msg, any life_keeper) {
         auto packet_id = msg.packet_id();
         LockGuard<Mutex> lck (store_mtx_);
         if (packet_id_.insert(packet_id).second) {
@@ -7741,7 +9253,7 @@ protected:
      * @brief Get shared_any of socket
      * @return reference of shared_any socket
      */
-    MQTT_NS::optional<MQTT_NS::socket>& socket_optional() {
+    optional<MQTT_NS::socket>& socket_optional() {
         return socket_;
     }
 
@@ -7883,12 +9395,12 @@ private:
         std::uint8_t qos,
         Args&&... args) {
 
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
+        std::vector<std::tuple<buffer, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
 
         async_send_subscribe(
             std::move(params),
-            MQTT_NS::any(),
+            any(),
             packet_id,
             std::move(topic_name),
             qos,
@@ -7909,12 +9421,12 @@ private:
         std::uint8_t qos,
         Args&&... args) {
 
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
+        std::vector<std::tuple<buffer, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
 
         async_send_subscribe(
             std::move(params),
-            MQTT_NS::any(),
+            any(),
             packet_id,
             topic_name,
             qos,
@@ -7935,12 +9447,12 @@ private:
         std::uint8_t qos,
         Args&&... args) {
 
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
+        std::vector<std::tuple<buffer, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
 
         async_send_subscribe(
             std::move(params),
-            MQTT_NS::any(),
+            any(),
             packet_id,
             std::move(topic_name),
             qos,
@@ -7962,12 +9474,12 @@ private:
         std::uint8_t qos,
         Args&&... args) {
 
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params;
+        std::vector<std::tuple<buffer, std::uint8_t>> params;
         params.reserve((sizeof...(args) + 2) / 2);
 
         async_send_subscribe(
             std::move(params),
-            MQTT_NS::any(),
+            any(),
             packet_id,
             topic_name,
             qos,
@@ -7988,12 +9500,12 @@ private:
         std::string topic_name,
         Args&&... args) {
 
-        std::vector<as::const_buffer> params;
+        std::vector<buffer> params;
         params.reserve(sizeof...(args));
 
         async_send_unsubscribe(
             std::move(params),
-            MQTT_NS::any(),
+            any(),
             packet_id,
             std::move(topic_name),
             std::forward<Args>(args)...
@@ -8012,12 +9524,12 @@ private:
         as::const_buffer topic_name,
         Args&&... args) {
 
-        std::vector<as::const_buffer> params;
+        std::vector<buffer> params;
         params.reserve(sizeof...(args));
 
         async_send_unsubscribe(
             std::move(params),
-            MQTT_NS::any(),
+            any(),
             packet_id,
             topic_name,
             std::forward<Args>(args)...
@@ -8036,12 +9548,12 @@ private:
         std::string topic_name,
         Args&&... args) {
 
-        std::vector<as::const_buffer> params;
+        std::vector<buffer> params;
         params.reserve(sizeof...(args) + 1);
 
         async_send_unsubscribe(
             std::move(params),
-            MQTT_NS::any(),
+            any(),
             packet_id,
             std::move(topic_name),
             std::forward<Args>(args)...,
@@ -8061,12 +9573,12 @@ private:
         as::const_buffer topic_name,
         Args&&... args) {
 
-        std::vector<as::const_buffer> params;
+        std::vector<buffer> params;
         params.reserve(sizeof...(args) + 1);
 
         async_send_unsubscribe(
             std::move(params),
-            MQTT_NS::any(),
+            any(),
             packet_id,
             topic_name,
             std::forward<Args>(args)...,
@@ -8159,7 +9671,7 @@ private:
             packet_id_t id,
             std::uint8_t type,
             basic_store_message_variant<PacketIdBytes> smv,
-            MQTT_NS::any life_keeper = MQTT_NS::any())
+            any life_keeper = any())
             : packet_id_(id)
             , expected_control_packet_type_(type)
             , smv_(std::move(smv))
@@ -8173,7 +9685,7 @@ private:
         packet_id_t packet_id_;
         std::uint8_t expected_control_packet_type_;
         basic_store_message_variant<PacketIdBytes> smv_;
-        MQTT_NS::any life_keeper_;
+        any life_keeper_;
     };
 
     struct tag_packet_id {};
@@ -9851,8 +11363,8 @@ private:
         std::vector<v5::property_variant> will_props;
         buffer will_topic;
         buffer will_payload;
-        MQTT_NS::optional<buffer> user_name;
-        MQTT_NS::optional<buffer> password;
+        optional<buffer> user_name;
+        optional<buffer> password;
     };
 
     void process_connect(
@@ -10154,7 +11666,7 @@ private:
                                             connect_flags::will_qos(info.connect_flag)
                                         );
                                 }
-                                return MQTT_NS::nullopt;
+                                return nullopt;
                             } (),
                             clean_session_,
                             info.keep_alive
@@ -10182,7 +11694,7 @@ private:
                                             std::move(info.will_props)
                                         );
                                 }
-                                return MQTT_NS::nullopt;
+                                return nullopt;
                             } (),
                             clean_session_,
                             info.keep_alive,
@@ -10379,7 +11891,7 @@ private:
 
     struct publish_info {
         buffer topic_name;
-        MQTT_NS::optional<packet_id_t> packet_id;
+        optional<packet_id_t> packet_id;
         std::vector<v5::property_variant> props;
     };
 
@@ -10556,7 +12068,7 @@ private:
                                     if (connected_) {
                                         async_send_puback(
                                             *info.packet_id,
-                                            MQTT_NS::nullopt,
+                                            nullopt,
                                             std::vector<v5::property_variant>{},
                                             func
                                         );
@@ -10578,7 +12090,7 @@ private:
                                     if (connected_) {
                                         async_send_pubrec(
                                             *info.packet_id,
-                                            MQTT_NS::nullopt,
+                                            nullopt,
                                             std::vector<v5::property_variant>{},
                                             func
                                         );
@@ -10888,7 +12400,7 @@ private:
                             if (connected_) {
                                 async_send_pubrel(
                                     info.packet_id,
-                                    MQTT_NS::nullopt,
+                                    nullopt,
                                     std::vector<v5::property_variant>{},
                                     func
                                 );
@@ -11056,7 +12568,7 @@ private:
                             if (connected_) {
                                 async_send_pubcomp(
                                     info.packet_id,
-                                    MQTT_NS::nullopt,
+                                    nullopt,
                                     std::vector<v5::property_variant>{},
                                     func
                                 );
@@ -11519,15 +13031,15 @@ private:
                     switch (version_) {
                     case protocol_version::v3_1_1:
                         if (h_suback_) {
-                            std::vector<MQTT_NS::optional<std::uint8_t>> results;
+                            std::vector<optional<std::uint8_t>> results;
                             results.resize(body.size());
                             std::transform(
                                 body.begin(),
                                 body.end(),
                                 results.begin(),
-                                [&](auto const& e) -> MQTT_NS::optional<std::uint8_t> {
+                                [&](auto const& e) -> optional<std::uint8_t> {
                                     if (e & variable_length_continue_flag) {
-                                        return MQTT_NS::nullopt;
+                                        return nullopt;
                                     }
                                     else {
                                         return static_cast<std::uint8_t>(e);
@@ -12145,10 +13657,10 @@ private:
 
     // Blocking senders.
     void send_connect(
-        std::string const& client_id,
-        MQTT_NS::optional<std::string> const& user_name,
-        MQTT_NS::optional<std::string> const& password,
-        MQTT_NS::optional<will> const& w,
+        buffer client_id,
+        optional<buffer> user_name,
+        optional<buffer> password,
+        optional<will> w,
         std::uint16_t keep_alive_sec,
         std::vector<v5::property_variant> props
     ) {
@@ -12157,11 +13669,11 @@ private:
             do_sync_write(
                 v3_1_1::connect_message(
                     keep_alive_sec,
-                    client_id,
+                    std::move(client_id),
                     clean_session_,
-                    w,
-                    user_name,
-                    password
+                    std::move(w),
+                    std::move(user_name),
+                    std::move(password)
                 )
             );
             break;
@@ -12169,11 +13681,11 @@ private:
             do_sync_write(
                 v5::connect_message(
                     keep_alive_sec,
-                    client_id,
+                    std::move(client_id),
                     clean_session_,
-                    w,
-                    user_name,
-                    password,
+                    std::move(w),
+                    std::move(user_name),
+                    std::move(password),
                     std::move(props)
                 )
             );
@@ -12214,24 +13726,14 @@ private:
     }
 
     void send_publish(
-        as::const_buffer topic_name,
+        buffer topic_name,
         std::uint8_t qos,
         bool retain,
         bool dup,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
-        as::const_buffer payload,
-        MQTT_NS::any life_keeper) {
-
-        auto msg =
-            basic_publish_message<PacketIdBytes>(
-                topic_name,
-                qos,
-                retain,
-                dup,
-                packet_id,
-                payload
-            );
+        buffer payload,
+        any life_keeper) {
 
         auto do_send_publish =
             [&](auto msg, auto const& serialize_publish) {
@@ -12252,19 +13754,19 @@ private:
                         serialize_publish(store_msg);
                     }
                 }
-                do_sync_write(msg);
+                do_sync_write(std::move(msg));
             };
 
         switch (version_) {
         case protocol_version::v3_1_1:
             do_send_publish(
                 v3_1_1::basic_publish_message<PacketIdBytes>(
-                    topic_name,
+                    std::move(topic_name),
                     qos,
                     retain,
                     dup,
                     packet_id,
-                    payload
+                    std::move(payload)
                 ),
                 h_serialize_publish_
             );
@@ -12272,13 +13774,13 @@ private:
         case protocol_version::v5:
             do_send_publish(
                 v5::basic_publish_message<PacketIdBytes>(
-                    topic_name,
+                    std::move(topic_name),
                     qos,
                     retain,
                     dup,
                     packet_id,
                     std::move(props),
-                    payload
+                    std::move(payload)
                 ),
                 h_serialize_v5_publish_
             );
@@ -12291,7 +13793,7 @@ private:
 
     void send_puback(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -12311,7 +13813,7 @@ private:
 
     void send_pubrec(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -12329,9 +13831,9 @@ private:
 
     void send_pubrel(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason = nullopt,
         std::vector<v5::property_variant> props = {},
-        MQTT_NS::any life_keeper = MQTT_NS::any()
+        any life_keeper = any()
     ) {
 
         auto impl =
@@ -12378,7 +13880,7 @@ private:
 
     void store_pubrel(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
 
@@ -12424,7 +13926,7 @@ private:
 
     void send_pubcomp(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -12444,28 +13946,39 @@ private:
 
     template <typename... Args>
     void send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
         packet_id_t packet_id,
         as::const_buffer topic_name,
         std::uint8_t qos,
         Args&&... args) {
-        params.emplace_back(topic_name, qos);
+        params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))), qos);
         send_subscribe(std::move(params), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
         packet_id_t packet_id,
-        MQTT_NS::string_view topic_name,
+        string_view topic_name,
         std::uint8_t qos,
         Args&&... args) {
-        params.emplace_back(as::buffer(topic_name.data(), topic_name.size()), qos);
+        params.emplace_back(buffer(std::move(topic_name)), qos);
+        send_subscribe(std::move(params), packet_id, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    void send_subscribe(
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        packet_id_t packet_id,
+        buffer topic_name,
+        std::uint8_t qos,
+        Args&&... args) {
+        params.emplace_back(std::move(topic_name), qos);
         send_subscribe(std::move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props = {}
     ) {
@@ -12520,26 +14033,36 @@ private:
 
     template <typename... Args>
     void send_unsubscribe(
-        std::vector<as::const_buffer> params,
+        std::vector<buffer> params,
         packet_id_t packet_id,
         as::const_buffer topic_name,
         Args&&... args) {
-        params.emplace_back(topic_name);
+        params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))));
         send_unsubscribe(std::move(params), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void send_unsubscribe(
-        std::vector<as::const_buffer> params,
+        std::vector<buffer> params,
         packet_id_t packet_id,
-        MQTT_NS::string_view topic_name,
+        string_view topic_name,
         Args&&... args) {
-        params.emplace_back(as::buffer(topic_name.data(), topic_name.size()));
+        params.emplace_back(buffer(topic_name));
+        send_unsubscribe(std::move(params), packet_id, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    void send_unsubscribe(
+        std::vector<buffer> params,
+        packet_id_t packet_id,
+        buffer topic_name,
+        Args&&... args) {
+        params.emplace_back(std::move(topic_name));
         send_unsubscribe(std::move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void send_unsubscribe(
-        std::vector<as::const_buffer> params,
+        std::vector<buffer> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props = {}
     ) {
@@ -12629,7 +14152,7 @@ private:
     }
 
     void send_auth(
-        MQTT_NS::optional<std::uint8_t> reason = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -12646,7 +14169,7 @@ private:
     }
 
     void send_disconnect(
-        MQTT_NS::optional<std::uint8_t> reason = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -12682,10 +14205,10 @@ private:
 
     // Non blocking (async) senders
     void async_send_connect(
-        std::string const& client_id,
-        MQTT_NS::optional<std::string> const& user_name,
-        MQTT_NS::optional<std::string> const& password,
-        MQTT_NS::optional<will> const& w,
+        buffer client_id,
+        optional<buffer> user_name,
+        optional<buffer> password,
+        optional<will> const& w,
         bool clean_session,
         std::uint16_t keep_alive_sec,
         std::vector<v5::property_variant> props,
@@ -12698,11 +14221,11 @@ private:
             do_async_write(
                 v3_1_1::connect_message(
                     keep_alive_sec,
-                    client_id,
+                    std::move(client_id),
                     clean_session_,
                     w,
-                    user_name,
-                    password
+                    std::move(user_name),
+                    std::move(password)
                 ),
                 std::move(func)
             );
@@ -12711,11 +14234,11 @@ private:
             do_async_write(
                 v5::connect_message(
                     keep_alive_sec,
-                    client_id,
+                    std::move(client_id),
                     clean_session_,
                     w,
-                    user_name,
-                    password,
+                    std::move(user_name),
+                    std::move(password),
                     std::move(props)
                 ),
                 std::move(func)
@@ -12760,15 +14283,15 @@ private:
     }
 
     void async_send_publish(
-        as::const_buffer topic_name,
+        buffer topic_name,
         std::uint8_t qos,
         bool retain,
         bool dup,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
-        as::const_buffer payload,
+        buffer payload,
         async_handler_t func,
-        MQTT_NS::any life_keeper) {
+        any life_keeper) {
 
         auto do_async_send_publish =
             [&](auto msg, auto const& serialize_publish) {
@@ -12803,12 +14326,12 @@ private:
         case protocol_version::v3_1_1:
             do_async_send_publish(
                 v3_1_1::basic_publish_message<PacketIdBytes>(
-                    topic_name,
+                    std::move(topic_name),
                     qos,
                     retain,
                     dup,
                     packet_id,
-                    payload
+                    std::move(payload)
                 ),
                 h_serialize_publish_
             );
@@ -12816,13 +14339,13 @@ private:
         case protocol_version::v5:
             do_async_send_publish(
                 v5::basic_publish_message<PacketIdBytes>(
-                    topic_name,
+                    std::move(topic_name),
                     qos,
                     retain,
                     dup,
                     packet_id,
                     std::move(props),
-                    payload
+                    std::move(payload)
                 ),
                 h_serialize_v5_publish_
             );
@@ -12835,7 +14358,7 @@ private:
 
     void async_send_puback(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason,
+        optional<std::uint8_t> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {
@@ -12872,7 +14395,7 @@ private:
 
     void async_send_pubrec(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason,
+        optional<std::uint8_t> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {
@@ -12897,10 +14420,10 @@ private:
 
     void async_send_pubrel(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason,
+        optional<std::uint8_t> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func,
-        MQTT_NS::any life_keeper = MQTT_NS::any()
+        any life_keeper = any()
     ) {
 
         auto msg = basic_pubrel_message<PacketIdBytes>(packet_id);
@@ -12971,7 +14494,7 @@ private:
 
     void async_send_pubcomp(
         packet_id_t packet_id,
-        MQTT_NS::optional<std::uint8_t> reason,
+        optional<std::uint8_t> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {
@@ -13006,33 +14529,33 @@ private:
 
     template <typename... Args>
     void async_send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
-        MQTT_NS::any life_keepers,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        any life_keepers,
         packet_id_t packet_id,
         as::const_buffer topic_name,
         std::uint8_t qos,
         Args&&... args) {
-        params.emplace_back(topic_name, qos);
+        params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))), qos);
         async_send_subscribe(std::move(params), std::move(life_keepers), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void async_send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
-        MQTT_NS::any life_keepers,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        any life_keepers,
         packet_id_t packet_id,
         std::string topic_name,
         std::uint8_t qos,
         Args&&... args) {
 
         auto sp_topic = std::make_shared<std::string>(std::move(topic_name));
-        params.emplace_back(as::buffer(*sp_topic), qos);
+        params.emplace_back(buffer(string_view(*sp_topic)), qos);
         async_send_subscribe(std::move(params), std::make_pair(std::move(life_keepers), std::move(sp_topic)), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
-        MQTT_NS::any life_keepers,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        any life_keepers,
         packet_id_t packet_id,
         async_handler_t func) {
 
@@ -13062,8 +14585,8 @@ private:
     }
 
     void async_send_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
-        MQTT_NS::any life_keepers,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        any life_keepers,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
         async_handler_t func) {
@@ -13128,31 +14651,31 @@ private:
 
     template <typename... Args>
     void async_send_unsubscribe(
-        std::vector<as::const_buffer> params,
-        MQTT_NS::any life_keepers,
+        std::vector<buffer> params,
+        any life_keepers,
         packet_id_t packet_id,
         as::const_buffer topic_name,
         Args&&... args) {
-        params.emplace_back(topic_name);
+        params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))));
         async_send_unsubscribe(std::move(params), std::move(life_keepers), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void async_send_unsubscribe(
-        std::vector<as::const_buffer> params,
-        MQTT_NS::any life_keepers,
+        std::vector<buffer> params,
+        any life_keepers,
         packet_id_t packet_id,
         std::string topic_name,
         Args&&... args) {
 
         auto sp_topic = std::make_shared<std::string>(std::move(topic_name));
-        params.emplace_back(as::buffer(*sp_topic));
+        params.emplace_back(buffer(string_view(*sp_topic)));
         async_send_unsubscribe(std::move(params), std::make_pair(std::move(life_keepers), std::move(sp_topic)), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_unsubscribe(
-        std::vector<as::const_buffer> params,
-        MQTT_NS::any life_keepers,
+        std::vector<buffer> params,
+        any life_keepers,
         packet_id_t packet_id,
         async_handler_t func) {
 
@@ -13189,8 +14712,8 @@ private:
     }
 
     void async_send_unsubscribe(
-        std::vector<as::const_buffer> params,
-        MQTT_NS::any life_keepers,
+        std::vector<buffer> params,
+        any life_keepers,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
         async_handler_t func) {
@@ -13334,7 +14857,7 @@ private:
             do_async_write(v3_1_1::disconnect_message(), std::move(func));
             break;
         case protocol_version::v5:
-            do_async_write(v5::disconnect_message(MQTT_NS::nullopt, {}), std::move(func));
+            do_async_write(v5::disconnect_message(nullopt, {}), std::move(func));
             break;
         default:
             BOOST_ASSERT(false);
@@ -13553,7 +15076,7 @@ protected:
     bool clean_session_{false};
 
 private:
-    MQTT_NS::optional<MQTT_NS::socket> socket_;
+    optional<MQTT_NS::socket> socket_;
     std::atomic<bool> connected_{false};
     std::atomic<bool> mqtt_connected_{false};
 

@@ -7,6 +7,8 @@
 #if !defined(MQTT_DEPRECATED_HPP)
 #define MQTT_DEPRECATED_HPP
 
+#if !defined(MQTT_DEPRECATED_TEST)
+
 #if __cplusplus >= 201402L
 #if defined(_MSC_VER)
 #define MQTT_DEPRECATED(msg) __declspec(deprecated(msg))
@@ -16,5 +18,7 @@
 #else  // __cplusplus >= 201402L
 #define MQTT_DEPRECATED(msg)
 #endif // __cplusplus >= 201402L
+
+#endif // !defined(MQTT_DEPRECATED_TEST)
 
 #endif // MQTT_DEPRECATED_HPP

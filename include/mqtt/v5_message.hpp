@@ -100,11 +100,11 @@ class connect_message {
 public:
     connect_message(
         std::uint16_t keep_alive_sec,
-        MQTT_NS::string_view client_id,
+        string_view client_id,
         bool clean_session,
-        MQTT_NS::optional<will> const& w,
-        MQTT_NS::optional<std::string> const& user_name,
-        MQTT_NS::optional<std::string> const& password,
+        optional<will> w,
+        optional<buffer> user_name,
+        optional<buffer> password,
         properties props
     )
         : fixed_header_(make_fixed_header(control_packet_type::connect, 0b0000)),
@@ -120,7 +120,7 @@ public:
               client_id.size()        // client id
           ),
           protocol_name_and_level_ { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x05 },
-          client_id_(as::buffer(client_id.data(), client_id.size())),
+          client_id_(std::move(client_id)),
           client_id_length_buf_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(client_id.size())) },
           will_property_length_(
               w ?
@@ -176,23 +176,23 @@ public:
 
         remaining_length_ += property_length_buf_.size() + property_length_;
 
-        utf8string_check(client_id);
+        utf8string_check(client_id_);
         if (clean_session) connect_flags_ |= connect_flags::clean_session;
         if (user_name) {
             utf8string_check(user_name.value());
             connect_flags_ |= connect_flags::user_name_flag;
-            user_name_ = as::buffer(user_name.value());
-            add_uint16_t_to_buf(user_name_length_buf_, boost::numeric_cast<std::uint16_t>(get_size(user_name_)));
+            user_name_ = std::move(user_name.value());
+            add_uint16_t_to_buf(user_name_length_buf_, boost::numeric_cast<std::uint16_t>(user_name_.size()));
 
-            remaining_length_ += 2 + get_size(user_name_);
+            remaining_length_ += 2 + user_name_.size();
             num_of_const_buffer_sequence_ += 2; // user name length, user name
         }
         if (password) {
             connect_flags_ |= connect_flags::password_flag;
-            password_ = as::buffer(password.value());
-            add_uint16_t_to_buf(password_length_buf_, boost::numeric_cast<std::uint16_t>(get_size(password_)));
+            password_ = std::move(password.value());
+            add_uint16_t_to_buf(password_length_buf_, boost::numeric_cast<std::uint16_t>(password_.size()));
 
-            remaining_length_ += 2 + get_size(password_);
+            remaining_length_ += 2 + password_.size();
             num_of_const_buffer_sequence_ += 2; // password length, password
         }
         if (w) {
@@ -206,21 +206,21 @@ public:
             }
 
             utf8string_check(w.value().topic());
-            will_topic_name_ = as::buffer(w.value().topic());
+            will_topic_name_ = std::move(w.value().topic());
             add_uint16_t_to_buf(
                 will_topic_name_length_buf_,
-                boost::numeric_cast<std::uint16_t>(get_size(will_topic_name_))
+                boost::numeric_cast<std::uint16_t>(will_topic_name_.size())
             );
             if (w.value().message().size() > 0xffffL) throw will_message_length_error();
-            will_message_ = as::buffer(w.value().message());
+            will_message_ = std::move(w.value().message());
             add_uint16_t_to_buf(
                 will_message_length_buf_,
-                boost::numeric_cast<std::uint16_t>(get_size(will_message_)));
+                boost::numeric_cast<std::uint16_t>(will_message_.size()));
 
             remaining_length_ +=
                 will_property_length_buf_.size() +
                 will_property_length_ +
-                2 + get_size(will_topic_name_) + 2 + get_size(will_message_);
+                2 + will_topic_name_.size() + 2 + will_message_.size();
             num_of_const_buffer_sequence_ +=
                 std::accumulate(
                   will_props_.begin(),
@@ -262,7 +262,7 @@ public:
         }
 
         ret.emplace_back(as::buffer(client_id_length_buf_.data(), client_id_length_buf_.size()));
-        ret.emplace_back(client_id_);
+        ret.emplace_back(as::buffer(client_id_));
 
         if (connect_flags::has_will_flag(connect_flags_)) {
             ret.emplace_back(as::buffer(will_property_length_buf_.data(), will_property_length_buf_.size()));
@@ -270,19 +270,19 @@ public:
                 v5::add_const_buffer_sequence(ret, p);
             }
             ret.emplace_back(as::buffer(will_topic_name_length_buf_.data(), will_topic_name_length_buf_.size()));
-            ret.emplace_back(will_topic_name_);
+            ret.emplace_back(as::buffer(will_topic_name_));
             ret.emplace_back(as::buffer(will_message_length_buf_.data(), will_message_length_buf_.size()));
-            ret.emplace_back(will_message_);
+            ret.emplace_back(as::buffer(will_message_));
         }
 
         if (connect_flags::has_user_name_flag(connect_flags_)) {
             ret.emplace_back(as::buffer(user_name_length_buf_.data(), user_name_length_buf_.size()));
-            ret.emplace_back(user_name_);
+            ret.emplace_back(as::buffer(user_name_));
         }
 
         if (connect_flags::has_password_flag(connect_flags_)) {
             ret.emplace_back(as::buffer(password_length_buf_.data(), password_length_buf_.size()));
-            ret.emplace_back(password_);
+            ret.emplace_back(as::buffer(password_));
         }
 
         return ret;
@@ -335,7 +335,7 @@ public:
         }
 
         ret.append(client_id_length_buf_.data(), client_id_length_buf_.size());
-        ret.append(get_pointer(client_id_), get_size(client_id_));
+        ret.append(client_id_.data(), client_id_.size());
 
         if (connect_flags::has_will_flag(connect_flags_)) {
             ret.append(will_property_length_buf_.data(), will_property_length_buf_.size());
@@ -347,19 +347,19 @@ public:
                 it += static_cast<std::string::difference_type>(v5::size(p));
             }
             ret.append(will_topic_name_length_buf_.data(), will_topic_name_length_buf_.size());
-            ret.append(get_pointer(will_topic_name_), get_size(will_topic_name_));
+            ret.append(will_topic_name_.data(), will_topic_name_.size());
             ret.append(will_message_length_buf_.data(), will_message_length_buf_.size());
-            ret.append(get_pointer(will_message_), get_size(will_message_));
+            ret.append(will_message_.data(), will_message_.size());
         }
 
         if (connect_flags::has_user_name_flag(connect_flags_)) {
             ret.append(user_name_length_buf_.data(), user_name_length_buf_.size());
-            ret.append(get_pointer(user_name_), get_size(user_name_));
+            ret.append(user_name_.data(), user_name_.size());
         }
 
         if (connect_flags::has_password_flag(connect_flags_)) {
             ret.append(password_length_buf_.data(), password_length_buf_.size());
-            ret.append(get_pointer(password_), get_size(password_));
+            ret.append(password_.data(), password_.size());
         }
 
         return ret;
@@ -373,21 +373,21 @@ private:
     boost::container::static_vector<char, 4> remaining_length_buf_;
 
     boost::container::static_vector<char, 7> protocol_name_and_level_;
-    as::const_buffer client_id_;
+    buffer client_id_;
     boost::container::static_vector<char, 2> client_id_length_buf_;
 
     std::size_t will_property_length_;
     boost::container::static_vector<char, 4> will_property_length_buf_;
     properties will_props_;
 
-    as::const_buffer will_topic_name_;
+    buffer will_topic_name_;
     boost::container::static_vector<char, 2> will_topic_name_length_buf_;
-    as::const_buffer will_message_;
+    buffer will_message_;
     boost::container::static_vector<char, 2> will_message_length_buf_;
 
-    as::const_buffer user_name_;
+    buffer user_name_;
     boost::container::static_vector<char, 2> user_name_length_buf_;
-    as::const_buffer password_;
+    buffer password_;
     boost::container::static_vector<char, 2> password_length_buf_;
 
     boost::container::static_vector<char, 2> keep_alive_buf_;
@@ -541,17 +541,17 @@ template <std::size_t PacketIdBytes>
 class basic_publish_message {
 public:
     basic_publish_message(
-        as::const_buffer const& topic_name,
+        buffer topic_name,
         std::uint8_t qos,
         bool retain,
         bool dup,
         typename packet_id_type<PacketIdBytes>::type packet_id,
         properties props,
-        as::const_buffer const& payload
+        buffer payload
     )
         : fixed_header_(make_fixed_header(control_packet_type::publish, 0b0000)),
-          topic_name_(topic_name),
-          topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(get_size(topic_name))) },
+          topic_name_(std::move(topic_name)),
+          topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_name_.size())) },
           property_length_(
               std::accumulate(
                   props.begin(),
@@ -563,8 +563,21 @@ public:
               )
           ),
           props_(std::move(props)),
-          payload_(payload),
-          remaining_length_(publish_remaining_length(topic_name, qos, payload)),
+          payload_(std::move(payload)),
+          remaining_length_(
+              2                      // topic name length
+              + topic_name_.size()   // topic name
+              + payload_.size()      // payload
+              +
+              [&] () -> typename packet_id_type<PacketIdBytes>::type {
+                  if (qos == qos::at_least_once || qos == qos::exactly_once) {
+                      return PacketIdBytes; // packet_id
+                  }
+                  else {
+                      return 0;
+                  }
+              }()
+          ),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length
@@ -584,7 +597,7 @@ public:
           )
 
     {
-        utf8string_check(string_view(get_pointer(topic_name), get_size(topic_name)));
+        utf8string_check(topic_name_);
         publish::set_qos(fixed_header_, qos);
         publish::set_retain(fixed_header_, retain);
         publish::set_dup(fixed_header_, dup);
@@ -631,13 +644,8 @@ public:
 
         if (buf.size() < topic_name_length) throw remaining_length_error();
 
-        // MQTT_NS::string_view is a base class of MQTT_NS::buffer (buf's type).
-        // The reason the explicit static_cast is to avoid buffer's lifetime copy.
-        // MQTT_NS::buffer::substr() copies internal lifetime. But MQTT_NS::string::view::substr()
-        // doesn't copy lifetime.
-        utf8string_check(static_cast<MQTT_NS::string_view>(buf).substr(0, topic_name_length));
-
-        topic_name_ = as::buffer(buf.data(), topic_name_length);
+        topic_name_ = buf.substr(0, topic_name_length);
+        utf8string_check(topic_name_);
         buf.remove_prefix(topic_name_length);
 
         switch (qos) {
@@ -671,7 +679,7 @@ public:
 
         props_ = property::parse(buf.substr(0, property_length_));
         buf.remove_prefix(property_length_);
-        payload_ = as::buffer(buf.data(), buf.size());
+        payload_ = std::move(buf);
         num_of_const_buffer_sequence_ =
             1 +                   // fixed header
             1 +                   // remaining length
@@ -702,7 +710,7 @@ public:
         ret.emplace_back(as::buffer(&fixed_header_, 1));
         ret.emplace_back(as::buffer(remaining_length_buf_.data(), remaining_length_buf_.size()));
         ret.emplace_back(topic_name_length_buf_.data(), topic_name_length_buf_.size());
-        ret.emplace_back(topic_name_);
+        ret.emplace_back(as::buffer(topic_name_));
 
         if (!packet_id_.empty()) {
             ret.emplace_back(as::buffer(packet_id_.data(), packet_id_.size()));
@@ -713,7 +721,7 @@ public:
             v5::add_const_buffer_sequence(ret, p);
         }
 
-        ret.emplace_back(payload_);
+        ret.emplace_back(as::buffer(payload_));
 
         return ret;
     }
@@ -752,7 +760,7 @@ public:
         ret.append(remaining_length_buf_.data(), remaining_length_buf_.size());
 
         ret.append(topic_name_length_buf_.data(), topic_name_length_buf_.size());
-        ret.append(get_pointer(topic_name_), get_size(topic_name_));
+        ret.append(topic_name_.data(), topic_name_.size());
 
         ret.append(packet_id_.data(), packet_id_.size());
 
@@ -766,7 +774,7 @@ public:
             it += static_cast<std::string::difference_type>(v5::size(p));
         }
 
-        ret.append(get_pointer(payload_), get_size(payload_));
+        ret.append(payload_.data(), payload_.size());
 
         return ret;
     }
@@ -807,7 +815,7 @@ public:
      * @brief Get topic name
      * @return topic name
      */
-    as::const_buffer topic() const {
+    buffer topic() const {
         return topic_name_;
     }
 
@@ -815,7 +823,7 @@ public:
      * @brief Get payload
      * @return payload
      */
-    as::const_buffer payload() const {
+    buffer payload() const {
         return payload_;
     }
 
@@ -827,35 +835,15 @@ public:
         publish::set_dup(fixed_header_, dup);
     }
 
-
-private:
-    static std::size_t publish_remaining_length(
-        as::const_buffer const& topic_name,
-        std::uint8_t qos,
-        as::const_buffer const& payload) {
-        return
-            2                      // topic name length
-            + get_size(topic_name) // topic name
-            + get_size(payload)    // payload
-            + [&] () -> typename packet_id_type<PacketIdBytes>::type {
-                  if (qos == qos::at_least_once || qos == qos::exactly_once) {
-                      return PacketIdBytes; // packet_id
-                  }
-                  else {
-                      return 0;
-                  }
-              }();
-    }
-
 private:
     std::uint8_t fixed_header_;
-    as::const_buffer topic_name_;
+    buffer topic_name_;
     boost::container::static_vector<char, 2> topic_name_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
-    as::const_buffer payload_;
+    buffer payload_;
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     std::size_t num_of_const_buffer_sequence_;
@@ -868,7 +856,7 @@ template <std::size_t PacketIdBytes>
 struct basic_puback_message {
     basic_puback_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        MQTT_NS::optional<std::uint8_t> reason_code,
+        optional<std::uint8_t> reason_code,
         properties props)
         : fixed_header_(make_fixed_header(control_packet_type::puback, 0b0000)),
           reason_code_(reason_code),
@@ -1007,7 +995,7 @@ struct basic_puback_message {
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    MQTT_NS::optional<std::uint8_t> reason_code_;
+    optional<std::uint8_t> reason_code_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
@@ -1020,7 +1008,7 @@ template <std::size_t PacketIdBytes>
 struct basic_pubrec_message {
     basic_pubrec_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        MQTT_NS::optional<std::uint8_t> reason_code,
+        optional<std::uint8_t> reason_code,
         properties props)
         : fixed_header_(make_fixed_header(control_packet_type::pubrec, 0b0000)),
           reason_code_(reason_code),
@@ -1159,7 +1147,7 @@ struct basic_pubrec_message {
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    MQTT_NS::optional<std::uint8_t> reason_code_;
+    optional<std::uint8_t> reason_code_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
@@ -1172,7 +1160,7 @@ template <std::size_t PacketIdBytes>
 struct basic_pubrel_message {
     basic_pubrel_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        MQTT_NS::optional<std::uint8_t> reason_code,
+        optional<std::uint8_t> reason_code,
         properties props)
         : fixed_header_(make_fixed_header(control_packet_type::pubrel, 0b0000)),
           reason_code_(reason_code),
@@ -1389,7 +1377,7 @@ struct basic_pubrel_message {
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    MQTT_NS::optional<std::uint8_t> reason_code_;
+    optional<std::uint8_t> reason_code_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
@@ -1403,7 +1391,7 @@ template <std::size_t PacketIdBytes>
 struct basic_pubcomp_message {
     basic_pubcomp_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        MQTT_NS::optional<std::uint8_t> reason_code,
+        optional<std::uint8_t> reason_code,
         properties props)
         : fixed_header_(make_fixed_header(control_packet_type::pubcomp, 0b0000)),
           reason_code_(reason_code),
@@ -1542,7 +1530,7 @@ struct basic_pubcomp_message {
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    MQTT_NS::optional<std::uint8_t> reason_code_;
+    optional<std::uint8_t> reason_code_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
@@ -1555,20 +1543,20 @@ template <std::size_t PacketIdBytes>
 class basic_subscribe_message {
 private:
     struct entry {
-        entry(as::const_buffer const& topic_filter, std::uint8_t options)
-            : topic_filter(topic_filter),
-              topic_filter_length_buf { num_to_2bytes(boost::numeric_cast<std::uint16_t>(get_size(topic_filter))) },
-              options(options)
+        entry(buffer topic_filter, std::uint8_t options)
+            : topic_filter_(std::move(topic_filter)),
+              topic_filter_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_filter_.size())) },
+              options_(options)
         {}
 
-        as::const_buffer topic_filter;
-        boost::container::static_vector<char, 2> topic_filter_length_buf;
-        std::uint8_t options;
+        buffer topic_filter_;
+        boost::container::static_vector<char, 2> topic_filter_length_buf_;
+        std::uint8_t options_;
     };
 
 public:
     basic_subscribe_message(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, std::uint8_t>> params,
         typename packet_id_type<PacketIdBytes>::type packet_id,
         properties props
     )
@@ -1612,16 +1600,17 @@ public:
             property_length_buf_.size() +
             property_length_;
 
-        for (auto const& e : params) {
-            auto const& topic_filter = std::get<0>(e);
-            utf8string_check(string_view(get_pointer(topic_filter), get_size(topic_filter)));
+        for (auto&& e : params) {
+            auto topic_filter = std::move(std::get<0>(e));
+            auto size = topic_filter.size();
+            utf8string_check(topic_filter);
 
             auto qos = std::get<1>(e);
-            entries_.emplace_back(topic_filter, qos);
+            entries_.emplace_back(std::move(topic_filter), qos);
             remaining_length_ +=
-                2 +                     // topic filter length
-                get_size(topic_filter) +  // topic filter
-                1;                      // means QoS
+                2 +               // topic filter length
+                size +            // topic filter
+                1;                // means QoS
         }
 
         auto rb = remaining_bytes(remaining_length_);
@@ -1651,10 +1640,9 @@ public:
         }
 
         for (auto const& e : entries_) {
-            utf8string_check(string_view(get_pointer(e.topic_filter), get_size(e.topic_filter)));
-            ret.emplace_back(as::buffer(e.topic_filter_length_buf.data(), e.topic_filter_length_buf.size()));
-            ret.emplace_back(e.topic_filter);
-            ret.emplace_back(as::buffer(&e.options, 1));
+            ret.emplace_back(as::buffer(e.topic_filter_length_buf_.data(), e.topic_filter_length_buf_.size()));
+            ret.emplace_back(as::buffer(e.topic_filter_));
+            ret.emplace_back(as::buffer(&e.options_, 1));
         }
 
         return ret;
@@ -1706,9 +1694,9 @@ public:
         }
 
         for (auto const& e : entries_) {
-            ret.append(e.topic_filter_length_buf.data(), e.topic_filter_length_buf.size());
-            ret.append(get_pointer(e.topic_filter), get_size(e.topic_filter));
-            ret.push_back(static_cast<char>(e.options));
+            ret.append(e.topic_filter_length_buf_.data(), e.topic_filter_length_buf_.size());
+            ret.append(e.topic_filter_.data(), e.topic_filter_.size());
+            ret.push_back(static_cast<char>(e.options_));
         }
 
         return ret;
@@ -1875,18 +1863,18 @@ template <std::size_t PacketIdBytes>
 class basic_unsubscribe_message {
 private:
     struct entry {
-        entry(as::const_buffer const& topic_filter)
-            : topic_filter(topic_filter),
-              topic_filter_length_buf { num_to_2bytes(boost::numeric_cast<std::uint16_t>(get_size(topic_filter))) }
+        entry(buffer topic_filter)
+            : topic_filter_(std::move(topic_filter)),
+              topic_filter_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_filter.size())) }
         {}
 
-        as::const_buffer topic_filter;
-        boost::container::static_vector<char, 2> topic_filter_length_buf;
+        buffer topic_filter_;
+        boost::container::static_vector<char, 2> topic_filter_length_buf_;
     };
 
 public:
     basic_unsubscribe_message(
-        std::vector<as::const_buffer> const& params,
+        std::vector<buffer> params,
         typename packet_id_type<PacketIdBytes>::type packet_id,
         properties props
     )
@@ -1931,11 +1919,12 @@ public:
             property_length_;
 
         for (auto const& e : params) {
-            utf8string_check(string_view(get_pointer(e), get_size(e)));
-            entries_.emplace_back(e);
+            auto size = e.size();
+            utf8string_check(e);
+            entries_.emplace_back(std::move(e));
             remaining_length_ +=
                 2 +          // topic filter length
-                get_size(e); // topic filter
+                size;        // topic filter
         }
         auto rb = remaining_bytes(remaining_length_);
         for (auto e : rb) {
@@ -1963,9 +1952,8 @@ public:
         }
 
         for (auto const& e : entries_) {
-            utf8string_check(string_view(get_pointer(e.topic_filter), get_size(e.topic_filter)));
-            ret.emplace_back(as::buffer(e.topic_filter_length_buf.data(), e.topic_filter_length_buf.size()));
-            ret.emplace_back(e.topic_filter);
+            ret.emplace_back(as::buffer(e.topic_filter_length_buf_.data(), e.topic_filter_length_buf_.size()));
+            ret.emplace_back(as::buffer(e.topic_filter_));
         }
 
         return ret;
@@ -2015,10 +2003,9 @@ public:
         }
 
         for (auto const& e : entries_) {
-            ret.append(e.topic_filter_length_buf.data(), e.topic_filter_length_buf.size());
-            ret.append(get_pointer(e.topic_filter), get_size(e.topic_filter));
+            ret.append(e.topic_filter_length_buf_.data(), e.topic_filter_length_buf_.size());
+            ret.append(e.topic_filter_.data(), e.topic_filter_.size());
         }
-
 
         return ret;
     }
@@ -2193,7 +2180,7 @@ struct pingresp_message : detail::header_only_message {
 
 struct disconnect_message {
     disconnect_message(
-        MQTT_NS::optional<std::uint8_t> reason_code,
+        optional<std::uint8_t> reason_code,
         properties props
     )
         : fixed_header_(make_fixed_header(control_packet_type::disconnect, 0b0000)),
@@ -2323,7 +2310,7 @@ private:
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 
-    MQTT_NS::optional<std::uint8_t> reason_code_;
+    optional<std::uint8_t> reason_code_;
 
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
@@ -2333,7 +2320,7 @@ private:
 
 struct auth_message {
     auth_message(
-        MQTT_NS::optional<std::uint8_t> reason_code,
+        optional<std::uint8_t> reason_code,
         properties props
     )
         : fixed_header_(make_fixed_header(control_packet_type::auth, 0b0000)),
@@ -2465,7 +2452,7 @@ private:
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 
-    MQTT_NS::optional<std::uint8_t> reason_code_;
+    optional<std::uint8_t> reason_code_;
 
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;

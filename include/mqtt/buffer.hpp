@@ -39,7 +39,7 @@ public:
      * This constructor is intentionally deleted.
      * Consider `buffer(std::string("ABC"))`, the buffer points to dangling reference.
      */
-    buffer(std::string) = delete; // to avoid misuse
+    explicit buffer(std::string) = delete; // to avoid misuse
 
     /**
      * @brief string_view and lifetime constructor
