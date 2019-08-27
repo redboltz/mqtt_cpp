@@ -162,12 +162,12 @@ private:
     as::ip::tcp::endpoint ep_;
     as::io_service& ios_accept_;
     as::io_service& ios_con_;
-    MQTT_NS::optional<as::ip::tcp::acceptor> acceptor_;
+    optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
-    MQTT_NS::protocol_version version_ = protocol_version::undetermined;
+    protocol_version version_ = protocol_version::undetermined;
 };
 
 #if !defined(MQTT_NO_TLS)
@@ -343,13 +343,13 @@ private:
     as::ip::tcp::endpoint ep_;
     as::io_service& ios_accept_;
     as::io_service& ios_con_;
-    MQTT_NS::optional<as::ip::tcp::acceptor> acceptor_;
+    optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
     as::ssl::context ctx_;
-    MQTT_NS::protocol_version version_ = protocol_version::undetermined;
+    protocol_version version_ = protocol_version::undetermined;
     boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
 };
 
@@ -566,12 +566,12 @@ private:
     as::ip::tcp::endpoint ep_;
     as::io_service& ios_accept_;
     as::io_service& ios_con_;
-    MQTT_NS::optional<as::ip::tcp::acceptor> acceptor_;
+    optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
-    MQTT_NS::protocol_version version_ = protocol_version::undetermined;
+    protocol_version version_ = protocol_version::undetermined;
     boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
 };
 
@@ -586,7 +586,7 @@ template <
 >
 class server_tls_ws {
 public:
-    using socket_t = MQTT_NS::ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
+    using socket_t = ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
     using endpoint_t = endpoint<Mutex, LockGuard, PacketIdBytes>;
 
     /**
@@ -787,13 +787,13 @@ private:
     as::ip::tcp::endpoint ep_;
     as::io_service& ios_accept_;
     as::io_service& ios_con_;
-    MQTT_NS::optional<as::ip::tcp::acceptor> acceptor_;
+    optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
     as::ssl::context ctx_;
-    MQTT_NS::protocol_version version_ = protocol_version::undetermined;
+    protocol_version version_ = protocol_version::undetermined;
     boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
 };
 

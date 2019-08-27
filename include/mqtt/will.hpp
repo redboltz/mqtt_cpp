@@ -28,7 +28,7 @@ public:
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      */
     will(buffer topic,
          buffer message,
@@ -67,7 +67,7 @@ public:
      * @param message
      *        The contents to publish as a will
      * @param qos
-     *        MQTT_NS::qos
+     *        qos
      */
     will(buffer topic,
          buffer message,

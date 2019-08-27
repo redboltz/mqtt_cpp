@@ -17,10 +17,10 @@ BOOST_AUTO_TEST_SUITE(test_message)
 using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( connect_cbuf ) {
-    std::string cid = "cid";
+    auto cid = "cid"_mb;
     MQTT_NS::optional<MQTT_NS::will> w = MQTT_NS::will("wt"_mb, "wmsg"_mb, false, 0);
-    MQTT_NS::optional<std::string> user = std::string("user");
-    MQTT_NS::optional<std::string> password = std::string("pw");
+    MQTT_NS::optional<MQTT_NS::buffer> user = "user"_mb;
+    MQTT_NS::optional<MQTT_NS::buffer> password = "pw"_mb;
     auto m = MQTT_NS::connect_message(
         10,
         cid,
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE( connack_num_of_cbs ) {
 
 
 BOOST_AUTO_TEST_CASE( publish_empty ) {
-    std::string buf;
+    MQTT_NS::buffer buf;
     try {
         auto m = MQTT_NS::publish_message(buf);
         BOOST_TEST(false);
@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE( publish_fixed_header ) {
         0b00110100 // fixed header
     };
     try {
-        auto m = MQTT_NS::publish_message(buf);
+        auto m = MQTT_NS::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(buf)));
         BOOST_TEST(false);
     }
     catch (MQTT_NS::remaining_length_error const&) {
@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE( publish_remaining_length ) {
         0b00000000  // remaining length
     };
     try {
-        auto m = MQTT_NS::publish_message(buf);
+        auto m = MQTT_NS::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(buf)));
         BOOST_TEST(false);
     }
     catch (MQTT_NS::remaining_length_error const&) {
@@ -143,7 +143,7 @@ BOOST_AUTO_TEST_CASE( publish_topic_name_length ) {
         '1'
     };
     try {
-        auto m = MQTT_NS::publish_message(buf);
+        auto m = MQTT_NS::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(buf)));
         BOOST_TEST(false);
     }
     catch (MQTT_NS::remaining_length_error const&) {
@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE( publish_packet_id ) {
         0x01        // packet_id (half)
     };
     try {
-        auto m = MQTT_NS::publish_message(buf);
+        auto m = MQTT_NS::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(buf)));
         BOOST_TEST(false);
     }
     catch (MQTT_NS::remaining_length_error const&) {
@@ -189,7 +189,7 @@ BOOST_AUTO_TEST_CASE( publish_bad_qos ) {
         0x02        //
     };
     try {
-        auto m = MQTT_NS::publish_message(buf);
+        auto m = MQTT_NS::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(buf)));
         BOOST_TEST(false);
     }
     catch (MQTT_NS::protocol_error const&) {
@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE( publish_packet_id_ok ) {
         0x02        //
     };
     try {
-        auto m = MQTT_NS::publish_message(buf);
+        auto m = MQTT_NS::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(buf)));
         BOOST_TEST(true);
     }
     catch (MQTT_NS::remaining_length_error const&) {
@@ -233,7 +233,7 @@ BOOST_AUTO_TEST_CASE( publish_packet_id_ok_qos0 ) {
         '4',
     };
     try {
-        auto m = MQTT_NS::publish_message(buf);
+        auto m = MQTT_NS::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(buf)));
         BOOST_TEST(true);
     }
     catch (MQTT_NS::remaining_length_error const&) {
@@ -256,15 +256,11 @@ BOOST_AUTO_TEST_CASE( publish_get_attributes1 ) {
         0x02        //
     };
     try {
-        auto m = MQTT_NS::publish_message(buf);
+        auto m = MQTT_NS::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(buf)));
         BOOST_TEST(m.is_retain() == true);
         BOOST_TEST(m.is_dup() == false);
-        auto t = m.topic();
-        auto topic = MQTT_NS::string_view(MQTT_NS::get_pointer(t), MQTT_NS::get_size(t));
-        BOOST_TEST(topic == "1234");
-        auto p = m.payload();
-        auto payload = MQTT_NS::string_view(MQTT_NS::get_pointer(p), MQTT_NS::get_size(p));
-        BOOST_TEST(payload == "");
+        BOOST_TEST(m.topic() == "1234");
+        BOOST_TEST(m.payload() == "");
     }
     catch (...) {
         BOOST_TEST(false);
@@ -288,15 +284,11 @@ BOOST_AUTO_TEST_CASE( publish_get_attributes2 ) {
         'B'
     };
     try {
-        auto m = MQTT_NS::publish_message(buf);
+        auto m = MQTT_NS::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(buf)));
         BOOST_TEST(m.is_retain() == false);
         BOOST_TEST(m.is_dup() == true);
-        auto t = m.topic();
-        auto topic = MQTT_NS::string_view(MQTT_NS::get_pointer(t), MQTT_NS::get_size(t));
-        BOOST_TEST(topic == "1234");
-        auto p = m.payload();
-        auto payload = MQTT_NS::string_view(MQTT_NS::get_pointer(p), MQTT_NS::get_size(p));
-        BOOST_TEST(payload == "AB");
+        BOOST_TEST(m.topic() == "1234");
+        BOOST_TEST(m.payload() == "AB");
         BOOST_TEST(m.continuous_buffer() == buf);
     }
     catch (...) {
@@ -305,10 +297,10 @@ BOOST_AUTO_TEST_CASE( publish_get_attributes2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( subscribe_cbuf ) {
-    std::vector<std::tuple<as::const_buffer, std::uint8_t>> v;
-    std::string topic = "tp";
-    v.emplace_back(as::buffer(topic), 1);
-    auto m = MQTT_NS::subscribe_message(v, 2);
+    std::vector<std::tuple<MQTT_NS::buffer, std::uint8_t>> v;
+    auto topic = "tp"_mb;
+    v.emplace_back(std::move(topic), 1);
+    auto m = MQTT_NS::subscribe_message(std::move(v), 2);
     std::string expected {
         static_cast<char>(0b1000'0010u),
         7,
@@ -336,10 +328,10 @@ BOOST_AUTO_TEST_CASE( suback_cbuf ) {
 }
 
 BOOST_AUTO_TEST_CASE( unsubscribe_cbuf ) {
-    std::vector<as::const_buffer> v;
-    std::string topic = "tp";
-    v.emplace_back(as::buffer(topic));
-    auto m = MQTT_NS::unsubscribe_message(v, 2);
+    std::vector<MQTT_NS::buffer> v;
+    auto topic = "tp"_mb;
+    v.emplace_back(std::move(topic));
+    auto m = MQTT_NS::unsubscribe_message(std::move(v), 2);
     std::string expected {
         static_cast<char>(0b1010'0010u),
         6,

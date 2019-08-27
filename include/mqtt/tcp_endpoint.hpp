@@ -14,7 +14,6 @@
 #endif // !defined(MQTT_NO_TLS)
 
 #include <mqtt/namespace.hpp>
-#include <mqtt/utility.hpp>
 
 namespace MQTT_NS {
 

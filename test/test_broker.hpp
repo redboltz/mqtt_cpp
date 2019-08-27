@@ -106,9 +106,9 @@ public:
                 return
                     connect_handler(
                         ep,
-                        client_id,
-                        username,
-                        password,
+                        std::move(client_id),
+                        std::move(username),
+                        std::move(password),
                         std::move(will),
                         clean_session,
                         keep_alive,
@@ -128,9 +128,9 @@ public:
                 return
                     connect_handler(
                         ep,
-                        client_id,
-                        username,
-                        password,
+                        std::move(client_id),
+                        std::move(username),
+                        std::move(password),
                         std::move(will),
                         clean_session,
                         keep_alive,
@@ -215,8 +215,8 @@ public:
                     ep,
                     header,
                     packet_id,
-                    topic_name,
-                    contents,
+                    std::move(topic_name),
+                    std::move(contents),
                     {}
                 );
             });
@@ -233,8 +233,8 @@ public:
                     ep,
                     header,
                     packet_id,
-                    topic_name,
-                    contents,
+                    std::move(topic_name),
+                    std::move(contents),
                     std::move(props)
                 );
             });
@@ -397,8 +397,8 @@ private:
     bool connect_handler(
         Endpoint& ep,
         MQTT_NS::buffer client_id,
-        MQTT_NS::optional<MQTT_NS::buffer> const& /*username*/,
-        MQTT_NS::optional<MQTT_NS::buffer> const& /*password*/,
+        MQTT_NS::optional<MQTT_NS::buffer> /*username*/,
+        MQTT_NS::optional<MQTT_NS::buffer> /*password*/,
         MQTT_NS::optional<MQTT_NS::will> will,
         bool clean_session,
         std::uint16_t /*keep_alive*/,
@@ -776,9 +776,8 @@ private:
             //       it wouldn't be possible for test_broker.hpp to be
             //       used with some hypothetical "async_server" in the future.
             sub.con->publish(
-                as::buffer(topic),
-                as::buffer(contents),
-                std::make_pair(topic, contents),
+                topic,
+                contents,
                 std::min(sub.qos, qos),
                 false,
                 props // TODO: Copying the properties vector for each subscription.

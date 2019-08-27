@@ -14,7 +14,6 @@
 #include <boost/beast/websocket.hpp>
 
 #include <mqtt/namespace.hpp>
-#include <mqtt/utility.hpp>
 #include <mqtt/string_view.hpp>
 
 namespace MQTT_NS {

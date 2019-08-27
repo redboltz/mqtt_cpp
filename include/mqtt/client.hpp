@@ -530,7 +530,7 @@ public:
      */
     void disconnect(
         boost::posix_time::time_duration const& timeout,
-        MQTT_NS::optional<std::uint8_t> reason_code = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -566,7 +566,7 @@ public:
      *        3.14.2.2 DISCONNECT Properties
      */
     void disconnect(
-        MQTT_NS::optional<std::uint8_t> reason_code = MQTT_NS::nullopt,
+        optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -623,7 +623,7 @@ public:
      */
     void async_disconnect(
         boost::posix_time::time_duration const& timeout,
-        MQTT_NS::optional<std::uint8_t> reason_code,
+        optional<std::uint8_t> reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -676,7 +676,7 @@ public:
      * @param func A callback function that is called when async operation will finish.
      */
     void async_disconnect(
-        MQTT_NS::optional<std::uint8_t> reason_code,
+        optional<std::uint8_t> reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -804,13 +804,40 @@ private:
 
 #endif // !defined(MQTT_NO_TLS)
 
+    void start_session(std::vector<v5::property_variant> props, async_handler_t func) {
+        base::async_read_control_packet_type(std::move(func));
+        // sync base::connect() refer to parameters only in the function.
+        // So they can be passed as view.
+        base::connect(
+            buffer(string_view(client_id_)),
+            [&] {
+                if (user_name_) {
+                    return buffer(string_view(user_name_.value()));
+                }
+                else {
+                    return buffer();
+                }
+            } (),
+            [&] {
+                if (password_) {
+                    return buffer(string_view(password_.value()));
+                }
+                else {
+                    return buffer();
+                }
+            } (),
+            will_,
+            keep_alive_sec_,
+            std::move(props)
+        );
+    }
+
     template <typename Strand>
     void handshake_socket(
         tcp_endpoint<as::ip::tcp::socket, Strand>&,
         std::vector<v5::property_variant> props,
         async_handler_t func) {
-        base::async_read_control_packet_type(std::move(func));
-        base::connect(client_id_, user_name_, password_, will_, keep_alive_sec_, std::move(props));
+        start_session(std::move(props), std::move(func));
     }
 
 #if defined(MQTT_USE_WS)
@@ -826,8 +853,7 @@ private:
             [this, self, func = std::move(func), props = std::move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
-                base::async_read_control_packet_type(std::move(func));
-                base::connect(client_id_, user_name_, password_, will_, keep_alive_sec_, std::move(props));
+                start_session(std::move(props), std::move(func));
             });
     }
 #endif // defined(MQTT_USE_WS)
@@ -845,8 +871,7 @@ private:
             [this, self, func = std::move(func), props = std::move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
-                base::async_read_control_packet_type(std::move(func));
-                base::connect(client_id_, user_name_, password_, will_, keep_alive_sec_, std::move(props));
+                start_session(std::move(props), std::move(func));
             });
     }
 
@@ -868,8 +893,7 @@ private:
                     [this, self, func = std::move(func), props = std::move(props)]
                     (boost::system::error_code const& ec) mutable {
                         if (base::handle_close_or_error(ec)) return;
-                        base::async_read_control_packet_type(std::move(func));
-                        base::connect(client_id_, user_name_, password_, will_, keep_alive_sec_, std::move(props));
+                        start_session(std::move(props), std::move(func));
                     });
             });
     }
@@ -953,9 +977,9 @@ private:
     std::uint16_t keep_alive_sec_{0};
     std::size_t ping_duration_ms_{0};
     std::string client_id_;
-    MQTT_NS::optional<will> will_;
-    MQTT_NS::optional<std::string> user_name_;
-    MQTT_NS::optional<std::string> password_;
+    optional<will> will_;
+    optional<std::string> user_name_;
+    optional<std::string> password_;
     bool async_pingreq_ = false;
 #if !defined(MQTT_NO_TLS)
     as::ssl::context ctx_{as::ssl::context::tlsv12};
