@@ -59,6 +59,8 @@
 #include <mqtt/buffer.hpp>
 #include <mqtt/shared_ptr_array.hpp>
 #include <mqtt/type_erased_socket.hpp>
+#include <mqtt/deprecated.hpp>
+#include <mqtt/deprecated_msg.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -73,6 +75,7 @@ template <typename Mutex = std::mutex, template<typename...> class LockGuard = s
 class endpoint : public std::enable_shared_from_this<endpoint<Mutex, LockGuard, PacketIdBytes>> {
     using this_type = endpoint<Mutex, LockGuard, PacketIdBytes>;
     using this_type_sp = std::shared_ptr<this_type>;
+
 public:
     using std::enable_shared_from_this<this_type>::shared_from_this;
     using async_handler_t = std::function<void(boost::system::error_code const& ec)>;
@@ -1483,6 +1486,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_PUB_STR)
     void publish_at_most_once(
         string_view topic_name,
         string_view contents,
@@ -1515,6 +1519,7 @@ public:
      *        3.3.2.3 PUBLISH Properties
      *        3.3.1.3 RETAIN
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_PUB_AS_BUF)
     void publish_at_most_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -1541,6 +1546,7 @@ public:
      * @return packet_id
      * packet_id is automatically generated.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_PUB_STR)
     packet_id_t publish_at_least_once(
         std::string topic_name,
         std::string contents,
@@ -1579,6 +1585,7 @@ public:
      * @return packet_id
      * packet_id is automatically generated.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_PUB_AS_BUF)
     packet_id_t publish_at_least_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -1608,6 +1615,7 @@ public:
      * @return packet_id
      * packet_id is automatically generated.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_PUB_STR)
     packet_id_t publish_exactly_once(
         std::string topic_name,
         std::string contents,
@@ -1646,6 +1654,7 @@ public:
      * @return packet_id
      * packet_id is automatically generated.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_PUB_AS_BUF)
     packet_id_t publish_exactly_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -1721,6 +1730,7 @@ public:
      *        The contents to publish
      * @param life_keeper
      *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        If qos is qos::at_most_once, then no life_keeper required. You can pass `any()` as the life_keeper.
      * @param qos
      *        qos
      * @param retain
@@ -1733,9 +1743,6 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
-     *
-     * @note If you know ahead of time that qos will be at_most_once, then prefer
-     *       publish_at_most_once() over publish() as it is slightly more efficent.
      */
     packet_id_t publish(
         as::const_buffer topic_name,
@@ -1763,8 +1770,6 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -1777,9 +1782,6 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
-     *
-     * @note If you know ahead of time that qos will be at_most_once, then prefer
-     *       publish_at_most_once() over publish() as it is slightly more efficent.
      */
     packet_id_t publish(
         buffer topic_name,
@@ -1802,11 +1804,6 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param args
-     *        args should be zero or more pairs of topic_name and option.
-     *        You can set props as the last argument optionally.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -1815,10 +1812,9 @@ public:
     template <typename... Args>
     packet_id_t subscribe(
         string_view topic_name,
-        std::uint8_t option,
-        Args&&... args) {
+        std::uint8_t option) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, topic_name, option, std::forward<Args>(args)...);
+        acquired_subscribe(packet_id, topic_name, option);
         return packet_id;
     }
 
@@ -1841,6 +1837,57 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     template <typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_SUB_STR)
+    packet_id_t subscribe(
+        string_view topic_name,
+        std::uint8_t option,
+        Args&&... args) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_subscribe(packet_id, topic_name, option, std::forward<Args>(args)...);
+        return packet_id;
+    }
+
+    /**
+     * @brief Subscribe
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    packet_id_t subscribe(
+        as::const_buffer topic_name,
+        std::uint8_t option) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_subscribe(packet_id, topic_name, option);
+        return packet_id;
+    }
+
+    /**
+     * @brief Subscribe
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param args
+     *        args should be zero or more pairs of topic_name and option.
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    template <typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_SUB_AS_BUF)
     packet_id_t subscribe(
         as::const_buffer topic_name,
         std::uint8_t option,
@@ -1950,21 +1997,14 @@ public:
      * @brief Unsubscribe
      * @param topic_name
      *        A topic name to unsubscribe
-     * @param args
-     *        args should be zero or more topics
-     *        You can set props as the last argument optionally.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    template <typename... Args>
     packet_id_t unsubscribe(
-        string_view topic_name,
-        Args&&... args) {
-        return unsubscribe(as::buffer(topic_name.data(), topic_name.size()), std::forward<Args>(args)...);
+        string_view topic_name) {
+        return unsubscribe(as::buffer(topic_name.data(), topic_name.size()));
     }
 
     /**
@@ -1982,6 +2022,45 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     template <typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_UNSUB_STR)
+    packet_id_t unsubscribe(
+        string_view topic_name,
+        Args&&... args) {
+        return unsubscribe(as::buffer(topic_name.data(), topic_name.size()), std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param topic_name
+     *        A topic name to unsubscribe
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    packet_id_t unsubscribe(
+        as::const_buffer topic_name) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        acquired_unsubscribe(packet_id, topic_name);
+        return packet_id;
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param topic_name
+     *        A topic name to unsubscribe
+     * @param args
+     *        args should be zero or more topics
+     *        You can set props as the last argument optionally.
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
+     * @return packet_id.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    template <typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_UNSUB_AS_BUF)
     packet_id_t unsubscribe(
         as::const_buffer topic_name,
         Args&&... args) {
@@ -2132,6 +2211,7 @@ public:
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_PUB_PID_STR)
     bool publish_at_least_once(
         packet_id_t packet_id,
         std::string topic_name,
@@ -2169,6 +2249,7 @@ public:
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_PUB_PID_AS_BUF)
     bool publish_at_least_once(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -2203,6 +2284,7 @@ public:
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_PUB_PID_STR)
     bool publish_exactly_once(
         packet_id_t packet_id,
         std::string topic_name,
@@ -2240,6 +2322,7 @@ public:
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_PUB_PID_AS_BUF)
     bool publish_exactly_once(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -2492,6 +2575,58 @@ public:
      * @brief Subscribe with a manual set packet identifier
      * @param packet_id
      *        packet identifier
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't subscribe, otherwise return true and subscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
+     */
+    bool subscribe(
+        packet_id_t packet_id,
+        string_view topic_name,
+        std::uint8_t option) {
+        if (register_packet_id(packet_id)) {
+            acquired_subscribe(packet_id, topic_name, option);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Subscribe with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't subscribe, otherwise return true and subscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
+     */
+    bool subscribe(
+        packet_id_t packet_id,
+        as::const_buffer topic_name,
+        std::uint8_t option) {
+        if (register_packet_id(packet_id)) {
+            acquired_subscribe(packet_id, topic_name, option);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Subscribe with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
      * @param args
      *        args should be one or more pairs of topic_name and qos.
      *
@@ -2504,6 +2639,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
     template <typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_SUB_PID)
     bool subscribe(
         packet_id_t packet_id,
         Args&&... args) {
@@ -2602,6 +2738,48 @@ public:
      * @brief Unsubscribe with a manual set packet identifier
      * @param packet_id
      *        packet identifier
+     * @param topic_name
+     *        A topic name to unsubscribe
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't unsubscribe, otherwise return true and unsubscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    bool unsubscribe(
+        packet_id_t packet_id,
+        string_view topic_name) {
+        if (register_packet_id(packet_id)) {
+            acquired_unsubscribe(packet_id, topic_name);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Unsubscribe with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
+     * @param topic_name
+     *        A topic name to unsubscribe
+     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
+     *         doesn't unsubscribe, otherwise return true and unsubscribes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    bool unsubscribe(
+        packet_id_t packet_id,
+        as::const_buffer topic_name) {
+        if (register_packet_id(packet_id)) {
+            acquired_unsubscribe(packet_id, topic_name);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Unsubscribe with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier
      * @param args
      *        args should be one or more topics
      *        You can set props as the last argument optionally.
@@ -2613,6 +2791,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     template <typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_UNSUB_PID)
     bool unsubscribe(
         packet_id_t packet_id,
         Args&&... args) {
@@ -2724,6 +2903,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_PUB_STR)
     void acquired_publish_at_most_once(
         string_view topic_name,
         string_view contents,
@@ -2756,6 +2936,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_PUB_AS_BUF)
     void acquired_publish_at_most_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -2792,6 +2973,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_PUB_STR)
     void acquired_publish_at_least_once(
         packet_id_t packet_id,
         std::string topic_name,
@@ -2835,6 +3017,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_PUB_AS_BUF)
     void acquired_publish_at_least_once(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -2874,6 +3057,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_PUB_STR)
     void acquired_publish_exactly_once(
         packet_id_t packet_id,
         std::string topic_name,
@@ -2917,6 +3101,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_PUB_AS_BUF)
     void acquired_publish_exactly_once(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -3239,6 +3424,52 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
+     */
+    void acquired_subscribe(
+        packet_id_t packet_id,
+        string_view topic_name,
+        std::uint8_t option) {
+        std::vector<std::tuple<buffer, std::uint8_t>> params;
+        params.reserve(1);
+        send_subscribe(std::move(params), packet_id, topic_name, option);
+    }
+
+    /**
+     * @brief Subscribe with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
+     */
+    void acquired_subscribe(
+        packet_id_t packet_id,
+        as::const_buffer topic_name,
+        std::uint8_t option) {
+        std::vector<std::tuple<buffer, std::uint8_t>> params;
+        params.reserve(1);
+        send_subscribe(std::move(params), packet_id, topic_name, option);
+    }
+
+    /**
+     * @brief Subscribe with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
      * @param args
      *        args should be one or more pairs of topic_name and qos.
      *
@@ -3249,6 +3480,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
     template <typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_SUB)
     void acquired_subscribe(
         packet_id_t packet_id,
         Args&&... args) {
@@ -3309,6 +3541,46 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to unsubscribe
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    void acquired_unsubscribe(
+        packet_id_t packet_id,
+        string_view topic_name) {
+
+        std::vector<buffer> params;
+        params.reserve(1);
+
+        send_unsubscribe(std::move(params), packet_id, topic_name);
+    }
+
+    /**
+     * @brief Unsubscribe with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name
+     *        A topic name to unsubscribe
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    void acquired_unsubscribe(
+        packet_id_t packet_id,
+        as::const_buffer topic_name) {
+
+        std::vector<buffer> params;
+        params.reserve(1);
+
+        send_unsubscribe(std::move(params), packet_id, topic_name);
+    }
+
+    /**
+     * @brief Unsubscribe with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
      * @param args
      *        args should be one or more topic names to unsubscribe to
      *
@@ -3319,6 +3591,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     template <typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_UNSUB)
     void acquired_unsubscribe(
         packet_id_t packet_id,
         Args&&... args) {
@@ -3758,6 +4031,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_STR)
     void async_publish_at_most_once(
         std::string topic_name,
         std::string contents,
@@ -3784,6 +4058,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PROPS_STR)
     void async_publish_at_most_once(
         std::string topic_name,
         std::string contents,
@@ -3811,6 +4086,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_AS_BUF)
     void async_publish_at_most_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -3842,6 +4118,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PROPS_AS_BUF)
     void async_publish_at_most_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -3868,6 +4145,7 @@ public:
      * @return packet_id
      * packet_id is automatically generated.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_STR)
     packet_id_t async_publish_at_least_once(
         std::string topic_name,
         std::string contents,
@@ -3898,6 +4176,7 @@ public:
      * @return packet_id
      * packet_id is automatically generated.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PROPS_STR)
     packet_id_t async_publish_at_least_once(
         std::string topic_name,
         std::string contents,
@@ -3927,6 +4206,7 @@ public:
      * @return packet_id
      * packet_id is automatically generated.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_AS_BUF)
     packet_id_t async_publish_at_least_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -3960,6 +4240,7 @@ public:
      * @return packet_id
      * packet_id is automatically generated.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PROPS_AS_BUF)
     packet_id_t async_publish_at_least_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -3988,6 +4269,7 @@ public:
      * @return packet_id
      * packet_id is automatically generated.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_STR)
     packet_id_t async_publish_exactly_once(
         std::string topic_name,
         std::string contents,
@@ -4018,6 +4300,7 @@ public:
      * @return packet_id
      * packet_id is automatically generated.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PROPS_STR)
     packet_id_t async_publish_exactly_once(
         std::string topic_name,
         std::string contents,
@@ -4047,6 +4330,7 @@ public:
      * @return packet_id
      * packet_id is automatically generated.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_AS_BUF)
     packet_id_t async_publish_exactly_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -4080,6 +4364,7 @@ public:
      * @return packet_id
      * packet_id is automatically generated.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PROPS_AS_BUF)
     packet_id_t async_publish_exactly_once(
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -4315,6 +4600,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_SUB_STR)
     packet_id_t async_subscribe(
         std::string topic_name,
         std::uint8_t option,
@@ -4346,6 +4632,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_SUB_AS_BUF)
     packet_id_t async_subscribe(
         as::const_buffer topic_name,
         std::uint8_t option,
@@ -4686,6 +4973,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_UNSUB_STR)
     packet_id_t async_unsubscribe(
         std::string topic_name,
         Arg0&& arg0,
@@ -4712,6 +5000,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_UNSUB_AS_BUF)
     packet_id_t async_unsubscribe(
         as::const_buffer topic_name,
         Arg0&& arg0,
@@ -5054,6 +5343,7 @@ public:
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PID_STR)
     bool async_publish_at_least_once(
         packet_id_t packet_id,
         std::string topic_name,
@@ -5089,6 +5379,7 @@ public:
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PID_PROPS_STR)
     bool async_publish_at_least_once(
         packet_id_t packet_id,
         std::string topic_name,
@@ -5123,6 +5414,7 @@ public:
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PID_AS_BUF)
     bool async_publish_at_least_once(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -5161,6 +5453,7 @@ public:
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PID_PROPS_AS_BUF)
     bool async_publish_at_least_once(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -5194,6 +5487,7 @@ public:
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PID_STR)
     bool async_publish_exactly_once(
         packet_id_t packet_id,
         std::string topic_name,
@@ -5229,6 +5523,7 @@ public:
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PID_PROPS_STR)
     bool async_publish_exactly_once(
         packet_id_t packet_id,
         std::string topic_name,
@@ -5263,6 +5558,7 @@ public:
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PID_AS_BUF)
     bool async_publish_exactly_once(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -5301,6 +5597,7 @@ public:
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents doesn't publish, otherwise return true and contents publish.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_PUB_PID_PROPS_AS_BUF)
     bool async_publish_exactly_once(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -5798,6 +6095,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_SUB_PID_STR)
     bool async_subscribe(
         packet_id_t packet_id,
         std::string topic_name,
@@ -5834,6 +6132,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_SUB_PID_AS_BUF)
     bool async_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -6232,6 +6531,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_UNSUB_PID_STR)
     bool async_unsubscribe(
         packet_id_t packet_id,
         std::string  topic_name,
@@ -6263,6 +6563,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_UNSUB_PID_AS_BUF)
     bool async_unsubscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -6513,6 +6814,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_PUB_STR)
     void acquired_async_publish_at_least_once(
         packet_id_t packet_id,
         std::string topic_name,
@@ -6559,6 +6861,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_PUB_PROPS_STR)
     void acquired_async_publish_at_least_once(
         packet_id_t packet_id,
         std::string topic_name,
@@ -6604,6 +6907,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_PUB_AS_BUF)
     void acquired_async_publish_at_least_once(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -6648,6 +6952,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_PUB_PROPS_AS_BUF)
     void acquired_async_publish_at_least_once(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -6687,6 +6992,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_PUB_STR)
     void acquired_async_publish_exactly_once(
         packet_id_t packet_id,
         std::string topic_name,
@@ -6733,6 +7039,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_PUB_PROPS_STR)
     void acquired_async_publish_exactly_once(
         packet_id_t packet_id,
         std::string topic_name,
@@ -6778,6 +7085,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_PUB_AS_BUF)
     void acquired_async_publish_exactly_once(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -6822,6 +7130,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_PUB_PROPS_AS_BUF)
     void acquired_async_publish_exactly_once(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -7442,6 +7751,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_SUB_STR)
     void acquired_async_subscribe(
         packet_id_t packet_id,
         std::string topic_name,
@@ -7472,6 +7782,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_SUB_AS_BUF)
     void acquired_async_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
@@ -7972,6 +8283,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_UNSUB_STR)
     void acquired_async_unsubscribe(
         packet_id_t packet_id,
         std::string topic_name,
@@ -7997,6 +8309,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_UNSUB_AS_BUF)
     void acquired_async_unsubscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,

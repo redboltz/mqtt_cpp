@@ -25,7 +25,6 @@
 #include <mqtt/will.hpp>
 #include <mqtt/connect_flags.hpp>
 #include <mqtt/publish.hpp>
-#include <mqtt/utility.hpp>
 #include <mqtt/exception.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
 #include <mqtt/four_byte_util.hpp>

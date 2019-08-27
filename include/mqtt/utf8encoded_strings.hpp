@@ -8,7 +8,6 @@
 #define MQTT_UTF8ENCODED_STRINGS_HPP
 
 #include <mqtt/namespace.hpp>
-#include <mqtt/utility.hpp>
 #include <mqtt/string_view.hpp>
 
 namespace MQTT_NS {

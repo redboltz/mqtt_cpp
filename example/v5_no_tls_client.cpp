@@ -45,8 +45,12 @@ int main(int argc, char** argv) {
                       << static_cast<int>(reason_code) << std::endl;
             if (reason_code == MQTT_NS::v5::reason_code::success) {
                 pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", MQTT_NS::qos::at_most_once);
-                pid_sub2 = c->subscribe("mqtt_client_cpp/topic2_1", MQTT_NS::qos::at_least_once,
-                                       "mqtt_client_cpp/topic2_2", MQTT_NS::qos::exactly_once);
+                pid_sub2 = c->subscribe(
+                    {
+                        { "mqtt_client_cpp/topic2_1", MQTT_NS::qos::at_least_once },
+                        { "mqtt_client_cpp/topic2_2", MQTT_NS::qos::exactly_once }
+                    }
+                );
             }
             return true;
         });
@@ -109,11 +113,11 @@ int main(int argc, char** argv) {
                 }
             }
             if (packet_id == pid_sub1) {
-                c->publish_at_most_once("mqtt_client_cpp/topic1", "test1");
+                c->publish("mqtt_client_cpp/topic1", "test1", MQTT_NS::qos::at_most_once);
             }
             else if (packet_id == pid_sub2) {
-                c->publish_at_least_once("mqtt_client_cpp/topic2_1", "test2_1");
-                c->publish_exactly_once("mqtt_client_cpp/topic2_2", "test2_2");
+                c->publish("mqtt_client_cpp/topic2_1", "test2_1", MQTT_NS::qos::at_least_once);
+                c->publish("mqtt_client_cpp/topic2_2", "test2_2", MQTT_NS::qos::exactly_once);
             }
             return true;
         });
