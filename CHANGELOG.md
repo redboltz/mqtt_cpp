@@ -1,3 +1,14 @@
+## 6.0.0
+* Set `[[deprecated]]` attribute to derecated APIs. They will be removed on verion 7.0.0. (#364)
+* Added `mqtt::buffer` based APIs. (#364)
+* Added user defined namespace support. User can define `MQTT_NS` (defualt `mqtt`). (#360)
+* Improved test. (#357)
+* Improved test broker. (#353)
+* Added allocation fuction for `mqtt::buffer`. (#349)
+* Supported old version of boost type_erasure. (#347)
+* <<<< breaking change >>>> Adde zero copy receiving functionality. Callback handlers take `mqtt::buffer` parameter instead of `mqtt::string_view`. It can hold the lifetime. (#339, #358, #359, )
+* Improved CI. (#333, #346)
+
 ## 5.0.1
 * Improved CI. (#330)
 * Fixed invalid std::any inclusion on mqtt::any. (#328)
