@@ -14158,6 +14158,7 @@ private:
                         msg,
                         std::move(life_keeper)
                     );
+                    (void)ret;
                     BOOST_ASSERT(ret.second);
                 }
 
@@ -14205,6 +14206,7 @@ private:
                         control_packet_type::pubcomp,
                         msg
                     );
+                    (void)ret;
                     BOOST_ASSERT(ret.second);
                 }
 
@@ -14615,6 +14617,7 @@ private:
                             store_msg,
                             life_keeper
                         );
+                        (void)ret;
                         BOOST_ASSERT(ret.second);
                     }
 
