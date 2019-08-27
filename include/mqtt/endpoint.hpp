@@ -1700,9 +1700,8 @@ public:
         if(qos == qos::at_most_once) {
             acquired_publish(
                 0,
-                as::buffer(topic_name.data(), topic_name.size()),
-                as::buffer(contents.data(), contents.size()),
-                any(),
+                std::move(topic_name),
+                std::move(contents),
                 qos::at_most_once,
                 retain,
                 std::move(props)
@@ -3438,7 +3437,6 @@ public:
         string_view topic_name,
         std::uint8_t option) {
         std::vector<std::tuple<buffer, std::uint8_t>> params;
-        params.reserve(1);
         send_subscribe(std::move(params), packet_id, topic_name, option);
     }
 
@@ -3461,7 +3459,6 @@ public:
         as::const_buffer topic_name,
         std::uint8_t option) {
         std::vector<std::tuple<buffer, std::uint8_t>> params;
-        params.reserve(1);
         send_subscribe(std::move(params), packet_id, topic_name, option);
     }
 
@@ -3551,7 +3548,6 @@ public:
         string_view topic_name) {
 
         std::vector<buffer> params;
-        params.reserve(1);
 
         send_unsubscribe(std::move(params), packet_id, topic_name);
     }
@@ -3571,7 +3567,6 @@ public:
         as::const_buffer topic_name) {
 
         std::vector<buffer> params;
-        params.reserve(1);
 
         send_unsubscribe(std::move(params), packet_id, topic_name);
     }
