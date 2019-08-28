@@ -1,3 +1,6 @@
+## 6.0.1
+* Fixed compile error of `acquired_async_publish_dup()`. (#375)
+
 ## 6.0.0
 * Supressed warnings. (#367, #368, #369, #370, #371)
 * Set `[[deprecated]]` attribute to derecated APIs. They will be removed on verion 7.0.0. (#364, #372)
