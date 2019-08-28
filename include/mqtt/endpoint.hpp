@@ -4596,7 +4596,11 @@ public:
      */
     template <typename Arg0, typename... Args>
     MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_SUB_STR)
-    packet_id_t async_subscribe(
+    std::enable_if_t<
+        !std::is_convertible<Arg0, async_handler_t>::value,
+        packet_id_t
+    >
+    async_subscribe(
         std::string topic_name,
         std::uint8_t option,
         Arg0&& arg0,
@@ -4628,7 +4632,11 @@ public:
      */
     template <typename Arg0, typename... Args>
     MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_SUB_AS_BUF)
-    packet_id_t async_subscribe(
+    std::enable_if_t<
+        !std::is_convertible<Arg0, async_handler_t>::value,
+        packet_id_t
+    >
+    async_subscribe(
         as::const_buffer topic_name,
         std::uint8_t option,
         Arg0&& arg0,
@@ -4969,7 +4977,11 @@ public:
      */
     template <typename Arg0, typename... Args>
     MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_UNSUB_STR)
-    packet_id_t async_unsubscribe(
+    std::enable_if_t<
+        !std::is_convertible<Arg0, async_handler_t>::value,
+        packet_id_t
+    >
+    async_unsubscribe(
         std::string topic_name,
         Arg0&& arg0,
         Args&&... args) {
@@ -4996,7 +5008,11 @@ public:
      */
     template <typename Arg0, typename... Args>
     MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_UNSUB_AS_BUF)
-    packet_id_t async_unsubscribe(
+    std::enable_if_t<
+        !std::is_convertible<Arg0, async_handler_t>::value,
+        packet_id_t
+    >
+    async_unsubscribe(
         as::const_buffer topic_name,
         Arg0&& arg0,
         Args&&... args) {
@@ -6091,7 +6107,11 @@ public:
      */
     template <typename Arg0, typename... Args>
     MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_SUB_PID_STR)
-    bool async_subscribe(
+    std::enable_if_t<
+        !std::is_convertible<Arg0, async_handler_t>::value,
+        bool
+    >
+    async_subscribe(
         packet_id_t packet_id,
         std::string topic_name,
         std::uint8_t option,
@@ -6128,7 +6148,11 @@ public:
      */
     template <typename Arg0, typename... Args>
     MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_SUB_PID_AS_BUF)
-    bool async_subscribe(
+    std::enable_if_t<
+        !std::is_convertible<Arg0, async_handler_t>::value,
+        bool
+    >
+    async_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         std::uint8_t option,
@@ -6527,7 +6551,11 @@ public:
      */
     template <typename Arg0, typename... Args>
     MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_UNSUB_PID_STR)
-    bool async_unsubscribe(
+    std::enable_if_t<
+        !std::is_convertible<Arg0, async_handler_t>::value,
+        bool
+    >
+    async_unsubscribe(
         packet_id_t packet_id,
         std::string  topic_name,
         Arg0&& arg0,
@@ -6559,7 +6587,11 @@ public:
      */
     template <typename Arg0, typename... Args>
     MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_UNSUB_PID_AS_BUF)
-    bool async_unsubscribe(
+    std::enable_if_t<
+        !std::is_convertible<Arg0, async_handler_t>::value,
+        bool
+    >
+    async_unsubscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         Arg0&& arg0,
@@ -7747,7 +7779,10 @@ public:
      */
     template <typename Arg0, typename... Args>
     MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_SUB_STR)
-    void acquired_async_subscribe(
+    std::enable_if_t<
+        !std::is_convertible<Arg0, async_handler_t>::value
+    >
+    acquired_async_subscribe(
         packet_id_t packet_id,
         std::string topic_name,
         std::uint8_t option,
@@ -7778,7 +7813,10 @@ public:
      */
     template <typename Arg0, typename... Args>
     MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_SUB_AS_BUF)
-    void acquired_async_subscribe(
+    std::enable_if_t<
+        !std::is_convertible<Arg0, async_handler_t>::value
+    >
+    acquired_async_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         std::uint8_t option,
@@ -8279,7 +8317,10 @@ public:
      */
     template <typename Arg0, typename... Args>
     MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_UNSUB_STR)
-    void acquired_async_unsubscribe(
+    std::enable_if_t<
+        !std::is_convertible<Arg0, async_handler_t>::value
+    >
+    acquired_async_unsubscribe(
         packet_id_t packet_id,
         std::string topic_name,
         Arg0&& arg0,
@@ -8305,12 +8346,53 @@ public:
      */
     template <typename Arg0, typename... Args>
     MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ACQ_ASYNC_UNSUB_AS_BUF)
-    void acquired_async_unsubscribe(
+    std::enable_if_t<
+        !std::is_convertible<Arg0, async_handler_t>::value
+    >
+    acquired_async_unsubscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         Arg0&& arg0,
         Args&&... args) {
         acquired_async_unsubscribe_imp(packet_id, topic_name, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name topic_name
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    void acquired_async_unsubscribe(
+        packet_id_t packet_id,
+        std::string topic_name,
+        async_handler_t func = async_handler_t()
+    ) {
+        acquired_async_unsubscribe_imp(packet_id, std::move(topic_name), std::move(func));
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_name topic_name
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    void acquired_async_unsubscribe(
+        packet_id_t packet_id,
+        as::const_buffer topic_name,
+        async_handler_t func = async_handler_t()
+    ) {
+        acquired_async_unsubscribe_imp(packet_id, topic_name, std::move(func));
     }
 
     /**
