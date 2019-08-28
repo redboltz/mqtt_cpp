@@ -7704,7 +7704,8 @@ public:
             packet_id,
             std::vector<v5::property_variant>{},
             std::move(contents),
-            std::move(func)
+            std::move(func),
+            any()
         );
     }
 
@@ -7753,7 +7754,8 @@ public:
             packet_id,
             std::move(props),
             std::move(contents),
-            std::move(func)
+            std::move(func),
+            any()
         );
     }
 
