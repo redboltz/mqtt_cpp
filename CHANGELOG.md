@@ -1,6 +1,6 @@
 ## 6.0.0
 * Supressed warnings. (#367, #368, #369, #370, #371)
-* Set `[[deprecated]]` attribute to derecated APIs. They will be removed on verion 7.0.0. (#364)
+* Set `[[deprecated]]` attribute to derecated APIs. They will be removed on verion 7.0.0. (#364, #372)
 * Added `mqtt::buffer` based APIs. (#364)
 * Added user defined namespace support. User can define `MQTT_NS` (default `mqtt`). (#360)
 * Improved test. (#357)
