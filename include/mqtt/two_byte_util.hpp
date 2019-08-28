@@ -30,6 +30,7 @@ inline void add_uint16_t_to_buf(T& buf, std::uint16_t num) {
 
 template <typename It>
 std::uint16_t make_uint16_t(It b, It e) {
+    (void)e; // Avoid warning in release builds about unused variable
     BOOST_ASSERT(std::distance(b, e) == 2);
     auto b1 = b++;
     auto b2 = b++;
