@@ -13,6 +13,7 @@
 #include <mqtt/optional.hpp>
 #include <mqtt/property_variant.hpp>
 #include <mqtt/variable_length.hpp>
+#include <mqtt/move.hpp>
 
 namespace MQTT_NS {
 namespace v5 {
@@ -190,7 +191,7 @@ optional<property_variant> parse_one(buffer& buf) {
             if (buf.size() < 2U + vallen) return nullopt;
             auto val = buf.substr(2, vallen);
 
-            auto p = user_property(std::move(key), std::move(val));
+            auto p = user_property(force_move(key), force_move(val));
             buf.remove_prefix(2 + vallen);
 
             return property_variant(p);
@@ -232,7 +233,7 @@ std::vector<property_variant> parse(buffer buf) {
     std::vector<property_variant> props;
     while (true) {
         if (auto ret = parse_one(buf)) {
-            props.push_back(std::move(ret.value()));
+            props.push_back(force_move(ret.value()));
         }
         else {
             break;

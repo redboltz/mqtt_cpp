@@ -12,6 +12,7 @@
 #include <mqtt/namespace.hpp>
 #include <mqtt/qos.hpp>
 #include <mqtt/property_variant.hpp>
+#include <mqtt/move.hpp>
 
 namespace MQTT_NS {
 
@@ -35,11 +36,11 @@ public:
          bool retain,
          std::uint8_t qos,
          std::vector<v5::property_variant> props = {})
-        :topic_(std::move(topic)),
-         message_(std::move(message)),
+        :topic_(force_move(topic)),
+         message_(force_move(message)),
          retain_(retain),
          qos_(qos),
-         props_(std::move(props))
+         props_(force_move(props))
     {}
 
     /**
@@ -57,7 +58,7 @@ public:
          buffer message,
          bool retain = false,
          std::vector<v5::property_variant> props = {})
-        :will(std::move(topic), std::move(message), retain, qos::at_most_once, std::move(props))
+        :will(force_move(topic), force_move(message), retain, qos::at_most_once, force_move(props))
     {}
 
     /**
@@ -73,7 +74,7 @@ public:
          buffer message,
          std::uint8_t qos,
          std::vector<v5::property_variant> props = {})
-        :will(std::move(topic), std::move(message), false, qos, std::move(props))
+        :will(force_move(topic), force_move(message), false, qos, force_move(props))
     {}
 
     buffer const& topic() const {

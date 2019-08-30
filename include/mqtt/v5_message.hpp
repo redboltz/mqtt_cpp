@@ -35,6 +35,7 @@
 #include <mqtt/property_parse.hpp>
 
 #include <mqtt/packet_id_type.hpp>
+#include <mqtt/move.hpp>
 
 namespace MQTT_NS {
 
@@ -119,7 +120,7 @@ public:
               client_id.size()        // client id
           ),
           protocol_name_and_level_ { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x05 },
-          client_id_(std::move(client_id)),
+          client_id_(force_move(client_id)),
           client_id_length_buf_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(client_id.size())) },
           will_property_length_(
               w ?
@@ -135,7 +136,7 @@ public:
           ),
           will_props_(
               w ?
-              std::move(w.value().props())
+              force_move(w.value().props())
               : properties()
           ),
           keep_alive_buf_ ({ num_to_2bytes(keep_alive_sec ) }),
@@ -149,7 +150,7 @@ public:
                   }
               )
           ),
-          props_(std::move(props)),
+          props_(force_move(props)),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length
@@ -180,7 +181,7 @@ public:
         if (user_name) {
             utf8string_check(user_name.value());
             connect_flags_ |= connect_flags::user_name_flag;
-            user_name_ = std::move(user_name.value());
+            user_name_ = force_move(user_name.value());
             add_uint16_t_to_buf(user_name_length_buf_, boost::numeric_cast<std::uint16_t>(user_name_.size()));
 
             remaining_length_ += 2 + user_name_.size();
@@ -188,7 +189,7 @@ public:
         }
         if (password) {
             connect_flags_ |= connect_flags::password_flag;
-            password_ = std::move(password.value());
+            password_ = force_move(password.value());
             add_uint16_t_to_buf(password_length_buf_, boost::numeric_cast<std::uint16_t>(password_.size()));
 
             remaining_length_ += 2 + password_.size();
@@ -205,13 +206,13 @@ public:
             }
 
             utf8string_check(w.value().topic());
-            will_topic_name_ = std::move(w.value().topic());
+            will_topic_name_ = force_move(w.value().topic());
             add_uint16_t_to_buf(
                 will_topic_name_length_buf_,
                 boost::numeric_cast<std::uint16_t>(will_topic_name_.size())
             );
             if (w.value().message().size() > 0xffffL) throw will_message_length_error();
-            will_message_ = std::move(w.value().message());
+            will_message_ = force_move(w.value().message());
             add_uint16_t_to_buf(
                 will_message_length_buf_,
                 boost::numeric_cast<std::uint16_t>(will_message_.size()));
@@ -422,7 +423,7 @@ public:
                   }
               )
           ),
-          props_(std::move(props)),
+          props_(force_move(props)),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length
@@ -549,7 +550,7 @@ public:
         buffer payload
     )
         : fixed_header_(make_fixed_header(control_packet_type::publish, 0b0000)),
-          topic_name_(std::move(topic_name)),
+          topic_name_(force_move(topic_name)),
           topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_name_.size())) },
           property_length_(
               std::accumulate(
@@ -561,8 +562,8 @@ public:
                   }
               )
           ),
-          props_(std::move(props)),
-          payload_(std::move(payload)),
+          props_(force_move(props)),
+          payload_(force_move(payload)),
           remaining_length_(
               2                      // topic name length
               + topic_name_.size()   // topic name
@@ -678,7 +679,7 @@ public:
 
         props_ = property::parse(buf.substr(0, property_length_));
         buf.remove_prefix(property_length_);
-        payload_ = std::move(buf);
+        payload_ = force_move(buf);
         num_of_const_buffer_sequence_ =
             1 +                   // fixed header
             1 +                   // remaining length
@@ -869,7 +870,7 @@ struct basic_puback_message {
                   }
               )
           ),
-          props_(std::move(props)),
+          props_(force_move(props)),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length
@@ -1021,7 +1022,7 @@ struct basic_pubrec_message {
                   }
               )
           ),
-          props_(std::move(props)),
+          props_(force_move(props)),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length
@@ -1173,7 +1174,7 @@ struct basic_pubrel_message {
                   }
               )
           ),
-          props_(std::move(props)),
+          props_(force_move(props)),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length
@@ -1404,7 +1405,7 @@ struct basic_pubcomp_message {
                   }
               )
           ),
-          props_(std::move(props)),
+          props_(force_move(props)),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length
@@ -1543,7 +1544,7 @@ class basic_subscribe_message {
 private:
     struct entry {
         entry(buffer topic_filter, std::uint8_t options)
-            : topic_filter_(std::move(topic_filter)),
+            : topic_filter_(force_move(topic_filter)),
               topic_filter_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_filter_.size())) },
               options_(options)
         {}
@@ -1571,7 +1572,7 @@ public:
                   }
               )
           ),
-          props_(std::move(props)),
+          props_(force_move(props)),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length
@@ -1600,12 +1601,12 @@ public:
             property_length_;
 
         for (auto&& e : params) {
-            auto topic_filter = std::move(std::get<0>(e));
+            auto topic_filter = force_move(std::get<0>(e));
             auto size = topic_filter.size();
             utf8string_check(topic_filter);
 
             auto qos = std::get<1>(e);
-            entries_.emplace_back(std::move(topic_filter), qos);
+            entries_.emplace_back(force_move(topic_filter), qos);
             remaining_length_ +=
                 2 +               // topic filter length
                 size +            // topic filter
@@ -1735,7 +1736,7 @@ public:
                   }
               )
           ),
-          props_(std::move(props)),
+          props_(force_move(props)),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length
@@ -1863,7 +1864,7 @@ class basic_unsubscribe_message {
 private:
     struct entry {
         entry(buffer topic_filter)
-            : topic_filter_(std::move(topic_filter)),
+            : topic_filter_(force_move(topic_filter)),
               topic_filter_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_filter.size())) }
         {}
 
@@ -1889,7 +1890,7 @@ public:
                   }
               )
           ),
-          props_(std::move(props)),
+          props_(force_move(props)),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length
@@ -1920,7 +1921,7 @@ public:
         for (auto const& e : params) {
             auto size = e.size();
             utf8string_check(e);
-            entries_.emplace_back(std::move(e));
+            entries_.emplace_back(force_move(e));
             remaining_length_ +=
                 2 +          // topic filter length
                 size;        // topic filter
@@ -2043,7 +2044,7 @@ public:
                   }
               )
           ),
-          props_(std::move(props)),
+          props_(force_move(props)),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length
@@ -2195,7 +2196,7 @@ struct disconnect_message {
                   }
               )
           ),
-          props_(std::move(props)),
+          props_(force_move(props)),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length
@@ -2335,7 +2336,7 @@ struct auth_message {
                   }
               )
           ),
-          props_(std::move(props)),
+          props_(force_move(props)),
           num_of_const_buffer_sequence_(
               1 +                   // fixed header
               1 +                   // remaining length

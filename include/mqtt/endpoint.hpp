@@ -61,6 +61,7 @@
 #include <mqtt/type_erased_socket.hpp>
 #include <mqtt/deprecated.hpp>
 #include <mqtt/deprecated_msg.hpp>
+#include <mqtt/move.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -89,7 +90,7 @@ public:
          h_mqtt_message_processed_(
              [this]
              (async_handler_t func) {
-                 async_read_control_packet_type(std::move(func));
+                 async_read_control_packet_type(force_move(func));
              }
          ),
          version_(version)
@@ -101,13 +102,13 @@ public:
      */
     template <typename Socket>
     explicit endpoint(std::shared_ptr<Socket> socket, protocol_version version = protocol_version::undetermined, bool async_send_store = false)
-        :socket_(std::move(socket)),
+        :socket_(force_move(socket)),
          connected_(true),
          async_send_store_{async_send_store},
          h_mqtt_message_processed_(
              [this]
              (async_handler_t func) {
-                 async_read_control_packet_type(std::move(func));
+                 async_read_control_packet_type(force_move(func));
              }
          ),
          version_(version)
@@ -795,7 +796,7 @@ public:
      * @param h handler
      */
     void set_pingreq_handler(pingreq_handler h = pingreq_handler()) {
-        h_pingreq_ = std::move(h);
+        h_pingreq_ = force_move(h);
     }
 
     /**
@@ -803,7 +804,7 @@ public:
      * @param h handler
      */
     void set_pingresp_handler(pingresp_handler h = pingresp_handler()) {
-        h_pingresp_ = std::move(h);
+        h_pingresp_ = force_move(h);
     }
 
 
@@ -831,7 +832,7 @@ public:
      * @param h handler
      */
     void set_connect_handler(connect_handler h = connect_handler()) {
-        h_connect_ = std::move(h);
+        h_connect_ = force_move(h);
     }
 
     /**
@@ -839,7 +840,7 @@ public:
      * @param h handler
      */
     void set_connack_handler(connack_handler h = connack_handler()) {
-        h_connack_ = std::move(h);
+        h_connack_ = force_move(h);
     }
 
     /**
@@ -847,7 +848,7 @@ public:
      * @param h handler
      */
     void set_publish_handler(publish_handler h = publish_handler()) {
-        h_publish_ = std::move(h);
+        h_publish_ = force_move(h);
     }
 
     /**
@@ -855,7 +856,7 @@ public:
      * @param h handler
      */
     void set_puback_handler(puback_handler h = puback_handler()) {
-        h_puback_ = std::move(h);
+        h_puback_ = force_move(h);
     }
 
     /**
@@ -863,7 +864,7 @@ public:
      * @param h handler
      */
     void set_pubrec_handler(pubrec_handler h = pubrec_handler()) {
-        h_pubrec_ = std::move(h);
+        h_pubrec_ = force_move(h);
     }
 
     /**
@@ -871,7 +872,7 @@ public:
      * @param h handler
      */
     void set_pubrel_handler(pubrel_handler h = pubrel_handler()) {
-        h_pubrel_ = std::move(h);
+        h_pubrel_ = force_move(h);
     }
 
     /**
@@ -879,7 +880,7 @@ public:
      * @param h handler
      */
     void set_pubcomp_handler(pubcomp_handler h = pubcomp_handler()) {
-        h_pubcomp_ = std::move(h);
+        h_pubcomp_ = force_move(h);
     }
 
     /**
@@ -887,7 +888,7 @@ public:
      * @param h handler
      */
     void set_subscribe_handler(subscribe_handler h = subscribe_handler()) {
-        h_subscribe_ = std::move(h);
+        h_subscribe_ = force_move(h);
     }
 
     /**
@@ -895,7 +896,7 @@ public:
      * @param h handler
      */
     void set_suback_handler(suback_handler h = suback_handler()) {
-        h_suback_ = std::move(h);
+        h_suback_ = force_move(h);
     }
 
     /**
@@ -903,7 +904,7 @@ public:
      * @param h handler
      */
     void set_unsubscribe_handler(unsubscribe_handler h = unsubscribe_handler()) {
-        h_unsubscribe_ = std::move(h);
+        h_unsubscribe_ = force_move(h);
     }
 
     /**
@@ -911,7 +912,7 @@ public:
      * @param h handler
      */
     void set_unsuback_handler(unsuback_handler h = unsuback_handler()) {
-        h_unsuback_ = std::move(h);
+        h_unsuback_ = force_move(h);
     }
 
     /**
@@ -919,7 +920,7 @@ public:
      * @param h handler
      */
     void set_disconnect_handler(disconnect_handler h = disconnect_handler()) {
-        h_disconnect_ = std::move(h);
+        h_disconnect_ = force_move(h);
     }
 
     /**
@@ -1025,7 +1026,7 @@ public:
      * @param h handler
      */
     void set_v5_connect_handler(v5_connect_handler h = v5_connect_handler()) {
-        h_v5_connect_ = std::move(h);
+        h_v5_connect_ = force_move(h);
     }
 
     /**
@@ -1033,7 +1034,7 @@ public:
      * @param h handler
      */
     void set_v5_connack_handler(v5_connack_handler h = v5_connack_handler()) {
-        h_v5_connack_ = std::move(h);
+        h_v5_connack_ = force_move(h);
     }
 
     /**
@@ -1041,7 +1042,7 @@ public:
      * @param h handler
      */
     void set_v5_publish_handler(v5_publish_handler h = v5_publish_handler()) {
-        h_v5_publish_ = std::move(h);
+        h_v5_publish_ = force_move(h);
     }
 
     /**
@@ -1049,7 +1050,7 @@ public:
      * @param h handler
      */
     void set_v5_puback_handler(v5_puback_handler h = v5_puback_handler()) {
-        h_v5_puback_ = std::move(h);
+        h_v5_puback_ = force_move(h);
     }
 
     /**
@@ -1057,7 +1058,7 @@ public:
      * @param h handler
      */
     void set_v5_pubrec_handler(v5_pubrec_handler h = v5_pubrec_handler()) {
-        h_v5_pubrec_ = std::move(h);
+        h_v5_pubrec_ = force_move(h);
     }
 
     /**
@@ -1065,7 +1066,7 @@ public:
      * @param h handler
      */
     void set_v5_pubrel_handler(v5_pubrel_handler h = v5_pubrel_handler()) {
-        h_v5_pubrel_ = std::move(h);
+        h_v5_pubrel_ = force_move(h);
     }
 
     /**
@@ -1073,7 +1074,7 @@ public:
      * @param h handler
      */
     void set_v5_pubcomp_handler(v5_pubcomp_handler h = v5_pubcomp_handler()) {
-        h_v5_pubcomp_ = std::move(h);
+        h_v5_pubcomp_ = force_move(h);
     }
 
     /**
@@ -1081,7 +1082,7 @@ public:
      * @param h handler
      */
     void set_v5_subscribe_handler(v5_subscribe_handler h = v5_subscribe_handler()) {
-        h_v5_subscribe_ = std::move(h);
+        h_v5_subscribe_ = force_move(h);
     }
 
     /**
@@ -1089,7 +1090,7 @@ public:
      * @param h handler
      */
     void set_v5_suback_handler(v5_suback_handler h = v5_suback_handler()) {
-        h_v5_suback_ = std::move(h);
+        h_v5_suback_ = force_move(h);
     }
 
     /**
@@ -1097,7 +1098,7 @@ public:
      * @param h handler
      */
     void set_v5_unsubscribe_handler(v5_unsubscribe_handler h = v5_unsubscribe_handler()) {
-        h_v5_unsubscribe_ = std::move(h);
+        h_v5_unsubscribe_ = force_move(h);
     }
 
     /**
@@ -1105,7 +1106,7 @@ public:
      * @param h handler
      */
     void set_v5_unsuback_handler(v5_unsuback_handler h = v5_unsuback_handler()) {
-        h_v5_unsuback_ = std::move(h);
+        h_v5_unsuback_ = force_move(h);
     }
 
     /**
@@ -1113,7 +1114,7 @@ public:
      * @param h handler
      */
     void set_v5_disconnect_handler(v5_disconnect_handler h = v5_disconnect_handler()) {
-        h_v5_disconnect_ = std::move(h);
+        h_v5_disconnect_ = force_move(h);
     }
 
     /**
@@ -1121,7 +1122,7 @@ public:
      * @param h handler
      */
     void set_v5_auth_handler(v5_auth_handler h = v5_auth_handler()) {
-        h_v5_auth_ = std::move(h);
+        h_v5_auth_ = force_move(h);
     }
 
     /**
@@ -1236,7 +1237,7 @@ public:
      * @param h handler
      */
     void set_close_handler(close_handler h = close_handler()) {
-        h_close_ = std::move(h);
+        h_close_ = force_move(h);
     }
 
     /**
@@ -1244,7 +1245,7 @@ public:
      * @param h handler
      */
     void set_error_handler(error_handler h = error_handler()) {
-        h_error_ = std::move(h);
+        h_error_ = force_move(h);
     }
 
     /**
@@ -1252,7 +1253,7 @@ public:
      * @param h handler
      */
     void set_pub_res_sent_handler(pub_res_sent_handler h = pub_res_sent_handler()) {
-        h_pub_res_sent_ = std::move(h);
+        h_pub_res_sent_ = force_move(h);
     }
 
     /**
@@ -1265,9 +1266,9 @@ public:
         serialize_publish_message_handler h_publish,
         serialize_pubrel_message_handler h_pubrel,
         serialize_remove_handler h_remove) {
-        h_serialize_publish_ = std::move(h_publish);
-        h_serialize_pubrel_ = std::move(h_pubrel);
-        h_serialize_remove_ = std::move(h_remove);
+        h_serialize_publish_ = force_move(h_publish);
+        h_serialize_pubrel_ = force_move(h_pubrel);
+        h_serialize_remove_ = force_move(h_remove);
     }
 
     /**
@@ -1280,9 +1281,9 @@ public:
         serialize_v5_publish_message_handler h_publish,
         serialize_v5_pubrel_message_handler h_pubrel,
         serialize_remove_handler h_remove) {
-        h_serialize_v5_publish_ = std::move(h_publish);
-        h_serialize_v5_pubrel_ = std::move(h_pubrel);
-        h_serialize_remove_ = std::move(h_remove);
+        h_serialize_v5_publish_ = force_move(h_publish);
+        h_serialize_v5_pubrel_ = force_move(h_pubrel);
+        h_serialize_remove_ = force_move(h_remove);
     }
 
     /**
@@ -1296,7 +1297,7 @@ public:
         serialize_pubrel_handler h_pubrel,
         serialize_remove_handler h_remove) {
         h_serialize_publish_ =
-            [h_publish = std::move(h_publish)]
+            [h_publish = force_move(h_publish)]
             (basic_publish_message<PacketIdBytes> msg) {
                 if (h_publish) {
                     auto buf = continuous_buffer<PacketIdBytes>(msg);
@@ -1304,14 +1305,14 @@ public:
                 }
             };
         h_serialize_pubrel_ =
-            [h_pubrel = std::move(h_pubrel)]
+            [h_pubrel = force_move(h_pubrel)]
             (basic_pubrel_message<PacketIdBytes> msg) {
                 if (h_pubrel) {
                     auto buf = continuous_buffer<PacketIdBytes>(msg);
                     h_pubrel(msg.packet_id(), buf.data(), buf.size());
                 }
             };
-        h_serialize_remove_ = std::move(h_remove);
+        h_serialize_remove_ = force_move(h_remove);
     }
 
     /**
@@ -1325,7 +1326,7 @@ public:
         serialize_pubrel_handler h_pubrel,
         serialize_remove_handler h_remove) {
         h_serialize_v5_publish_ =
-            [h_publish = std::move(h_publish)]
+            [h_publish = force_move(h_publish)]
             (v5::basic_publish_message<PacketIdBytes> msg) {
                 if (h_publish) {
                     auto buf = continuous_buffer<PacketIdBytes>(msg);
@@ -1333,14 +1334,14 @@ public:
                 }
             };
         h_serialize_v5_pubrel_ =
-            [h_pubrel = std::move(h_pubrel)]
+            [h_pubrel = force_move(h_pubrel)]
             (v5::basic_pubrel_message<PacketIdBytes> msg) {
                 if (h_pubrel) {
                     auto buf = continuous_buffer<PacketIdBytes>(msg);
                     h_pubrel(msg.packet_id(), buf.data(), buf.size());
                 }
             };
-        h_serialize_remove_ = std::move(h_remove);
+        h_serialize_remove_ = force_move(h_remove);
     }
 
     /**
@@ -1359,7 +1360,7 @@ public:
      * @param h handler
      */
     void set_pre_send_handler(pre_send_handler h = pre_send_handler()) {
-        h_pre_send_ = std::move(h);
+        h_pre_send_ = force_move(h);
     }
 
     /**
@@ -1367,7 +1368,7 @@ public:
      * @param h handler
      */
     void set_is_valid_length_handler(is_valid_length_handler h = is_valid_length_handler()) {
-        h_is_valid_length_ = std::move(h);
+        h_is_valid_length_ = force_move(h);
     }
 
     void set_packet_bulk_read_limit(std::size_t size) {
@@ -1466,7 +1467,7 @@ public:
      *
      */
     void start_session(async_handler_t func = async_handler_t()) {
-        async_read_control_packet_type(std::move(func));
+        async_read_control_packet_type(force_move(func));
     }
 
     // Blocking APIs
@@ -1500,7 +1501,7 @@ public:
             any(),
             qos::at_most_once,
             retain,
-            std::move(props)
+            force_move(props)
         );
     }
 
@@ -1526,7 +1527,7 @@ public:
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        acquired_publish(0, topic_name, contents, any(), qos::at_most_once, retain, std::move(props));
+        acquired_publish(0, topic_name, contents, any(), qos::at_most_once, retain, force_move(props));
     }
 
     /**
@@ -1553,17 +1554,17 @@ public:
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        auto sp_topic    = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic    = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(force_move(contents));
 
         as::const_buffer topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
         as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
         return publish_at_least_once(topic_buf,
                                      contents_buf,
-                                     std::make_pair(std::move(sp_topic), std::move(sp_contents)),
+                                     std::make_pair(force_move(sp_topic), force_move(sp_contents)),
                                      retain,
-                                     std::move(props));
+                                     force_move(props));
     }
 
     /**
@@ -1573,7 +1574,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -1594,7 +1595,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props));
+        acquired_publish_at_least_once(packet_id, topic_name, contents, force_move(life_keeper), retain, force_move(props));
         return packet_id;
     }
 
@@ -1622,17 +1623,17 @@ public:
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        auto sp_topic    = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic    = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(force_move(contents));
 
         as::const_buffer topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
         as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
         return publish_exactly_once(topic_buf,
                                     contents_buf,
-                                    std::make_pair(std::move(sp_topic), std::move(sp_contents)),
+                                    std::make_pair(force_move(sp_topic), force_move(sp_contents)),
                                     retain,
-                                    std::move(props));
+                                    force_move(props));
     }
 
     /**
@@ -1642,7 +1643,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -1663,7 +1664,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props));
+        acquired_publish_exactly_once(packet_id, topic_name, contents, force_move(life_keeper), retain, force_move(props));
         return packet_id;
     }
 
@@ -1700,23 +1701,23 @@ public:
         if(qos == qos::at_most_once) {
             acquired_publish(
                 0,
-                std::move(topic_name),
-                std::move(contents),
+                force_move(topic_name),
+                force_move(contents),
                 qos::at_most_once,
                 retain,
-                std::move(props)
+                force_move(props)
             );
             return 0;
         }
         else {
-            auto sp_topic    = std::make_shared<std::string>(std::move(topic_name));
-            auto sp_contents = std::make_shared<std::string>(std::move(contents));
+            auto sp_topic    = std::make_shared<std::string>(force_move(topic_name));
+            auto sp_contents = std::make_shared<std::string>(force_move(contents));
 
             as::const_buffer topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
             as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
             packet_id_t packet_id = acquire_unique_packet_id();
-            acquired_publish(packet_id, topic_buf, contents_buf, std::make_pair(std::move(sp_topic), std::move(sp_contents)), qos, retain, std::move(props));
+            acquired_publish(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos, retain, force_move(props));
             return packet_id;
         }
     }
@@ -1728,7 +1729,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      *        If qos is qos::at_most_once, then no life_keeper required. You can pass `any()` as the life_keeper.
      * @param qos
      *        qos
@@ -1753,12 +1754,12 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if(qos == qos::at_most_once) {
-            acquired_publish(0, topic_name, contents, any(), qos::at_most_once, retain, std::move(props));
+            acquired_publish(0, topic_name, contents, any(), qos::at_most_once, retain, force_move(props));
             return 0;
         }
         else {
             packet_id_t packet_id = acquire_unique_packet_id();
-            acquired_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props));
+            acquired_publish(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(props));
             return packet_id;
         }
     }
@@ -1791,7 +1792,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(props));
+        acquired_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props));
         return packet_id;
     }
 
@@ -1913,7 +1914,7 @@ public:
         buffer topic_name,
         std::uint8_t option) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, std::move(topic_name), option);
+        acquired_subscribe(packet_id, force_move(topic_name), option);
         return packet_id;
     }
 
@@ -1940,9 +1941,9 @@ public:
         buf_params.reserve(params.size());
         for(auto&& p : params)
         {
-            buf_params.emplace_back(buffer(std::move(std::get<0>(p))), std::get<1>(p));
+            buf_params.emplace_back(buffer(force_move(std::get<0>(p))), std::get<1>(p));
         }
-        acquired_subscribe(packet_id, std::move(buf_params), std::move(props));
+        acquired_subscribe(packet_id, force_move(buf_params), force_move(props));
         return packet_id;
     }
 
@@ -1965,7 +1966,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, std::move(params), std::move(props));
+        acquired_subscribe(packet_id, force_move(params), force_move(props));
         return packet_id;
     }
 
@@ -1988,7 +1989,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, std::move(params), std::move(props));
+        acquired_subscribe(packet_id, force_move(params), force_move(props));
         return packet_id;
     }
 
@@ -2080,7 +2081,7 @@ public:
     packet_id_t unsubscribe(
         buffer topic_name) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_unsubscribe(packet_id, std::move(topic_name));
+        acquired_unsubscribe(packet_id, force_move(topic_name));
         return packet_id;
     }
 
@@ -2104,10 +2105,10 @@ public:
         buf_params.reserve(params.size());
         for(auto&& p : params)
         {
-            buf_params.emplace_back(buffer(std::move(p)));
+            buf_params.emplace_back(buffer(force_move(p)));
         }
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_unsubscribe(packet_id, std::move(buf_params), std::move(props));
+        acquired_unsubscribe(packet_id, force_move(buf_params), force_move(props));
         return packet_id;
     }
 
@@ -2128,7 +2129,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_unsubscribe(packet_id, std::move(params), std::move(props));
+        acquired_unsubscribe(packet_id, force_move(params), force_move(props));
         return packet_id;
     }
 
@@ -2149,7 +2150,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_unsubscribe(packet_id, std::move(params), std::move(props));
+        acquired_unsubscribe(packet_id, force_move(params), force_move(props));
         return packet_id;
     }
 
@@ -2174,7 +2175,7 @@ public:
     ) {
         if (connected_ && mqtt_connected_) {
             disconnect_requested_ = true;
-            send_disconnect(reason, std::move(props));
+            send_disconnect(reason, force_move(props));
         }
     }
 
@@ -2218,13 +2219,13 @@ public:
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        auto sp_topic    = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic    = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(force_move(contents));
 
         as::const_buffer topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
         as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
-        return publish_at_least_once(packet_id, topic_buf, contents_buf, std::make_pair(std::move(sp_topic), std::move(sp_contents)), retain, std::move(props));
+        return publish_at_least_once(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), retain, force_move(props));
     }
 
     /**
@@ -2236,7 +2237,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2258,7 +2259,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props));
+            acquired_publish_at_least_once(packet_id, topic_name, contents, force_move(life_keeper), retain, force_move(props));
             return true;
         }
         return false;
@@ -2291,13 +2292,13 @@ public:
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        auto sp_topic    = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic    = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(force_move(contents));
 
         as::const_buffer topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
         as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
-        return publish_exactly_once(packet_id, topic_buf, contents_buf, std::make_pair(std::move(sp_topic), std::move(sp_contents)), retain, std::move(props));
+        return publish_exactly_once(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), retain, force_move(props));
     }
 
     /**
@@ -2309,7 +2310,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2331,7 +2332,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props));
+            acquired_publish_exactly_once(packet_id, topic_name, contents, force_move(life_keeper), retain, force_move(props));
             return true;
         }
         return false;
@@ -2366,13 +2367,13 @@ public:
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        auto sp_topic    = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic    = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(force_move(contents));
 
         as::const_buffer topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
         as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
-        return publish(packet_id, topic_buf, contents_buf, std::make_pair(std::move(sp_topic), std::move(sp_contents)), qos, retain, std::move(props));
+        return publish(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos, retain, force_move(props));
     }
 
     /**
@@ -2384,7 +2385,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -2409,7 +2410,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props));
+            acquired_publish(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(props));
             return true;
         }
         return false;
@@ -2424,7 +2425,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -2449,7 +2450,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_publish(packet_id, std::move(topic_name), std::move(contents), std::move(life_keeper), qos, retain, std::move(props));
+            acquired_publish(packet_id, force_move(topic_name), force_move(contents), force_move(life_keeper), qos, retain, force_move(props));
             return true;
         }
         return false;
@@ -2484,13 +2485,13 @@ public:
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        auto sp_topic    = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic    = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(force_move(contents));
 
         as::const_buffer topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
         as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
-        return publish_dup(packet_id, topic_buf, contents_buf, std::make_pair(std::move(sp_topic), std::move(sp_contents)), qos, retain, std::move(props));
+        return publish_dup(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos, retain, force_move(props));
     }
 
     /**
@@ -2502,7 +2503,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -2527,7 +2528,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_publish_dup(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props));
+            acquired_publish_dup(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(props));
             return true;
         }
         return false;
@@ -2564,7 +2565,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_publish_dup(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(props));
+            acquired_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props));
             return true;
         }
         return false;
@@ -2673,9 +2674,9 @@ public:
             buf_params.reserve(params.size());
             for(auto const& p : params)
             {
-                buf_params.emplace_back(buffer(std::move(std::get<0>(p))));
+                buf_params.emplace_back(buffer(force_move(std::get<0>(p))));
             }
-            acquired_subscribe(packet_id, std::move(buf_params), std::move(props));
+            acquired_subscribe(packet_id, force_move(buf_params), force_move(props));
             return true;
         }
         return false;
@@ -2701,7 +2702,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_subscribe(packet_id, std::move(params), std::move(props));
+            acquired_subscribe(packet_id, force_move(params), force_move(props));
             return true;
         }
         return false;
@@ -2727,7 +2728,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_subscribe(packet_id, std::move(params), std::move(props));
+            acquired_subscribe(packet_id, force_move(params), force_move(props));
             return true;
         }
         return false;
@@ -2825,9 +2826,9 @@ public:
             buf_params.reserve(params.size());
             for(auto&& p : params)
             {
-                buf_params.emplace_back(buffer(std::move(p)));
+                buf_params.emplace_back(buffer(force_move(p)));
             }
-            acquired_unsubscribe(packet_id, std::move(buf_params), std::move(props));
+            acquired_unsubscribe(packet_id, force_move(buf_params), force_move(props));
             return true;
         }
         return false;
@@ -2853,7 +2854,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_unsubscribe(packet_id, std::move(params), std::move(props));
+            acquired_unsubscribe(packet_id, force_move(params), force_move(props));
             return true;
         }
         return false;
@@ -2879,7 +2880,7 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_unsubscribe(packet_id, std::move(params), std::move(props));
+            acquired_unsubscribe(packet_id, force_move(params), force_move(props));
             return true;
         }
         return false;
@@ -2914,7 +2915,7 @@ public:
             as::buffer(contents.data(), contents.size()),
             any(),
             retain,
-            std::move(props)
+            force_move(props)
         );
     }
 
@@ -2925,7 +2926,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -2949,9 +2950,9 @@ public:
             retain,
             false,
             0,
-            std::move(props),
+            force_move(props),
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(life_keeper)
+            force_move(life_keeper)
         );
     }
     /**
@@ -2980,8 +2981,8 @@ public:
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents   = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents   = std::make_shared<std::string>(force_move(contents));
 
         auto topic_buf    = as::buffer(*sp_topic_name);
         auto contents_buf = as::buffer(*sp_contents);
@@ -2990,9 +2991,9 @@ public:
             packet_id,
             topic_buf,
             contents_buf,
-            std::make_pair(std::move(sp_topic_name), std::move(sp_contents)),
+            std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
             retain,
-            std::move(props)
+            force_move(props)
         );
     }
 
@@ -3006,7 +3007,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -3032,9 +3033,9 @@ public:
             retain,
             false,
             packet_id,
-            std::move(props),
+            force_move(props),
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(life_keeper)
+            force_move(life_keeper)
         );
     }
 
@@ -3064,8 +3065,8 @@ public:
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents   = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents   = std::make_shared<std::string>(force_move(contents));
 
         auto topic_buf    = as::buffer(*sp_topic_name);
         auto contents_buf = as::buffer(*sp_contents);
@@ -3074,9 +3075,9 @@ public:
             packet_id,
             topic_buf,
             contents_buf,
-            std::make_pair(std::move(sp_topic_name), std::move(sp_contents)),
+            std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
             retain,
-            std::move(props)
+            force_move(props)
         );
     }
 
@@ -3090,7 +3091,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -3116,9 +3117,9 @@ public:
             retain,
             false,
             packet_id,
-            std::move(props),
+            force_move(props),
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(life_keeper)
+            force_move(life_keeper)
         );
     }
 
@@ -3159,11 +3160,11 @@ public:
                              any(),
                              qos,
                              retain,
-                             std::move(props));
+                             force_move(props));
         }
         else {
-            auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
-            auto sp_contents   = std::make_shared<std::string>(std::move(contents));
+            auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
+            auto sp_contents   = std::make_shared<std::string>(force_move(contents));
 
             auto topic_buf    = as::buffer(*sp_topic_name);
             auto contents_buf = as::buffer(*sp_contents);
@@ -3171,10 +3172,10 @@ public:
             acquired_publish(packet_id,
                              topic_buf,
                              contents_buf,
-                             std::make_pair(std::move(sp_topic_name), std::move(sp_contents)),
+                             std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
                              qos,
                              retain,
-                             std::move(props));
+                             force_move(props));
         }
     }
 
@@ -3189,7 +3190,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -3219,9 +3220,9 @@ public:
             retain,
             false,
             packet_id,
-            std::move(props),
+            force_move(props),
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(life_keeper)
+            force_move(life_keeper)
         );
     }
 
@@ -3258,13 +3259,13 @@ public:
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
         send_publish(
-            std::move(topic_name),
+            force_move(topic_name),
             qos,
             retain,
             false,
             packet_id,
-            std::move(props),
-            std::move(contents),
+            force_move(props),
+            force_move(contents),
             any()
         );
     }
@@ -3307,12 +3308,12 @@ public:
                                  any(),
                                  qos,
                                  retain,
-                                 std::move(props));
+                                 force_move(props));
         }
         else
         {
-            auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
-            auto sp_contents   = std::make_shared<std::string>(std::move(contents));
+            auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
+            auto sp_contents   = std::make_shared<std::string>(force_move(contents));
 
             auto topic_buf    = as::buffer(*sp_topic_name);
             auto contents_buf = as::buffer(*sp_contents);
@@ -3320,10 +3321,10 @@ public:
             acquired_publish_dup(packet_id,
                                  topic_buf,
                                  contents_buf,
-                                 std::make_pair(std::move(sp_topic_name), std::move(sp_contents)),
+                                 std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
                                  qos,
                                  retain,
-                                 std::move(props));
+                                 force_move(props));
         }
     }
 
@@ -3338,7 +3339,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -3368,9 +3369,9 @@ public:
             retain,
             true,
             packet_id,
-            std::move(props),
+            force_move(props),
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(life_keeper)
+            force_move(life_keeper)
         );
     }
 
@@ -3407,13 +3408,13 @@ public:
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
         send_publish(
-            std::move(topic_name),
+            force_move(topic_name),
             qos,
             retain,
             true,
             packet_id,
-            std::move(props),
-            std::move(contents),
+            force_move(props),
+            force_move(contents),
             any()
         );
     }
@@ -3437,7 +3438,7 @@ public:
         string_view topic_name,
         std::uint8_t option) {
         std::vector<std::tuple<buffer, std::uint8_t>> params;
-        send_subscribe(std::move(params), packet_id, topic_name, option);
+        send_subscribe(force_move(params), packet_id, topic_name, option);
     }
 
     /**
@@ -3459,7 +3460,7 @@ public:
         as::const_buffer topic_name,
         std::uint8_t option) {
         std::vector<std::tuple<buffer, std::uint8_t>> params;
-        send_subscribe(std::move(params), packet_id, topic_name, option);
+        send_subscribe(force_move(params), packet_id, topic_name, option);
     }
 
     /**
@@ -3483,7 +3484,7 @@ public:
         Args&&... args) {
         std::vector<std::tuple<buffer, std::uint8_t>> params;
         params.reserve(sizeof...(args) / 2);
-        send_subscribe(std::move(params), packet_id, std::forward<Args>(args)...);
+        send_subscribe(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     /**
@@ -3509,7 +3510,7 @@ public:
         for (auto const& e : params) {
             cb_params.emplace_back(as::buffer(std::get<0>(e).data(), std::get<0>(e).size()), std::get<1>(e));
         }
-        send_subscribe(std::move(cb_params), packet_id, std::move(props));
+        send_subscribe(force_move(cb_params), packet_id, force_move(props));
     }
 
     /**
@@ -3530,7 +3531,7 @@ public:
         std::vector<std::tuple<buffer, std::uint8_t>> params,
         std::vector<v5::property_variant> props = {}
     ) {
-        send_subscribe(std::move(params), packet_id, std::move(props));
+        send_subscribe(force_move(params), packet_id, force_move(props));
     }
 
     /**
@@ -3549,7 +3550,7 @@ public:
 
         std::vector<buffer> params;
 
-        send_unsubscribe(std::move(params), packet_id, topic_name);
+        send_unsubscribe(force_move(params), packet_id, topic_name);
     }
 
     /**
@@ -3568,7 +3569,7 @@ public:
 
         std::vector<buffer> params;
 
-        send_unsubscribe(std::move(params), packet_id, topic_name);
+        send_unsubscribe(force_move(params), packet_id, topic_name);
     }
 
     /**
@@ -3594,7 +3595,7 @@ public:
         std::vector<buffer> params;
         params.reserve(sizeof...(args));
 
-        send_unsubscribe(std::move(params), packet_id, std::forward<Args>(args)...);
+        send_unsubscribe(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     /**
@@ -3619,9 +3620,9 @@ public:
         cb_params.reserve(params.size());
 
         for (auto&& e : params) {
-            cb_params.emplace_back(buffer(std::move(e)));
+            cb_params.emplace_back(buffer(force_move(e)));
         }
-        send_unsubscribe(std::move(cb_params), packet_id, std::move(props));
+        send_unsubscribe(force_move(cb_params), packet_id, force_move(props));
     }
 
     /**
@@ -3648,7 +3649,7 @@ public:
         for (auto&& e : params) {
             cb_params.emplace_back(buffer(string_view(get_pointer(e), get_size(e))));
         }
-        send_unsubscribe(std::move(cb_params), packet_id, std::move(props));
+        send_unsubscribe(force_move(cb_params), packet_id, force_move(props));
     }
 
     /**
@@ -3669,7 +3670,7 @@ public:
         std::vector<buffer> params,
         std::vector<v5::property_variant> props = {}
     ) {
-        send_unsubscribe(std::move(params), packet_id, std::move(props));
+        send_unsubscribe(force_move(params), packet_id, force_move(props));
     }
 
     /**
@@ -3704,7 +3705,7 @@ public:
         optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
-        send_auth(reason_code, std::move(props));
+        send_auth(reason_code, force_move(props));
     }
 
     /**
@@ -3764,9 +3765,9 @@ public:
                     return buffer();
                 }
             } (),
-            std::move(w),
+            force_move(w),
             keep_alive_sec,
-            std::move(props)
+            force_move(props)
         );
     }
 
@@ -3810,12 +3811,12 @@ public:
     ) {
         connect_requested_ = true;
         send_connect(
-            std::move(client_id),
-            std::move(user_name),
-            std::move(password),
-            std::move(w),
+            force_move(client_id),
+            force_move(user_name),
+            force_move(password),
+            force_move(w),
             keep_alive_sec,
-            std::move(props)
+            force_move(props)
         );
     }
 
@@ -3834,7 +3835,7 @@ public:
         std::uint8_t reason_code,
         std::vector<v5::property_variant> props = {}
     ) {
-        send_connack(session_present, reason_code, std::move(props));
+        send_connack(session_present, reason_code, force_move(props));
     }
 
     /**
@@ -3854,7 +3855,7 @@ public:
         optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
-        send_puback(packet_id, reason_code, std::move(props));
+        send_puback(packet_id, reason_code, force_move(props));
     }
 
     /**
@@ -3874,7 +3875,7 @@ public:
         optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
-        send_pubrec(packet_id, reason_code, std::move(props));
+        send_pubrec(packet_id, reason_code, force_move(props));
     }
 
     /**
@@ -3889,7 +3890,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901145<BR>
      *        3.6.2.2 PUBREL Properties
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param
      */
     void pubrel(
@@ -3898,7 +3899,7 @@ public:
         std::vector<v5::property_variant> props = {},
         any life_keeper = any()
     ) {
-        send_pubrel(packet_id, reason_code, std::move(props), std::move(life_keeper));
+        send_pubrel(packet_id, reason_code, force_move(props), force_move(life_keeper));
     }
 
     /**
@@ -3918,7 +3919,7 @@ public:
         optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
-        send_pubcomp(packet_id, reason_code, std::move(props));
+        send_pubcomp(packet_id, reason_code, force_move(props));
     }
 
     /**
@@ -3959,7 +3960,7 @@ public:
         std::vector<std::uint8_t> reasons,
         std::vector<v5::property_variant> props = {}
     ) {
-        send_suback(std::move(reasons), packet_id, std::move(props));
+        send_suback(force_move(reasons), packet_id, force_move(props));
     }
 
     /**
@@ -4010,7 +4011,7 @@ public:
         std::vector<std::uint8_t> reasons,
         std::vector<v5::property_variant> props = {}
     ) {
-        send_unsuback(std::move(reasons), packet_id, std::move(props));
+        send_unsuback(force_move(reasons), packet_id, force_move(props));
     }
 
     /**
@@ -4033,7 +4034,7 @@ public:
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        acquired_async_publish(0, std::move(topic_name), std::move(contents), qos::at_most_once, retain, std::move(func));
+        acquired_async_publish(0, force_move(topic_name), force_move(contents), qos::at_most_once, retain, force_move(func));
     }
 
     /**
@@ -4061,7 +4062,7 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        acquired_async_publish(0, std::move(topic_name), std::move(contents), qos::at_most_once, retain, std::move(props), std::move(func));
+        acquired_async_publish(0, force_move(topic_name), force_move(contents), qos::at_most_once, retain, force_move(props), force_move(func));
     }
 
     /**
@@ -4073,7 +4074,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4089,7 +4090,7 @@ public:
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        acquired_async_publish(0, topic_name, contents, std::move(life_keeper), qos::at_most_once, retain, std::move(func));
+        acquired_async_publish(0, topic_name, contents, force_move(life_keeper), qos::at_most_once, retain, force_move(func));
     }
 
     /**
@@ -4101,7 +4102,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4122,7 +4123,7 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        acquired_async_publish(0, topic_name, contents, std::move(life_keeper), qos::at_most_once, retain, std::move(props), std::move(func));
+        acquired_async_publish(0, topic_name, contents, force_move(life_keeper), qos::at_most_once, retain, force_move(props), force_move(func));
     }
 
     /**
@@ -4148,7 +4149,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_at_least_once(packet_id, std::move(topic_name), std::move(contents), retain, std::move(func));
+        acquired_async_publish_at_least_once(packet_id, force_move(topic_name), force_move(contents), retain, force_move(func));
         return packet_id;
     }
 
@@ -4180,7 +4181,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_at_least_once(packet_id, std::move(topic_name), std::move(contents), retain, std::move(props), std::move(func));
+        acquired_async_publish_at_least_once(packet_id, force_move(topic_name), force_move(contents), retain, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4191,7 +4192,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4210,7 +4211,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(func));
+        acquired_async_publish_at_least_once(packet_id, topic_name, contents, force_move(life_keeper), retain, force_move(func));
         return packet_id;
     }
 
@@ -4221,7 +4222,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4245,7 +4246,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props), std::move(func));
+        acquired_async_publish_at_least_once(packet_id, topic_name, contents, force_move(life_keeper), retain, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4272,7 +4273,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_exactly_once(packet_id, std::move(topic_name), std::move(contents), retain, std::move(func));
+        acquired_async_publish_exactly_once(packet_id, force_move(topic_name), force_move(contents), retain, force_move(func));
         return packet_id;
     }
 
@@ -4304,7 +4305,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_exactly_once(packet_id, std::move(topic_name), std::move(contents), retain, std::move(props), std::move(func));
+        acquired_async_publish_exactly_once(packet_id, force_move(topic_name), force_move(contents), retain, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4315,7 +4316,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4334,7 +4335,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(func));
+        acquired_async_publish_exactly_once(packet_id, topic_name, contents, force_move(life_keeper), retain, force_move(func));
         return packet_id;
     }
 
@@ -4345,7 +4346,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -4369,7 +4370,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props), std::move(func));
+        acquired_async_publish_exactly_once(packet_id, topic_name, contents, force_move(life_keeper), retain, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4399,7 +4400,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(func));
+        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(func));
         return packet_id;
     }
 
@@ -4434,7 +4435,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(props), std::move(func));
+        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4445,7 +4446,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -4467,7 +4468,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(func));
+        acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(func));
         return packet_id;
     }
 
@@ -4478,7 +4479,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -4505,7 +4506,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props), std::move(func));
+        acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4535,7 +4536,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(func));
+        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(func));
         return packet_id;
     }
 
@@ -4570,7 +4571,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(props), std::move(func));
+        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4606,7 +4607,7 @@ public:
         Arg0&& arg0,
         Args&&... args) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, std::move(topic_name), option, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+        acquired_async_subscribe(packet_id, force_move(topic_name), option, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
         return packet_id;
     }
 
@@ -4667,7 +4668,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, std::move(topic_name), option, std::move(func));
+        acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(func));
         return packet_id;
     }
 
@@ -4698,7 +4699,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, std::move(topic_name), option, std::move(props), std::move(func));
+        acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4723,7 +4724,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, option, std::move(func));
+        acquired_async_subscribe(packet_id, topic_name, option, force_move(func));
         return packet_id;
     }
 
@@ -4753,7 +4754,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, option, std::move(props), std::move(func));
+        acquired_async_subscribe(packet_id, topic_name, option, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4778,7 +4779,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, std::move(topic_name), option, std::move(func));
+        acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(func));
         return packet_id;
     }
 
@@ -4808,7 +4809,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, std::move(topic_name), option, std::move(props), std::move(func));
+        acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4830,7 +4831,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, params, std::move(func));
+        acquired_async_subscribe(packet_id, params, force_move(func));
         return packet_id;
     }
 
@@ -4857,7 +4858,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, params, std::move(props), std::move(func));
+        acquired_async_subscribe(packet_id, params, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4879,7 +4880,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, params, std::move(func));
+        acquired_async_subscribe(packet_id, params, force_move(func));
         return packet_id;
     }
 
@@ -4906,7 +4907,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, params, std::move(props), std::move(func));
+        acquired_async_subscribe(packet_id, params, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4928,7 +4929,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, std::move(params), std::move(func));
+        acquired_async_subscribe(packet_id, force_move(params), force_move(func));
         return packet_id;
     }
 
@@ -4955,7 +4956,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, std::move(params), std::move(props), std::move(func));
+        acquired_async_subscribe(packet_id, force_move(params), force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4986,7 +4987,7 @@ public:
         Arg0&& arg0,
         Args&&... args) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, std::move(topic_name), std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+        acquired_async_unsubscribe(packet_id, force_move(topic_name), std::forward<Arg0>(arg0), std::forward<Args>(args)...);
         return packet_id;
     }
 
@@ -5037,7 +5038,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, std::move(topic_name), std::move(func));
+        acquired_async_unsubscribe(packet_id, force_move(topic_name), force_move(func));
         return packet_id;
     }
 
@@ -5062,7 +5063,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, std::move(topic_name), std::move(props), std::move(func));
+        acquired_async_unsubscribe(packet_id, force_move(topic_name), force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -5082,7 +5083,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, topic_name, std::move(func));
+        acquired_async_unsubscribe(packet_id, topic_name, force_move(func));
         return packet_id;
     }
 
@@ -5107,7 +5108,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, topic_name, std::move(props), std::move(func));
+        acquired_async_unsubscribe(packet_id, topic_name, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -5127,7 +5128,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, std::move(topic_name), std::move(func));
+        acquired_async_unsubscribe(packet_id, force_move(topic_name), force_move(func));
         return packet_id;
     }
 
@@ -5152,7 +5153,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, std::move(topic_name), std::move(props), std::move(func));
+        acquired_async_unsubscribe(packet_id, force_move(topic_name), force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -5172,7 +5173,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, params, std::move(func));
+        acquired_async_unsubscribe(packet_id, params, force_move(func));
         return packet_id;
     }
 
@@ -5197,7 +5198,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, params, std::move(props), std::move(func));
+        acquired_async_unsubscribe(packet_id, params, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -5217,7 +5218,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, params, std::move(func));
+        acquired_async_unsubscribe(packet_id, params, force_move(func));
         return packet_id;
     }
 
@@ -5242,7 +5243,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, params, std::move(props), std::move(func));
+        acquired_async_unsubscribe(packet_id, params, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -5262,7 +5263,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, std::move(params), std::move(func));
+        acquired_async_unsubscribe(packet_id, force_move(params), force_move(func));
         return packet_id;
     }
 
@@ -5287,7 +5288,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, std::move(params), std::move(props), std::move(func));
+        acquired_async_unsubscribe(packet_id, force_move(params), force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -5304,7 +5305,7 @@ public:
     ) {
         if (connected_ && mqtt_connected_) {
             disconnect_requested_ = true;
-            async_send_disconnect(std::move(func));
+            async_send_disconnect(force_move(func));
         }
     }
 
@@ -5331,7 +5332,7 @@ public:
     ) {
         if (connected_ && mqtt_connected_) {
             disconnect_requested_ = true;
-            async_send_disconnect(reason, std::move(props), std::move(func));
+            async_send_disconnect(reason, force_move(props), force_move(func));
         }
     }
 
@@ -5363,7 +5364,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_at_least_once(packet_id, std::move(topic_name), std::move(contents), retain, std::move(func));
+            acquired_async_publish_at_least_once(packet_id, force_move(topic_name), force_move(contents), retain, force_move(func));
             return true;
         }
         return false;
@@ -5400,7 +5401,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_at_least_once(packet_id, std::move(topic_name), std::move(contents), retain, std::move(props), std::move(func));
+            acquired_async_publish_at_least_once(packet_id, force_move(topic_name), force_move(contents), retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -5415,7 +5416,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -5435,7 +5436,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(func));
+            acquired_async_publish_at_least_once(packet_id, topic_name, contents, force_move(life_keeper), retain, force_move(func));
             return true;
         }
         return false;
@@ -5450,7 +5451,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -5475,7 +5476,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_at_least_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props), std::move(func));
+            acquired_async_publish_at_least_once(packet_id, topic_name, contents, force_move(life_keeper), retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -5507,7 +5508,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_exactly_once(packet_id, std::move(topic_name), std::move(contents), retain, std::move(func));
+            acquired_async_publish_exactly_once(packet_id, force_move(topic_name), force_move(contents), retain, force_move(func));
             return true;
         }
         return false;
@@ -5544,7 +5545,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_exactly_once(packet_id, std::move(topic_name), std::move(contents), retain, std::move(props), std::move(func));
+            acquired_async_publish_exactly_once(packet_id, force_move(topic_name), force_move(contents), retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -5559,7 +5560,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -5579,7 +5580,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(func));
+            acquired_async_publish_exactly_once(packet_id, topic_name, contents, force_move(life_keeper), retain, force_move(func));
             return true;
         }
         return false;
@@ -5594,7 +5595,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -5619,7 +5620,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_exactly_once(packet_id, topic_name, contents, std::move(life_keeper), retain, std::move(props), std::move(func));
+            acquired_async_publish_exactly_once(packet_id, topic_name, contents, force_move(life_keeper), retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -5640,7 +5641,7 @@ public:
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
      *        3.3.1.3 RETAIN
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         contents don't publish, otherwise return true and contents publish.
      */
@@ -5654,7 +5655,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(func));
+            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(func));
             return true;
         }
         return false;
@@ -5694,7 +5695,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(props), std::move(func));
+            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -5709,7 +5710,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -5731,7 +5732,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(func));
+            acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(func));
             return true;
         }
         return false;
@@ -5746,7 +5747,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -5774,7 +5775,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props), std::move(func));
+            acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -5808,7 +5809,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(func));
+            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(func));
             return true;
         }
         return false;
@@ -5848,7 +5849,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(props), std::move(func));
+            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -5883,7 +5884,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(func));
+            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(func));
             return true;
         }
         return false;
@@ -5923,7 +5924,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(props), std::move(func));
+            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -5938,7 +5939,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -5960,7 +5961,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(func));
+            acquired_async_publish_dup(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(func));
             return true;
         }
         return false;
@@ -5975,7 +5976,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -6003,7 +6004,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, topic_name, contents, std::move(life_keeper), qos, retain, std::move(props), std::move(func));
+            acquired_async_publish_dup(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -6037,7 +6038,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, std::move(topic_name), std::move(contents), qos, retain, std::move(func));
+            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(func));
             return true;
         }
         return false;
@@ -6077,7 +6078,7 @@ public:
     ) {
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, std::move(topic_name), std::move(contents),  qos, retain, std::move(props), std::move(func));
+            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents),  qos, retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -6118,7 +6119,7 @@ public:
         Arg0&& arg0,
         Args&&... args) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, std::move(topic_name), option, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+            acquired_async_subscribe(packet_id, force_move(topic_name), option, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
             return true;
         }
         return false;
@@ -6189,7 +6190,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, std::move(topic_name), option, std::move(func));
+            acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(func));
             return true;
         }
         return false;
@@ -6224,7 +6225,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, std::move(topic_name), option, std::move(props), std::move(func));
+            acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -6254,7 +6255,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, option, std::move(func));
+            acquired_async_subscribe(packet_id, topic_name, option, force_move(func));
             return true;
         }
         return false;
@@ -6289,7 +6290,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, option, std::move(props), std::move(func));
+            acquired_async_subscribe(packet_id, topic_name, option, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -6319,7 +6320,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, std::move(topic_name), option, std::move(func));
+            acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(func));
             return true;
         }
         return false;
@@ -6354,7 +6355,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, std::move(topic_name), option, std::move(props), std::move(func));
+            acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -6380,7 +6381,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, params, std::move(func));
+            acquired_async_subscribe(packet_id, params, force_move(func));
             return true;
         }
         return false;
@@ -6411,7 +6412,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, params, std::move(props), std::move(func));
+            acquired_async_subscribe(packet_id, params, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -6437,7 +6438,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, params, std::move(func));
+            acquired_async_subscribe(packet_id, params, force_move(func));
             return true;
         }
         return false;
@@ -6468,7 +6469,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, params, std::move(props), std::move(func));
+            acquired_async_subscribe(packet_id, params, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -6494,7 +6495,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, std::move(params), std::move(func));
+            acquired_async_subscribe(packet_id, force_move(params), force_move(func));
             return true;
         }
         return false;
@@ -6525,7 +6526,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, std::move(params), std::move(props), std::move(func));
+            acquired_async_subscribe(packet_id, force_move(params), force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -6561,7 +6562,7 @@ public:
         Arg0&& arg0,
         Args&&... args) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, std::move(topic_name), std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+            acquired_async_unsubscribe(packet_id, force_move(topic_name), std::forward<Arg0>(arg0), std::forward<Args>(args)...);
             return true;
         }
         return false;
@@ -6622,7 +6623,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, std::move(topic_name), std::move(func));
+            acquired_async_unsubscribe(packet_id, force_move(topic_name), force_move(func));
             return true;
         }
         return false;
@@ -6652,7 +6653,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, std::move(topic_name), std::move(props), std::move(func));
+            acquired_async_unsubscribe(packet_id, force_move(topic_name), force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -6677,7 +6678,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, params, std::move(func));
+            acquired_async_unsubscribe(packet_id, params, force_move(func));
             return true;
         }
         return false;
@@ -6707,7 +6708,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, params, std::move(props), std::move(func));
+            acquired_async_unsubscribe(packet_id, params, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -6732,7 +6733,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, params, std::move(func));
+            acquired_async_unsubscribe(packet_id, params, force_move(func));
             return true;
         }
         return false;
@@ -6762,7 +6763,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, params, std::move(props), std::move(func));
+            acquired_async_unsubscribe(packet_id, params, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -6787,7 +6788,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, std::move(params), std::move(func));
+            acquired_async_unsubscribe(packet_id, force_move(params), force_move(func));
             return true;
         }
         return false;
@@ -6817,7 +6818,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, std::move(params), std::move(props), std::move(func));
+            acquired_async_unsubscribe(packet_id, force_move(params), force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -6850,8 +6851,8 @@ public:
         async_handler_t func = async_handler_t()
     ) {
 
-        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(force_move(contents));
         auto sv_topic_name = string_view(*sp_topic_name);
         auto sv_contents = string_view(*sp_contents);
 
@@ -6863,8 +6864,8 @@ public:
             packet_id,
             std::vector<v5::property_variant>{},
             buffer(sv_contents),
-            std::move(func),
-            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
+            force_move(func),
+            std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
     }
 
@@ -6898,8 +6899,8 @@ public:
         async_handler_t func = async_handler_t()
     ) {
 
-        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(force_move(contents));
         auto sv_topic_name = string_view(*sp_topic_name);
         auto sv_contents = string_view(*sp_contents);
 
@@ -6909,10 +6910,10 @@ public:
             retain,
             false,
             packet_id,
-            std::move(props),
+            force_move(props),
             buffer(sv_contents),
-            std::move(func),
-            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
+            force_move(func),
+            std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
     }
 
@@ -6926,7 +6927,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -6952,8 +6953,8 @@ public:
             packet_id,
             std::vector<v5::property_variant>{},
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(func),
-            std::move(life_keeper)
+            force_move(func),
+            force_move(life_keeper)
         );
     }
 
@@ -6967,7 +6968,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -6996,10 +6997,10 @@ public:
             retain,
             false,
             packet_id,
-            std::move(props),
+            force_move(props),
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(func),
-            std::move(life_keeper)
+            force_move(func),
+            force_move(life_keeper)
         );
     }
 
@@ -7028,8 +7029,8 @@ public:
         async_handler_t func = async_handler_t()
     ) {
 
-        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents = std::make_shared<std::string>(force_move(contents));
         auto sv_topic_name = string_view(*sp_topic_name);
         auto sv_contents = string_view(*sp_contents);
 
@@ -7041,8 +7042,8 @@ public:
             packet_id,
             std::vector<v5::property_variant>{},
             buffer(sv_contents),
-            std::move(func),
-            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
+            force_move(func),
+            std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
     }
 
@@ -7076,8 +7077,8 @@ public:
         async_handler_t func = async_handler_t()
     ) {
 
-        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents   = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents   = std::make_shared<std::string>(force_move(contents));
         auto sv_topic_name = string_view(*sp_topic_name);
         auto sv_contents = string_view(*sp_contents);
 
@@ -7086,11 +7087,11 @@ public:
             qos::at_least_once,
             retain,
             false,
-            std::move(props),
+            force_move(props),
             packet_id,
             buffer(sv_contents),
-            std::move(func),
-            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
+            force_move(func),
+            std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
     }
 
@@ -7104,7 +7105,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -7130,8 +7131,8 @@ public:
             packet_id,
             std::vector<v5::property_variant>{},
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(func),
-            std::move(life_keeper)
+            force_move(func),
+            force_move(life_keeper)
         );
     }
 
@@ -7145,7 +7146,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param retain
      *        A retain flag. If set it to true, the contents is retained.<BR>
      *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
@@ -7174,10 +7175,10 @@ public:
             retain,
             false,
             packet_id,
-            std::move(props),
+            force_move(props),
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(func),
-            std::move(life_keeper)
+            force_move(func),
+            force_move(life_keeper)
         );
     }
 
@@ -7224,8 +7225,8 @@ public:
             packet_id,
             std::vector<v5::property_variant>{},
             buffer(sv_contents),
-            std::move(func),
-            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
+            force_move(func),
+            std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
     }
 
@@ -7264,8 +7265,8 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
-        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents   = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents   = std::make_shared<std::string>(force_move(contents));
         auto sv_topic_name = string_view(*sp_topic_name);
         auto sv_contents = string_view(*sp_contents);
 
@@ -7275,10 +7276,10 @@ public:
             retain,
             false,
             packet_id,
-            std::move(props),
+            force_move(props),
             buffer(sv_contents),
-            std::move(func),
-            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
+            force_move(func),
+            std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
     }
 
@@ -7293,7 +7294,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -7323,8 +7324,8 @@ public:
             packet_id,
             std::vector<v5::property_variant>{},
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(func),
-            std::move(life_keeper)
+            force_move(func),
+            force_move(life_keeper)
         );
     }
 
@@ -7339,7 +7340,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -7372,10 +7373,10 @@ public:
             retain,
             false,
             packet_id,
-            std::move(props),
+            force_move(props),
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(func),
-            std::move(life_keeper)
+            force_move(func),
+            force_move(life_keeper)
         );
     }
 
@@ -7410,14 +7411,14 @@ public:
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
-            std::move(topic_name),
+            force_move(topic_name),
             qos,
             retain,
             false,
             packet_id,
             std::vector<v5::property_variant>{},
-            std::move(contents),
-            std::move(func),
+            force_move(contents),
+            force_move(func),
             any()
         );
     }
@@ -7458,14 +7459,14 @@ public:
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
-            std::move(topic_name),
+            force_move(topic_name),
             qos,
             retain,
             false,
             packet_id,
-            std::move(props),
-            std::move(contents),
-            std::move(func),
+            force_move(props),
+            force_move(contents),
+            force_move(func),
             any()
         );
     }
@@ -7513,8 +7514,8 @@ public:
             packet_id,
             std::vector<v5::property_variant>{},
             buffer(sv_contents),
-            std::move(func),
-            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
+            force_move(func),
+            std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
     }
 
@@ -7553,8 +7554,8 @@ public:
         BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
-        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
-        auto sp_contents   = std::make_shared<std::string>(std::move(contents));
+        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents   = std::make_shared<std::string>(force_move(contents));
         auto sv_topic_name = string_view(*sp_topic_name);
         auto sv_contents = string_view(*sp_contents);
 
@@ -7564,10 +7565,10 @@ public:
             retain,
             true,
             packet_id,
-            std::move(props),
+            force_move(props),
             buffer(sv_contents),
-            std::move(func),
-            std::make_pair(std::move(sp_topic_name), std::move(sp_contents))
+            force_move(func),
+            std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
     }
 
@@ -7582,7 +7583,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -7611,8 +7612,8 @@ public:
             packet_id,
             std::vector<v5::property_variant>{},
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(func),
-            std::move(life_keeper)
+            force_move(func),
+            force_move(life_keeper)
         );
     }
 
@@ -7627,7 +7628,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -7660,10 +7661,10 @@ public:
             retain,
             true,
             packet_id,
-            std::move(props),
+            force_move(props),
             buffer(string_view(get_pointer(contents), get_size(contents))),
-            std::move(func),
-            std::move(life_keeper)
+            force_move(func),
+            force_move(life_keeper)
         );
     }
 
@@ -7697,14 +7698,14 @@ public:
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
-            std::move(topic_name),
+            force_move(topic_name),
             qos,
             retain,
             true,
             packet_id,
             std::vector<v5::property_variant>{},
-            std::move(contents),
-            std::move(func),
+            force_move(contents),
+            force_move(func),
             any()
         );
     }
@@ -7720,7 +7721,7 @@ public:
      * @param contents
      *        The contents to publish
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * @param qos
      *        qos
      * @param retain
@@ -7747,14 +7748,14 @@ public:
         BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
-            std::move(topic_name),
+            force_move(topic_name),
             qos,
             retain,
             true,
             packet_id,
-            std::move(props),
-            std::move(contents),
-            std::move(func),
+            force_move(props),
+            force_move(contents),
+            force_move(func),
             any()
         );
     }
@@ -7790,7 +7791,7 @@ public:
         std::uint8_t option,
         Arg0&& arg0,
         Args&&... args) {
-        acquired_async_subscribe_imp(packet_id, std::move(topic_name), option, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+        acquired_async_subscribe_imp(packet_id, force_move(topic_name), option, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
     }
 
     /**
@@ -7853,14 +7854,14 @@ public:
         std::uint8_t option,
         async_handler_t func = async_handler_t()
     ) {
-        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
+        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
         auto sv_topic_name = string_view(*sp_topic_name);
 
         async_send_subscribe(
             std::vector<std::tuple<buffer, std::uint8_t>>({std::make_tuple(buffer(sv_topic_name), option)}),
-            std::move(sp_topic_name),
+            force_move(sp_topic_name),
             packet_id,
-            std::move(func)
+            force_move(func)
         );
     }
 
@@ -7891,15 +7892,15 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        auto sp_topic_name = std::make_shared<std::string>(std::move(topic_name));
+        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
         auto sv_topic_name = string_view(*sp_topic_name);
 
         async_send_subscribe(
             std::vector<std::tuple<buffer, std::uint8_t>>({std::make_tuple(buffer(sv_topic_name), option)}),
-            std::move(sp_topic_name),
+            force_move(sp_topic_name),
             packet_id,
-            std::move(props),
-            std::move(func)
+            force_move(props),
+            force_move(func)
         );
     }
 
@@ -7934,7 +7935,7 @@ public:
             }),
             any(),
             packet_id,
-            std::move(func)
+            force_move(func)
         );
     }
 
@@ -7975,8 +7976,8 @@ public:
             }),
             any(),
             packet_id,
-            std::move(props),
-            std::move(func)
+            force_move(props),
+            force_move(func)
         );
     }
 
@@ -8005,13 +8006,13 @@ public:
         async_send_subscribe(
             std::vector<std::tuple<buffer, std::uint8_t>>({
                 std::make_tuple(
-                    std::move(topic_name),
+                    force_move(topic_name),
                     option
                 )
             }),
             any(),
             packet_id,
-            std::move(func)
+            force_move(func)
         );
     }
 
@@ -8046,14 +8047,14 @@ public:
         async_send_subscribe(
             std::vector<std::tuple<buffer, std::uint8_t>>({
                 std::make_tuple(
-                    std::move(topic_name),
+                    force_move(topic_name),
                     option
                 )
             }),
             any(),
             packet_id,
-            std::move(props),
-            std::move(func)
+            force_move(props),
+            force_move(func)
         );
     }
 
@@ -8084,15 +8085,15 @@ public:
         life_keepers.reserve(params.size());
 
         for (auto const& e : params) {
-            auto sp_topic_name = std::make_shared<std::string>(std::move(std::get<0>(e)));
+            auto sp_topic_name = std::make_shared<std::string>(force_move(std::get<0>(e)));
             cb_params.emplace_back(buffer(string_view(*sp_topic_name)), std::get<1>(e));
-            life_keepers.emplace_back(std::move(sp_topic_name));
+            life_keepers.emplace_back(force_move(sp_topic_name));
         }
         async_send_subscribe(
-            std::move(cb_params),
-            std::move(life_keepers),
+            force_move(cb_params),
+            force_move(life_keepers),
             packet_id,
-            std::move(func)
+            force_move(func)
         );
     }
 
@@ -8128,16 +8129,16 @@ public:
         life_keepers.reserve(params.size());
 
         for (auto const& e : params) {
-            auto sp_topic_name = std::make_shared<std::string>(std::move(std::get<0>(e)));
+            auto sp_topic_name = std::make_shared<std::string>(force_move(std::get<0>(e)));
             cb_params.emplace_back(buffer(string_view(*sp_topic_name)), std::get<1>(e));
-            life_keepers.emplace_back(std::move(sp_topic_name));
+            life_keepers.emplace_back(force_move(sp_topic_name));
         }
         async_send_subscribe(
-            std::move(cb_params),
+            force_move(cb_params),
             life_keepers,
             packet_id,
-            std::move(props),
-            std::move(func)
+            force_move(props),
+            force_move(func)
         );
     }
 
@@ -8174,10 +8175,10 @@ public:
         }
 
         async_send_subscribe(
-            std::move(cb_params),
+            force_move(cb_params),
             any(),
             packet_id,
-            std::move(func)
+            force_move(func)
         );
     }
 
@@ -8218,11 +8219,11 @@ public:
         }
 
         async_send_subscribe(
-            std::move(cb_params),
+            force_move(cb_params),
             any(),
             packet_id,
-            std::move(props),
-            std::move(func)
+            force_move(props),
+            force_move(func)
         );
     }
 
@@ -8248,16 +8249,16 @@ public:
 
         for (auto const& e : params) {
             cb_params.emplace_back(
-                std::move(std::get<0>(e)),
+                force_move(std::get<0>(e)),
                 std::get<1>(e)
             );
         }
 
         async_send_subscribe(
-            std::move(cb_params),
+            force_move(cb_params),
             any(),
             packet_id,
-            std::move(func)
+            force_move(func)
         );
     }
 
@@ -8287,17 +8288,17 @@ public:
 
         for (auto const& e : params) {
             cb_params.emplace_back(
-                std::move(std::get<0>(e)),
+                force_move(std::get<0>(e)),
                 std::get<1>(e)
             );
         }
 
         async_send_subscribe(
-            std::move(cb_params),
+            force_move(cb_params),
             any(),
             packet_id,
-            std::move(props),
-            std::move(func)
+            force_move(props),
+            force_move(func)
         );
     }
 
@@ -8327,7 +8328,7 @@ public:
         std::string topic_name,
         Arg0&& arg0,
         Args&&... args) {
-        acquired_async_unsubscribe_imp(packet_id, std::move(topic_name), std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+        acquired_async_unsubscribe_imp(packet_id, force_move(topic_name), std::forward<Arg0>(arg0), std::forward<Args>(args)...);
     }
 
     /**
@@ -8375,7 +8376,7 @@ public:
         std::string topic_name,
         async_handler_t func = async_handler_t()
     ) {
-        acquired_async_unsubscribe_imp(packet_id, std::move(topic_name), std::move(func));
+        acquired_async_unsubscribe_imp(packet_id, force_move(topic_name), force_move(func));
     }
 
     /**
@@ -8394,7 +8395,7 @@ public:
         as::const_buffer topic_name,
         async_handler_t func = async_handler_t()
     ) {
-        acquired_async_unsubscribe_imp(packet_id, topic_name, std::move(func));
+        acquired_async_unsubscribe_imp(packet_id, topic_name, force_move(func));
     }
 
     /**
@@ -8413,8 +8414,8 @@ public:
         buffer topic_name,
         async_handler_t func = async_handler_t()
     ) {
-        std::vector<buffer> params { std::move(topic_name) };
-        async_send_unsubscribe(std::move(params), any(), packet_id, std::move(func));
+        std::vector<buffer> params { force_move(topic_name) };
+        async_send_unsubscribe(force_move(params), any(), packet_id, force_move(func));
     }
 
     /**
@@ -8438,8 +8439,8 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        std::vector<buffer> params { std::move(topic_name) };
-        async_send_unsubscribe(std::move(params), any(), packet_id, std::move(props), std::move(func));
+        std::vector<buffer> params { force_move(topic_name) };
+        async_send_unsubscribe(force_move(params), any(), packet_id, force_move(props), force_move(func));
     }
 
     /**
@@ -8467,15 +8468,15 @@ public:
         life_keepers.reserve(params.size());
 
         for (auto const& e : params) {
-            life_keepers.emplace_back(std::make_shared<std::string>(std::move(e)));
+            life_keepers.emplace_back(std::make_shared<std::string>(force_move(e)));
             cb_params.emplace_back(buffer(string_view(*life_keepers.back())));
         }
 
         async_send_unsubscribe(
-            std::move(cb_params),
-            std::move(life_keepers),
+            force_move(cb_params),
+            force_move(life_keepers),
             packet_id,
-            std::move(func)
+            force_move(func)
         );
     }
 
@@ -8509,16 +8510,16 @@ public:
         life_keepers.reserve(params.size());
 
         for (auto const& e : params) {
-            life_keepers.emplace_back(std::make_shared<std::string>(std::move(e)));
+            life_keepers.emplace_back(std::make_shared<std::string>(force_move(e)));
             cb_params.emplace_back(buffer(string_view(*life_keepers.back())));
         }
 
         async_send_unsubscribe(
-            std::move(cb_params),
+            force_move(cb_params),
             life_keepers,
             packet_id,
-            std::move(props),
-            std::move(func)
+            force_move(props),
+            force_move(func)
         );
     }
 
@@ -8555,10 +8556,10 @@ public:
         }
 
         async_send_unsubscribe(
-            std::move(cb_params),
+            force_move(cb_params),
             any(),
             packet_id,
-            std::move(func)
+            force_move(func)
         );
     }
 
@@ -8586,11 +8587,11 @@ public:
     ) {
 
         async_send_unsubscribe(
-            std::move(params),
+            force_move(params),
             any(),
             packet_id,
-            std::move(props),
-            std::move(func)
+            force_move(props),
+            force_move(func)
         );
     }
 
@@ -8613,10 +8614,10 @@ public:
     ) {
 
         async_send_unsubscribe(
-            std::move(params),
+            force_move(params),
             any(),
             packet_id,
-            std::move(func)
+            force_move(func)
         );
     }
 
@@ -8644,11 +8645,11 @@ public:
     ) {
 
         async_send_unsubscribe(
-            std::move(params),
+            force_move(params),
             any(),
             packet_id,
-            std::move(props),
-            std::move(func)
+            force_move(props),
+            force_move(func)
         );
     }
 
@@ -8659,7 +8660,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901195
      */
     void async_pingreq(async_handler_t func = async_handler_t()) {
-        if (connected_ && mqtt_connected_) async_send_pingreq(std::move(func));
+        if (connected_ && mqtt_connected_) async_send_pingreq(force_move(func));
     }
 
     /**
@@ -8669,7 +8670,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901200
      */
     void async_pingresp(async_handler_t func = async_handler_t()) {
-        async_send_pingresp(std::move(func));
+        async_send_pingresp(force_move(func));
     }
 
     /**
@@ -8690,7 +8691,7 @@ public:
         optional<std::uint8_t> reason_code = nullopt,
         std::vector<v5::property_variant> props = {},
         async_handler_t func = async_handler_t()) {
-        async_send_auth(reason_code, std::move(props), std::move(func));
+        async_send_auth(reason_code, force_move(props), force_move(func));
     }
     /**
      * @brief Send connect packet.
@@ -8724,13 +8725,13 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         async_connect(
-            std::move(client_id),
-            std::move(user_name),
-            std::move(password),
-            std::move(w),
+            force_move(client_id),
+            force_move(user_name),
+            force_move(password),
+            force_move(w),
             keep_alive_sec,
             std::vector<v5::property_variant>{},
-            std::move(func));
+            force_move(func));
     }
 
     /**
@@ -8771,13 +8772,13 @@ public:
     ) {
         connect_requested_ = true;
         async_send_connect(
-            std::move(client_id),
-            std::move(user_name),
-            std::move(password),
-            std::move(w),
+            force_move(client_id),
+            force_move(user_name),
+            force_move(password),
+            force_move(w),
             keep_alive_sec,
-            std::move(props),
-            std::move(func));
+            force_move(props),
+            force_move(func));
     }
     /**
      * @brief Send connack packet. This function is for broker.
@@ -8792,7 +8793,7 @@ public:
         std::uint8_t reason_code,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_connack(session_present, reason_code, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_connack(session_present, reason_code, std::vector<v5::property_variant>{}, force_move(func));
     }
 
     /**
@@ -8813,7 +8814,7 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_connack(session_present, reason_code, std::move(props), std::move(func));
+        async_send_connack(session_present, reason_code, force_move(props), force_move(func));
     }
 
     /**
@@ -8827,7 +8828,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_puback(packet_id, nullopt, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_puback(packet_id, nullopt, std::vector<v5::property_variant>{}, force_move(func));
     }
 
     /**
@@ -8851,7 +8852,7 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_puback(packet_id, reason_code, std::move(props), std::move(func));
+        async_send_puback(packet_id, reason_code, force_move(props), force_move(func));
     }
 
     /**
@@ -8865,7 +8866,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrec(packet_id, nullopt, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_pubrec(packet_id, nullopt, std::vector<v5::property_variant>{}, force_move(func));
     }
 
     /**
@@ -8889,7 +8890,7 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrec(packet_id, reason_code, std::move(props), std::move(func));
+        async_send_pubrec(packet_id, reason_code, force_move(props), force_move(func));
     }
 
     /**
@@ -8903,7 +8904,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrel(packet_id, nullopt, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_pubrel(packet_id, nullopt, std::vector<v5::property_variant>{}, force_move(func));
     }
 
     /**
@@ -8920,7 +8921,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the async operation is finished.
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
     void async_pubrel(
@@ -8930,7 +8931,7 @@ public:
         async_handler_t func = async_handler_t(),
         any life_keeper = any()
     ) {
-        async_send_pubrel(packet_id, reason_code, std::move(props), std::move(func), std::move(life_keeper));
+        async_send_pubrel(packet_id, reason_code, force_move(props), force_move(func), force_move(life_keeper));
     }
 
     /**
@@ -8944,7 +8945,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubcomp(packet_id, nullopt, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_pubcomp(packet_id, nullopt, std::vector<v5::property_variant>{}, force_move(func));
     }
 
     /**
@@ -8968,7 +8969,7 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubcomp(packet_id, reason_code, std::move(props), std::move(func));
+        async_send_pubcomp(packet_id, reason_code, force_move(props), force_move(func));
     }
 
     /**
@@ -9011,7 +9012,7 @@ public:
         std::uint8_t reason,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_suback(std::vector<std::uint8_t>{}, packet_id, reason, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_suback(std::vector<std::uint8_t>{}, packet_id, reason, std::vector<v5::property_variant>{}, force_move(func));
     }
 
     /**
@@ -9035,7 +9036,7 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_suback(std::vector<std::uint8_t>{}, packet_id, reason, std::move(props), std::move(func));
+        async_send_suback(std::vector<std::uint8_t>{}, packet_id, reason, force_move(props), force_move(func));
     }
 
     /**
@@ -9054,7 +9055,7 @@ public:
         std::vector<std::uint8_t> reasons,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_suback(std::move(reasons), packet_id, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_suback(force_move(reasons), packet_id, std::vector<v5::property_variant>{}, force_move(func));
     }
 
     /**
@@ -9078,7 +9079,7 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_suback(std::move(reasons), packet_id, std::move(props), std::move(func));
+        async_send_suback(force_move(reasons), packet_id, force_move(props), force_move(func));
     }
 
     /**
@@ -9121,7 +9122,7 @@ public:
         std::uint8_t reason,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, reason, std::move(func));
+        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, reason, force_move(func));
     }
 
     /**
@@ -9145,7 +9146,7 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, reason, std::move(props), std::move(func));
+        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, reason, force_move(props), force_move(func));
     }
 
     /**
@@ -9164,7 +9165,7 @@ public:
         std::vector<std::uint8_t> reasons,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_unsuback(std::move(reasons), packet_id, std::vector<v5::property_variant>{}, std::move(func));
+        async_send_unsuback(force_move(reasons), packet_id, std::vector<v5::property_variant>{}, force_move(func));
     }
 
     /**
@@ -9188,7 +9189,7 @@ public:
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_unsuback(std::move(reasons), packet_id, std::move(props), std::move(func));
+        async_send_unsuback(force_move(reasons), packet_id, force_move(props), force_move(func));
     }
 
     /**
@@ -9202,7 +9203,7 @@ public:
     void async_unsuback(
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()) {
-        async_send_unsuback(packet_id, std::move(func));
+        async_send_unsuback(packet_id, force_move(func));
     }
 
     /**
@@ -9370,7 +9371,7 @@ public:
      *        This function should be called before connect.
      * @param msg         publish message.
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the stored message is sent.
+     *        An object that stays alive (but is moved with force_move()) until the stored message is sent.
      */
     void restore_serialized_message(basic_publish_message<PacketIdBytes> msg, any life_keeper) {
         auto packet_id = msg.packet_id();
@@ -9381,8 +9382,8 @@ public:
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
                                           : control_packet_type::pubrec,
-                std::move(msg),
-                std::move(life_keeper)
+                force_move(msg),
+                force_move(life_keeper)
             );
             // When client want to restore serialized messages,
             // endpoint might keep the message that has the same packet_id.
@@ -9395,8 +9396,8 @@ public:
                             packet_id,
                             qos == qos::at_least_once ? control_packet_type::puback
                                                       : control_packet_type::pubrec,
-                            std::move(msg),
-                            std::move(life_keeper)
+                            force_move(msg),
+                            force_move(life_keeper)
                         );
                     }
                 );
@@ -9416,7 +9417,7 @@ public:
             auto ret = store_.emplace(
                 packet_id,
                 control_packet_type::pubcomp,
-                std::move(msg)
+                force_move(msg)
             );
             // When client want to restore serialized messages,
             // endpoint might keep the message that has the same packet_id.
@@ -9428,7 +9429,7 @@ public:
                         e = store(
                             packet_id,
                             control_packet_type::pubcomp,
-                            std::move(msg)
+                            force_move(msg)
                         );
                     }
                 );
@@ -9475,7 +9476,7 @@ public:
      *        This function shouold be called before connect.
      * @param msg         publish message.
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the stored message is sent.
+     *        An object that stays alive (but is moved with force_move()) until the stored message is sent.
      */
     void restore_v5_serialized_message(v5::basic_publish_message<PacketIdBytes> msg, any life_keeper) {
         auto packet_id = msg.packet_id();
@@ -9486,8 +9487,8 @@ public:
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
                                           : control_packet_type::pubrec,
-                std::move(msg),
-                std::move(life_keeper)
+                force_move(msg),
+                force_move(life_keeper)
             );
             // When client want to restore serialized messages,
             // endpoint might keep the message that has the same packet_id.
@@ -9500,8 +9501,8 @@ public:
                             packet_id,
                             qos == qos::at_least_once ? control_packet_type::puback
                                                       : control_packet_type::pubrec,
-                            std::move(msg),
-                            std::move(life_keeper)
+                            force_move(msg),
+                            force_move(life_keeper)
                         );
                     }
                 );
@@ -9514,7 +9515,7 @@ public:
      *        This function shouold be called before connect.
      * @param msg pubrel message.
      * @param life_keeper
-     *        An object that stays alive (but is moved with std::move()) until the stored message is sent.
+     *        An object that stays alive (but is moved with force_move()) until the stored message is sent.
      */
     void restore_v5_serialized_message(v5::basic_pubrel_message<PacketIdBytes> msg, any life_keeper) {
         auto packet_id = msg.packet_id();
@@ -9523,8 +9524,8 @@ public:
             auto ret = store_.emplace(
                 packet_id,
                 control_packet_type::pubcomp,
-                std::move(msg),
-                std::move(life_keeper)
+                force_move(msg),
+                force_move(life_keeper)
             );
             // When client want to restore serialized messages,
             // endpoint might keep the message that has the same packet_id.
@@ -9536,7 +9537,7 @@ public:
                         e = store(
                             packet_id,
                             control_packet_type::pubcomp,
-                            std::move(msg)
+                            force_move(msg)
                         );
                     }
                 );
@@ -9567,13 +9568,13 @@ public:
     void set_mqtt_message_processed_handler(
         mqtt_message_processed_handler h = mqtt_message_processed_handler()) {
         if (h) {
-            h_mqtt_message_processed_ = std::move(h);
+            h_mqtt_message_processed_ = force_move(h);
         }
         else {
             h_mqtt_message_processed_ =
                 [this]
                 (async_handler_t func) {
-                    async_read_control_packet_type(std::move(func));
+                    async_read_control_packet_type(force_move(func));
             };
         }
     }
@@ -9592,7 +9593,7 @@ public:
      *        using set_auto_next_read(false);
      */
     void async_read_next_message(async_handler_t func) {
-        async_read_control_packet_type(std::move(func));
+        async_read_control_packet_type(force_move(func));
     }
 
      /**
@@ -9653,11 +9654,11 @@ protected:
         auto self = shared_from_this();
         socket_->async_read(
             as::buffer(buf_.data(), 1),
-            [this, self = std::move(self), func = std::move(func)](
+            [this, self = force_move(self), func = force_move(func)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred) {
                 if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
-                handle_control_packet_type(std::move(func), std::move(self));
+                handle_control_packet_type(force_move(func), force_move(self));
             }
         );
     }
@@ -9791,10 +9792,10 @@ private:
         params.reserve((sizeof...(args) + 2) / 2);
 
         async_send_subscribe(
-            std::move(params),
+            force_move(params),
             any(),
             packet_id,
-            std::move(topic_name),
+            force_move(topic_name),
             qos,
             std::forward<Args>(args)...
         );
@@ -9817,7 +9818,7 @@ private:
         params.reserve((sizeof...(args) + 2) / 2);
 
         async_send_subscribe(
-            std::move(params),
+            force_move(params),
             any(),
             packet_id,
             topic_name,
@@ -9843,10 +9844,10 @@ private:
         params.reserve((sizeof...(args) + 2) / 2);
 
         async_send_subscribe(
-            std::move(params),
+            force_move(params),
             any(),
             packet_id,
-            std::move(topic_name),
+            force_move(topic_name),
             qos,
             std::forward<Args>(args)...,
             async_handler_t()
@@ -9870,7 +9871,7 @@ private:
         params.reserve((sizeof...(args) + 2) / 2);
 
         async_send_subscribe(
-            std::move(params),
+            force_move(params),
             any(),
             packet_id,
             topic_name,
@@ -9896,10 +9897,10 @@ private:
         params.reserve(sizeof...(args));
 
         async_send_unsubscribe(
-            std::move(params),
+            force_move(params),
             any(),
             packet_id,
-            std::move(topic_name),
+            force_move(topic_name),
             std::forward<Args>(args)...
         );
     }
@@ -9920,7 +9921,7 @@ private:
         params.reserve(sizeof...(args));
 
         async_send_unsubscribe(
-            std::move(params),
+            force_move(params),
             any(),
             packet_id,
             topic_name,
@@ -9944,10 +9945,10 @@ private:
         params.reserve(sizeof...(args) + 1);
 
         async_send_unsubscribe(
-            std::move(params),
+            force_move(params),
             any(),
             packet_id,
-            std::move(topic_name),
+            force_move(topic_name),
             std::forward<Args>(args)...,
             async_handler_t()
         );
@@ -9969,7 +9970,7 @@ private:
         params.reserve(sizeof...(args) + 1);
 
         async_send_unsubscribe(
-            std::move(params),
+            force_move(params),
             any(),
             packet_id,
             topic_name,
@@ -10066,8 +10067,8 @@ private:
             any life_keeper = any())
             : packet_id_(id)
             , expected_control_packet_type_(type)
-            , smv_(std::move(smv))
-            , life_keeper_(std::move(life_keeper)) {}
+            , smv_(force_move(smv))
+            , life_keeper_(force_move(life_keeper)) {}
         packet_id_t packet_id() const { return packet_id_; }
         std::uint8_t expected_control_packet_type() const { return expected_control_packet_type_; }
         basic_message_variant<PacketIdBytes> message() const {
@@ -10119,11 +10120,11 @@ private:
         remaining_length_multiplier_ = 1;
         socket_->async_read(
             as::buffer(buf_.data(), 1),
-            [this, self = std::move(self), func = std::move(func)](
+            [this, self = force_move(self), func = force_move(func)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred){
                 if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
-                handle_remaining_length(std::move(func), std::move(self));
+                handle_remaining_length(force_move(func), force_move(self));
             }
         );
     }
@@ -10143,7 +10144,7 @@ private:
         if (buf_.front() & variable_length_continue_flag) {
             socket_->async_read(
                 as::buffer(buf_.data(), 1),
-                [self = std::move(self), func = std::move(func)](
+                [self = force_move(self), func = force_move(func)](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred){
                     if (self->handle_close_or_error(ec)) {
@@ -10155,7 +10156,7 @@ private:
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
-                    self->handle_remaining_length(std::move(func), std::move(self));
+                    self->handle_remaining_length(force_move(func), force_move(self));
                 }
             );
         }
@@ -10229,7 +10230,7 @@ private:
                 return;
             }
 
-            process_payload(std::move(func), std::move(self));
+            process_payload(force_move(func), force_move(self));
         }
     }
 
@@ -10237,71 +10238,71 @@ private:
         auto control_packet_type = get_control_packet_type(fixed_header_);
         switch (control_packet_type) {
         case control_packet_type::connect:
-            process_connect(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            process_connect(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::connack:
-            process_connack(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            process_connack(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::publish:
             if (mqtt_connected_) {
-                process_publish(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+                process_publish(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::puback:
             if (mqtt_connected_) {
-                process_puback(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+                process_puback(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::pubrec:
             if (mqtt_connected_) {
-                process_pubrec(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+                process_pubrec(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::pubrel:
             if (mqtt_connected_) {
-                process_pubrel(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+                process_pubrel(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::pubcomp:
             if (mqtt_connected_) {
-                process_pubcomp(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+                process_pubcomp(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::subscribe:
             if (mqtt_connected_) {
-                process_subscribe(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+                process_subscribe(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::suback:
             if (mqtt_connected_) {
-                process_suback(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+                process_suback(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::unsubscribe:
             if (mqtt_connected_) {
-                process_unsubscribe(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+                process_unsubscribe(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::unsuback:
             if (mqtt_connected_) {
-                process_unsuback(std::move(func), remaining_length_ < packet_bulk_read_limit_, std::move(self));
+                process_unsuback(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::pingreq:
             if (mqtt_connected_) {
-                process_pingreq(std::move(func));
+                process_pingreq(force_move(func));
             }
             break;
         case control_packet_type::pingresp:
             if (mqtt_connected_) {
-                process_pingresp(std::move(func));
+                process_pingresp(force_move(func));
             }
             break;
         case control_packet_type::disconnect:
-            process_disconnect(func, remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            process_disconnect(func, remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::auth:
-            process_auth(func, remaining_length_ < packet_bulk_read_limit_, std::move(self));
+            process_auth(func, remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         default:
             break;
@@ -10329,19 +10330,19 @@ private:
                 as::buffer(ptr, size),
                 [
                     this,
-                    self = std::move(self),
-                    func = std::move(func),
-                    handler = std::move(handler),
-                    buf = buffer(string_view(ptr, size), std::move(spa))
+                    self = force_move(self),
+                    func = force_move(func),
+                    handler = force_move(handler),
+                    buf = buffer(string_view(ptr, size), force_move(spa))
                 ]
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, func, bytes_transferred, buf.size())) return;
                     handler(
-                        std::move(buf),
+                        force_move(buf),
                         buffer(),
-                        std::move(func),
-                        std::move(self)
+                        force_move(func),
+                        force_move(self)
                     );
                 }
             );
@@ -10353,18 +10354,18 @@ private:
             }
             socket_->post(
                 [
-                    self = std::move(self),
-                    func = std::move(func),
-                    buf = std::move(buf),
+                    self = force_move(self),
+                    func = force_move(func),
+                    buf = force_move(buf),
                     size,
-                    handler = std::move(handler)
+                    handler = force_move(handler)
                 ]
                 () mutable {
                     handler(
                         buf.substr(0, size),
                         buf.substr(size),
-                        std::move(func),
-                        std::move(self)
+                        force_move(func),
+                        force_move(self)
                     );
                 }
             );
@@ -10390,9 +10391,9 @@ private:
                 as::buffer(buf_.data(), Bytes),
                 [
                     this,
-                    self = std::move(self),
-                    func = std::move(func),
-                    handler = std::move(handler)
+                    self = force_move(self),
+                    func = force_move(func),
+                    handler = force_move(handler)
                 ]
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) mutable {
@@ -10403,8 +10404,8 @@ private:
                             std::next(buf_.data(), boost::numeric_cast<buffer::difference_type>(Bytes))
                         ),
                         buffer(),
-                        std::move(func),
-                        std::move(self)
+                        force_move(func),
+                        force_move(self)
                     );
                 }
             );
@@ -10412,10 +10413,10 @@ private:
         else {
             socket_->post(
                [
-                    self = std::move(self),
-                    func = std::move(func),
-                    buf = std::move(buf),
-                    handler = std::move(handler)
+                    self = force_move(self),
+                    func = force_move(func),
+                    buf = force_move(buf),
+                    handler = force_move(handler)
                ]
                () mutable {
                     auto packet_id =
@@ -10426,9 +10427,9 @@ private:
                     buf.remove_prefix(Bytes);
                     handler(
                         packet_id,
-                        std::move(buf),
-                        std::move(func),
-                        std::move(self)
+                        force_move(buf),
+                        force_move(func),
+                        force_move(self)
                     );
                }
             );
@@ -10443,12 +10444,12 @@ private:
         this_type_sp self
     ) {
         process_variable_length_impl(
-            std::move(func),
-            std::move(buf),
-            std::move(handler),
+            force_move(func),
+            force_move(buf),
+            force_move(handler),
             0,
             1,
-            std::move(self)
+            force_move(self)
         );
     }
 
@@ -10487,21 +10488,21 @@ private:
                     BOOST_ASSERT(!buf.empty());
                     buf.remove_prefix(1);
                     process_variable_length_impl(
-                        std::move(func),
-                        std::move(buf),
-                        std::move(handler),
+                        force_move(func),
+                        force_move(buf),
+                        force_move(handler),
                         size,
                         multiplier,
-                        std::move(self)
+                        force_move(self)
                     );
                 }
                 else {
                     buf.remove_prefix(1);
                     handler(
                         size,
-                        std::move(buf),
-                        std::move(func),
-                        std::move(self)
+                        force_move(buf),
+                        force_move(func),
+                        force_move(self)
                     );
                 }
             };
@@ -10511,23 +10512,23 @@ private:
                 as::buffer(buf_.data(), 1),
                 [
                     this,
-                    self = std::move(self),
-                    func = std::move(func),
-                    handler = std::move(handler),
+                    self = force_move(self),
+                    func = force_move(func),
+                    handler = force_move(handler),
                     size,
                     multiplier,
-                    proc = std::move(proc)
+                    proc = force_move(proc)
                 ]
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
                     proc(
-                        std::move(func),
+                        force_move(func),
                         buffer(string_view(buf_.data(), 1)), // buf_'s lifetime is handled by `self`
-                        std::move(handler),
+                        force_move(handler),
                         size,
                         multiplier,
-                        std::move(self)
+                        force_move(self)
                     );
                 }
             );
@@ -10535,22 +10536,22 @@ private:
         else {
             socket_->post(
                 [
-                    func = std::move(func),
-                    handler = std::move(handler),
-                    buf = std::move(buf),
+                    func = force_move(func),
+                    handler = force_move(handler),
+                    buf = force_move(buf),
                     size,
                     multiplier,
-                    proc = std::move(proc),
-                    self = std::move(self)
+                    proc = force_move(proc),
+                    self = force_move(self)
                 ]
                 () mutable {
                     proc(
-                        std::move(func),
-                        std::move(buf),
-                        std::move(handler),
+                        force_move(func),
+                        force_move(buf),
+                        force_move(handler),
                         size,
                         multiplier,
-                        std::move(self)
+                        force_move(self)
                     );
                 }
             );
@@ -10564,15 +10565,15 @@ private:
         this_type_sp self
     ) {
         process_fixed_length<sizeof(packet_id_t)>(
-            std::move(func),
-            std::move(buf),
+            force_move(func),
+            force_move(buf),
             [
-                handler = std::move(handler)
+                handler = force_move(handler)
             ]
             (std::size_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                handler(static_cast<packet_id_t>(packet_id), std::move(buf), std::move(func), std::move(self));
+                handler(static_cast<packet_id_t>(packet_id), force_move(buf), force_move(func), force_move(self));
             },
-            std::move(self)
+            force_move(self)
         );
     }
 
@@ -10587,11 +10588,11 @@ private:
             return;
         }
         process_fixed_length<2>(
-            std::move(func),
-            std::move(buf),
+            force_move(func),
+            force_move(buf),
             [
                 this,
-                handler = std::move(handler)
+                handler = force_move(handler)
             ]
             (std::size_t size,
              buffer buf,
@@ -10602,14 +10603,14 @@ private:
                     return;
                 }
                 process_nbytes(
-                    std::move(func),
-                    std::move(buf),
+                    force_move(func),
+                    force_move(buf),
                     size,
-                    std::move(handler),
-                    std::move(self)
+                    force_move(handler),
+                    force_move(self)
                 );
             },
-            std::move(self)
+            force_move(self)
         );
     }
 
@@ -10620,18 +10621,18 @@ private:
         this_type_sp self
     ) {
         process_binary(
-            std::move(func),
-            std::move(buf),
-            [this, handler = std::move(handler)]
+            force_move(func),
+            force_move(buf),
+            [this, handler = force_move(handler)]
             (buffer str, buffer buf, async_handler_t func, this_type_sp self) mutable {
                 auto r = utf8string::validate_contents(str);
                 if (r != utf8string::validation::well_formed) {
                     call_protocol_error_handlers(func);
                     return;
                 }
-                handler(std::move(str), std::move(buf), std::move(func), std::move(self));
+                handler(force_move(str), force_move(buf), force_move(func), force_move(self));
             },
-            std::move(self)
+            force_move(self)
         );
     }
 
@@ -10643,11 +10644,11 @@ private:
         this_type_sp self
     ) {
         process_variable_length(
-            std::move(func),
-            std::move(buf),
+            force_move(func),
+            force_move(buf),
             [
                 this,
-                handler = std::move(handler)
+                handler = force_move(handler)
             ]
             (std::size_t property_length, buffer buf, async_handler_t func, this_type_sp self) mutable {
                 if (property_length > remaining_length_) {
@@ -10655,7 +10656,7 @@ private:
                     return;
                 }
                 if (property_length == 0) {
-                    handler(std::vector<v5::property_variant>(), std::move(buf), std::move(func), std::move(self));
+                    handler(std::vector<v5::property_variant>(), force_move(buf), force_move(func), force_move(self));
                     return;
                 }
 
@@ -10672,7 +10673,7 @@ private:
                                 auto ptr = spa.get();
                                 return
                                     {
-                                        std::move(spa),
+                                        force_move(spa),
                                         ptr,
                                         property_length
                                     };
@@ -10688,9 +10689,9 @@ private:
                         as::buffer(result.address, result.len),
                         [
                             this,
-                            self = std::move(self),
-                            func = std::move(func),
-                            handler = std::move(handler),
+                            self = force_move(self),
+                            func = force_move(func),
+                            handler = force_move(handler),
                             property_length,
                             result
                         ]
@@ -10698,12 +10699,12 @@ private:
                          std::size_t bytes_transferred) mutable {
                             if (!check_error_and_transferred_length(ec, func, bytes_transferred, result.len)) return;
                             process_property_id(
-                                std::move(func),
+                                force_move(func),
                                 buffer(string_view(result.address, result.len), result.spa),
                                 property_length,
                                 std::vector<v5::property_variant>(),
-                                std::move(handler),
-                                std::move(self)
+                                force_move(handler),
+                                force_move(self)
                             );
                         }
                     );
@@ -10712,26 +10713,26 @@ private:
                     socket_->post(
                         [
                             this,
-                            self = std::move(self),
-                            func = std::move(func),
-                            buf = std::move(buf),
-                            handler = std::move(handler),
+                            self = force_move(self),
+                            func = force_move(func),
+                            buf = force_move(buf),
+                            handler = force_move(handler),
                             property_length
                         ]
                         () mutable {
                             process_property_id(
-                                std::move(func),
-                                std::move(buf),
+                                force_move(func),
+                                force_move(buf),
                                 property_length,
                                 std::vector<v5::property_variant>(),
-                                std::move(handler),
-                                std::move(self)
+                                force_move(handler),
+                                force_move(self)
                             );
                         }
                     );
                 }
             },
-            std::move(self)
+            force_move(self)
         );
     }
 
@@ -10745,7 +10746,7 @@ private:
     ) {
 
         if (property_length_rest == 0) {
-            handler(std::move(props), std::move(buf), std::move(func), std::move(self));
+            handler(force_move(props), force_move(buf), force_move(func), force_move(self));
             return;
         }
 
@@ -10755,23 +10756,23 @@ private:
                 as::buffer(buf_.data(), 1),
                 [
                     this,
-                    self = std::move(self),
-                    func = std::move(func),
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    self = force_move(self),
+                    func = force_move(func),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest
                 ]
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
                     process_property_body(
-                        std::move(func),
+                        force_move(func),
                         buffer(),
                         static_cast<v5::property::id>(buf_.front()),
                         property_length_rest - 1,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 }
             );
@@ -10780,24 +10781,24 @@ private:
             socket_->post(
                 [
                     this,
-                    self = std::move(self),
-                    func = std::move(func),
-                    buf = std::move(buf),
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    self = force_move(self),
+                    func = force_move(func),
+                    buf = force_move(buf),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest
                 ]
                 () mutable {
                     auto id = static_cast<v5::property::id>(buf.front());
                     buf.remove_prefix(1);
                     process_property_body(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         id,
                         property_length_rest - 1,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 }
             );
@@ -10829,13 +10830,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -10843,15 +10844,15 @@ private:
                         v5::property::payload_format_indicator(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::message_expiry_interval: {
@@ -10861,13 +10862,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -10875,106 +10876,106 @@ private:
                         v5::property::message_expiry_interval(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::content_type: {
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
-                        v5::property::content_type(std::move(body), true)
+                        v5::property::content_type(force_move(body), true)
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::response_topic: {
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
-                        v5::property::response_topic(std::move(body), true)
+                        v5::property::response_topic(force_move(body), true)
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::correlation_data: {
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
-                        v5::property::correlation_data(std::move(body), true)
+                        v5::property::correlation_data(force_move(body), true)
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::subscription_identifier: {
             process_variable_length(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest,
                     remaining_length_before = remaining_length_
                 ]
@@ -10985,15 +10986,15 @@ private:
                         v5::property::subscription_identifier(size)
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::session_expiry_interval: {
@@ -11003,13 +11004,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11017,42 +11018,42 @@ private:
                         v5::property::session_expiry_interval(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::assigned_client_identifier: {
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
-                        v5::property::assigned_client_identifier(std::move(body), true)
+                        v5::property::assigned_client_identifier(force_move(body), true)
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
 
         } break;
@@ -11063,13 +11064,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11077,69 +11078,69 @@ private:
                         v5::property::server_keep_alive(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::authentication_method: {
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
-                        v5::property::authentication_method(std::move(body), true)
+                        v5::property::authentication_method(force_move(body), true)
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::authentication_data: {
             process_binary(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
-                        v5::property::authentication_data(std::move(body))
+                        v5::property::authentication_data(force_move(body))
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::request_problem_information: {
@@ -11149,13 +11150,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11163,15 +11164,15 @@ private:
                         v5::property::request_problem_information(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::will_delay_interval: {
@@ -11181,13 +11182,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11195,15 +11196,15 @@ private:
                         v5::property::will_delay_interval(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::request_response_information: {
@@ -11213,13 +11214,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11227,96 +11228,96 @@ private:
                         v5::property::request_response_information(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::response_information: {
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
-                        v5::property::response_information(std::move(body), true)
+                        v5::property::response_information(force_move(body), true)
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::server_reference: {
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
-                        v5::property::server_reference(std::move(body), true)
+                        v5::property::server_reference(force_move(body), true)
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::reason_string: {
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
-                        v5::property::reason_string(std::move(body), true)
+                        v5::property::reason_string(force_move(body), true)
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::receive_maximum: {
@@ -11326,13 +11327,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11340,15 +11341,15 @@ private:
                         v5::property::receive_maximum(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::topic_alias_maximum: {
@@ -11358,13 +11359,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11372,15 +11373,15 @@ private:
                         v5::property::topic_alias_maximum(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::topic_alias: {
@@ -11390,13 +11391,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11404,15 +11405,15 @@ private:
                         v5::property::topic_alias(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::maximum_qos: {
@@ -11422,13 +11423,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11436,15 +11437,15 @@ private:
                         v5::property::maximum_qos(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::retain_available: {
@@ -11454,13 +11455,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11468,62 +11469,62 @@ private:
                         v5::property::retain_available(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::user_property: {
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     property_length_rest
                 ]
                 (buffer key, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - key.size();
                     process_string(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [
                             this,
-                            props = std::move(props),
-                            handler = std::move(handler),
-                            key = std::move(key),
+                            props = force_move(props),
+                            handler = force_move(handler),
+                            key = force_move(key),
                             property_length_rest = rest
                         ]
                         (buffer val, buffer buf, async_handler_t func, this_type_sp self) mutable {
                             auto rest = property_length_rest - length_bytes - val.size();
                             props.emplace_back(
                                 v5::property::user_property(
-                                    std::move(key),
-                                    std::move(val),
+                                    force_move(key),
+                                    force_move(val),
                                     true,
                                     true
                                 )
                             );
                             process_property_id(
-                                std::move(func),
-                                std::move(buf),
+                                force_move(func),
+                                force_move(buf),
                                 rest,
-                                std::move(props),
-                                std::move(handler),
-                                std::move(self)
+                                force_move(props),
+                                force_move(handler),
+                                force_move(self)
                             );
                         },
-                        std::move(self)
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::maximum_packet_size: {
@@ -11533,13 +11534,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11547,15 +11548,15 @@ private:
                         v5::property::maximum_packet_size(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::wildcard_subscription_available: {
@@ -11565,13 +11566,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11579,15 +11580,15 @@ private:
                         v5::property::wildcard_subscription_available(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::subscription_identifier_available: {
@@ -11597,13 +11598,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11611,15 +11612,15 @@ private:
                         v5::property::subscription_identifier_available(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         case v5::property::id::shared_subscription_available: {
@@ -11629,13 +11630,13 @@ private:
                 return;
             }
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 len,
                 [
                     this,
-                    props = std::move(props),
-                    handler = std::move(handler),
+                    props = force_move(props),
+                    handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
@@ -11643,15 +11644,15 @@ private:
                         v5::property::shared_subscription_available(body.begin(), body.end())
                     );
                     process_property_id(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         rest,
-                        std::move(props),
-                        std::move(handler),
-                        std::move(self)
+                        force_move(props),
+                        force_move(handler),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
         } break;
         }
@@ -11677,21 +11678,21 @@ private:
                 as::buffer(ptr, remaining_length_),
                 [
                     this,
-                    func = std::move(func),
-                    buf = buffer(string_view(ptr, remaining_length_), std::move(spa)),
+                    func = force_move(func),
+                    buf = buffer(string_view(ptr, remaining_length_), force_move(spa)),
                     next_func = std::forward<NextFunc>(next_func),
                     next_phase,
                     info = std::forward<Info>(info),
-                    self = std::move(self)
+                    self = force_move(self)
                 ]
                 (boost::system::error_code const& ec, std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, func, bytes_transferred, remaining_length_)) return;
                     (this->*next_func)(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         next_phase,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 }
             );
@@ -11700,11 +11701,11 @@ private:
 
         if (header_len == 0) {
             (this->*next_func)(
-                std::move(func),
+                force_move(func),
                 buffer(),
                 next_phase,
-                std::move(info),
-                std::move(self)
+                force_move(info),
+                force_move(self)
             );
             return;
         }
@@ -11713,22 +11714,22 @@ private:
             as::buffer(buf_.data(), header_len),
             [
                 this,
-                func = std::move(func),
+                func = force_move(func),
                 header_len,
                 next_func = std::forward<NextFunc>(next_func),
                 next_phase,
                 info = std::forward<Info>(info),
-                self = std::move(self)
+                self = force_move(self)
             ]
             (boost::system::error_code const& ec,
              std::size_t bytes_transferred) mutable {
                 if (!check_error_and_transferred_length(ec, func, bytes_transferred, header_len)) return;
                 (this->*next_func)(
-                    std::move(func),
+                    force_move(func),
                     buffer(string_view(buf_.data(), header_len)),
                     next_phase,
-                    std::move(info),
-                    std::move(self)
+                    force_move(info),
+                    force_move(self)
                 );
             }
         );
@@ -11780,13 +11781,13 @@ private:
         info.header_len = header_len;
 
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             header_len,
             &this_type::process_connect_impl,
             connect_phase::header,
-            std::move(info),
-            std::move(self)
+            force_move(info),
+            force_move(self)
         );
     }
 
@@ -11838,25 +11839,25 @@ private:
 
             buf.remove_prefix(info.header_len); // consume buffer
             process_connect_impl(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [&] {
                     if (version_ == protocol_version::v5) {
                         return connect_phase::properties;
                     }
                     return connect_phase::client_id;
                 } (),
-                std::move(info),
-                std::move(self)
+                force_move(info),
+                force_move(self)
             );
         } break;
         case connect_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (
                     std::vector<v5::property_variant> props,
@@ -11864,32 +11865,32 @@ private:
                     async_handler_t func,
                     this_type_sp self
                 ) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_connect_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         connect_phase::client_id,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case connect_phase::client_id:
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer client_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.client_id = std::move(client_id);
+                    info.client_id = force_move(client_id);
                     auto connect_flag = info.connect_flag;
                     process_connect_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [&] {
                             if (connect_flags::has_will_flag(connect_flag)) {
                                 return connect_phase::will;
@@ -11902,11 +11903,11 @@ private:
                             }
                             return connect_phase::finish;
                         } (),
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case connect_phase::will: {
@@ -11922,27 +11923,27 @@ private:
                     this_type_sp&& self
                 ) mutable {
                     process_string(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [
                             this,
-                            info = std::move(info)
+                            info = force_move(info)
                         ]
                         (buffer will_topic, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                            info.will_topic = std::move(will_topic);
+                            info.will_topic = force_move(will_topic);
                             process_binary(
-                                std::move(func),
-                                std::move(buf),
+                                force_move(func),
+                                force_move(buf),
                                 [
                                     this,
-                                    info = std::move(info)
+                                    info = force_move(info)
                                 ]
                                 (buffer will_payload, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                                    info.will_payload = std::move(will_payload);
+                                    info.will_payload = force_move(will_payload);
                                     auto connect_flag = info.connect_flag;
                                     process_connect_impl(
-                                        std::move(func),
-                                        std::move(buf),
+                                        force_move(func),
+                                        force_move(buf),
                                         [&] {
                                             if (connect_flags::has_user_name_flag(connect_flag)) {
                                                 return connect_phase::user_name;
@@ -11952,91 +11953,91 @@ private:
                                             }
                                             return connect_phase::finish;
                                         } (),
-                                        std::move(info),
-                                        std::move(self)
+                                        force_move(info),
+                                        force_move(self)
                                     );
                                 },
-                                std::move(self)
+                                force_move(self)
                             );
                         },
-                        std::move(self)
+                        force_move(self)
                     );
                 };
 
             if (version_ == protocol_version::v5) {
                 process_properties(
-                    std::move(func),
-                    std::move(buf),
+                    force_move(func),
+                    force_move(buf),
                     [
-                        info = std::move(info),
+                        info = force_move(info),
                         topic_message_proc
                     ]
                     (std::vector<v5::property_variant> will_props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                        info.will_props = std::move(will_props);
+                        info.will_props = force_move(will_props);
                         topic_message_proc(
-                            std::move(func),
-                            std::move(buf),
-                            std::move(info),
-                            std::move(self)
+                            force_move(func),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
                         );
                     },
-                    std::move(self)
+                    force_move(self)
                 );
                 return;
             }
             topic_message_proc(
-                std::move(func),
-                std::move(buf),
-                std::move(info),
-                std::move(self)
+                force_move(func),
+                force_move(buf),
+                force_move(info),
+                force_move(self)
             );
         } break;
         case connect_phase::user_name:
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer user_name, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.user_name = std::move(user_name);
+                    info.user_name = force_move(user_name);
                     auto connect_flag = info.connect_flag;
                     process_connect_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [&] {
                             if (connect_flags::has_password_flag(connect_flag)) {
                                 return connect_phase::password;
                             }
                             return connect_phase::finish;
                         } (),
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case connect_phase::password:
             process_binary(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer password, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.password = std::move(password);
+                    info.password = force_move(password);
                     process_connect_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         connect_phase::finish,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case connect_phase::finish:
@@ -12045,15 +12046,15 @@ private:
             case protocol_version::v3_1_1:
                 if (h_connect_) {
                     if (!h_connect_(
-                            std::move(info.client_id),
-                            std::move(info.user_name),
-                            std::move(info.password),
+                            force_move(info.client_id),
+                            force_move(info.user_name),
+                            force_move(info.password),
                             [&] () -> optional<will> {
                                 if (connect_flags::has_will_flag(info.connect_flag)) {
                                     return
                                         will(
-                                            std::move(info.will_topic),
-                                            std::move(info.will_payload),
+                                            force_move(info.will_topic),
+                                            force_move(info.will_payload),
                                             connect_flags::has_will_retain(info.connect_flag),
                                             connect_flags::will_qos(info.connect_flag)
                                         );
@@ -12067,36 +12068,36 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             case protocol_version::v5:
                 if (h_v5_connect_) {
                     if (!h_v5_connect_(
-                            std::move(info.client_id),
-                            std::move(info.user_name),
-                            std::move(info.password),
+                            force_move(info.client_id),
+                            force_move(info.user_name),
+                            force_move(info.password),
                             [&] () -> optional<will> {
                                 if (connect_flags::has_will_flag(info.connect_flag)) {
                                     return
                                         will(
-                                            std::move(info.will_topic),
-                                            std::move(info.will_payload),
+                                            force_move(info.will_topic),
+                                            force_move(info.will_payload),
                                             connect_flags::has_will_retain(info.connect_flag),
                                             connect_flags::will_qos(info.connect_flag),
-                                            std::move(info.will_props)
+                                            force_move(info.will_props)
                                         );
                                 }
                                 return nullopt;
                             } (),
                             clean_session_,
                             info.keep_alive,
-                            std::move(info.props)
+                            force_move(info.props)
                         )
                     ) {
                         return;
                     }
                 }
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -12137,13 +12138,13 @@ private:
         connack_info info;
         info.header_len = header_len;
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             header_len,
             &this_type::process_connack_impl,
             connack_phase::header,
-            std::move(info),
-            std::move(self)
+            force_move(info),
+            force_move(self)
         );
     }
 
@@ -12161,37 +12162,37 @@ private:
 
             buf.remove_prefix(info.header_len); // consume buffer
             process_connack_impl(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [&] {
                     if (version_ == protocol_version::v5) {
                         return connack_phase::properties;
                     }
                     return connack_phase::finish;
                 } (),
-                std::move(info),
-                std::move(self)
+                force_move(info),
+                force_move(self)
             );
             break;
         case connack_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_connack_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         connack_phase::finish,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case connack_phase::finish: {
@@ -12213,15 +12214,15 @@ private:
                                 return;
                             }
                         }
-                        h_mqtt_message_processed_(std::move(func));
+                        h_mqtt_message_processed_(force_move(func));
                         break;
                     case protocol_version::v5:
                         if (h_v5_connack_) {
-                            if (!h_v5_connack_(info.session_present, info.reason_code, std::move(info.props))) {
+                            if (!h_v5_connack_(info.session_present, info.reason_code, force_move(info.props))) {
                                 return;
                             }
                         }
-                        h_mqtt_message_processed_(std::move(func));
+                        h_mqtt_message_processed_(force_move(func));
                         break;
                     default:
                         BOOST_ASSERT(false);
@@ -12249,25 +12250,25 @@ private:
                         auto async_connack_proc =
                             [
                                 this,
-                                self = std::move(self),
-                                func = std::move(func),
-                                connack_proc = std::move(connack_proc),
-                                org = std::move(org),
-                                info = std::move(info)
+                                self = force_move(self),
+                                func = force_move(func),
+                                connack_proc = force_move(connack_proc),
+                                org = force_move(org),
+                                info = force_move(info)
                             ]
                             () mutable {
                                 // All stored messages are sent, then restore the original handler
                                 // and do the connack process. If it returns true, read the next mqtt message.
-                                set_mqtt_message_processed_handler(std::move(org));
-                                connack_proc(std::move(func), std::move(info));
+                                set_mqtt_message_processed_handler(force_move(org));
+                                connack_proc(force_move(func), force_move(info));
                             };
-                        async_send_store(std::move(async_connack_proc));
+                        async_send_store(force_move(async_connack_proc));
                         return;
                     }
                     send_store();
                 }
             }
-            connack_proc(std::move(func), std::move(info));
+            connack_proc(force_move(func), force_move(info));
         } break;
         }
     }
@@ -12301,13 +12302,13 @@ private:
         }
 
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             0,
             &this_type::process_publish_impl,
             publish_phase::topic_name,
             publish_info(),
-            std::move(self)
+            force_move(self)
         );
     }
 
@@ -12321,14 +12322,14 @@ private:
         switch (phase) {
         case publish_phase::topic_name:
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer topic_name, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.topic_name = std::move(topic_name);
+                    info.topic_name = force_move(topic_name);
                     auto qos = publish::get_qos(fixed_header_);
                     if (qos != qos::at_most_once &&
                         qos != qos::at_least_once &&
@@ -12337,8 +12338,8 @@ private:
                         return;
                     }
                     process_publish_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [&] {
                             if (qos == qos::at_most_once) {
                                 if (version_ == protocol_version::v5) {
@@ -12348,69 +12349,69 @@ private:
                             }
                             return publish_phase::packet_id;
                         } (),
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case publish_phase::packet_id:
             process_packet_id(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_publish_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [&] {
                             if (version_ == protocol_version::v5) {
                                 return publish_phase::properties;
                             }
                             return publish_phase::payload;
                         } (),
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
 
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case publish_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_publish_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         publish_phase::payload,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case publish_phase::payload:
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 remaining_length_,
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer payload, buffer /*buf*/, async_handler_t func, this_type_sp /*self*/) mutable {
                     auto handler_call =
@@ -12418,26 +12419,26 @@ private:
                             switch (version_) {
                             case protocol_version::v3_1_1:
                                 if (h_publish_) {
-                                    if (!h_publish_(fixed_header_, info.packet_id, std::move(info.topic_name), std::move(payload))) {
+                                    if (!h_publish_(fixed_header_, info.packet_id, force_move(info.topic_name), force_move(payload))) {
                                         return false;
                                     }
                                 }
-                                h_mqtt_message_processed_(std::move(func));
+                                h_mqtt_message_processed_(force_move(func));
                                 break;
                             case protocol_version::v5:
                                 if (h_v5_publish_) {
                                     if (!h_v5_publish_(
                                             fixed_header_,
                                             info.packet_id,
-                                            std::move(info.topic_name),
-                                            std::move(payload),
-                                            std::move(info.props)
+                                            force_move(info.topic_name),
+                                            force_move(payload),
+                                            force_move(info.props)
                                         )
                                     ) {
                                         return false;
                                     }
                                 }
-                                h_mqtt_message_processed_(std::move(func));
+                                h_mqtt_message_processed_(force_move(func));
                                 break;
                             default:
                                 BOOST_ASSERT(false);
@@ -12493,7 +12494,7 @@ private:
                         break;
                     }
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         }
@@ -12529,13 +12530,13 @@ private:
 
         puback_info info;
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             header_len,
             &this_type::process_puback_impl,
             puback_phase::packet_id,
-            std::move(info),
-            std::move(self)
+            force_move(info),
+            force_move(self)
         );
     }
 
@@ -12549,17 +12550,17 @@ private:
         switch (phase) {
         case puback_phase::packet_id:
             process_packet_id(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_puback_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
                                 info.reason_code = v5::reason_code::success;
@@ -12567,54 +12568,54 @@ private:
                             }
                             return puback_phase::reason_code;
                         } (),
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case puback_phase::reason_code:
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 1, // reason_code
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.reason_code = static_cast<std::uint8_t>(body[0]);
                     process_puback_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         puback_phase::properties,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case puback_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_puback_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         puback_phase::finish,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case puback_phase::finish:
@@ -12633,15 +12634,15 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             case protocol_version::v5:
                 if (h_v5_puback_) {
-                    if (!h_v5_puback_(info.packet_id, info.reason_code, std::move(info.props))) {
+                    if (!h_v5_puback_(info.packet_id, info.reason_code, force_move(info.props))) {
                         return;
                     }
                 }
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -12680,13 +12681,13 @@ private:
 
         pubrec_info info;
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             header_len,
             &this_type::process_pubrec_impl,
             pubrec_phase::packet_id,
-            std::move(info),
-            std::move(self)
+            force_move(info),
+            force_move(self)
         );
     }
 
@@ -12700,17 +12701,17 @@ private:
         switch (phase) {
         case pubrec_phase::packet_id:
             process_packet_id(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_pubrec_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
                                 info.reason_code = v5::reason_code::success;
@@ -12718,54 +12719,54 @@ private:
                             }
                             return pubrec_phase::reason_code;
                         } (),
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case pubrec_phase::reason_code:
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 1, // reason_code
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.reason_code = static_cast<std::uint8_t>(body[0]);
                     process_pubrec_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         pubrec_phase::properties,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case pubrec_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_pubrec_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         pubrec_phase::finish,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case pubrec_phase::finish: {
@@ -12811,16 +12812,16 @@ private:
                     }
                 }
                 res();
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             case protocol_version::v5:
                 if (h_v5_pubrec_) {
-                    if (!h_v5_pubrec_(info.packet_id, info.reason_code, std::move(info.props))) {
+                    if (!h_v5_pubrec_(info.packet_id, info.reason_code, force_move(info.props))) {
                         return;
                     }
                 }
                 res();
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -12859,13 +12860,13 @@ private:
 
         pubrel_info info;
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             header_len,
             &this_type::process_pubrel_impl,
             pubrel_phase::packet_id,
-            std::move(info),
-            std::move(self)
+            force_move(info),
+            force_move(self)
         );
     }
 
@@ -12879,17 +12880,17 @@ private:
         switch (phase) {
         case pubrel_phase::packet_id:
             process_packet_id(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_pubrel_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
                                 info.reason_code = v5::reason_code::success;
@@ -12897,54 +12898,54 @@ private:
                             }
                             return pubrel_phase::reason_code;
                         } (),
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case pubrel_phase::reason_code:
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 1, // reason_code
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.reason_code = static_cast<std::uint8_t>(body[0]);
                     process_pubrel_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         pubrel_phase::properties,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case pubrel_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_pubrel_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         pubrel_phase::finish,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case pubrel_phase::finish: {
@@ -12977,16 +12978,16 @@ private:
                     }
                 }
                 res();
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             case protocol_version::v5:
                 if (h_v5_pubrel_) {
-                    if (!h_v5_pubrel_(info.packet_id, info.reason_code, std::move(info.props))) {
+                    if (!h_v5_pubrel_(info.packet_id, info.reason_code, force_move(info.props))) {
                         return;
                     }
                 }
                 res();
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -13025,13 +13026,13 @@ private:
 
         pubcomp_info info;
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             header_len,
             &this_type::process_pubcomp_impl,
             pubcomp_phase::packet_id,
-            std::move(info),
-            std::move(self)
+            force_move(info),
+            force_move(self)
         );
     }
 
@@ -13045,17 +13046,17 @@ private:
         switch (phase) {
         case pubcomp_phase::packet_id:
             process_packet_id(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_pubcomp_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
                                 info.reason_code = v5::reason_code::success;
@@ -13063,54 +13064,54 @@ private:
                             }
                             return pubcomp_phase::reason_code;
                         } (),
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case pubcomp_phase::reason_code:
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 1, // reason_code
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.reason_code = static_cast<std::uint8_t>(body[0]);
                     process_pubcomp_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         pubcomp_phase::properties,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case pubcomp_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_pubcomp_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         pubcomp_phase::finish,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case pubcomp_phase::finish:
@@ -13130,15 +13131,15 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             case protocol_version::v5:
                 if (h_v5_pubcomp_) {
-                    if (!h_v5_pubcomp_(info.packet_id, info.reason_code, std::move(info.props))) {
+                    if (!h_v5_pubcomp_(info.packet_id, info.reason_code, force_move(info.props))) {
                         return;
                     }
                 }
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -13177,13 +13178,13 @@ private:
 
         subscribe_info info;
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             header_len,
             &this_type::process_subscribe_impl,
             subscribe_phase::packet_id,
-            std::move(info),
-            std::move(self)
+            force_move(info),
+            force_move(self)
         );
     }
 
@@ -13197,68 +13198,68 @@ private:
         switch (phase) {
         case subscribe_phase::packet_id:
             process_packet_id(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_subscribe_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [&] {
                             if (version_ == protocol_version::v5) {
                                 return subscribe_phase::properties;
                             }
                             return subscribe_phase::topic;
                         } (),
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case subscribe_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_subscribe_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         subscribe_phase::topic,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case subscribe_phase::topic:
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer topic_filter, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     process_nbytes(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         1, // requested_qos
                         [
                             this,
-                            info = std::move(info),
-                            topic_filter = std::move(topic_filter)
+                            info = force_move(info),
+                            topic_filter = force_move(topic_filter)
                         ]
                         (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                             auto requested_qos = static_cast<std::uint8_t>(body[0]);
@@ -13268,43 +13269,43 @@ private:
                                 call_protocol_error_handlers(func);
                                 return;
                             }
-                            info.entries.emplace_back(std::move(topic_filter), requested_qos);
+                            info.entries.emplace_back(force_move(topic_filter), requested_qos);
                             process_subscribe_impl(
-                                std::move(func),
-                                std::move(buf),
+                                force_move(func),
+                                force_move(buf),
                                 [&] {
                                     if (remaining_length_ == 0) {
                                         return subscribe_phase::finish;
                                     }
                                     return subscribe_phase::topic;
                                 } (),
-                                std::move(info),
-                                std::move(self)
+                                force_move(info),
+                                force_move(self)
                             );
                         },
-                        std::move(self)
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case subscribe_phase::finish:
             switch (version_) {
             case protocol_version::v3_1_1:
                 if (h_subscribe_) {
-                    if (!h_subscribe_(info.packet_id, std::move(info.entries))) {
+                    if (!h_subscribe_(info.packet_id, force_move(info.entries))) {
                         return;
                     }
                 }
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             case protocol_version::v5:
                 if (h_v5_subscribe_) {
-                    if (!h_v5_subscribe_(info.packet_id, std::move(info.entries), std::move(info.props))) {
+                    if (!h_v5_subscribe_(info.packet_id, force_move(info.entries), force_move(info.props))) {
                         return;
                     }
                 }
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -13341,13 +13342,13 @@ private:
 
         suback_info info;
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             header_len,
             &this_type::process_suback_impl,
             suback_phase::packet_id,
-            std::move(info),
-            std::move(self)
+            force_move(info),
+            force_move(self)
         );
     }
 
@@ -13361,59 +13362,59 @@ private:
         switch (phase) {
         case suback_phase::packet_id:
             process_packet_id(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_suback_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [&] {
                             if (version_ == protocol_version::v5) {
                                 return suback_phase::properties;
                             }
                             return suback_phase::reasons;
                         } (),
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case suback_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_suback_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         suback_phase::reasons,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case suback_phase::reasons:
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 remaining_length_, // Reason Codes
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer body, buffer /*buf*/, async_handler_t func, this_type_sp /*self*/) mutable {
                     {
@@ -13438,11 +13439,11 @@ private:
                                     }
                                 }
                             );
-                            if (!h_suback_(info.packet_id, std::move(results))) {
+                            if (!h_suback_(info.packet_id, force_move(results))) {
                                 return;
                             }
                         }
-                        h_mqtt_message_processed_(std::move(func));
+                        h_mqtt_message_processed_(force_move(func));
                         break;
                     case protocol_version::v5:
                         if (h_v5_suback_) {
@@ -13456,17 +13457,17 @@ private:
                                     return static_cast<uint8_t>(e);
                                 }
                             );
-                            if (!h_v5_suback_(info.packet_id, std::move(reasons), std::move(info.props))) {
+                            if (!h_v5_suback_(info.packet_id, force_move(reasons), force_move(info.props))) {
                                 return;
                             }
                         }
-                        h_mqtt_message_processed_(std::move(func));
+                        h_mqtt_message_processed_(force_move(func));
                         break;
                     default:
                         BOOST_ASSERT(false);
                     }
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         }
@@ -13502,13 +13503,13 @@ private:
 
         unsubscribe_info info;
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             header_len,
             &this_type::process_unsubscribe_impl,
             unsubscribe_phase::packet_id,
-            std::move(info),
-            std::move(self)
+            force_move(info),
+            force_move(self)
         );
     }
 
@@ -13522,94 +13523,94 @@ private:
         switch (phase) {
         case unsubscribe_phase::packet_id:
             process_packet_id(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_unsubscribe_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [&] {
                             if (version_ == protocol_version::v5) {
                                 return unsubscribe_phase::properties;
                             }
                             return unsubscribe_phase::topic;
                         } (),
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case unsubscribe_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_unsubscribe_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         unsubscribe_phase::topic,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case unsubscribe_phase::topic:
             process_string(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer topic_filter, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.entries.emplace_back(std::move(topic_filter));
+                    info.entries.emplace_back(force_move(topic_filter));
                     process_unsubscribe_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
                                 return unsubscribe_phase::finish;
                             }
                             return unsubscribe_phase::topic;
                         } (),
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case unsubscribe_phase::finish:
             switch (version_) {
             case protocol_version::v3_1_1:
                 if (h_unsubscribe_) {
-                    if (!h_unsubscribe_(info.packet_id, std::move(info.entries))) {
+                    if (!h_unsubscribe_(info.packet_id, force_move(info.entries))) {
                         return;
                     }
                 }
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             case protocol_version::v5:
                 if (h_v5_unsubscribe_) {
-                    if (!h_v5_unsubscribe_(info.packet_id, std::move(info.entries), std::move(info.props))) {
+                    if (!h_v5_unsubscribe_(info.packet_id, force_move(info.entries), force_move(info.props))) {
                         return;
                     }
                 }
-                h_mqtt_message_processed_(std::move(func));
+                h_mqtt_message_processed_(force_move(func));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -13646,13 +13647,13 @@ private:
 
         unsuback_info info;
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             header_len,
             &this_type::process_unsuback_impl,
             unsuback_phase::packet_id,
-            std::move(info),
-            std::move(self)
+            force_move(info),
+            force_move(self)
         );
     }
 
@@ -13666,11 +13667,11 @@ private:
         switch (phase) {
         case unsuback_phase::packet_id:
             process_packet_id(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.packet_id = packet_id;
@@ -13685,53 +13686,53 @@ private:
                                 return;
                             }
                         }
-                        h_mqtt_message_processed_(std::move(func));
+                        h_mqtt_message_processed_(force_move(func));
                         break;
                     case protocol_version::v5:
                         process_unsuback_impl(
-                            std::move(func),
-                            std::move(buf),
+                            force_move(func),
+                            force_move(buf),
                             unsuback_phase::properties,
-                            std::move(info),
-                            std::move(self)
+                            force_move(info),
+                            force_move(self)
                         );
                         break;
                     default:
                         BOOST_ASSERT(false);
                     }
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case unsuback_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_unsuback_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         unsuback_phase::reasons,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case unsuback_phase::reasons:
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 remaining_length_, // Reason Codes
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer body, buffer /*buf*/, async_handler_t func, this_type_sp /*self*/) mutable {
                     BOOST_ASSERT(version_ == protocol_version::v5);
@@ -13750,13 +13751,13 @@ private:
                                 return static_cast<uint8_t>(e);
                             }
                         );
-                        if (!h_v5_unsuback_(info.packet_id, std::move(reasons), std::move(info.props))) {
+                        if (!h_v5_unsuback_(info.packet_id, force_move(reasons), force_move(info.props))) {
                             return;
                         }
-                        h_mqtt_message_processed_(std::move(func));
+                        h_mqtt_message_processed_(force_move(func));
                     }
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         }
@@ -13776,7 +13777,7 @@ private:
         if (h_pingreq_) {
             if (!h_pingreq_()) return;
         }
-        h_mqtt_message_processed_(std::move(func));
+        h_mqtt_message_processed_(force_move(func));
     }
 
     // process pingresp
@@ -13793,7 +13794,7 @@ private:
         if (h_pingresp_) {
             if (!h_pingresp_()) return;
         }
-        h_mqtt_message_processed_(std::move(func));
+        h_mqtt_message_processed_(force_move(func));
     }
 
     // process disconnect
@@ -13817,11 +13818,11 @@ private:
         if (remaining_length_ == 0) {
             disconnect_info info { v5::reason_code::normal_disconnection, std::vector<v5::property_variant>() };
             process_disconnect_impl(
-                std::move(func),
+                force_move(func),
                 buffer(),
                 disconnect_phase::finish,
-                std::move(info),
-                std::move(self)
+                force_move(info),
+                force_move(self)
             );
             return;
         }
@@ -13841,13 +13842,13 @@ private:
 
         disconnect_info info;
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             header_len,
             &this_type::process_disconnect_impl,
             disconnect_phase::reason_code,
-            std::move(info),
-            std::move(self)
+            force_move(info),
+            force_move(self)
         );
     }
 
@@ -13861,45 +13862,45 @@ private:
         switch (phase) {
         case disconnect_phase::reason_code:
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 1, // reason_code
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.reason_code = static_cast<std::uint8_t>(body[0]);
                     process_disconnect_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         disconnect_phase::properties,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case disconnect_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_disconnect_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         disconnect_phase::finish,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case disconnect_phase::finish:
@@ -13911,7 +13912,7 @@ private:
                 break;
             case protocol_version::v5:
                 if (h_v5_disconnect_) {
-                    h_v5_disconnect_(info.reason_code, std::move(info.props));
+                    h_v5_disconnect_(info.reason_code, force_move(info.props));
                 }
                 break;
             default:
@@ -13947,11 +13948,11 @@ private:
         if (remaining_length_ == 0) {
             auth_info info { v5::reason_code::success, std::vector<v5::property_variant>() };
             process_auth_impl(
-                std::move(func),
+                force_move(func),
                 buffer(),
                 auth_phase::finish,
-                std::move(info),
-                std::move(self)
+                force_move(info),
+                force_move(self)
             );
             return;
         }
@@ -13966,13 +13967,13 @@ private:
 
         auth_info info;
         process_header(
-            std::move(func),
+            force_move(func),
             all_read,
             header_len,
             &this_type::process_auth_impl,
             auth_phase::reason_code,
-            std::move(info),
-            std::move(self)
+            force_move(info),
+            force_move(self)
         );
     }
 
@@ -13986,55 +13987,55 @@ private:
         switch (phase) {
         case auth_phase::reason_code:
             process_nbytes(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 1, // reason_code
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.reason_code = static_cast<std::uint8_t>(body[0]);
                     process_auth_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         auth_phase::properties,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case auth_phase::properties:
             process_properties(
-                std::move(func),
-                std::move(buf),
+                force_move(func),
+                force_move(buf),
                 [
                     this,
-                    info = std::move(info)
+                    info = force_move(info)
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.props = std::move(props);
+                    info.props = force_move(props);
                     process_auth_impl(
-                        std::move(func),
-                        std::move(buf),
+                        force_move(func),
+                        force_move(buf),
                         auth_phase::finish,
-                        std::move(info),
-                        std::move(self)
+                        force_move(info),
+                        force_move(self)
                     );
                 },
-                std::move(self)
+                force_move(self)
             );
             break;
         case auth_phase::finish:
             BOOST_ASSERT(version_ == protocol_version::v5);
             if (h_v5_auth_) {
-                if (!h_v5_auth_(info.reason_code, std::move(info.props))) {
+                if (!h_v5_auth_(info.reason_code, force_move(info.props))) {
                     return;
                 }
             }
-            h_mqtt_message_processed_(std::move(func));
+            h_mqtt_message_processed_(force_move(func));
             break;
         }
     }
@@ -14061,11 +14062,11 @@ private:
             do_sync_write(
                 v3_1_1::connect_message(
                     keep_alive_sec,
-                    std::move(client_id),
+                    force_move(client_id),
                     clean_session_,
-                    std::move(w),
-                    std::move(user_name),
-                    std::move(password)
+                    force_move(w),
+                    force_move(user_name),
+                    force_move(password)
                 )
             );
             break;
@@ -14073,12 +14074,12 @@ private:
             do_sync_write(
                 v5::connect_message(
                     keep_alive_sec,
-                    std::move(client_id),
+                    force_move(client_id),
                     clean_session_,
-                    std::move(w),
-                    std::move(user_name),
-                    std::move(password),
-                    std::move(props)
+                    force_move(w),
+                    force_move(user_name),
+                    force_move(password),
+                    force_move(props)
                 )
             );
             break;
@@ -14107,7 +14108,7 @@ private:
                 v5::connack_message(
                     session_present,
                     reason_code,
-                    std::move(props)
+                    force_move(props)
                 )
             );
             break;
@@ -14140,25 +14141,25 @@ private:
                          ? control_packet_type::puback
                          : control_packet_type::pubrec,
                         store_msg,
-                        std::move(life_keeper)
+                        force_move(life_keeper)
                     );
                     if (serialize_publish) {
                         serialize_publish(store_msg);
                     }
                 }
-                do_sync_write(std::move(msg));
+                do_sync_write(force_move(msg));
             };
 
         switch (version_) {
         case protocol_version::v3_1_1:
             do_send_publish(
                 v3_1_1::basic_publish_message<PacketIdBytes>(
-                    std::move(topic_name),
+                    force_move(topic_name),
                     qos,
                     retain,
                     dup,
                     packet_id,
-                    std::move(payload)
+                    force_move(payload)
                 ),
                 h_serialize_publish_
             );
@@ -14166,13 +14167,13 @@ private:
         case protocol_version::v5:
             do_send_publish(
                 v5::basic_publish_message<PacketIdBytes>(
-                    std::move(topic_name),
+                    force_move(topic_name),
                     qos,
                     retain,
                     dup,
                     packet_id,
-                    std::move(props),
-                    std::move(payload)
+                    force_move(props),
+                    force_move(payload)
                 ),
                 h_serialize_v5_publish_
             );
@@ -14193,7 +14194,7 @@ private:
             do_sync_write(v3_1_1::basic_puback_message<PacketIdBytes>(packet_id));
             break;
         case protocol_version::v5:
-            do_sync_write(v5::basic_puback_message<PacketIdBytes>(packet_id, reason, std::move(props)));
+            do_sync_write(v5::basic_puback_message<PacketIdBytes>(packet_id, reason, force_move(props)));
             break;
         default:
             BOOST_ASSERT(false);
@@ -14213,7 +14214,7 @@ private:
             do_sync_write(v3_1_1::basic_pubrec_message<PacketIdBytes>(packet_id));
             break;
         case protocol_version::v5:
-            do_sync_write(v5::basic_pubrec_message<PacketIdBytes>(packet_id, reason, std::move(props)));
+            do_sync_write(v5::basic_pubrec_message<PacketIdBytes>(packet_id, reason, force_move(props)));
             break;
         default:
             BOOST_ASSERT(false);
@@ -14240,7 +14241,7 @@ private:
                         packet_id,
                         control_packet_type::pubcomp,
                         msg,
-                        std::move(life_keeper)
+                        force_move(life_keeper)
                     );
                     (void)ret;
                     BOOST_ASSERT(ret.second);
@@ -14249,7 +14250,7 @@ private:
                 if (serialize) {
                     serialize(msg);
                 }
-                do_sync_write(std::move(msg));
+                do_sync_write(force_move(msg));
             };
 
         switch (version_) {
@@ -14261,7 +14262,7 @@ private:
             break;
         case protocol_version::v5:
             impl(
-                v5::basic_pubrel_message<PacketIdBytes>(packet_id, reason, std::move(props)),
+                v5::basic_pubrel_message<PacketIdBytes>(packet_id, reason, force_move(props)),
                 h_serialize_v5_pubrel_
             );
             break;
@@ -14295,7 +14296,7 @@ private:
                 }
 
                 if (serialize) {
-                    serialize(std::move(msg));
+                    serialize(force_move(msg));
                 }
             };
 
@@ -14308,7 +14309,7 @@ private:
             break;
         case protocol_version::v5:
             impl(
-                v5::basic_pubrel_message<PacketIdBytes>(packet_id, reason, std::move(props)),
+                v5::basic_pubrel_message<PacketIdBytes>(packet_id, reason, force_move(props)),
                 h_serialize_v5_pubrel_
             );
             break;
@@ -14328,7 +14329,7 @@ private:
             do_sync_write(v3_1_1::basic_pubcomp_message<PacketIdBytes>(packet_id));
             break;
         case protocol_version::v5:
-            do_sync_write(v5::basic_pubcomp_message<PacketIdBytes>(packet_id, reason, std::move(props)));
+            do_sync_write(v5::basic_pubcomp_message<PacketIdBytes>(packet_id, reason, force_move(props)));
             break;
         default:
             BOOST_ASSERT(false);
@@ -14346,7 +14347,7 @@ private:
         std::uint8_t qos,
         Args&&... args) {
         params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))), qos);
-        send_subscribe(std::move(params), packet_id, std::forward<Args>(args)...);
+        send_subscribe(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -14356,8 +14357,8 @@ private:
         string_view topic_name,
         std::uint8_t qos,
         Args&&... args) {
-        params.emplace_back(buffer(std::move(topic_name)), qos);
-        send_subscribe(std::move(params), packet_id, std::forward<Args>(args)...);
+        params.emplace_back(buffer(force_move(topic_name)), qos);
+        send_subscribe(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -14367,8 +14368,8 @@ private:
         buffer topic_name,
         std::uint8_t qos,
         Args&&... args) {
-        params.emplace_back(std::move(topic_name), qos);
-        send_subscribe(std::move(params), packet_id, std::forward<Args>(args)...);
+        params.emplace_back(force_move(topic_name), qos);
+        send_subscribe(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void send_subscribe(
@@ -14386,10 +14387,10 @@ private:
         }
         switch (version_) {
         case protocol_version::v3_1_1:
-            do_sync_write(v3_1_1::basic_subscribe_message<PacketIdBytes>(std::move(params), packet_id));
+            do_sync_write(v3_1_1::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id));
             break;
         case protocol_version::v5:
-            do_sync_write(v5::basic_subscribe_message<PacketIdBytes>(std::move(params), packet_id, std::move(props)));
+            do_sync_write(v5::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id, force_move(props)));
             break;
         default:
             BOOST_ASSERT(false);
@@ -14404,7 +14405,7 @@ private:
         std::uint8_t reason,
         Args&&... args) {
         params.push_back(reason);
-        send_suback(std::move(params), packet_id, std::forward<Args>(args)...);
+        send_suback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void send_suback(
@@ -14414,10 +14415,10 @@ private:
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
-            do_sync_write(v3_1_1::basic_suback_message<PacketIdBytes>(std::move(params), packet_id));
+            do_sync_write(v3_1_1::basic_suback_message<PacketIdBytes>(force_move(params), packet_id));
             break;
         case protocol_version::v5:
-            do_sync_write(v5::basic_suback_message<PacketIdBytes>(std::move(params), packet_id, std::move(props)));
+            do_sync_write(v5::basic_suback_message<PacketIdBytes>(force_move(params), packet_id, force_move(props)));
             break;
         default:
             BOOST_ASSERT(false);
@@ -14432,7 +14433,7 @@ private:
         as::const_buffer topic_name,
         Args&&... args) {
         params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))));
-        send_unsubscribe(std::move(params), packet_id, std::forward<Args>(args)...);
+        send_unsubscribe(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -14442,7 +14443,7 @@ private:
         string_view topic_name,
         Args&&... args) {
         params.emplace_back(buffer(topic_name));
-        send_unsubscribe(std::move(params), packet_id, std::forward<Args>(args)...);
+        send_unsubscribe(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -14451,8 +14452,8 @@ private:
         packet_id_t packet_id,
         buffer topic_name,
         Args&&... args) {
-        params.emplace_back(std::move(topic_name));
-        send_unsubscribe(std::move(params), packet_id, std::forward<Args>(args)...);
+        params.emplace_back(force_move(topic_name));
+        send_unsubscribe(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void send_unsubscribe(
@@ -14462,10 +14463,10 @@ private:
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
-            do_sync_write(v3_1_1::basic_unsubscribe_message<PacketIdBytes>(std::move(params), packet_id));
+            do_sync_write(v3_1_1::basic_unsubscribe_message<PacketIdBytes>(force_move(params), packet_id));
             break;
         case protocol_version::v5:
-            do_sync_write(v5::basic_unsubscribe_message<PacketIdBytes>(std::move(params), packet_id, std::move(props)));
+            do_sync_write(v5::basic_unsubscribe_message<PacketIdBytes>(force_move(params), packet_id, force_move(props)));
             break;
         default:
             BOOST_ASSERT(false);
@@ -14496,7 +14497,7 @@ private:
         std::uint8_t reason,
         Args&&... args) {
         params.push_back(reason);
-        send_suback(std::move(params), packet_id, std::forward<Args>(args)...);
+        send_suback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void send_unsuback(
@@ -14509,7 +14510,7 @@ private:
             BOOST_ASSERT(false);
             break;
         case protocol_version::v5:
-            do_sync_write(v5::basic_unsuback_message<PacketIdBytes>(std::move(params), packet_id, std::move(props)));
+            do_sync_write(v5::basic_unsuback_message<PacketIdBytes>(force_move(params), packet_id, force_move(props)));
             break;
         default:
             BOOST_ASSERT(false);
@@ -14554,7 +14555,7 @@ private:
             BOOST_ASSERT(false);
             break;
         case protocol_version::v5:
-            do_sync_write(v5::auth_message(reason, std::move(props)));
+            do_sync_write(v5::auth_message(reason, force_move(props)));
             break;
         default:
             BOOST_ASSERT(false);
@@ -14571,7 +14572,7 @@ private:
             do_sync_write(v3_1_1::disconnect_message());
             break;
         case protocol_version::v5:
-            do_sync_write(v5::disconnect_message(reason, std::move(props)));
+            do_sync_write(v5::disconnect_message(reason, force_move(props)));
             break;
         default:
             BOOST_ASSERT(false);
@@ -14615,27 +14616,27 @@ private:
             do_async_write(
                 v3_1_1::connect_message(
                     keep_alive_sec,
-                    std::move(client_id),
+                    force_move(client_id),
                     clean_session_,
                     w,
-                    std::move(user_name),
-                    std::move(password)
+                    force_move(user_name),
+                    force_move(password)
                 ),
-                std::move(func)
+                force_move(func)
             );
             break;
         case protocol_version::v5:
             do_async_write(
                 v5::connect_message(
                     keep_alive_sec,
-                    std::move(client_id),
+                    force_move(client_id),
                     clean_session_,
                     w,
-                    std::move(user_name),
-                    std::move(password),
-                    std::move(props)
+                    force_move(user_name),
+                    force_move(password),
+                    force_move(props)
                 ),
-                std::move(func)
+                force_move(func)
             );
             break;
         default:
@@ -14657,7 +14658,7 @@ private:
                     session_present,
                     reason_code
                 ),
-                std::move(func)
+                force_move(func)
             );
             break;
         case protocol_version::v5:
@@ -14665,9 +14666,9 @@ private:
                 v5::connack_message(
                     session_present,
                     reason_code,
-                    std::move(props)
+                    force_move(props)
                 ),
-                std::move(func)
+                force_move(func)
             );
             break;
         default:
@@ -14710,8 +14711,8 @@ private:
                     }
                 }
                 do_async_write(
-                    std::move(msg),
-                    [life_keeper = std::move(life_keeper), func = std::move(func)](boost::system::error_code const& ec) {
+                    force_move(msg),
+                    [life_keeper = force_move(life_keeper), func = force_move(func)](boost::system::error_code const& ec) {
                         if (func) func(ec);
                     }
                 );
@@ -14721,12 +14722,12 @@ private:
         case protocol_version::v3_1_1:
             do_async_send_publish(
                 v3_1_1::basic_publish_message<PacketIdBytes>(
-                    std::move(topic_name),
+                    force_move(topic_name),
                     qos,
                     retain,
                     dup,
                     packet_id,
-                    std::move(payload)
+                    force_move(payload)
                 ),
                 h_serialize_publish_
             );
@@ -14734,13 +14735,13 @@ private:
         case protocol_version::v5:
             do_async_send_publish(
                 v5::basic_publish_message<PacketIdBytes>(
-                    std::move(topic_name),
+                    force_move(topic_name),
                     qos,
                     retain,
                     dup,
                     packet_id,
-                    std::move(props),
-                    std::move(payload)
+                    force_move(props),
+                    force_move(payload)
                 ),
                 h_serialize_v5_publish_
             );
@@ -14762,8 +14763,8 @@ private:
             [&] (auto msg) {
                 auto self = shared_from_this();
                 do_async_write(
-                    std::move(msg),
-                    [this, self, packet_id, func = std::move(func)]
+                    force_move(msg),
+                    [this, self, packet_id, func = force_move(func)]
                     (boost::system::error_code const& ec){
                         if (func) func(ec);
                         if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
@@ -14779,7 +14780,7 @@ private:
             break;
         case protocol_version::v5:
             impl(
-                v5::basic_puback_message<PacketIdBytes>(packet_id, reason, std::move(props))
+                v5::basic_puback_message<PacketIdBytes>(packet_id, reason, force_move(props))
             );
             break;
         default:
@@ -14798,13 +14799,13 @@ private:
         case protocol_version::v3_1_1:
             do_async_write(
                 v3_1_1::basic_pubrec_message<PacketIdBytes>(packet_id),
-                std::move(func)
+                force_move(func)
             );
             break;
         case protocol_version::v5:
             do_async_write(
-                v5::basic_pubrec_message<PacketIdBytes>(packet_id, reason, std::move(props)),
-                std::move(func)
+                v5::basic_pubrec_message<PacketIdBytes>(packet_id, reason, force_move(props)),
+                force_move(func)
             );
             break;
         default:
@@ -14849,7 +14850,7 @@ private:
                                 e = store(
                                     packet_id,
                                     control_packet_type::pubcomp,
-                                    std::move(msg),
+                                    force_move(msg),
                                     life_keeper
                                 );
                             }
@@ -14861,8 +14862,8 @@ private:
                     serialize(msg);
                 }
                 do_async_write(
-                    std::move(msg),
-                    [life_keeper = std::move(life_keeper), func = std::move(func)](boost::system::error_code const& ec) {
+                    force_move(msg),
+                    [life_keeper = force_move(life_keeper), func = force_move(func)](boost::system::error_code const& ec) {
                         if (func) func(ec);
                     }
                 );
@@ -14877,7 +14878,7 @@ private:
             break;
         case protocol_version::v5:
             impl(
-                v5::basic_pubrel_message<PacketIdBytes>(packet_id, reason, std::move(props)),
+                v5::basic_pubrel_message<PacketIdBytes>(packet_id, reason, force_move(props)),
                 h_serialize_v5_pubrel_
             );
             break;
@@ -14897,8 +14898,8 @@ private:
             [&] (auto msg) {
                 auto self = shared_from_this();
                 do_async_write(
-                    std::move(msg),
-                    [this, self = std::move(self), packet_id, func = std::move(func)]
+                    force_move(msg),
+                    [this, self = force_move(self), packet_id, func = force_move(func)]
                     (boost::system::error_code const& ec){
                         if (func) func(ec);
                         if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
@@ -14913,7 +14914,7 @@ private:
             break;
         case protocol_version::v5:
             impl(
-                v5::basic_pubcomp_message<PacketIdBytes>(packet_id, reason, std::move(props))
+                v5::basic_pubcomp_message<PacketIdBytes>(packet_id, reason, force_move(props))
             );
             break;
         default:
@@ -14931,7 +14932,7 @@ private:
         std::uint8_t qos,
         Args&&... args) {
         params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))), qos);
-        async_send_subscribe(std::move(params), std::move(life_keepers), packet_id, std::forward<Args>(args)...);
+        async_send_subscribe(force_move(params), force_move(life_keepers), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -14943,9 +14944,9 @@ private:
         std::uint8_t qos,
         Args&&... args) {
 
-        auto sp_topic = std::make_shared<std::string>(std::move(topic_name));
+        auto sp_topic = std::make_shared<std::string>(force_move(topic_name));
         params.emplace_back(buffer(string_view(*sp_topic)), qos);
-        async_send_subscribe(std::move(params), std::make_pair(std::move(life_keepers), std::move(sp_topic)), packet_id, std::forward<Args>(args)...);
+        async_send_subscribe(force_move(params), std::make_pair(force_move(life_keepers), force_move(sp_topic)), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_subscribe(
@@ -14957,8 +14958,8 @@ private:
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
-                v3_1_1::basic_subscribe_message<PacketIdBytes>(std::move(params), packet_id),
-                [life_keepers = std::move(life_keepers), func = std::move(func)]
+                v3_1_1::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id),
+                [life_keepers = force_move(life_keepers), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -14966,8 +14967,8 @@ private:
             break;
         case protocol_version::v5:
             do_async_write(
-                v5::basic_subscribe_message<PacketIdBytes>(std::move(params), packet_id, {}),
-                [life_keepers = std::move(life_keepers), func = std::move(func)]
+                v5::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id, {}),
+                [life_keepers = force_move(life_keepers), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -14989,8 +14990,8 @@ private:
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
-                v3_1_1::basic_subscribe_message<PacketIdBytes>(std::move(params), packet_id),
-                [life_keepers = std::move(life_keepers), func = std::move(func)]
+                v3_1_1::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id),
+                [life_keepers = force_move(life_keepers), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -14998,8 +14999,8 @@ private:
             break;
         case protocol_version::v5:
             do_async_write(
-                v5::basic_subscribe_message<PacketIdBytes>(std::move(params), packet_id, std::move(props)),
-                [life_keepers = std::move(life_keepers), func = std::move(func)]
+                v5::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id, force_move(props)),
+                [life_keepers = force_move(life_keepers), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -15018,7 +15019,7 @@ private:
         std::uint8_t qos,
         Args&&... args) {
         params.push_back(qos);
-        async_send_suback(std::move(params), packet_id, std::forward<Args>(args)...);
+        async_send_suback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_suback(
@@ -15030,12 +15031,12 @@ private:
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
-                v3_1_1::basic_suback_message<PacketIdBytes>(std::move(params), packet_id), std::move(func)
+                v3_1_1::basic_suback_message<PacketIdBytes>(force_move(params), packet_id), force_move(func)
             );
             break;
         case protocol_version::v5:
             do_async_write(
-                v5::basic_suback_message<PacketIdBytes>(std::move(params), packet_id, std::move(props)), std::move(func)
+                v5::basic_suback_message<PacketIdBytes>(force_move(params), packet_id, force_move(props)), force_move(func)
             );
             break;
         default:
@@ -15052,7 +15053,7 @@ private:
         as::const_buffer topic_name,
         Args&&... args) {
         params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))));
-        async_send_unsubscribe(std::move(params), std::move(life_keepers), packet_id, std::forward<Args>(args)...);
+        async_send_unsubscribe(force_move(params), force_move(life_keepers), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -15063,9 +15064,9 @@ private:
         std::string topic_name,
         Args&&... args) {
 
-        auto sp_topic = std::make_shared<std::string>(std::move(topic_name));
+        auto sp_topic = std::make_shared<std::string>(force_move(topic_name));
         params.emplace_back(buffer(string_view(*sp_topic)));
-        async_send_unsubscribe(std::move(params), std::make_pair(std::move(life_keepers), std::move(sp_topic)), packet_id, std::forward<Args>(args)...);
+        async_send_unsubscribe(force_move(params), std::make_pair(force_move(life_keepers), force_move(sp_topic)), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_unsubscribe(
@@ -15078,10 +15079,10 @@ private:
         case protocol_version::v3_1_1:
             do_async_write(
                 v3_1_1::basic_unsubscribe_message<PacketIdBytes>(
-                    std::move(params),
+                    force_move(params),
                     packet_id
                 ),
-                [life_keepers = std::move(life_keepers), func = std::move(func)]
+                [life_keepers = force_move(life_keepers), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -15090,11 +15091,11 @@ private:
         case protocol_version::v5:
             do_async_write(
                 v5::basic_unsubscribe_message<PacketIdBytes>(
-                    std::move(params),
+                    force_move(params),
                     packet_id,
                     {}
                 ),
-                [life_keepers = std::move(life_keepers), func = std::move(func)]
+                [life_keepers = force_move(life_keepers), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -15117,10 +15118,10 @@ private:
         case protocol_version::v3_1_1:
             do_async_write(
                 v3_1_1::basic_unsubscribe_message<PacketIdBytes>(
-                    std::move(params),
+                    force_move(params),
                     packet_id
                 ),
-                [life_keepers = std::move(life_keepers), func = std::move(func)]
+                [life_keepers = force_move(life_keepers), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -15129,11 +15130,11 @@ private:
         case protocol_version::v5:
             do_async_write(
                 v5::basic_unsubscribe_message<PacketIdBytes>(
-                    std::move(params),
+                    force_move(params),
                     packet_id,
-                    std::move(props)
+                    force_move(props)
                 ),
-                [life_keepers = std::move(life_keepers), func = std::move(func)]
+                [life_keepers = force_move(life_keepers), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -15150,7 +15151,7 @@ private:
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
-                v3_1_1::basic_unsuback_message<PacketIdBytes>(packet_id), std::move(func)
+                v3_1_1::basic_unsuback_message<PacketIdBytes>(packet_id), force_move(func)
             );
             break;
         case protocol_version::v5:
@@ -15169,7 +15170,7 @@ private:
         std::uint8_t qos,
         Args&&... args) {
         params.push_back(qos);
-        async_send_unsuback(std::move(params), packet_id, std::forward<Args>(args)...);
+        async_send_unsuback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_unsuback(
@@ -15185,11 +15186,11 @@ private:
         case protocol_version::v5:
             do_async_write(
                 v5::basic_unsuback_message<PacketIdBytes>(
-                    std::move(params),
+                    force_move(params),
                     packet_id,
-                    std::move(props)
+                    force_move(props)
                 ),
-                std::move(func)
+                force_move(func)
             );
             break;
         default:
@@ -15201,10 +15202,10 @@ private:
     void async_send_pingreq(async_handler_t func) {
         switch (version_) {
         case protocol_version::v3_1_1:
-            do_async_write(v3_1_1::pingreq_message(), std::move(func));
+            do_async_write(v3_1_1::pingreq_message(), force_move(func));
             break;
         case protocol_version::v5:
-            do_async_write(v5::pingreq_message(), std::move(func));
+            do_async_write(v5::pingreq_message(), force_move(func));
             break;
         default:
             BOOST_ASSERT(false);
@@ -15215,10 +15216,10 @@ private:
     void async_send_pingresp(async_handler_t func) {
         switch (version_) {
         case protocol_version::v3_1_1:
-            do_async_write(v3_1_1::pingresp_message(), std::move(func));
+            do_async_write(v3_1_1::pingresp_message(), force_move(func));
             break;
         case protocol_version::v5:
-            do_async_write(v5::pingresp_message(), std::move(func));
+            do_async_write(v5::pingresp_message(), force_move(func));
             break;
         default:
             BOOST_ASSERT(false);
@@ -15236,7 +15237,7 @@ private:
             BOOST_ASSERT(false);
             break;
         case protocol_version::v5:
-            do_async_write(v5::auth_message(reason, std::move(props)), std::move(func));
+            do_async_write(v5::auth_message(reason, force_move(props)), force_move(func));
             break;
         default:
             BOOST_ASSERT(false);
@@ -15249,10 +15250,10 @@ private:
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
-            do_async_write(v3_1_1::disconnect_message(), std::move(func));
+            do_async_write(v3_1_1::disconnect_message(), force_move(func));
             break;
         case protocol_version::v5:
-            do_async_write(v5::disconnect_message(nullopt, {}), std::move(func));
+            do_async_write(v5::disconnect_message(nullopt, {}), force_move(func));
             break;
         default:
             BOOST_ASSERT(false);
@@ -15267,10 +15268,10 @@ private:
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
-            do_async_write(v3_1_1::disconnect_message(), std::move(func));
+            do_async_write(v3_1_1::disconnect_message(), force_move(func));
             break;
         case protocol_version::v5:
-            do_async_write(v5::disconnect_message(reason, std::move(props)), std::move(func));
+            do_async_write(v5::disconnect_message(reason, force_move(props)), force_move(func));
             break;
         default:
             BOOST_ASSERT(false);
@@ -15280,7 +15281,7 @@ private:
 
     void async_send_store(std::function<void()> func) {
         auto g = shared_scope_guard(
-            [func = std::move(func)] {
+            [func = force_move(func)] {
                 func();
             }
         );
@@ -15303,8 +15304,8 @@ private:
         async_packet(
             basic_message_variant<PacketIdBytes> mv,
             async_handler_t h = async_handler_t())
-            : mv_(std::move(mv))
-            , handler_(std::move(h)) {}
+            : mv_(force_move(mv))
+            , handler_(force_move(h)) {}
         basic_message_variant<PacketIdBytes> const& message() const {
             return mv_;
         }
@@ -15324,8 +15325,8 @@ private:
             async_handler_t func,
             std::size_t num_of_messages,
             std::size_t expected)
-            :self_(std::move(self)),
-             func_(std::move(func)),
+            :self_(force_move(self)),
+             func_(force_move(func)),
              num_of_messages_(num_of_messages),
              bytes_to_transfer_(expected)
         {}
@@ -15425,10 +15426,10 @@ private:
         if (h_pre_send_) h_pre_send_();
 
         socket_->async_write(
-            std::move(buf),
+            force_move(buf),
             write_completion_handler(
                 shared_from_this(),
-                [handlers = std::move(handlers)]
+                [handlers = force_move(handlers)]
                 (boost::system::error_code const& ec) {
                     for (auto const& h : handlers) {
                         if (h) h(ec);
@@ -15444,14 +15445,14 @@ private:
         auto self = shared_from_this();
         // Move this job to the socket's strand so that it can be queued without mutexes.
         socket_->post(
-            [self = std::move(self), mv = std::move(mv), func = std::move(func)]
+            [self = force_move(self), mv = force_move(mv), func = force_move(func)]
             () {
                 if (!self->connected_) {
                     // offline async publish is successfully finished, because there's nothing to do.
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                     return;
                 }
-                self->queue_.emplace_back(std::move(mv), std::move(func));
+                self->queue_.emplace_back(force_move(mv), force_move(func));
                 // Only need to start async writes if there was nothing in the queue before the above item.
                 if (self->queue_.size() > 1) return;
                 self->do_async_write();
