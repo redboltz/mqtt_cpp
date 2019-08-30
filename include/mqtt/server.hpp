@@ -146,7 +146,7 @@ private:
         acceptor_.value().async_accept(
             socket->lowest_layer(),
             [this, socket]
-            (boost::system::error_code const& ec) {
+            (boost::system::error_code const& ec) mutable {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
@@ -325,7 +325,7 @@ private:
                 socket->async_handshake(
                     as::ssl::stream_base::server,
                     [this, socket, tim, underlying_finished]
-                    (boost::system::error_code ec) {
+                    (boost::system::error_code ec) mutable {
                         *underlying_finished = true;
                         tim->cancel();
                         if (ec) {
@@ -546,7 +546,7 @@ private:
                                 }
                             },
                             [this, socket, tim, underlying_finished]
-                            (boost::system::error_code const& ec) {
+                            (boost::system::error_code const& ec) mutable {
                                 *underlying_finished = true;
                                 tim->cancel();
                                 if (ec) {
@@ -765,7 +765,7 @@ private:
                                         }
                                     },
                                     [this, socket, tim, underlying_finished]
-                                    (boost::system::error_code const& ec) {
+                                    (boost::system::error_code const& ec) mutable {
                                         *underlying_finished = true;
                                         tim->cancel();
                                         if (ec) {

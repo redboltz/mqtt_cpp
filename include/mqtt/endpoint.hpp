@@ -2672,7 +2672,7 @@ public:
         if (register_packet_id(packet_id)) {
             std::vector<std::tuple<buffer, std::uint8_t>> buf_params;
             buf_params.reserve(params.size());
-            for(auto const& p : params)
+            for(auto&& p : params)
             {
                 buf_params.emplace_back(buffer(force_move(std::get<0>(p))));
             }
@@ -8084,7 +8084,7 @@ public:
         std::vector<std::shared_ptr<std::string>> life_keepers;
         life_keepers.reserve(params.size());
 
-        for (auto const& e : params) {
+        for (auto&& e : params) {
             auto sp_topic_name = std::make_shared<std::string>(force_move(std::get<0>(e)));
             cb_params.emplace_back(buffer(string_view(*sp_topic_name)), std::get<1>(e));
             life_keepers.emplace_back(force_move(sp_topic_name));
@@ -8128,7 +8128,7 @@ public:
         std::vector<std::shared_ptr<std::string>> life_keepers;
         life_keepers.reserve(params.size());
 
-        for (auto const& e : params) {
+        for (auto&& e : params) {
             auto sp_topic_name = std::make_shared<std::string>(force_move(std::get<0>(e)));
             cb_params.emplace_back(buffer(string_view(*sp_topic_name)), std::get<1>(e));
             life_keepers.emplace_back(force_move(sp_topic_name));
@@ -8247,7 +8247,7 @@ public:
         std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
         cb_params.reserve(params.size());
 
-        for (auto const& e : params) {
+        for (auto&& e : params) {
             cb_params.emplace_back(
                 force_move(std::get<0>(e)),
                 std::get<1>(e)
@@ -8286,7 +8286,7 @@ public:
         std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
         cb_params.reserve(params.size());
 
-        for (auto const& e : params) {
+        for (auto&& e : params) {
             cb_params.emplace_back(
                 force_move(std::get<0>(e)),
                 std::get<1>(e)
@@ -8467,7 +8467,7 @@ public:
         std::vector<std::shared_ptr<std::string>> life_keepers;
         life_keepers.reserve(params.size());
 
-        for (auto const& e : params) {
+        for (auto&& e : params) {
             life_keepers.emplace_back(std::make_shared<std::string>(force_move(e)));
             cb_params.emplace_back(buffer(string_view(*life_keepers.back())));
         }
@@ -8509,7 +8509,7 @@ public:
         std::vector<std::shared_ptr<std::string>> life_keepers;
         life_keepers.reserve(params.size());
 
-        for (auto const& e : params) {
+        for (auto&& e : params) {
             life_keepers.emplace_back(std::make_shared<std::string>(force_move(e)));
             cb_params.emplace_back(buffer(string_view(*life_keepers.back())));
         }
@@ -9656,7 +9656,7 @@ protected:
             as::buffer(buf_.data(), 1),
             [this, self = force_move(self), func = force_move(func)](
                 boost::system::error_code const& ec,
-                std::size_t bytes_transferred) {
+                std::size_t bytes_transferred) mutable {
                 if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
                 handle_control_packet_type(force_move(func), force_move(self));
             }
@@ -10120,9 +10120,9 @@ private:
         remaining_length_multiplier_ = 1;
         socket_->async_read(
             as::buffer(buf_.data(), 1),
-            [this, self = force_move(self), func = force_move(func)](
+            [this, self = force_move(self), func = force_move(func)] (
                 boost::system::error_code const& ec,
-                std::size_t bytes_transferred){
+                std::size_t bytes_transferred) mutable {
                 if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
                 handle_remaining_length(force_move(func), force_move(self));
             }
@@ -10144,19 +10144,19 @@ private:
         if (buf_.front() & variable_length_continue_flag) {
             socket_->async_read(
                 as::buffer(buf_.data(), 1),
-                [self = force_move(self), func = force_move(func)](
+                [this, self = force_move(self), func = force_move(func)](
                     boost::system::error_code const& ec,
-                    std::size_t bytes_transferred){
-                    if (self->handle_close_or_error(ec)) {
+                    std::size_t bytes_transferred) mutable {
+                    if (handle_close_or_error(ec)) {
                         if (func) func(ec);
                         return;
                     }
                     if (bytes_transferred != 1) {
-                        self->handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                        handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
-                    self->handle_remaining_length(force_move(func), force_move(self));
+                    handle_remaining_length(force_move(func), force_move(self));
                 }
             );
         }
@@ -15445,17 +15445,17 @@ private:
         auto self = shared_from_this();
         // Move this job to the socket's strand so that it can be queued without mutexes.
         socket_->post(
-            [self = force_move(self), mv = force_move(mv), func = force_move(func)]
-            () {
-                if (!self->connected_) {
+            [this, self = force_move(self), mv = force_move(mv), func = force_move(func)]
+            () mutable {
+                if (!connected_) {
                     // offline async publish is successfully finished, because there's nothing to do.
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                     return;
                 }
-                self->queue_.emplace_back(force_move(mv), force_move(func));
+                queue_.emplace_back(force_move(mv), force_move(func));
                 // Only need to start async writes if there was nothing in the queue before the above item.
-                if (self->queue_.size() > 1) return;
-                self->do_async_write();
+                if (queue_.size() > 1) return;
+                do_async_write();
             }
         );
     }

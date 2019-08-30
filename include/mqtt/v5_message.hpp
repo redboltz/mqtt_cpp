@@ -100,7 +100,7 @@ class connect_message {
 public:
     connect_message(
         std::uint16_t keep_alive_sec,
-        string_view client_id,
+        buffer client_id,
         bool clean_session,
         optional<will> w,
         optional<buffer> user_name,
@@ -121,7 +121,7 @@ public:
           ),
           protocol_name_and_level_ { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x05 },
           client_id_(force_move(client_id)),
-          client_id_length_buf_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(client_id.size())) },
+          client_id_length_buf_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(client_id_.size())) },
           will_property_length_(
               w ?
               std::accumulate(
@@ -1918,7 +1918,7 @@ public:
             property_length_buf_.size() +
             property_length_;
 
-        for (auto const& e : params) {
+        for (auto&& e : params) {
             auto size = e.size();
             utf8string_check(e);
             entries_.emplace_back(force_move(e));

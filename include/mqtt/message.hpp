@@ -318,7 +318,7 @@ public:
           ),
           protocol_name_and_level_ { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x04 },
           client_id_(force_move(client_id)),
-          client_id_length_buf_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(client_id.size())) },
+          client_id_length_buf_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(client_id_.size())) },
           keep_alive_buf_ { num_to_2bytes(keep_alive_sec) }
     {
         utf8string_check(client_id_);

@@ -404,6 +404,7 @@ private:
         std::uint16_t /*keep_alive*/,
         std::vector<MQTT_NS::v5::property_variant> props
     ) {
+
         if (ep.get_protocol_version() == MQTT_NS::protocol_version::v5 && h_connect_props_) h_connect_props_(props);
 
         // If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1 [MQTT-3.1.3-7].
@@ -466,7 +467,7 @@ private:
             // to the active_session container.
             if(non_act_sess_it != non_act_sess_idx.end()) {
                 session_state state;
-                non_act_sess_idx.modify(non_act_sess_it, [&](session_state & val) { state = std::move(val); });
+                non_act_sess_idx.modify(non_act_sess_it, [&](session_state & val) { state = val; });
                 state.con = spep;
                 non_act_sess_idx.erase(non_act_sess_it);
                 BOOST_ASSERT(non_act_sess_idx.end() == non_act_sess_idx.find(client_id));
