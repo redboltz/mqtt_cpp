@@ -33,12 +33,12 @@ public:
     will(buffer topic,
          buffer message,
          bool retain,
-         std::uint8_t qos,
+         qos qos_value,
          std::vector<v5::property_variant> props = {})
         :topic_(std::move(topic)),
          message_(std::move(message)),
          retain_(retain),
-         qos_(qos),
+         qos_value_(qos_value),
          props_(std::move(props))
     {}
 
@@ -66,14 +66,14 @@ public:
      *        A topic name to publish as a will
      * @param message
      *        The contents to publish as a will
-     * @param qos
+     * @param qos_value
      *        qos
      */
     will(buffer topic,
          buffer message,
-         std::uint8_t qos,
+         qos qos_value,
          std::vector<v5::property_variant> props = {})
-        :will(std::move(topic), std::move(message), false, qos, std::move(props))
+        :will(std::move(topic), std::move(message), false, qos_value, std::move(props))
     {}
 
     buffer const& topic() const {
@@ -91,8 +91,8 @@ public:
     bool retain() const {
         return retain_;
     }
-    std::uint8_t qos() const {
-        return qos_;
+    qos get_qos() const {
+        return qos_value_;
     }
     std::vector<v5::property_variant> const& props() const {
         return props_;
@@ -105,7 +105,7 @@ private:
     buffer topic_;
     buffer message_;
     bool retain_ = false;
-    std::uint8_t qos_ = 0;
+    qos qos_value_ = qos::at_most_once;
     std::vector<v5::property_variant> props_;
 };
 

@@ -340,7 +340,7 @@ public:
         if (w) {
             connect_flags_ |= connect_flags::will_flag;
             if (w.value().retain()) connect_flags_ |= connect_flags::will_retain;
-            connect_flags::set_will_qos(connect_flags_, w.value().qos());
+            connect_flags::set_will_qos(connect_flags_, w.value().get_qos());
 
             utf8string_check(w.value().topic());
             will_topic_name_ = std::move(w.value().topic());
@@ -501,7 +501,7 @@ class basic_publish_message {
 public:
     basic_publish_message(
         buffer topic_name,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         bool dup,
         typename packet_id_type<PacketIdBytes>::type packet_id,
@@ -517,7 +517,7 @@ public:
               + payload_.size()      // payload
               +
               [&] () -> typename packet_id_type<PacketIdBytes>::type {
-                  if (qos == qos::at_least_once || qos == qos::exactly_once) {
+                  if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
                       return PacketIdBytes; // packet_id
                   }
                   else {
@@ -527,7 +527,7 @@ public:
           )
     {
         utf8string_check(topic_name_);
-        publish::set_qos(fixed_header_, qos);
+        publish::set_qos(fixed_header_, qos_value);
         publish::set_retain(fixed_header_, retain);
         publish::set_dup(fixed_header_, dup);
 
@@ -535,8 +535,8 @@ public:
         for (auto e : rb) {
             remaining_length_buf_.push_back(e);
         }
-        if (qos == qos::at_least_once ||
-            qos == qos::exactly_once) {
+        if (qos_value == qos::at_least_once ||
+            qos_value == qos::exactly_once) {
             packet_id_.reserve(PacketIdBytes);
             add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
         }
@@ -675,7 +675,7 @@ public:
      * @brief Get qos
      * @return qos
      */
-    std::uint8_t qos() const {
+    qos get_qos() const {
         return publish::get_qos(fixed_header_);
     }
 

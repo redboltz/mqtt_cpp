@@ -43,17 +43,17 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                         c->subscribe(
                             0,
                             "topic1",
-                            MQTT_NS::qos::at_most_once) == false);
+                            static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once)) == false);
                     BOOST_TEST(
                         c->subscribe(
                             1,
                             "topic1",
-                            MQTT_NS::qos::at_most_once) == true);
+                            static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once)) == true);
                     BOOST_TEST(
                         c->subscribe(
                             1,
                             "topic1",
-                            MQTT_NS::qos::at_most_once) == false);
+                            static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once)) == false);
                     return true;
                 });
             c->set_puback_handler(
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t packet_id, std::vector<MQTT_NS::optional<std::uint8_t>> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::optional<MQTT_NS::qos>> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == 1);
                     BOOST_TEST(results.size() == 1U);
@@ -143,17 +143,17 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                         c->subscribe(
                             0,
                             "topic1",
-                            MQTT_NS::qos::at_most_once) == false);
+                            static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once)) == false);
                     BOOST_TEST(
                         c->subscribe(
                             1,
                             "topic1",
-                            MQTT_NS::qos::at_most_once) == true);
+                            static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once)) == true);
                     BOOST_TEST(
                         c->subscribe(
                             1,
                             "topic1",
-                            MQTT_NS::qos::at_most_once) == false);
+                            static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once)) == false);
                     return true;
                 });
             c->set_v5_puback_handler(

@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
                 MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                pid_sub = c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                 return true;
             });
         c->set_close_handler(
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
             });
         c->set_suback_handler(
             [&chk, &c, &pid_sub, &test_contents]
-            (packet_id_t packet_id, std::vector<MQTT_NS::optional<std::uint8_t>> results) {
+            (packet_id_t packet_id, std::vector<MQTT_NS::optional<MQTT_NS::qos>> results) {
                 MQTT_CHK("h_suback");
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(results.size() == 1U);
@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
                 MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                pid_sub = c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                 return true;
             });
         c->set_close_handler(
@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
             });
         c->set_suback_handler(
             [&chk, &c, &pid_sub, &test_contents]
-            (packet_id_t packet_id, std::vector<MQTT_NS::optional<std::uint8_t>> results) {
+            (packet_id_t packet_id, std::vector<MQTT_NS::optional<MQTT_NS::qos>> results) {
                 MQTT_CHK("h_suback");
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(results.size() == 1U);
@@ -262,7 +262,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
                 MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                pid_sub = c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                 return true;
             });
         c->set_close_handler(
@@ -296,7 +296,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
             });
         c->set_suback_handler(
             [&chk, &c, &pid_sub, &test_contents]
-            (packet_id_t packet_id, std::vector<MQTT_NS::optional<std::uint8_t>> results) {
+            (packet_id_t packet_id, std::vector<MQTT_NS::optional<MQTT_NS::qos>> results) {
                 MQTT_CHK("h_suback");
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(results.size() == 1U);

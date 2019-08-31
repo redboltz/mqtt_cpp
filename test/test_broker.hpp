@@ -18,6 +18,7 @@
 #include <boost/multi_index/identity.hpp>
 
 #include <mqtt_server_cpp.hpp>
+#include <mqtt/qos.hpp>
 #include <mqtt/optional.hpp>
 #include <mqtt/visitor_util.hpp>
 
@@ -551,12 +552,12 @@ private:
                         as::buffer(item.topic),
                         as::buffer(d.contents),
                         std::make_pair(item.topic, d.contents),
-                        std::min(item.qos, d.qos),
+                        std::min(item.qos_value, d.qos_value),
                         true, // TODO: why is this 'retain'?
                         *(d.props)
                         );
                 }
-                subs_.emplace(item.topic, spep, item.qos);
+                subs_.emplace(item.topic, spep, item.qos_value);
             }
             idx.erase(range.begin(), range.end());
             BOOST_ASSERT(idx.count(client_id) == 0);
@@ -595,18 +596,18 @@ private:
         MQTT_NS::buffer contents,
         std::vector<MQTT_NS::v5::property_variant> props) {
 
-        std::uint8_t qos = MQTT_NS::publish::get_qos(header);
+        MQTT_NS::qos qos_value = MQTT_NS::publish::get_qos(header);
         bool is_retain = MQTT_NS::publish::is_retain(header);
         do_publish(
             std::move(topic_name),
             std::move(contents),
-            qos,
+            qos_value,
             is_retain,
             std::move(props));
 
         switch (ep.get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
-            switch (qos) {
+            switch (qos_value) {
             case MQTT_NS::qos::at_least_once:
                 ep.puback(packet_id.value());
                 break;
@@ -618,7 +619,7 @@ private:
             }
             break;
         case MQTT_NS::protocol_version::v5:
-            switch (qos) {
+            switch (qos_value) {
             case MQTT_NS::qos::at_least_once:
                 ep.puback(packet_id.value(), MQTT_NS::v5::reason_code::success, puback_props_);
                 break;
@@ -653,11 +654,11 @@ private:
         res.reserve(entries.size());
         for (auto const& e : entries) {
             MQTT_NS::buffer topic = std::get<0>(e);
-            std::uint8_t qos = std::get<1>(e);
-            res.emplace_back(qos);
+            std::uint8_t qos_value = std::get<1>(e);
+            res.emplace_back(qos_value);
             // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
             // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
-            subs_.emplace(std::move(topic), ep.shared_from_this(), qos);
+            subs_.emplace(std::move(topic), ep.shared_from_this(), static_cast<MQTT_NS::qos>(qos_value));
         }
         switch (ep.get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
@@ -675,7 +676,7 @@ private:
         }
         for (auto const& e : entries) {
             MQTT_NS::buffer const& topic = std::get<0>(e);
-            std::uint8_t qos = std::get<1>(e);
+            MQTT_NS::qos qos_value = static_cast<MQTT_NS::qos>(std::get<1>(e));
             // Publish any retained messages that match the newly subscribed topic.
             auto it = retains_.find(topic);
             if (it != retains_.end()) {
@@ -683,7 +684,7 @@ private:
                     as::buffer(it->topic),
                     as::buffer(it->contents),
                     std::make_pair(it->topic, it->contents),
-                    std::min(it->qos, qos),
+                    std::min(it->qos_value, qos_value),
                     true,
                     it->props);
             }
@@ -764,7 +765,7 @@ private:
     void do_publish(
         MQTT_NS::buffer topic,
         MQTT_NS::buffer contents,
-        std::uint8_t qos,
+        MQTT_NS::qos qos_value,
         bool is_retain,
         std::vector<MQTT_NS::v5::property_variant> props) {
         // For each active subscription registered for this topic
@@ -778,7 +779,7 @@ private:
             sub.con->publish(
                 topic,
                 contents,
-                std::min(sub.qos, qos),
+                std::min(sub.qos_value, qos_value),
                 false,
                 props // TODO: Copying the properties vector for each subscription.
             );
@@ -801,7 +802,7 @@ private:
                                    val.messages.emplace_back(
                                        contents,
                                        sp_props,
-                                       std::min(it->qos, qos));
+                                       std::min(it->qos_value, qos_value));
                                },
                                [&](session_subscription&)
                                {
@@ -840,7 +841,7 @@ private:
             else {
                 auto const& it = retains_.find(topic);
                 if(it == retains_.end()) {
-                    auto const& ret = retains_.emplace(topic, contents, std::move(props), qos);
+                    auto const& ret = retains_.emplace(topic, contents, std::move(props), qos_value);
                     BOOST_ASSERT(ret.second);
                     BOOST_ASSERT(ret.first->topic == topic);
                     BOOST_ASSERT(ret.first->contents == contents);
@@ -849,7 +850,7 @@ private:
                     retains_.modify(it,
                                     [&](retain& val)
                                     {
-                                        val.qos = qos;
+                                        val.qos_value = qos_value;
                                         val.props = std::move(props);
                                         val.contents = contents;
                                     },
@@ -955,7 +956,7 @@ private:
                 for(auto const& item : range) {
                     auto const& ret = saved_subs_.emplace(client_id,
                                                           item.topic,
-                                                          item.qos);
+                                                          item.qos_value);
                     BOOST_ASSERT(ret.second);
                     BOOST_ASSERT(ret.first == saved_subs_.find(client_id));
                 }
@@ -970,7 +971,7 @@ private:
             do_publish(
                 std::move(will.value().topic()),
                 std::move(will.value().message()),
-                will.value().qos(),
+                will.value().get_qos(),
                 will.value().retain(),
                 std::move(will.value().props()));
         }
@@ -1054,11 +1055,11 @@ private:
         sub_con(
             MQTT_NS::buffer topic,
             con_sp_t con,
-            std::uint8_t qos)
-            :topic(std::move(topic)), con(std::move(con)), qos(qos) {}
+            MQTT_NS::qos qos_value)
+            :topic(std::move(topic)), con(std::move(con)), qos_value(qos_value) {}
         MQTT_NS::buffer topic;
         con_sp_t con;
-        std::uint8_t qos;
+        MQTT_NS::qos qos_value;
     };
     using mi_sub_con = mi::multi_index_container<
         sub_con,
@@ -1092,12 +1093,12 @@ private:
             MQTT_NS::buffer topic,
             MQTT_NS::buffer contents,
             std::vector<MQTT_NS::v5::property_variant> props,
-            std::uint8_t qos)
-            :topic(std::move(topic)), contents(std::move(contents)), props(std::move(props)), qos(qos) {}
+            MQTT_NS::qos qos_value)
+            :topic(std::move(topic)), contents(std::move(contents)), props(std::move(props)), qos_value(qos_value) {}
         MQTT_NS::buffer topic;
         MQTT_NS::buffer contents;
         std::vector<MQTT_NS::v5::property_variant> props;
-        std::uint8_t qos;
+        MQTT_NS::qos qos_value;
     };
     using mi_retain = mi::multi_index_container<
         retain,
@@ -1117,11 +1118,11 @@ private:
         saved_message(
             MQTT_NS::buffer contents,
             std::shared_ptr<std::vector<MQTT_NS::v5::property_variant>> props,
-            std::uint8_t qos)
-            : contents(std::move(contents)), props(std::move(props)), qos(qos) {}
+            MQTT_NS::qos qos_value)
+            : contents(std::move(contents)), props(std::move(props)), qos_value(qos_value) {}
         MQTT_NS::buffer contents;
         std::shared_ptr<std::vector<MQTT_NS::v5::property_variant>> props;
-        std::uint8_t qos;
+        MQTT_NS::qos qos_value;
     };
 
     // Each instance of session_subscription describes a subscription that the associated client id has made
@@ -1130,12 +1131,12 @@ private:
         session_subscription(
             MQTT_NS::buffer client_id,
             MQTT_NS::buffer topic,
-            std::uint8_t qos)
-            :client_id(std::move(client_id)), topic(std::move(topic)), qos(qos) {}
+            MQTT_NS::qos qos_value)
+            :client_id(std::move(client_id)), topic(std::move(topic)), qos_value(qos_value) {}
         MQTT_NS::buffer client_id;
         MQTT_NS::buffer topic;
         std::vector<saved_message> messages;
-        std::uint8_t qos;
+        MQTT_NS::qos qos_value;
     };
 
     using mi_session_subscription = mi::multi_index_container<

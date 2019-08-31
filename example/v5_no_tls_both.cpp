@@ -35,11 +35,11 @@ void client_proc(
             std::cout << "[client] Connect Reason Code: "
                       << static_cast<int>(reason_code) << std::endl;
             if (reason_code == MQTT_NS::v5::reason_code::success) {
-                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", MQTT_NS::qos::at_most_once);
+                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                 pid_sub2 = c->subscribe(
                     {
-                        { "mqtt_client_cpp/topic2_1", MQTT_NS::qos::at_least_once },
-                        { "mqtt_client_cpp/topic2_2", MQTT_NS::qos::exactly_once }
+                        { "mqtt_client_cpp/topic2_1", static_cast<std::uint8_t>(MQTT_NS::qos::at_least_once) },
+                        { "mqtt_client_cpp/topic2_2", static_cast<std::uint8_t>(MQTT_NS::qos::exactly_once) }
                     }
                 );
             }
@@ -121,7 +121,7 @@ void client_proc(
          std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout << "[client] publish received. "
                       << "dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
-                      << " pos: " << MQTT_NS::qos::to_str(MQTT_NS::publish::get_qos(header))
+                      << " pos: " << MQTT_NS::qos_to_str(MQTT_NS::publish::get_qos(header))
                       << " retain: " << MQTT_NS::publish::is_retain(header) << std::endl;
             if (packet_id)
                 std::cout << "[client] packet_id: " << *packet_id << std::endl;
@@ -146,11 +146,11 @@ using con_t = MQTT_NS::server<>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
 
 struct sub_con {
-    sub_con(MQTT_NS::buffer topic, con_sp_t con, std::uint8_t qos)
-        :topic(std::move(topic)), con(std::move(con)), qos(qos) {}
+    sub_con(MQTT_NS::buffer topic, con_sp_t con, MQTT_NS::qos qos_value)
+        :topic(std::move(topic)), con(std::move(con)), qos_value(qos_value) {}
     MQTT_NS::buffer topic;
     con_sp_t con;
-    std::uint8_t qos;
+    MQTT_NS::qos qos_value;
 };
 
 struct tag_topic {};
@@ -281,11 +281,11 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                  MQTT_NS::buffer topic_name,
                  MQTT_NS::buffer contents,
                  std::vector<MQTT_NS::v5::property_variant> /*props*/){
-                    std::uint8_t qos = MQTT_NS::publish::get_qos(header);
+                    MQTT_NS::qos qos_value = MQTT_NS::publish::get_qos(header);
                     bool retain = MQTT_NS::publish::is_retain(header);
                     std::cout << "[server] publish received."
                               << " dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
-                              << " qos: " << MQTT_NS::qos::to_str(qos)
+                              << " qos: " << MQTT_NS::qos_to_str(qos_value)
                               << " retain: " << retain << std::endl;
                     if (packet_id)
                         std::cout << "[server] packet_id: " << *packet_id << std::endl;
@@ -298,7 +298,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                             boost::asio::buffer(topic_name),
                             boost::asio::buffer(contents),
                             std::make_pair(topic_name, contents),
-                            std::min(r.first->qos, qos),
+                            std::min(r.first->qos_value, qos_value),
                             retain
                         );
                     }
@@ -314,10 +314,10 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     res.reserve(entries.size());
                     for (auto const& e : entries) {
                         MQTT_NS::buffer topic = std::get<0>(e);
-                        std::uint8_t qos = std::get<1>(e);
-                        std::cout << "[server] topic: " << topic  << " qos: " << static_cast<int>(qos) << std::endl;
-                        res.emplace_back(qos);
-                        subs.emplace(std::move(topic), ep.shared_from_this(), qos);
+                        std::uint8_t qos_value = std::get<1>(e);
+                        std::cout << "[server] topic: " << topic  << " qos: " << static_cast<int>(qos_value) << std::endl;
+                        res.emplace_back(qos_value);
+                        subs.emplace(std::move(topic), ep.shared_from_this(), static_cast<MQTT_NS::qos>(qos_value));
                     }
                     ep.suback(packet_id, res);
                     return true;

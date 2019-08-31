@@ -469,11 +469,11 @@ class maximum_qos : public detail::n_bytes_property<1> {
 public:
     using recv = maximum_qos;
     using store = maximum_qos;
-    maximum_qos(std::uint8_t qos)
-        : detail::n_bytes_property<1>(id::maximum_qos, { static_cast<char>(qos) } ) {
-        if (qos != qos::at_most_once &&
-            qos != qos::at_least_once &&
-            qos != qos::exactly_once) throw property_parse_error();
+    maximum_qos(qos qos_value)
+        : detail::n_bytes_property<1>(id::maximum_qos, { static_cast<char>(qos_value) } ) {
+        if (qos_value != qos::at_most_once &&
+            qos_value != qos::at_least_once &&
+            qos_value != qos::exactly_once) throw property_parse_error();
     }
 
     template <typename It>

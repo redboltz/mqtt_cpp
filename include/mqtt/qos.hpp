@@ -12,13 +12,30 @@
 
 namespace MQTT_NS {
 
-namespace qos {
+enum class qos : std::uint8_t {
 
-constexpr std::uint8_t const at_most_once  = 0;
-constexpr std::uint8_t const at_least_once = 1;
-constexpr std::uint8_t const exactly_once  = 2;
+    at_most_once  = 0,
+    at_least_once = 1,
+    exactly_once  = 2,
 
-} // namespace qos
+}; // enum qos
+
+inline
+char const* qos_to_str(qos v) {
+    char const * const str[] = {
+        "at_most_once",
+        "at_least_once",
+        "exactly_once"
+    };
+    if (static_cast<size_t>(v) < sizeof(str)) return str[static_cast<size_t>(v)];
+    return "invalid_qos";
+}
+
+template<typename OSTREAM_T>
+OSTREAM_T & operator<<(OSTREAM_T & os, qos v)
+{
+    return os << qos_to_str(v);
+}
 
 } // namespace MQTT_NS
 

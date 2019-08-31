@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE( topic_alias ) {
 }
 
 BOOST_AUTO_TEST_CASE( maximum_qos ) {
-    MQTT_NS::v5::property::maximum_qos v { 2 };
+    MQTT_NS::v5::property::maximum_qos v { MQTT_NS::qos::exactly_once };
 
     BOOST_TEST(boost::lexical_cast<std::string>(v) == "2");
 }

@@ -44,11 +44,11 @@ int main(int argc, char** argv) {
             std::cout << "[client] Connect Reason Code: "
                       << static_cast<int>(reason_code) << std::endl;
             if (reason_code == MQTT_NS::v5::reason_code::success) {
-                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", MQTT_NS::qos::at_most_once);
+                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                 pid_sub2 = c->subscribe(
                     {
-                        { "mqtt_client_cpp/topic2_1", MQTT_NS::qos::at_least_once },
-                        { "mqtt_client_cpp/topic2_2", MQTT_NS::qos::exactly_once }
+                        { "mqtt_client_cpp/topic2_1", static_cast<std::uint8_t>(MQTT_NS::qos::at_least_once) },
+                        { "mqtt_client_cpp/topic2_2", static_cast<std::uint8_t>(MQTT_NS::qos::exactly_once) }
                     }
                 );
             }
@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
          std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout << "[client] publish received. "
                       << "dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
-                      << " pos: " << MQTT_NS::qos::to_str(MQTT_NS::publish::get_qos(header))
+                      << " pos: " << MQTT_NS::qos_to_str(MQTT_NS::publish::get_qos(header))
                       << " retain: " << MQTT_NS::publish::is_retain(header) << std::endl;
             if (packet_id)
                 std::cout << "[client] packet_id: " << *packet_id << std::endl;

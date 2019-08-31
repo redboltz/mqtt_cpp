@@ -49,11 +49,11 @@ int main(int argc, char** argv) {
             std::cout << "Connack Return Code: "
                       << MQTT_NS::connect_return_code_to_str(connack_return_code) << std::endl;
             if (connack_return_code == MQTT_NS::connect_return_code::accepted) {
-                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", MQTT_NS::qos::at_most_once);
+                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                 pid_sub2 = c->subscribe(
                     {
-                        { "mqtt_client_cpp/topic2_1", MQTT_NS::qos::at_least_once },
-                        { "mqtt_client_cpp/topic2_2", MQTT_NS::qos::exactly_once }
+                        { "mqtt_client_cpp/topic2_1", static_cast<std::uint8_t>(MQTT_NS::qos::at_least_once) },
+                        { "mqtt_client_cpp/topic2_2", static_cast<std::uint8_t>(MQTT_NS::qos::exactly_once) }
                     }
                 );
             }
@@ -91,11 +91,11 @@ int main(int argc, char** argv) {
         });
     c->set_suback_handler(
         [&]
-        (packet_id_t packet_id, std::vector<MQTT_NS::optional<std::uint8_t>> results){
+        (packet_id_t packet_id, std::vector<MQTT_NS::optional<MQTT_NS::qos>> results){
             std::cout << "suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : results) {
                 if (e) {
-                    std::cout << "subscribe success: " << MQTT_NS::qos::to_str(*e) << std::endl;
+                    std::cout << "subscribe success: " << MQTT_NS::qos_to_str(*e) << std::endl;
                 }
                 else {
                     std::cout << "subscribe failed" << std::endl;
@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
          MQTT_NS::buffer contents){
             std::cout << "publish received. "
                       << "dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
-                      << " pos: " << MQTT_NS::qos::to_str(MQTT_NS::publish::get_qos(header))
+                      << " pos: " << MQTT_NS::qos_to_str(MQTT_NS::publish::get_qos(header))
                       << " retain: " << MQTT_NS::publish::is_retain(header) << std::endl;
             if (packet_id)
                 std::cout << "packet_id: " << *packet_id << std::endl;

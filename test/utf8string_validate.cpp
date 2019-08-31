@@ -632,7 +632,7 @@ BOOST_AUTO_TEST_CASE( subscribe_overlength_topic ) {
             [&]
             (bool, std::uint8_t) {
                 try {
-                    c->subscribe(tp, MQTT_NS::qos::at_most_once);
+                    c->subscribe(tp, static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     return true;
                 }
                 catch (MQTT_NS::utf8string_length_error const&) {
@@ -660,7 +660,7 @@ BOOST_AUTO_TEST_CASE( subscribe_invalid_topic ) {
             [&]
             (bool, std::uint8_t) {
                 try {
-                    c->subscribe(tp, MQTT_NS::qos::at_most_once);
+                    c->subscribe(tp, static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     return true;
                 }
                 catch (MQTT_NS::utf8string_contents_error const&) {

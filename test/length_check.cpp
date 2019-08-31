@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                 return true;
             });
         c->set_close_handler(
@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             });
         c->set_suback_handler(
             [&chk, &c]
-            (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<MQTT_NS::qos>> /*results*/) {
                 MQTT_CHK("h_suback");
                 c->publish_at_most_once("topic1", "topic1_contents");
                 return true;

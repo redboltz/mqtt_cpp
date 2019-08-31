@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
 
                     c->publish_at_most_once("topic1", "retained_contents", true);
 
-                    pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                    pid_sub = c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     return true;
                 });
             c->set_puback_handler(
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
                 });
             c->set_suback_handler(
                 [&chk, &pid_sub]
-                (packet_id_t packet_id, std::vector<MQTT_NS::optional<std::uint8_t>> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::optional<MQTT_NS::qos>> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
 
                     c->publish_at_most_once("topic1", "retained_contents", true);
 
-                    pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                    pid_sub = c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -228,7 +228,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     c->publish_at_most_once("topic1", "retained_contents2", true);
                     c->publish_at_most_once("topic1", "retained_contents3", false);
 
-                    pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                    pid_sub = c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     return true;
                 });
             c->set_puback_handler(
@@ -251,7 +251,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                 });
             c->set_suback_handler(
                 [&chk, &pid_sub]
-                (packet_id_t packet_id, std::vector<MQTT_NS::optional<std::uint8_t>> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::optional<MQTT_NS::qos>> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
@@ -295,7 +295,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     c->publish_at_most_once("topic1", "retained_contents2", true);
                     c->publish_at_most_once("topic1", "retained_contents3", false);
 
-                    pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                    pid_sub = c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -411,7 +411,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                    pid_sub = c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     return true;
                 });
             c->set_puback_handler(
@@ -434,7 +434,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                 });
             c->set_suback_handler(
                 [&chk, &c, &pid_sub]
-                (packet_id_t packet_id, std::vector<MQTT_NS::optional<std::uint8_t>> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::optional<MQTT_NS::qos>> results) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
@@ -460,7 +460,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                         "h_publish1",
                         [&] {
                             MQTT_CHK("h_unsuback1");
-                            pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                            pid_sub = c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                         },
                         "h_publish2",
                         [&] {
@@ -506,7 +506,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                    pid_sub = c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     return true;
                 });
             c->set_v5_puback_handler(
@@ -557,7 +557,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                         "h_publish1",
                         [&] {
                             MQTT_CHK("h_unsuback1");
-                            pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                            pid_sub = c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                         },
                         "h_publish2",
                         [&] {
@@ -666,7 +666,7 @@ BOOST_AUTO_TEST_CASE( prop ) {
 
                 c->publish_at_most_once("topic1", "retained_contents", true, std::move(ps));
 
-                pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                pid_sub = c->subscribe("topic1", static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                 return true;
             });
         c->set_v5_puback_handler(

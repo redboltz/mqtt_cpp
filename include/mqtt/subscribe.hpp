@@ -18,8 +18,8 @@ namespace MQTT_NS {
 namespace subscribe {
 
 inline
-constexpr std::uint8_t get_qos(std::uint8_t v) {
-    return v & 0b00000011;
+constexpr qos get_qos(std::uint8_t v) {
+    return static_cast<qos>(v & 0b00000011);
 }
 
 inline
