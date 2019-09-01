@@ -1,5 +1,9 @@
+## 6.0.2
+* Fixed moved from object access problem. (#378)
+* Fixed unexpected copy fallback of move operations. (#378)
+
 ## 6.0.1
-* Fixed compile error of `acquired_async_publish_dup()`. (#375)
+* Fixed compile error of `acquired_async_publish_dup()`. (#376)
 
 ## 6.0.0
 * Supressed warnings. (#367, #368, #369, #370, #371)
