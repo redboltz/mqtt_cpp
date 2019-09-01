@@ -301,10 +301,11 @@ private:
     void do_accept() {
         if (close_request_) return;
         auto socket = std::make_shared<socket_t>(ios_con_, ctx_);
+        auto ps = socket.get();
         acceptor_.value().async_accept(
-            socket->lowest_layer(),
-            [this, socket]
-            (boost::system::error_code const& ec) {
+            ps->lowest_layer(),
+            [this, socket = force_move(socket)]
+            (boost::system::error_code const& ec) mutable {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
@@ -322,9 +323,10 @@ private:
                         socket->lowest_layer().close(close_ec);
                     }
                 );
-                socket->async_handshake(
+                auto ps = socket.get();
+                ps->async_handshake(
                     as::ssl::stream_base::server,
-                    [this, socket, tim, underlying_finished]
+                    [this, socket = force_move(socket), tim, underlying_finished]
                     (boost::system::error_code ec) mutable {
                         *underlying_finished = true;
                         tim->cancel();
@@ -496,10 +498,11 @@ private:
     void do_accept() {
         if (close_request_) return;
         auto socket = std::make_shared<socket_t>(ios_con_);
+        auto ps = socket.get();
         acceptor_.value().async_accept(
-            socket->next_layer(),
-            [this, socket]
-            (boost::system::error_code const& ec) {
+            ps->next_layer(),
+            [this, socket = force_move(socket)]
+            (boost::system::error_code const& ec) mutable {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
@@ -520,12 +523,13 @@ private:
 
                 auto sb = std::make_shared<boost::asio::streambuf>();
                 auto request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
+                auto ps = socket.get();
                 boost::beast::http::async_read(
-                    socket->next_layer(),
+                    ps->next_layer(),
                     *sb,
                     *request,
-                    [this, socket, sb, request, tim, underlying_finished]
-                    (boost::system::error_code const& ec, std::size_t) {
+                    [this, socket = force_move(socket), sb, request, tim, underlying_finished]
+                    (boost::system::error_code const& ec, std::size_t) mutable {
                         if (ec) {
                             *underlying_finished = true;
                             tim->cancel();
@@ -536,7 +540,8 @@ private:
                             tim->cancel();
                             return;
                         }
-                        socket->async_accept_ex(
+                        auto ps = socket.get();
+                        ps->async_accept_ex(
                             *request,
                             [request]
                             (boost::beast::websocket::response_type& m) {
@@ -545,7 +550,7 @@ private:
                                     m.insert(it->name(), it->value());
                                 }
                             },
-                            [this, socket, tim, underlying_finished]
+                            [this, socket = force_move(socket), tim, underlying_finished]
                             (boost::system::error_code const& ec) mutable {
                                 *underlying_finished = true;
                                 tim->cancel();
