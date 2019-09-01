@@ -26,6 +26,7 @@
 
 #include <mqtt/endpoint.hpp>
 #include <mqtt/null_strand.hpp>
+#include <mqtt/move.hpp>
 
 namespace MQTT_NS {
 
@@ -116,7 +117,7 @@ public:
     }
 
     void set_accept_handler(accept_handler h = accept_handler()) {
-        h_accept_ = std::move(h);
+        h_accept_ = force_move(h);
     }
 
     /**
@@ -124,7 +125,7 @@ public:
      * @param h handler
      */
     void set_error_handler(error_handler h = error_handler()) {
-        h_error_ = std::move(h);
+        h_error_ = force_move(h);
     }
 
     /**
@@ -145,13 +146,13 @@ private:
         acceptor_.value().async_accept(
             socket->lowest_layer(),
             [this, socket]
-            (boost::system::error_code const& ec) {
+            (boost::system::error_code const& ec) mutable {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
                     return;
                 }
-                auto sp = std::make_shared<endpoint_t>(std::move(socket), version_);
+                auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
                 if (h_accept_) h_accept_(*sp);
                 do_accept();
             }
@@ -207,7 +208,7 @@ public:
           ios_con_(ios_con),
           acceptor_(as::ip::tcp::acceptor(ios_accept_, ep_)),
           config_(std::forward<AcceptorConfig>(config)),
-          ctx_(std::move(ctx)) {
+          ctx_(force_move(ctx)) {
         config_(acceptor_.value());
     }
 
@@ -217,7 +218,7 @@ public:
         as::ssl::context&& ctx,
         as::io_service& ios_accept,
         as::io_service& ios_con)
-        : server_tls(std::forward<AsioEndpoint>(ep), std::move(ctx), ios_accept, ios_con, [](as::ip::tcp::acceptor&) {}) {}
+        : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ios_accept, ios_con, [](as::ip::tcp::acceptor&) {}) {}
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls(
@@ -225,14 +226,14 @@ public:
         as::ssl::context&& ctx,
         as::io_service& ios,
         AcceptorConfig&& config)
-        : server_tls(std::forward<AsioEndpoint>(ep), std::move(ctx), ios, ios, std::forward<AcceptorConfig>(config)) {}
+        : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ios, ios, std::forward<AcceptorConfig>(config)) {}
 
     template <typename AsioEndpoint>
     server_tls(
         AsioEndpoint&& ep,
         as::ssl::context&& ctx,
         as::io_service& ios)
-        : server_tls(std::forward<AsioEndpoint>(ep), std::move(ctx), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
+        : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
         close_request_ = false;
@@ -262,7 +263,7 @@ public:
     }
 
     void set_accept_handler(accept_handler h = accept_handler()) {
-        h_accept_ = std::move(h);
+        h_accept_ = force_move(h);
     }
 
     /**
@@ -270,7 +271,7 @@ public:
      * @param h handler
      */
     void set_error_handler(error_handler h = error_handler()) {
-        h_error_ = std::move(h);
+        h_error_ = force_move(h);
     }
 
     /**
@@ -293,17 +294,18 @@ public:
      * @param timeout timeout value
      */
     void set_underlying_connect_timeout(boost::posix_time::time_duration timeout) {
-        underlying_connect_timeout_ = std::move(timeout);
+        underlying_connect_timeout_ = force_move(timeout);
     }
 
 private:
     void do_accept() {
         if (close_request_) return;
         auto socket = std::make_shared<socket_t>(ios_con_, ctx_);
+        auto ps = socket.get();
         acceptor_.value().async_accept(
-            socket->lowest_layer(),
-            [this, socket]
-            (boost::system::error_code const& ec) {
+            ps->lowest_layer(),
+            [this, socket = force_move(socket)]
+            (boost::system::error_code const& ec) mutable {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
@@ -321,16 +323,17 @@ private:
                         socket->lowest_layer().close(close_ec);
                     }
                 );
-                socket->async_handshake(
+                auto ps = socket.get();
+                ps->async_handshake(
                     as::ssl::stream_base::server,
-                    [this, socket, tim, underlying_finished]
-                    (boost::system::error_code ec) {
+                    [this, socket = force_move(socket), tim, underlying_finished]
+                    (boost::system::error_code ec) mutable {
                         *underlying_finished = true;
                         tim->cancel();
                         if (ec) {
                             return;
                         }
-                        auto sp = std::make_shared<endpoint_t>(std::move(socket), version_);
+                        auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
                         if (h_accept_) h_accept_(*sp);
                     }
                 );
@@ -457,7 +460,7 @@ public:
     }
 
     void set_accept_handler(accept_handler h = accept_handler()) {
-        h_accept_ = std::move(h);
+        h_accept_ = force_move(h);
     }
 
     /**
@@ -465,7 +468,7 @@ public:
      * @param h handler
      */
     void set_error_handler(error_handler h = error_handler()) {
-        h_error_ = std::move(h);
+        h_error_ = force_move(h);
     }
 
     /**
@@ -488,17 +491,18 @@ public:
      * @param timeout timeout value
      */
     void set_underlying_connect_timeout(boost::posix_time::time_duration timeout) {
-        underlying_connect_timeout_ = std::move(timeout);
+        underlying_connect_timeout_ = force_move(timeout);
     }
 
 private:
     void do_accept() {
         if (close_request_) return;
         auto socket = std::make_shared<socket_t>(ios_con_);
+        auto ps = socket.get();
         acceptor_.value().async_accept(
-            socket->next_layer(),
-            [this, socket]
-            (boost::system::error_code const& ec) {
+            ps->next_layer(),
+            [this, socket = force_move(socket)]
+            (boost::system::error_code const& ec) mutable {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
@@ -519,12 +523,13 @@ private:
 
                 auto sb = std::make_shared<boost::asio::streambuf>();
                 auto request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
+                auto ps = socket.get();
                 boost::beast::http::async_read(
-                    socket->next_layer(),
+                    ps->next_layer(),
                     *sb,
                     *request,
-                    [this, socket, sb, request, tim, underlying_finished]
-                    (boost::system::error_code const& ec, std::size_t) {
+                    [this, socket = force_move(socket), sb, request, tim, underlying_finished]
+                    (boost::system::error_code const& ec, std::size_t) mutable {
                         if (ec) {
                             *underlying_finished = true;
                             tim->cancel();
@@ -535,7 +540,8 @@ private:
                             tim->cancel();
                             return;
                         }
-                        socket->async_accept_ex(
+                        auto ps = socket.get();
+                        ps->async_accept_ex(
                             *request,
                             [request]
                             (boost::beast::websocket::response_type& m) {
@@ -544,14 +550,14 @@ private:
                                     m.insert(it->name(), it->value());
                                 }
                             },
-                            [this, socket, tim, underlying_finished]
-                            (boost::system::error_code const& ec) {
+                            [this, socket = force_move(socket), tim, underlying_finished]
+                            (boost::system::error_code const& ec) mutable {
                                 *underlying_finished = true;
                                 tim->cancel();
                                 if (ec) {
                                     return;
                                 }
-                                auto sp = std::make_shared<endpoint_t>(std::move(socket), version_);
+                                auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
                                 if (h_accept_) h_accept_(*sp);
                             }
                         );
@@ -613,7 +619,7 @@ public:
           ios_con_(ios_con),
           acceptor_(as::ip::tcp::acceptor(ios_accept_, ep_)),
           config_(std::forward<AcceptorConfig>(config)),
-          ctx_(std::move(ctx)) {
+          ctx_(force_move(ctx)) {
         config_(acceptor_.value());
     }
 
@@ -623,7 +629,7 @@ public:
         as::ssl::context&& ctx,
         as::io_service& ios_accept,
         as::io_service& ios_con)
-        : server_tls_ws(std::forward<AsioEndpoint>(ep), std::move(ctx), ios_accept, ios_con, [](as::ip::tcp::acceptor&) {}) {}
+        : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ios_accept, ios_con, [](as::ip::tcp::acceptor&) {}) {}
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls_ws(
@@ -631,14 +637,14 @@ public:
         as::ssl::context&& ctx,
         as::io_service& ios,
         AcceptorConfig&& config)
-        : server_tls_ws(std::forward<AsioEndpoint>(ep), std::move(ctx), ios, ios, std::forward<AcceptorConfig>(config)) {}
+        : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ios, ios, std::forward<AcceptorConfig>(config)) {}
 
     template <typename AsioEndpoint>
     server_tls_ws(
         AsioEndpoint&& ep,
         as::ssl::context&& ctx,
         as::io_service& ios)
-        : server_tls_ws(std::forward<AsioEndpoint>(ep), std::move(ctx), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
+        : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
         close_request_ = false;
@@ -668,7 +674,7 @@ public:
     }
 
     void set_accept_handler(accept_handler h = accept_handler()) {
-        h_accept_ = std::move(h);
+        h_accept_ = force_move(h);
     }
 
     /**
@@ -676,7 +682,7 @@ public:
      * @param h handler
      */
     void set_error_handler(error_handler h = error_handler()) {
-        h_error_ = std::move(h);
+        h_error_ = force_move(h);
     }
 
     /**
@@ -699,7 +705,7 @@ public:
      * @param timeout timeout value
      */
     void set_underlying_connect_timeout(boost::posix_time::time_duration timeout) {
-        underlying_connect_timeout_ = std::move(timeout);
+        underlying_connect_timeout_ = force_move(timeout);
     }
 
 private:
@@ -764,13 +770,13 @@ private:
                                         }
                                     },
                                     [this, socket, tim, underlying_finished]
-                                    (boost::system::error_code const& ec) {
+                                    (boost::system::error_code const& ec) mutable {
                                         *underlying_finished = true;
                                         tim->cancel();
                                         if (ec) {
                                             return;
                                         }
-                                        auto sp = std::make_shared<endpoint_t>(std::move(socket), version_);
+                                        auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
                                         if (h_accept_) h_accept_(*sp);
                                     }
                                 );

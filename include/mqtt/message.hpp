@@ -33,6 +33,7 @@
 #include <mqtt/string_view.hpp>
 #include <mqtt/property.hpp>
 #include <mqtt/string_check.hpp>
+#include <mqtt/move.hpp>
 
 namespace MQTT_NS {
 
@@ -316,8 +317,8 @@ public:
               client_id.size()        // client id
           ),
           protocol_name_and_level_ { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x04 },
-          client_id_(std::move(client_id)),
-          client_id_length_buf_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(client_id.size())) },
+          client_id_(force_move(client_id)),
+          client_id_length_buf_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(client_id_.size())) },
           keep_alive_buf_ { num_to_2bytes(keep_alive_sec) }
     {
         utf8string_check(client_id_);
@@ -325,14 +326,14 @@ public:
         if (user_name) {
             utf8string_check(user_name.value());
             connect_flags_ |= connect_flags::user_name_flag;
-            user_name_ = std::move(user_name.value());
+            user_name_ = force_move(user_name.value());
             add_uint16_t_to_buf(user_name_length_buf_, boost::numeric_cast<std::uint16_t>(user_name_.size()));
 
             remaining_length_ += 2 + user_name_.size();
         }
         if (password) {
             connect_flags_ |= connect_flags::password_flag;
-            password_ = std::move(password.value());
+            password_ = force_move(password.value());
             add_uint16_t_to_buf(password_length_buf_, boost::numeric_cast<std::uint16_t>(password_.size()));
 
             remaining_length_ += 2 + password_.size();
@@ -343,13 +344,13 @@ public:
             connect_flags::set_will_qos(connect_flags_, w.value().qos());
 
             utf8string_check(w.value().topic());
-            will_topic_name_ = std::move(w.value().topic());
+            will_topic_name_ = force_move(w.value().topic());
             add_uint16_t_to_buf(
                 will_topic_name_length_buf_,
                 boost::numeric_cast<std::uint16_t>(will_topic_name_.size())
             );
             if (w.value().message().size() > 0xffffL) throw will_message_length_error();
-            will_message_ = std::move(w.value().message());
+            will_message_ = force_move(w.value().message());
             add_uint16_t_to_buf(
                 will_message_length_buf_,
                 boost::numeric_cast<std::uint16_t>(will_message_.size()));
@@ -508,9 +509,9 @@ public:
         buffer payload
     )
         : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::publish, 0b0000))),
-          topic_name_(std::move(topic_name)),
+          topic_name_(force_move(topic_name)),
           topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_name.size())) },
-          payload_(std::move(payload)),
+          payload_(force_move(payload)),
           remaining_length_(
               2                      // topic name length
               + topic_name_.size()   // topic name
@@ -584,7 +585,7 @@ public:
             break;
         };
 
-        payload_ = std::move(buf);
+        payload_ = force_move(buf);
     }
 
     /**
@@ -737,7 +738,7 @@ class basic_subscribe_message {
 private:
     struct entry {
         entry(buffer topic_name, std::uint8_t qos)
-            : topic_name_(std::move(topic_name)),
+            : topic_name_(force_move(topic_name)),
               topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_name_.size())) },
               qos_(qos)
         {}
@@ -757,12 +758,12 @@ public:
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
         for (auto&& e : params) {
-            auto topic_name = std::move(std::get<0>(e));
+            auto topic_name = force_move(std::get<0>(e));
             auto size = topic_name.size();
             utf8string_check(topic_name);
 
             auto qos = std::get<1>(e);
-            entries_.emplace_back(std::move(topic_name), qos);
+            entries_.emplace_back(force_move(topic_name), qos);
             remaining_length_ +=
                 2 +                     // topic name length
                 size +                  // topic name
@@ -949,7 +950,7 @@ class basic_unsubscribe_message {
 private:
     struct entry {
         entry(buffer topic_name)
-            : topic_name_(std::move(topic_name)),
+            : topic_name_(force_move(topic_name)),
               topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_name_.size())) }
         {}
 
@@ -969,7 +970,7 @@ public:
         for (auto&& e : params) {
             auto size = e.size();
             utf8string_check(e);
-            entries_.emplace_back(std::move(e));
+            entries_.emplace_back(force_move(e));
             remaining_length_ +=
                 2 +          // topic name length
                 size;        // topic name

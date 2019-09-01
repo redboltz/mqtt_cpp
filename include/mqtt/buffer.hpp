@@ -14,6 +14,7 @@
 #include <mqtt/namespace.hpp>
 #include <mqtt/string_view.hpp>
 #include <mqtt/shared_ptr_array.hpp>
+#include <mqtt/move.hpp>
 
 namespace MQTT_NS {
 
@@ -31,7 +32,7 @@ public:
      * It behaves as string_view. Caller needs to manage the target lifetime.
      */
     explicit constexpr buffer(MQTT_NS::string_view sv = MQTT_NS::string_view())
-        : MQTT_NS::string_view(std::move(sv)) {}
+        : MQTT_NS::string_view(force_move(sv)) {}
 
     /**
      * @brief string constructor (deleted)
@@ -48,8 +49,8 @@ public:
      * If user creates buffer via this constructor, spa's lifetime is held by the buffer.
      */
     buffer(MQTT_NS::string_view sv, shared_ptr_array spa)
-        : MQTT_NS::string_view(std::move(sv)),
-          lifetime_(std::move(spa)) {
+        : MQTT_NS::string_view(force_move(sv)),
+          lifetime_(force_move(spa)) {
     }
 
     /**
@@ -75,7 +76,7 @@ public:
      */
     buffer substr(std::size_t offset, std::size_t length = MQTT_NS::string_view::npos) && {
         // range is checked in MQTT_NS::string_view::substr.
-        return buffer(MQTT_NS::string_view::substr(offset, length), std::move(lifetime_));
+        return buffer(MQTT_NS::string_view::substr(offset, length), force_move(lifetime_));
     }
 
 private:

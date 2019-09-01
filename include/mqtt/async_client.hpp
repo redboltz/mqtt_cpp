@@ -9,6 +9,7 @@
 
 #include <mqtt/namespace.hpp>
 #include <mqtt/client.hpp>
+#include <mqtt/move.hpp>
 
 namespace MQTT_NS {
 
@@ -260,9 +261,9 @@ protected:
 #endif // defined(MQTT_USE_WS)
         ,
         protocol_version version = protocol_version::v3_1_1
-    ):base(ios, std::move(host), std::move(port)
+    ):base(ios, force_move(host), force_move(port)
 #if defined(MQTT_USE_WS)
-           , std::move(path)
+           , force_move(path)
 #endif // defined(MQTT_USE_WS)
            ,
            version,
@@ -279,8 +280,8 @@ make_async_client(as::io_service& ios, std::string host, std::string port, proto
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
+        force_move(host),
+        force_move(port),
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -292,7 +293,7 @@ inline std::shared_ptr<async_client<tcp_endpoint<as::ip::tcp::socket, as::io_ser
 make_async_client(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_async_client(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
         version
     );
@@ -304,8 +305,8 @@ make_async_client_no_strand(as::io_service& ios, std::string host, std::string p
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
+        force_move(host),
+        force_move(port),
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -317,7 +318,7 @@ inline std::shared_ptr<async_client<tcp_endpoint<as::ip::tcp::socket, null_stran
 make_async_client_no_strand(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_no_strand(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
         version
     );
@@ -331,9 +332,9 @@ make_async_client_ws(as::io_service& ios, std::string host, std::string port, st
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
-        std::move(path),
+        force_move(host),
+        force_move(port),
+        force_move(path),
         version
     );
 }
@@ -342,9 +343,9 @@ inline std::shared_ptr<async_client<ws_endpoint<as::ip::tcp::socket, as::io_serv
 make_async_client_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_ws(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
-        std::move(path),
+        force_move(path),
         version
     );
 }
@@ -355,9 +356,9 @@ make_async_client_no_strand_ws(as::io_service& ios, std::string host, std::strin
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
-        std::move(path),
+        force_move(host),
+        force_move(port),
+        force_move(path),
         version
     );
 }
@@ -366,9 +367,9 @@ inline std::shared_ptr<async_client<ws_endpoint<as::ip::tcp::socket, null_strand
 make_async_client_no_strand_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_no_strand_ws(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
-        std::move(path),
+        force_move(path),
         version
     );
 }
@@ -383,8 +384,8 @@ make_tls_async_client(as::io_service& ios, std::string host, std::string port, p
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
+        force_move(host),
+        force_move(port),
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -396,7 +397,7 @@ inline std::shared_ptr<async_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::so
 make_tls_async_client(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
         version
     );
@@ -408,8 +409,8 @@ make_tls_async_client_no_strand(as::io_service& ios, std::string host, std::stri
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
+        force_move(host),
+        force_move(port),
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -421,7 +422,7 @@ inline std::shared_ptr<async_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::so
 make_tls_async_client_no_strand(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_no_strand(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
         version
     );
@@ -435,9 +436,9 @@ make_tls_async_client_ws(as::io_service& ios, std::string host, std::string port
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
-        std::move(path),
+        force_move(host),
+        force_move(port),
+        force_move(path),
         version
     );
 }
@@ -446,9 +447,9 @@ inline std::shared_ptr<async_client<ws_endpoint<as::ssl::stream<as::ip::tcp::soc
 make_tls_async_client_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_ws(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
-        std::move(path),
+        force_move(path),
         version
     );
 }
@@ -459,9 +460,9 @@ make_tls_async_client_no_strand_ws(as::io_service& ios, std::string host, std::s
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
-        std::move(path),
+        force_move(host),
+        force_move(port),
+        force_move(path),
         version
     );
 }
@@ -470,9 +471,9 @@ inline std::shared_ptr<async_client<ws_endpoint<as::ssl::stream<as::ip::tcp::soc
 make_tls_async_client_no_strand_ws(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_no_strand_ws(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
-        std::move(path),
+        force_move(path),
         version
     );
 }
@@ -490,8 +491,8 @@ make_async_client_32(as::io_service& ios, std::string host, std::string port, pr
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
+        force_move(host),
+        force_move(port),
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -503,7 +504,7 @@ inline std::shared_ptr<async_client<tcp_endpoint<as::ip::tcp::socket, as::io_ser
 make_async_client_32(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_32(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
         version
     );
@@ -515,8 +516,8 @@ make_async_client_no_strand_32(as::io_service& ios, std::string host, std::strin
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
+        force_move(host),
+        force_move(port),
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -528,7 +529,7 @@ inline std::shared_ptr<async_client<tcp_endpoint<as::ip::tcp::socket, null_stran
 make_async_client_no_strand_32(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_no_strand_32(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
         version
     );
@@ -542,9 +543,9 @@ make_async_client_ws_32(as::io_service& ios, std::string host, std::string port,
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
-        std::move(path),
+        force_move(host),
+        force_move(port),
+        force_move(path),
         version
     );
 }
@@ -553,9 +554,9 @@ inline std::shared_ptr<async_client<ws_endpoint<as::ip::tcp::socket, as::io_serv
 make_async_client_ws_32(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_ws_32(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
-        std::move(path),
+        force_move(path),
         version
     );
 }
@@ -566,9 +567,9 @@ make_async_client_no_strand_ws_32(as::io_service& ios, std::string host, std::st
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
-        std::move(path),
+        force_move(host),
+        force_move(port),
+        force_move(path),
         version
     );
 }
@@ -577,9 +578,9 @@ inline std::shared_ptr<async_client<ws_endpoint<as::ip::tcp::socket, null_strand
 make_async_client_no_strand_ws_32(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_no_strand_ws_32(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
-        std::move(path),
+        force_move(path),
         version
     );
 }
@@ -594,8 +595,8 @@ make_tls_async_client_32(as::io_service& ios, std::string host, std::string port
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
+        force_move(host),
+        force_move(port),
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -607,7 +608,7 @@ inline std::shared_ptr<async_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::so
 make_tls_async_client_32(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_32(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
         version
     );
@@ -619,8 +620,8 @@ make_tls_async_client_no_strand_32(as::io_service& ios, std::string host, std::s
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
+        force_move(host),
+        force_move(port),
 #if defined(MQTT_USE_WS)
         "/",
 #endif // defined(MQTT_USE_WS)
@@ -632,7 +633,7 @@ inline std::shared_ptr<async_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::so
 make_tls_async_client_no_strand_32(as::io_service& ios, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_no_strand_32(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
         version
     );
@@ -646,9 +647,9 @@ make_tls_async_client_ws_32(as::io_service& ios, std::string host, std::string p
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
-        std::move(path),
+        force_move(host),
+        force_move(port),
+        force_move(path),
         version
     );
 }
@@ -657,9 +658,9 @@ inline std::shared_ptr<async_client<ws_endpoint<as::ssl::stream<as::ip::tcp::soc
 make_tls_async_client_ws_32(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_ws_32(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
-        std::move(path),
+        force_move(path),
         version
     );
 }
@@ -670,9 +671,9 @@ make_tls_async_client_no_strand_ws_32(as::io_service& ios, std::string host, std
     return std::make_shared<async_client_t>(
         async_client_t::constructor_access(),
         ios,
-        std::move(host),
-        std::move(port),
-        std::move(path),
+        force_move(host),
+        force_move(port),
+        force_move(path),
         version
     );
 }
@@ -681,9 +682,9 @@ inline std::shared_ptr<async_client<ws_endpoint<as::ssl::stream<as::ip::tcp::soc
 make_tls_async_client_no_strand_ws_32(as::io_service& ios, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_no_strand_ws_32(
         ios,
-        std::move(host),
+        force_move(host),
         std::to_string(port),
-        std::move(path),
+        force_move(path),
         version
     );
 }

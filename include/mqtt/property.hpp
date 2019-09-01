@@ -28,6 +28,8 @@
 #include <mqtt/qos.hpp>
 #include <mqtt/variable_length.hpp>
 #include <mqtt/buffer.hpp>
+#include <mqtt/move.hpp>
+
 namespace MQTT_NS {
 
 namespace as = boost::asio;
@@ -52,10 +54,10 @@ struct n_bytes_property {
 
     template <typename It>
     n_bytes_property(property::id id, It b, It e)
-        :id_(id), buf_(std::move(b), std::move(e)) {}
+        :id_(id), buf_(force_move(b), force_move(e)) {}
 
     n_bytes_property(property::id id, boost::container::static_vector<char, N> buf)
-        :id_(id), buf_(std::move(buf)) {}
+        :id_(id), buf_(force_move(buf)) {}
 
     /**
      * @brief Add const buffer sequence into the given buffer.
@@ -104,7 +106,7 @@ struct n_bytes_property {
 struct binary_property {
     binary_property(property::id id, buffer buf)
         :id_(id),
-         buf_(std::move(buf)),
+         buf_(force_move(buf)),
          length_{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(buf_.size())) } {
              if (buf_.size() > 0xffff) throw property_length_error();
          }
@@ -165,7 +167,7 @@ struct binary_property {
 
 struct string_property : binary_property {
     string_property(property::id id, buffer buf, bool already_checked)
-        :binary_property(id, std::move(buf)) {
+        :binary_property(id, force_move(buf)) {
         if (!already_checked) {
             auto r = utf8string::validate_contents(this->val());
             if (r != utf8string::validation::well_formed) throw utf8string_contents_error(r);
@@ -276,19 +278,19 @@ public:
 class content_type : public detail::string_property {
 public:
     explicit content_type(buffer val, bool already_checked = false)
-        : detail::string_property(id::content_type, std::move(val), already_checked) {}
+        : detail::string_property(id::content_type, force_move(val), already_checked) {}
 };
 
 class response_topic : public detail::string_property {
 public:
     explicit response_topic(buffer val, bool already_checked = false)
-        : detail::string_property(id::response_topic, std::move(val), already_checked) {}
+        : detail::string_property(id::response_topic, force_move(val), already_checked) {}
 };
 
 class correlation_data : public detail::string_property {
 public:
     explicit correlation_data(buffer val, bool already_checked = false)
-        : detail::string_property(id::correlation_data, std::move(val), already_checked) {}
+        : detail::string_property(id::correlation_data, force_move(val), already_checked) {}
 };
 
 class subscription_identifier : public detail::variable_property {
@@ -318,7 +320,7 @@ public:
 class assigned_client_identifier : public detail::string_property {
 public:
     explicit assigned_client_identifier(buffer val, bool already_checked = false)
-        : detail::string_property(id::assigned_client_identifier, std::move(val), already_checked) {}
+        : detail::string_property(id::assigned_client_identifier, force_move(val), already_checked) {}
 };
 
 class server_keep_alive : public detail::n_bytes_property<2> {
@@ -340,13 +342,13 @@ public:
 class authentication_method : public detail::string_property {
 public:
     explicit authentication_method(buffer val, bool already_checked = false)
-        : detail::string_property(id::authentication_method, std::move(val), already_checked) {}
+        : detail::string_property(id::authentication_method, force_move(val), already_checked) {}
 };
 
 class authentication_data : public detail::binary_property {
 public:
     explicit authentication_data(buffer val)
-        : detail::binary_property(id::authentication_data, std::move(val)) {}
+        : detail::binary_property(id::authentication_data, force_move(val)) {}
 };
 
 class request_problem_information : public detail::n_bytes_property<1> {
@@ -400,19 +402,19 @@ public:
 class response_information : public detail::string_property {
 public:
     explicit response_information(buffer val, bool already_checked = false)
-        : detail::string_property(id::response_information, std::move(val), already_checked) {}
+        : detail::string_property(id::response_information, force_move(val), already_checked) {}
 };
 
 class server_reference : public detail::string_property {
 public:
     explicit server_reference(buffer val, bool already_checked = false)
-        : detail::string_property(id::server_reference, std::move(val), already_checked) {}
+        : detail::string_property(id::server_reference, force_move(val), already_checked) {}
 };
 
 class reason_string : public detail::string_property {
 public:
     explicit reason_string(buffer val, bool already_checked = false)
-        : detail::string_property(id::reason_string, std::move(val), already_checked) {}
+        : detail::string_property(id::reason_string, force_move(val), already_checked) {}
 };
 
 class receive_maximum : public detail::n_bytes_property<2> {
@@ -507,7 +509,7 @@ public:
 class user_property {
 public:
     user_property(buffer key, buffer val, bool key_already_checked = false, bool val_already_checked = false)
-        : key_(std::move(key), key_already_checked), val_(std::move(val), val_already_checked) {}
+        : key_(force_move(key), key_already_checked), val_(force_move(val), val_already_checked) {}
 
     /**
      * @brief Add const buffer sequence into the given buffer.
@@ -581,7 +583,7 @@ public:
 private:
     struct len_str {
         explicit len_str(buffer b, bool already_checked = false)
-            : buf(std::move(b)),
+            : buf(force_move(b)),
               len{ num_to_2bytes(boost::numeric_cast<std::uint16_t>(buf.size())) }
         {
             if (!already_checked) {
