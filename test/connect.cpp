@@ -233,7 +233,7 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                         [&chk, &c, &tim](boost::system::error_code const& ec) {
                             MQTT_CHK("2sec");
                             BOOST_CHECK(!ec);
-                            c->publish_at_most_once("topic1", "timer_reset");
+                            c->publish("topic1", "timer_reset", MQTT_NS::qos::at_most_once);
                             tim.expires_from_now(boost::posix_time::seconds(4));
                             tim.async_wait(
                                 [&chk](boost::system::error_code const& ec) {
@@ -258,7 +258,7 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                         [&chk, &c, &tim](boost::system::error_code const& ec) {
                             MQTT_CHK("2sec");
                             BOOST_CHECK(!ec);
-                            c->publish_at_most_once("topic1", "timer_reset");
+                            c->publish("topic1", "timer_reset", MQTT_NS::qos::at_most_once);
                             tim.expires_from_now(boost::posix_time::seconds(4));
                             tim.async_wait(
                                 [&chk](boost::system::error_code const& ec) {
