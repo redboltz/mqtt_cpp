@@ -1804,17 +1804,22 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    template <typename... Args>
     packet_id_t subscribe(
         string_view topic_name,
-        std::uint8_t option) {
+        std::uint8_t option,
+        std::vector<v5::property_variant> props = {}
+    ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, topic_name, option);
+        acquired_subscribe(packet_id, topic_name, option, force_move(props));
         return packet_id;
     }
 
@@ -1855,6 +1860,10 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -1862,9 +1871,11 @@ public:
      */
     packet_id_t subscribe(
         as::const_buffer topic_name,
-        std::uint8_t option) {
+        std::uint8_t option,
+        std::vector<v5::property_variant> props = {}
+    ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, topic_name, option);
+        acquired_subscribe(packet_id, topic_name, option, force_move(props));
         return packet_id;
     }
 
@@ -1905,6 +1916,10 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
@@ -1912,9 +1927,11 @@ public:
      */
     packet_id_t subscribe(
         buffer topic_name,
-        std::uint8_t option) {
+        std::uint8_t option,
+        std::vector<v5::property_variant> props = {}
+    ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, force_move(topic_name), option);
+        acquired_subscribe(packet_id, force_move(topic_name), option, force_move(props));
         return packet_id;
     }
 
@@ -1997,14 +2014,20 @@ public:
      * @brief Unsubscribe
      * @param topic_name
      *        A topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     packet_id_t unsubscribe(
-        string_view topic_name) {
-        return unsubscribe(as::buffer(topic_name.data(), topic_name.size()));
+        string_view topic_name,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        return unsubscribe(as::buffer(topic_name.data(), topic_name.size()), force_move(props));
     }
 
     /**
@@ -2033,15 +2056,21 @@ public:
      * @brief Unsubscribe
      * @param topic_name
      *        A topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     packet_id_t unsubscribe(
-        as::const_buffer topic_name) {
+        as::const_buffer topic_name,
+        std::vector<v5::property_variant> props = {}
+    ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_unsubscribe(packet_id, topic_name);
+        acquired_unsubscribe(packet_id, topic_name, force_move(props));
         return packet_id;
     }
 
@@ -2073,15 +2102,21 @@ public:
      * @brief Unsubscribe
      * @param topic_name
      *        A topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     packet_id_t unsubscribe(
-        buffer topic_name) {
+        buffer topic_name,
+        std::vector<v5::property_variant> props = {}
+    ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_unsubscribe(packet_id, force_move(topic_name));
+        acquired_unsubscribe(packet_id, force_move(topic_name), force_move(props));
         return packet_id;
     }
 
@@ -2581,6 +2616,10 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -2589,9 +2628,11 @@ public:
     bool subscribe(
         packet_id_t packet_id,
         string_view topic_name,
-        std::uint8_t option) {
+        std::uint8_t option,
+        std::vector<v5::property_variant> props = {}
+    ) {
         if (register_packet_id(packet_id)) {
-            acquired_subscribe(packet_id, topic_name, option);
+            acquired_subscribe(packet_id, topic_name, option, force_move(props));
             return true;
         }
         return false;
@@ -2607,6 +2648,10 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't subscribe, otherwise return true and subscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -2615,9 +2660,11 @@ public:
     bool subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t option) {
+        std::uint8_t option,
+        std::vector<v5::property_variant> props = {}
+    ) {
         if (register_packet_id(packet_id)) {
-            acquired_subscribe(packet_id, topic_name, option);
+            acquired_subscribe(packet_id, topic_name, option, force_move(props));
             return true;
         }
         return false;
@@ -2740,6 +2787,10 @@ public:
      *        packet identifier
      * @param topic_name
      *        A topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -2747,9 +2798,11 @@ public:
      */
     bool unsubscribe(
         packet_id_t packet_id,
-        string_view topic_name) {
+        string_view topic_name,
+        std::vector<v5::property_variant> props = {}
+    ) {
         if (register_packet_id(packet_id)) {
-            acquired_unsubscribe(packet_id, topic_name);
+            acquired_unsubscribe(packet_id, topic_name, force_move(props));
             return true;
         }
         return false;
@@ -2761,6 +2814,10 @@ public:
      *        packet identifier
      * @param topic_name
      *        A topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
      *         doesn't unsubscribe, otherwise return true and unsubscribes.
      * You can subscribe multiple topics all at once.<BR>
@@ -2768,9 +2825,11 @@ public:
      */
     bool unsubscribe(
         packet_id_t packet_id,
-        as::const_buffer topic_name) {
+        as::const_buffer topic_name,
+        std::vector<v5::property_variant> props = {}
+    ) {
         if (register_packet_id(packet_id)) {
-            acquired_unsubscribe(packet_id, topic_name);
+            acquired_unsubscribe(packet_id, topic_name, force_move(props));
             return true;
         }
         return false;
@@ -3430,15 +3489,21 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
     void acquired_subscribe(
         packet_id_t packet_id,
         string_view topic_name,
-        std::uint8_t option) {
+        std::uint8_t option,
+        std::vector<v5::property_variant> props = {}
+    ) {
         std::vector<std::tuple<buffer, std::uint8_t>> params;
-        send_subscribe(force_move(params), packet_id, topic_name, option);
+        send_subscribe(force_move(params), packet_id, topic_name, option, force_move(props));
     }
 
     /**
@@ -3452,15 +3517,21 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
     void acquired_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t option) {
+        std::uint8_t option,
+        std::vector<v5::property_variant> props = {}
+    ) {
         std::vector<std::tuple<buffer, std::uint8_t>> params;
-        send_subscribe(force_move(params), packet_id, topic_name, option);
+        send_subscribe(force_move(params), packet_id, topic_name, option, force_move(props));
     }
 
     /**
@@ -3541,16 +3612,22 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param topic_name
      *        A topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     void acquired_unsubscribe(
         packet_id_t packet_id,
-        string_view topic_name) {
+        string_view topic_name,
+        std::vector<v5::property_variant> props = {}
+    ) {
 
         std::vector<buffer> params;
 
-        send_unsubscribe(force_move(params), packet_id, topic_name);
+        send_unsubscribe(force_move(params), packet_id, topic_name, force_move(props));
     }
 
     /**
@@ -3560,16 +3637,22 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param topic_name
      *        A topic name to unsubscribe
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
+     *        3.10.2.1 UNSUBSCRIBE Properties
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     void acquired_unsubscribe(
         packet_id_t packet_id,
-        as::const_buffer topic_name) {
+        as::const_buffer topic_name,
+        std::vector<v5::property_variant> props = {}
+    ) {
 
         std::vector<buffer> params;
 
-        send_unsubscribe(force_move(params), packet_id, topic_name);
+        send_unsubscribe(force_move(params), packet_id, topic_name, force_move(props));
     }
 
     /**
