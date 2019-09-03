@@ -1,3 +1,6 @@
+## 6.0.3
+* Fixed sync subscribe/unsubscribe with properties APIs dispatch to deprecated APIs problem. (#383)
+
 ## 6.0.2
 * Fixed moved from object access problem. (#378)
 * Fixed unexpected copy fallback of move operations. (#378)
