@@ -13,6 +13,7 @@
 BOOST_AUTO_TEST_SUITE(test_sub)
 
 using namespace MQTT_NS::literals;
+using namespace std::literals::string_literals;
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
@@ -130,14 +131,19 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    c->subscribe("topic1", MQTT_NS::qos::at_most_once, "topic2", MQTT_NS::qos::exactly_once);
+                    c->subscribe(
+                        {
+                            {"topic1", MQTT_NS::qos::at_most_once},
+                            {"topic2", MQTT_NS::qos::exactly_once}
+                        }
+                    );
                     return true;
                 });
             c->set_suback_handler(
                 [&chk, &c]
                 (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<std::uint8_t>> /*results*/) {
                     MQTT_CHK("h_suback");
-                    c->unsubscribe("topic1", "topic2");
+                    c->unsubscribe( { MQTT_NS::string_view{"topic1"}, MQTT_NS::string_view{"topic2"} } );
                     return true;
                 });
             c->set_unsuback_handler(
@@ -155,14 +161,19 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    c->subscribe("topic1", MQTT_NS::qos::at_most_once, "topic2", MQTT_NS::qos::exactly_once);
+                    c->subscribe(
+                        {
+                            {"topic1", MQTT_NS::qos::at_most_once},
+                            {"topic2", MQTT_NS::qos::exactly_once}
+                        }
+                    );
                     return true;
                 });
             c->set_v5_suback_handler(
                 [&chk, &c]
                 (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_suback");
-                    c->unsubscribe("topic1", "topic2");
+                    c->unsubscribe( { MQTT_NS::string_view{"topic1"}, MQTT_NS::string_view{"topic2"} });
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -420,8 +431,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     c->async_subscribe(
-                        "topic1", MQTT_NS::qos::at_most_once,
-                        "topic2", MQTT_NS::qos::exactly_once,
+                        {
+                            {"topic1", MQTT_NS::qos::at_most_once},
+                            {"topic2", MQTT_NS::qos::exactly_once}
+                        },
                         [](boost::system::error_code const&) {}
                     );
                     return true;
@@ -431,8 +444,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                 (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<std::uint8_t>> /*results*/) {
                     MQTT_CHK("h_suback");
                     c->async_unsubscribe(
-                        "topic1",
-                        "topic2",
+                        {
+                            "topic1"s,
+                            "topic2"s
+                        },
                         [](boost::system::error_code const&) {}
                     );
                     return true;
@@ -453,8 +468,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     c->async_subscribe(
-                        "topic1", MQTT_NS::qos::at_most_once,
-                        "topic2", MQTT_NS::qos::exactly_once,
+                        {
+                            {"topic1", MQTT_NS::qos::at_most_once},
+                            {"topic2", MQTT_NS::qos::exactly_once}
+                        },
                         [](boost::system::error_code const&) {}
                     );
                     return true;
@@ -464,8 +481,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                 (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_suback");
                     c->async_unsubscribe(
-                        "topic1",
-                        "topic2",
+                        {
+                            "topic1"s,
+                            "topic2"s
+                        },
                         [](boost::system::error_code const&) {}
                     );
                     return true;
@@ -541,8 +560,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                     MQTT_CHK("h_suback");
                     std::vector<std::string> v
                         {
-                         "topic1",
-                         "topic2",
+                            "topic1",
+                            "topic2",
                         };
                     c->async_unsubscribe(
                         v,
@@ -580,8 +599,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                     MQTT_CHK("h_suback");
                     std::vector<std::string> v
                         {
-                         "topic1",
-                         "topic2",
+                            "topic1",
+                            "topic2",
                         };
                     c->async_unsubscribe(
                         v,

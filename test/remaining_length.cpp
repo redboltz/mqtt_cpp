@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(results.size() == 1U);
                 BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
-                c->publish_at_most_once("topic1", test_contents);
+                c->publish("topic1", test_contents, MQTT_NS::qos::at_most_once);
                 return true;
             });
         c->set_unsuback_handler(
@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(results.size() == 1U);
                 BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
-                c->publish_at_most_once("topic1", test_contents);
+                c->publish("topic1", test_contents, MQTT_NS::qos::at_most_once);
                 return true;
             });
         c->set_unsuback_handler(
@@ -301,7 +301,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(results.size() == 1U);
                 BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
-                c->publish_at_most_once("topic1", test_contents);
+                c->publish("topic1", test_contents, MQTT_NS::qos::at_most_once);
                 return true;
             });
         c->set_unsuback_handler(

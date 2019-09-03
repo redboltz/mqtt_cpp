@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                         [&] {
                             MQTT_CHK("h_connack2");
                             BOOST_TEST(sp == false);
-                            pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
+                            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
                             c->force_disconnect();
                         },
                         "h_error",
@@ -169,7 +169,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                             // such that it only effects the start of the session.
                             // Post Session cleanup is handled with a timer, not with the  clean session flag.
                             BOOST_TEST(sp == true);
-                            pid_pub = c->publish_at_least_once("topic1", "topic1_contents", false, std::move(ps));
+                            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once, false, std::move(ps));
                             c->force_disconnect();
                         },
                         "h_error",
@@ -272,7 +272,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                         [&] {
                             MQTT_CHK("h_connack2");
                             BOOST_TEST(sp == false);
-                            pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
+                            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                             c->force_disconnect();
                         },
                         "h_error",
@@ -322,7 +322,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                             // such that it only effects the start of the session.
                             // Post Session cleanup is handled with a timer, not with the  clean session flag.
                             BOOST_TEST(sp == true);
-                            pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
+                            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                             c->force_disconnect();
                         },
                         "h_error",
@@ -481,7 +481,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                         [&] {
                             MQTT_CHK("h_connack2");
                             BOOST_TEST(sp == false);
-                            pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
+                            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                         },
                         "h_error",
                         [&] {
@@ -532,7 +532,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                             // such that it only effects the start of the session.
                             // Post Session cleanup is handled with a timer, not with the  clean session flag.
                             BOOST_TEST(sp == true);
-                            pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
+                            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                         },
                         "h_error",
                         [&] {
@@ -647,7 +647,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                         [&] {
                             MQTT_CHK("h_connack2");
                             BOOST_TEST(sp == false);
-                            pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
+                            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                             c->force_disconnect();
                         },
                         "h_error1",
@@ -703,7 +703,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                             // such that it only effects the start of the session.
                             // Post Session cleanup is handled with a timer, not with the  clean session flag.
                             BOOST_TEST(sp == true);
-                            pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
+                            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                             c->force_disconnect();
                         },
                         "h_error1",
@@ -832,8 +832,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                         [&] {
                             MQTT_CHK("h_connack2");
                             BOOST_TEST(sp == false);
-                            pid_pub1 = c->publish_at_least_once("topic1", "topic1_contents1");
-                            pid_pub2 = c->publish_at_least_once("topic1", "topic1_contents2");
+                            pid_pub1 = c->publish("topic1", "topic1_contents1", MQTT_NS::qos::at_least_once);
+                            pid_pub2 = c->publish("topic1", "topic1_contents2", MQTT_NS::qos::at_least_once);
                             c->force_disconnect();
                         },
                         "h_error1",
@@ -887,8 +887,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                             // such that it only effects the start of the session.
                             // Post Session cleanup is handled with a timer, not with the  clean session flag.
                             BOOST_TEST(sp == true);
-                            pid_pub1 = c->publish_at_least_once("topic1", "topic1_contents1");
-                            pid_pub2 = c->publish_at_least_once("topic1", "topic1_contents2");
+                            pid_pub1 = c->publish("topic1", "topic1_contents1", MQTT_NS::qos::at_least_once);
+                            pid_pub2 = c->publish("topic1", "topic1_contents2", MQTT_NS::qos::at_least_once);
                             c->force_disconnect();
                         },
                         "h_error1",
