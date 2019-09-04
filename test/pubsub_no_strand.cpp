@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             BOOST_TEST(packet_id == pid_sub);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
-            c->publish_at_most_once("topic1", "topic1_contents");
+            c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
             return true;
         });
     c->set_unsuback_handler(
@@ -191,7 +191,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             BOOST_TEST(packet_id == pid_sub);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
-            pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
+            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
             return true;
         });
     c->set_unsuback_handler(
@@ -297,7 +297,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             BOOST_TEST(packet_id == 1);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
-            pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
+            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
             return true;
         });
     c->set_unsuback_handler(
@@ -397,7 +397,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             BOOST_TEST(packet_id == pid_sub);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == MQTT_NS::qos::at_least_once);
-            c->publish_at_most_once("topic1", "topic1_contents");
+            c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
             return true;
         });
     c->set_unsuback_handler(
@@ -510,7 +510,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             BOOST_TEST(packet_id == pid_sub);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == MQTT_NS::qos::at_least_once);
-            pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
+            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
             return true;
         });
     c->set_unsuback_handler(
@@ -625,7 +625,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             BOOST_TEST(packet_id == pid_sub);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == MQTT_NS::qos::at_least_once);
-            pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
+            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
             return true;
         });
     c->set_unsuback_handler(
@@ -726,7 +726,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             BOOST_TEST(packet_id == pid_sub);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == MQTT_NS::qos::exactly_once);
-            c->publish_at_most_once("topic1", "topic1_contents");
+            c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
             return true;
         });
     c->set_unsuback_handler(
@@ -839,7 +839,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             BOOST_TEST(packet_id == pid_sub);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == MQTT_NS::qos::exactly_once);
-            pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
+            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
             return true;
         });
     c->set_unsuback_handler(
@@ -954,7 +954,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             BOOST_TEST(packet_id == pid_sub);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == MQTT_NS::qos::exactly_once);
-            pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
+            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
             return true;
         });
     c->set_unsuback_handler(

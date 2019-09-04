@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             [&chk, &c]
             (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<std::uint8_t>> /*results*/) {
                 MQTT_CHK("h_suback");
-                c->publish_at_most_once("topic1", "topic1_contents");
+                c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
                 return true;
             });
         c->set_publish_handler(

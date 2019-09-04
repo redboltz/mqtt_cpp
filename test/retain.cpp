@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
 
-                    c->publish_at_most_once("topic1", "retained_contents", true);
+                    c->publish("topic1", "retained_contents", MQTT_NS::qos::at_most_once, true);
 
                     pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
                     return true;
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
 
-                    c->publish_at_most_once("topic1", "retained_contents", true);
+                    c->publish("topic1", "retained_contents", MQTT_NS::qos::at_most_once, true);
 
                     pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
                     return true;
@@ -224,9 +224,9 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
 
-                    c->publish_at_most_once("topic1", "retained_contents1", true);
-                    c->publish_at_most_once("topic1", "retained_contents2", true);
-                    c->publish_at_most_once("topic1", "retained_contents3", false);
+                    c->publish("topic1", "retained_contents1", MQTT_NS::qos::at_most_once, true);
+                    c->publish("topic1", "retained_contents2", MQTT_NS::qos::at_most_once, true);
+                    c->publish("topic1", "retained_contents3", MQTT_NS::qos::at_most_once, false);
 
                     pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
                     return true;
@@ -291,9 +291,9 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
 
-                    c->publish_at_most_once("topic1", "retained_contents1", true);
-                    c->publish_at_most_once("topic1", "retained_contents2", true);
-                    c->publish_at_most_once("topic1", "retained_contents3", false);
+                    c->publish("topic1", "retained_contents1", MQTT_NS::qos::at_most_once, true);
+                    c->publish("topic1", "retained_contents2", MQTT_NS::qos::at_most_once, true);
+                    c->publish("topic1", "retained_contents3", MQTT_NS::qos::at_most_once, false);
 
                     pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
                     return true;
@@ -442,7 +442,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                         "h_connack",
                         [&] {
                             MQTT_CHK("h_suback1");
-                            c->publish_at_most_once("topic1", "topic1_contents", true);
+                            c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once, true);
                         },
                         "h_unsuback1",
                         [&] {
@@ -537,7 +537,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                         "h_connack",
                         [&] {
                             MQTT_CHK("h_suback1");
-                            c->publish_at_most_once("topic1", "topic1_contents", true);
+                            c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once, true);
                         },
                         "h_unsuback1",
                         [&] {
@@ -664,7 +664,7 @@ BOOST_AUTO_TEST_CASE( prop ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
 
-                c->publish_at_most_once("topic1", "retained_contents", true, std::move(ps));
+                c->publish("topic1", "retained_contents", MQTT_NS::qos::at_most_once, true, std::move(ps));
 
                 pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
                 return true;

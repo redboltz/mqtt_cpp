@@ -79,10 +79,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     BOOST_TEST(*results[0] == MQTT_NS::qos::exactly_once);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
-                    c->async_publish_at_most_once(
+                    c->async_publish(
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        [topic1, contents] {},
+                        std::make_pair(topic1, contents),
+                        MQTT_NS::qos::at_most_once,
                         false
                     );
                     return true;
@@ -158,10 +159,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::granted_qos_2);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
-                    c->async_publish_at_most_once(
+                    c->async_publish(
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        [topic1, contents] {},
+                        std::make_pair(topic1, contents),
+                        MQTT_NS::qos::at_most_once,
                         false
                     );
                     return true;
@@ -306,10 +308,11 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     BOOST_TEST(*results[0] == MQTT_NS::qos::exactly_once);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->async_publish_at_least_once(
+                    pid_pub = c->async_publish(
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        [topic1, contents] {}
+                        std::make_pair(topic1, contents),
+                        MQTT_NS::qos::at_least_once
                     );
                     return true;
                 });
@@ -386,10 +389,11 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::granted_qos_2);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->async_publish_at_least_once(
+                    pid_pub = c->async_publish(
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        [topic1, contents] {}
+                        std::make_pair(topic1, contents),
+                        MQTT_NS::qos::at_least_once
                     );
                     return true;
                 });
@@ -527,10 +531,11 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     BOOST_TEST(*results[0] == MQTT_NS::qos::exactly_once);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->async_publish_exactly_once(
+                    pid_pub = c->async_publish(
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        [topic1, contents] {}
+                        std::make_pair(topic1, contents),
+                        MQTT_NS::qos::exactly_once
                     );
                     return true;
                 });
@@ -608,10 +613,11 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::granted_qos_2);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->async_publish_exactly_once(
+                    pid_pub = c->async_publish(
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        [topic1, contents] {}
+                        std::make_pair(topic1, contents),
+                        MQTT_NS::qos::exactly_once
                     );
                     return true;
                 });
@@ -732,7 +738,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     c->async_publish(
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        [topic1, contents] {},
+                        std::make_pair(topic1, contents),
                         MQTT_NS::qos::at_most_once
                     );
                     return true;
@@ -811,7 +817,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     c->async_publish(
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        [topic1, contents] {},
+                        std::make_pair(topic1, contents),
                         MQTT_NS::qos::at_most_once
                     );
                     return true;
@@ -1148,7 +1154,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                         1,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        [topic1, contents] {},
+                        std::make_pair(topic1, contents),
                         MQTT_NS::qos::at_least_once
                     );
                     BOOST_TEST(ret == true);
@@ -1230,7 +1236,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                         1,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        [topic1, contents] {},
+                        std::make_pair(topic1, contents),
                         MQTT_NS::qos::at_least_once
                     );
                     BOOST_TEST(ret == true);

@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                     [&] {
                         MQTT_CHK("h_close1");
                         // offline publish
-                        pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
+                        pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
                         c->set_clean_session(false);
                         c->connect();
                     },
@@ -256,7 +256,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                     [&] {
                         MQTT_CHK("h_close1");
                         // offline publish
-                        pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
+                        pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                         c->set_clean_session(false);
                         c->connect();
                     },
@@ -409,8 +409,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                     [&] {
                         MQTT_CHK("h_close1");
                         // offline publish
-                        pid_pub1 = c->publish_at_least_once(/*topic_base()*/ + "987/topic1", "topic1_contents1");
-                        pid_pub2 = c->publish_at_least_once(/*topic_base()*/ + "987/topic1", "topic1_contents2");
+                        pid_pub1 = c->publish(/*topic_base()*/ + "987/topic1", "topic1_contents1", MQTT_NS::qos::at_least_once);
+                        pid_pub2 = c->publish(/*topic_base()*/ + "987/topic1", "topic1_contents2", MQTT_NS::qos::at_least_once);
                         c->set_clean_session(false);
                         c->connect();
                     },
@@ -539,9 +539,10 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                     [&] {
                         MQTT_CHK("h_close1");
                         // offline publish
-                        pid_pub = c->async_publish_at_least_once(
+                        pid_pub = c->async_publish(
                             "topic1",
                             "topic1_contents",
+                            MQTT_NS::qos::at_least_once,
                             false, // retain
                             [&chk](boost::system::error_code const& ec){
                                 BOOST_TEST(ec == boost::system::errc::success);

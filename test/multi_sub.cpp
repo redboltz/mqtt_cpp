@@ -12,6 +12,8 @@
 
 BOOST_AUTO_TEST_SUITE(test_multi_sub)
 
+using namespace std::literals::string_literals;
+
 BOOST_AUTO_TEST_CASE( multi_channel ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) return;
@@ -44,8 +46,11 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                 pid_sub = c->subscribe(
-                    "topic1", MQTT_NS::qos::at_most_once,
-                    "topic2", MQTT_NS::qos::at_most_once);
+                    {
+                        {"topic1", MQTT_NS::qos::at_most_once},
+                        {"topic2", MQTT_NS::qos::at_most_once}
+                    }
+                );
 
                 return true;
             });
@@ -86,7 +91,7 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
                 BOOST_TEST(results.size() == 2U);
                 BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
                 BOOST_TEST(*results[1] == MQTT_NS::qos::at_most_once);
-                c->publish_at_most_once("topic1", "topic1_contents");
+                c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
                 return true;
             });
         c->set_unsuback_handler(
@@ -113,7 +118,7 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
                         MQTT_CHK("h_publish_topic1");
                         BOOST_TEST(topic == "topic1");
                         BOOST_TEST(contents == "topic1_contents");
-                        c->publish_at_most_once("topic2", "topic2_contents");
+                        c->publish("topic2", "topic2_contents", MQTT_NS::qos::at_most_once);
                     },
                     "h_publish_topic1",
                     [&] {
@@ -121,8 +126,11 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
                         BOOST_TEST(topic == "topic2");
                         BOOST_TEST(contents == "topic2_contents");
                         pid_unsub = c->unsubscribe(
-                            "topic1",
-                            "topic2");
+                            {
+                                "topic1"s,
+                                "topic2"s
+                            }
+                        );
                     }
                 );
                 BOOST_TEST(ret);
@@ -223,7 +231,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
             if (++sub_count == 2)
-                c1->publish_at_most_once("topic1", "topic1_contents");
+                c1->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
             return true;
         });
     c1->set_unsuback_handler(
@@ -304,7 +312,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
             if (++sub_count == 2)
-                c2->publish_at_most_once("topic1", "topic1_contents");
+                c2->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
             return true;
         });
     c2->set_unsuback_handler(
@@ -427,7 +435,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
 
             c1ready = true;
             if (c1ready && c2ready && c3ready) {
-                pid_pub3 = c3->publish_at_least_once("topic1", "topic1_contents");
+                pid_pub3 = c3->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
             }
             return true;
         });
@@ -489,7 +497,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
 
             c2ready = true;
             if (c1ready && c2ready && c3ready) {
-                pid_pub3 = c3->publish_at_least_once("topic1", "topic1_contents");
+                pid_pub3 = c3->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
             }
             return true;
         });
@@ -526,7 +534,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             c3ready = true;
             if (c1ready && c2ready && c3ready) {
-                pid_pub3 = c3->publish_at_least_once("topic1", "topic1_contents");
+                pid_pub3 = c3->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
             }
             return true;
         });
