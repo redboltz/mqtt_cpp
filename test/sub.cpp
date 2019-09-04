@@ -444,9 +444,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                 (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<std::uint8_t>> /*results*/) {
                     MQTT_CHK("h_suback");
                     c->async_unsubscribe(
-                        {
-                            "topic1"s,
-                            "topic2"s
+                        std::vector<std::string> {
+                            "topic1",
+                            "topic2"
                         },
                         [](boost::system::error_code const&) {}
                     );
@@ -481,9 +481,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                 (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_suback");
                     c->async_unsubscribe(
-                        {
-                            "topic1"s,
-                            "topic2"s
+                        std::vector<std::string> {
+                            "topic1",
+                            "topic2"
                         },
                         [](boost::system::error_code const&) {}
                     );
