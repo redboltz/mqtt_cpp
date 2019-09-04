@@ -13345,14 +13345,15 @@ private:
                             topic_filter = force_move(topic_filter)
                         ]
                         (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                            auto requested_qos = static_cast<std::uint8_t>(body[0]);
+                            auto option = static_cast<std::uint8_t>(body[0]);
+                            auto requested_qos = subscribe::get_qos(option);
                             if (requested_qos != qos::at_most_once &&
                                 requested_qos != qos::at_least_once &&
                                 requested_qos != qos::exactly_once) {
                                 call_protocol_error_handlers(func);
                                 return;
                             }
-                            info.entries.emplace_back(force_move(topic_filter), requested_qos);
+                            info.entries.emplace_back(force_move(topic_filter), option);
                             process_subscribe_impl(
                                 force_move(func),
                                 force_move(buf),
