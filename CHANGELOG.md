@@ -1,3 +1,6 @@
+## 6.0.4
+* Fixed invalid subscribe qos comparison on receive. (#385)
+
 ## 6.0.3
 * Fixed sync subscribe/unsubscribe with properties APIs dispatch to deprecated APIs problem. (#383)
 
