@@ -231,7 +231,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    std::vector<std::tuple<MQTT_NS::string_view, std::uint8_t>> v
+                    std::vector<std::tuple<MQTT_NS::string_view, MQTT_NS::subscribe_options>> v
                         {
                             { "topic1", MQTT_NS::qos::at_most_once },
                             { "topic2", MQTT_NS::qos::exactly_once }
@@ -261,7 +261,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    std::vector<std::tuple<MQTT_NS::string_view, std::uint8_t>> v
+                    std::vector<std::tuple<MQTT_NS::string_view, MQTT_NS::subscribe_options>> v
                         {
                             { "topic1", MQTT_NS::qos::at_most_once },
                             { "topic2", MQTT_NS::qos::exactly_once }
@@ -561,7 +561,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto topic2 = std::make_shared<std::string>("topic2");
-                    std::vector<std::tuple<as::const_buffer, std::uint8_t>> v
+                    std::vector<std::tuple<as::const_buffer, MQTT_NS::subscribe_options>> v
                     {
                         { as::buffer(*topic1), MQTT_NS::qos::at_most_once },
                         { as::buffer(*topic2), MQTT_NS::qos::exactly_once }
@@ -606,7 +606,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto topic2 = std::make_shared<std::string>("topic2");
-                    std::vector<std::tuple<as::const_buffer, std::uint8_t>> v
+                    std::vector<std::tuple<as::const_buffer, MQTT_NS::subscribe_options>> v
                         {
                             { as::buffer(*topic1), MQTT_NS::qos::at_most_once },
                             { as::buffer(*topic2), MQTT_NS::qos::exactly_once }

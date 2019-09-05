@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <mqtt/namespace.hpp>
+#include <mqtt/subscribe_options.hpp>
 
 namespace MQTT_NS {
 
@@ -40,12 +41,12 @@ inline constexpr bool has_user_name_flag(char v) {
     return (v & user_name_flag) != 0;
 }
 
-inline void set_will_qos(char& v, std::size_t qos) {
-    v |= static_cast<char>((qos & 0b00000011) << 3);
+inline void set_will_qos(char& v, qos qos_value) {
+    v |= static_cast<char>(static_cast<std::uint8_t>(qos_value) << 3);
 }
 
-inline constexpr std::uint8_t will_qos(char v) {
-    return (v & 0b00011000) >> 3;
+inline constexpr qos will_qos(char v) {
+    return static_cast<qos>((v & 0b00011000) >> 3);
 }
 
 } // namespace connect_flags

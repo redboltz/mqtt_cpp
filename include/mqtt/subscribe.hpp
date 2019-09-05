@@ -18,8 +18,8 @@ namespace MQTT_NS {
 namespace subscribe {
 
 inline
-constexpr std::uint8_t get_qos(std::uint8_t v) {
-    return v & 0b00000011;
+constexpr qos get_qos(std::uint8_t v) {
+    return static_cast<qos>(v & 0b00000011);
 }
 
 inline
@@ -38,9 +38,9 @@ constexpr std::uint8_t get_retain_handling(std::uint8_t v) {
 }
 
 inline
-constexpr void set_qos(std::uint8_t& fixed_header, std::uint8_t qos) {
-    BOOST_ASSERT(qos <= 2U);
-    fixed_header |= qos;
+constexpr void set_qos(std::uint8_t& fixed_header, qos qos_value) {
+    BOOST_ASSERT(static_cast<std::uint8_t>(qos_value) <= 2U);
+    fixed_header |= static_cast<std::uint8_t>(qos_value);
 }
 
 inline

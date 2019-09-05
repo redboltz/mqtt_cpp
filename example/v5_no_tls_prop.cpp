@@ -234,7 +234,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                     std::vector<MQTT_NS::v5::property_variant> connack_ps {
                         MQTT_NS::v5::property::session_expiry_interval(0),
                         MQTT_NS::v5::property::receive_maximum(0),
-                        MQTT_NS::v5::property::maximum_qos(2),
+                        MQTT_NS::v5::property::maximum_qos(MQTT_NS::qos::exactly_once),
                         MQTT_NS::v5::property::retain_available(true),
                         MQTT_NS::v5::property::maximum_packet_size(0),
                         MQTT_NS::v5::property::assigned_client_identifier("test cid"_mb),

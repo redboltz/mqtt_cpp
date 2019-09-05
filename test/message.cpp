@@ -18,7 +18,7 @@ using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( connect_cbuf ) {
     auto cid = "cid"_mb;
-    MQTT_NS::optional<MQTT_NS::will> w = MQTT_NS::will("wt"_mb, "wmsg"_mb, false, 0);
+    MQTT_NS::optional<MQTT_NS::will> w = MQTT_NS::will("wt"_mb, "wmsg"_mb, false, MQTT_NS::qos::at_most_once);
     MQTT_NS::optional<MQTT_NS::buffer> user = "user"_mb;
     MQTT_NS::optional<MQTT_NS::buffer> password = "pw"_mb;
     auto m = MQTT_NS::connect_message(
@@ -297,7 +297,7 @@ BOOST_AUTO_TEST_CASE( publish_get_attributes2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( subscribe_cbuf ) {
-    std::vector<std::tuple<MQTT_NS::buffer, std::uint8_t>> v;
+    std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> v;
     auto topic = "tp"_mb;
     v.emplace_back(std::move(topic), 1);
     auto m = MQTT_NS::subscribe_message(std::move(v), 2);

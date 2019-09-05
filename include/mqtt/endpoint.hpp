@@ -40,7 +40,7 @@
 #include <mqtt/connect_flags.hpp>
 #include <mqtt/will.hpp>
 #include <mqtt/session_present.hpp>
-#include <mqtt/qos.hpp>
+#include <mqtt/subscribe_options.hpp>
 #include <mqtt/publish.hpp>
 #include <mqtt/connect_return_code.hpp>
 #include <mqtt/exception.hpp>
@@ -264,7 +264,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using subscribe_handler = std::function<bool(packet_id_t packet_id,
-                                                 std::vector<std::tuple<MQTT_NS::buffer, std::uint8_t>> entries)>;
+                                                 std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries)>;
 
     /**
      * @brief Suback handler
@@ -523,7 +523,7 @@ public:
      */
     using v5_subscribe_handler = std::function<
         bool(packet_id_t packet_id,
-             std::vector<std::tuple<MQTT_NS::buffer, std::uint8_t>> entries,
+             std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries,
              std::vector<v5::property_variant> props)
     >;
 
@@ -1495,12 +1495,12 @@ public:
     packet_id_t publish(
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        if(qos == qos::at_most_once) {
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        if(qos_value == qos::at_most_once) {
             acquired_publish(
                 0,
                 force_move(topic_name),
@@ -1519,7 +1519,7 @@ public:
             as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
             packet_id_t packet_id = acquire_unique_packet_id();
-            acquired_publish(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos, retain, force_move(props));
+            acquired_publish(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos_value, retain, force_move(props));
             return packet_id;
         }
     }
@@ -1550,18 +1550,18 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        if(qos == qos::at_most_once) {
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        if(qos_value == qos::at_most_once) {
             acquired_publish(0, topic_name, contents, any(), qos::at_most_once, retain, force_move(props));
             return 0;
         }
         else {
             packet_id_t packet_id = acquire_unique_packet_id();
-            acquired_publish(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(props));
+            acquired_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props));
             return packet_id;
         }
     }
@@ -1588,13 +1588,13 @@ public:
     packet_id_t publish(
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
+        acquired_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props));
         return packet_id;
     }
 
@@ -1617,7 +1617,7 @@ public:
      */
     packet_id_t subscribe(
         string_view topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -1644,7 +1644,7 @@ public:
      */
     packet_id_t subscribe(
         as::const_buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -1671,7 +1671,7 @@ public:
      */
     packet_id_t subscribe(
         buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -1694,11 +1694,11 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t subscribe(
-        std::vector<std::tuple<string_view, std::uint8_t>> params,
+        std::vector<std::tuple<string_view, subscribe_options>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        std::vector<std::tuple<buffer, std::uint8_t>> buf_params;
+        std::vector<std::tuple<buffer, subscribe_options>> buf_params;
         buf_params.reserve(params.size());
         for(auto&& p : params)
         {
@@ -1723,7 +1723,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -1746,7 +1746,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t subscribe(
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -1950,7 +1950,7 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
@@ -1960,7 +1960,7 @@ public:
         as::const_buffer topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
         as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
-        return publish(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos, retain, force_move(props));
+        return publish(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos_value, retain, force_move(props));
     }
 
     /**
@@ -1991,13 +1991,13 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_publish(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(props));
+            acquired_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props));
             return true;
         }
         return false;
@@ -2031,13 +2031,13 @@ public:
         buffer topic_name,
         buffer contents,
         any life_keeper,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_publish(packet_id, force_move(topic_name), force_move(contents), force_move(life_keeper), qos, retain, force_move(props));
+            acquired_publish(packet_id, force_move(topic_name), force_move(contents), force_move(life_keeper), qos_value, retain, force_move(props));
             return true;
         }
         return false;
@@ -2068,7 +2068,7 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
@@ -2078,7 +2078,7 @@ public:
         as::const_buffer topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
         as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
-        return publish_dup(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos, retain, force_move(props));
+        return publish_dup(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos_value, retain, force_move(props));
     }
 
     /**
@@ -2109,13 +2109,13 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_publish_dup(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(props));
+            acquired_publish_dup(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props));
             return true;
         }
         return false;
@@ -2146,13 +2146,13 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props));
+            acquired_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props));
             return true;
         }
         return false;
@@ -2180,7 +2180,7 @@ public:
     bool subscribe(
         packet_id_t packet_id,
         string_view topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
@@ -2212,7 +2212,7 @@ public:
     bool subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
@@ -2238,7 +2238,7 @@ public:
      */
     bool subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<string_view, std::uint8_t>> params,
+        std::vector<std::tuple<string_view, subscribe_options>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
@@ -2270,7 +2270,7 @@ public:
      */
     bool subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
@@ -2296,7 +2296,7 @@ public:
      */
     bool subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
@@ -2471,17 +2471,17 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        if(qos == qos::at_most_once) {
+        if(qos_value == qos::at_most_once) {
             // In the at_most_once case, we know a priori that send_publish won't track the lifetime.
             acquired_publish(packet_id,
                              as::buffer(topic_name),
                              as::buffer(contents),
                              any(),
-                             qos,
+                             qos_value,
                              retain,
                              force_move(props));
         }
@@ -2496,7 +2496,7 @@ public:
                              topic_buf,
                              contents_buf,
                              std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
-                             qos,
+                             qos_value,
                              retain,
                              force_move(props));
         }
@@ -2530,16 +2530,16 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         send_publish(
             buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
-            qos,
+            qos_value,
             retain,
             false,
             packet_id,
@@ -2574,16 +2574,16 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         send_publish(
             force_move(topic_name),
-            qos,
+            qos_value,
             retain,
             false,
             packet_id,
@@ -2618,18 +2618,18 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        if(qos == qos::at_most_once)
+        if(qos_value == qos::at_most_once)
         {
             // In the at_most_once case, we know a priori that send_publish won't track the lifetime.
             acquired_publish_dup(packet_id,
                                  as::buffer(topic_name),
                                  as::buffer(contents),
                                  any(),
-                                 qos,
+                                 qos::at_most_once,
                                  retain,
                                  force_move(props));
         }
@@ -2645,7 +2645,7 @@ public:
                                  topic_buf,
                                  contents_buf,
                                  std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
-                                 qos,
+                                 qos_value,
                                  retain,
                                  force_move(props));
         }
@@ -2679,16 +2679,16 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         send_publish(
             buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
-            qos,
+            qos_value,
             retain,
             true,
             packet_id,
@@ -2723,16 +2723,16 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         std::vector<v5::property_variant> props = {}
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         send_publish(
             force_move(topic_name),
-            qos,
+            qos_value,
             retain,
             true,
             packet_id,
@@ -2763,10 +2763,10 @@ public:
     void acquired_subscribe(
         packet_id_t packet_id,
         string_view topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props = {}
     ) {
-        std::vector<std::tuple<buffer, std::uint8_t>> params;
+        std::vector<std::tuple<buffer, subscribe_options>> params;
         send_subscribe(force_move(params), packet_id, topic_name, option, force_move(props));
     }
 
@@ -2791,10 +2791,10 @@ public:
     void acquired_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props = {}
     ) {
-        std::vector<std::tuple<buffer, std::uint8_t>> params;
+        std::vector<std::tuple<buffer, subscribe_options>> params;
         send_subscribe(force_move(params), packet_id, topic_name, option, force_move(props));
     }
 
@@ -2813,10 +2813,10 @@ public:
      */
     void acquired_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<string_view, std::uint8_t>> params,
+        std::vector<std::tuple<string_view, subscribe_options>> params,
         std::vector<v5::property_variant> props = {}
     ) {
-        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
+        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
         for (auto const& e : params) {
             cb_params.emplace_back(as::buffer(std::get<0>(e).data(), std::get<0>(e).size()), std::get<1>(e));
@@ -2839,7 +2839,7 @@ public:
      */
     void acquired_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         std::vector<v5::property_variant> props = {}
     ) {
         send_subscribe(force_move(params), packet_id, force_move(props));
@@ -3331,13 +3331,13 @@ public:
     packet_id_t async_publish(
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(func));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
+        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
         return packet_id;
     }
 
@@ -3365,14 +3365,14 @@ public:
     packet_id_t async_publish(
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props), force_move(func));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
+        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -3399,13 +3399,13 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(func));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
+        acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(func));
         return packet_id;
     }
 
@@ -3436,14 +3436,14 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(props), force_move(func));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
+        acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -3467,13 +3467,13 @@ public:
     packet_id_t async_publish(
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(func));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
+        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
         return packet_id;
     }
 
@@ -3501,14 +3501,14 @@ public:
     packet_id_t async_publish(
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        packet_id_t packet_id = qos == qos::at_most_once ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props), force_move(func));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
+        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -3529,7 +3529,7 @@ public:
      */
     packet_id_t async_subscribe(
         std::string topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3559,7 +3559,7 @@ public:
 
     packet_id_t async_subscribe(
         std::string topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -3585,7 +3585,7 @@ public:
      */
     packet_id_t async_subscribe(
         as::const_buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3614,7 +3614,7 @@ public:
      */
     packet_id_t async_subscribe(
         as::const_buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -3640,7 +3640,7 @@ public:
      */
     packet_id_t async_subscribe(
         buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3669,7 +3669,7 @@ public:
      */
     packet_id_t async_subscribe(
         buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -3692,7 +3692,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t async_subscribe(
-        std::vector<std::tuple<std::string, std::uint8_t>> const& params,
+        std::vector<std::tuple<std::string, subscribe_options>> const& params,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3718,7 +3718,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t async_subscribe(
-        std::vector<std::tuple<std::string, std::uint8_t>> const& params,
+        std::vector<std::tuple<std::string, subscribe_options>> const& params,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -3741,7 +3741,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t async_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> const& params,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3767,7 +3767,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t async_subscribe(
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> const& params,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -3790,7 +3790,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t async_subscribe(
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3816,7 +3816,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t async_subscribe(
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -4164,13 +4164,13 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(func));
+            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
             return true;
         }
         return false;
@@ -4203,14 +4203,14 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props), force_move(func));
+            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -4241,13 +4241,13 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(func));
+            acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(func));
             return true;
         }
         return false;
@@ -4283,14 +4283,14 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(props), force_move(func));
+            acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -4318,13 +4318,13 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(func));
+            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
             return true;
         }
         return false;
@@ -4357,14 +4357,14 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props), force_move(func));
+            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -4393,13 +4393,13 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(func));
+            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
             return true;
         }
         return false;
@@ -4432,14 +4432,14 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(props), force_move(func));
+            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -4470,13 +4470,13 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(func));
+            acquired_async_publish_dup(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(func));
             return true;
         }
         return false;
@@ -4512,14 +4512,14 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, topic_name, contents, force_move(life_keeper), qos, retain, force_move(props), force_move(func));
+            acquired_async_publish_dup(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -4547,13 +4547,13 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos, retain, force_move(func));
+            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
             return true;
         }
         return false;
@@ -4586,14 +4586,14 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents),  qos, retain, force_move(props), force_move(func));
+            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents),  qos_value, retain, force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -4619,7 +4619,7 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         std::string topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4653,7 +4653,7 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         std::string topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -4684,7 +4684,7 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4718,7 +4718,7 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -4749,7 +4749,7 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4783,7 +4783,7 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -4810,7 +4810,7 @@ public:
      */
     bool async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<std::string, std::uint8_t>> const& params,
+        std::vector<std::tuple<std::string, subscribe_options>> const& params,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4840,7 +4840,7 @@ public:
      */
     bool async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<std::string, std::uint8_t>> const& params,
+        std::vector<std::tuple<std::string, subscribe_options>> const& params,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -4867,7 +4867,7 @@ public:
      */
     bool async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> const& params,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4897,7 +4897,7 @@ public:
      */
     bool async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> const& params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> const& params,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -4924,7 +4924,7 @@ public:
      */
     bool async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4954,7 +4954,7 @@ public:
      */
     bool async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -5210,12 +5210,12 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         auto sp_topic_name = std::make_shared<std::string>(topic_name);
         auto sp_contents   = std::make_shared<std::string>(contents);
@@ -5224,7 +5224,7 @@ public:
 
         async_send_publish(
             buffer(sv_topic_name),
-            qos,
+            qos_value,
             retain,
             false,
             packet_id,
@@ -5262,13 +5262,13 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
         auto sp_contents   = std::make_shared<std::string>(force_move(contents));
@@ -5277,7 +5277,7 @@ public:
 
         async_send_publish(
             buffer(sv_topic_name),
-            qos,
+            qos_value,
             retain,
             false,
             packet_id,
@@ -5314,16 +5314,16 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
             buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
-            qos,
+            qos_value,
             retain,
             false,
             packet_id,
@@ -5364,17 +5364,17 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
             buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
-            qos,
+            qos_value,
             retain,
             false,
             packet_id,
@@ -5408,16 +5408,16 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
             force_move(topic_name),
-            qos,
+            qos_value,
             retain,
             false,
             packet_id,
@@ -5455,17 +5455,17 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
             force_move(topic_name),
-            qos,
+            qos_value,
             retain,
             false,
             packet_id,
@@ -5499,12 +5499,12 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         auto sp_topic_name = std::make_shared<std::string>(topic_name);
         auto sp_contents = std::make_shared<std::string>(contents);
@@ -5513,7 +5513,7 @@ public:
 
         async_send_publish(
             buffer(sv_topic_name),
-            qos,
+            qos_value,
             retain,
             true,
             packet_id,
@@ -5551,13 +5551,13 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
         auto sp_contents   = std::make_shared<std::string>(force_move(contents));
@@ -5566,7 +5566,7 @@ public:
 
         async_send_publish(
             buffer(sv_topic_name),
-            qos,
+            qos_value,
             retain,
             true,
             packet_id,
@@ -5602,16 +5602,16 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
             buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
-            qos,
+            qos_value,
             retain,
             true,
             packet_id,
@@ -5652,17 +5652,17 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
             buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
-            qos,
+            qos_value,
             retain,
             true,
             packet_id,
@@ -5695,16 +5695,16 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos = qos::at_most_once,
+        qos qos_value = qos::at_most_once,
         bool retain = false,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
             force_move(topic_name),
-            qos,
+            qos_value,
             retain,
             true,
             packet_id,
@@ -5744,17 +5744,17 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-        BOOST_ASSERT((qos == qos::at_most_once && packet_id == 0) || (qos != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
             force_move(topic_name),
-            qos,
+            qos_value,
             retain,
             true,
             packet_id,
@@ -5788,14 +5788,14 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         std::string topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         async_handler_t func = async_handler_t()
     ) {
         auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
         auto sv_topic_name = string_view(*sp_topic_name);
 
         async_send_subscribe(
-            std::vector<std::tuple<buffer, std::uint8_t>>({std::make_tuple(buffer(sv_topic_name), option)}),
+            std::vector<std::tuple<buffer, subscribe_options>>({std::make_tuple(buffer(sv_topic_name), option)}),
             force_move(sp_topic_name),
             packet_id,
             force_move(func)
@@ -5825,7 +5825,7 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         std::string topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -5833,7 +5833,7 @@ public:
         auto sv_topic_name = string_view(*sp_topic_name);
 
         async_send_subscribe(
-            std::vector<std::tuple<buffer, std::uint8_t>>({std::make_tuple(buffer(sv_topic_name), option)}),
+            std::vector<std::tuple<buffer, subscribe_options>>({std::make_tuple(buffer(sv_topic_name), option)}),
             force_move(sp_topic_name),
             packet_id,
             force_move(props),
@@ -5860,11 +5860,11 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         async_handler_t func = async_handler_t()
     ) {
         async_send_subscribe(
-            std::vector<std::tuple<buffer, std::uint8_t>>({
+            std::vector<std::tuple<buffer, subscribe_options>>({
                 std::make_tuple(
                     buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
                     option
@@ -5899,13 +5899,13 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
 
         async_send_subscribe(
-            std::vector<std::tuple<buffer, std::uint8_t>>({
+            std::vector<std::tuple<buffer, subscribe_options>>({
                 std::make_tuple(
                     buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
                     option
@@ -5937,11 +5937,11 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         async_handler_t func = async_handler_t()
     ) {
         async_send_subscribe(
-            std::vector<std::tuple<buffer, std::uint8_t>>({
+            std::vector<std::tuple<buffer, subscribe_options>>({
                 std::make_tuple(
                     force_move(topic_name),
                     option
@@ -5976,13 +5976,13 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         buffer topic_name,
-        std::uint8_t option,
+        subscribe_options option,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
 
         async_send_subscribe(
-            std::vector<std::tuple<buffer, std::uint8_t>>({
+            std::vector<std::tuple<buffer, subscribe_options>>({
                 std::make_tuple(
                     force_move(topic_name),
                     option
@@ -6011,11 +6011,11 @@ public:
      */
     void acquired_async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<std::string, std::uint8_t>> params,
+        std::vector<std::tuple<std::string, subscribe_options>> params,
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
+        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
         std::vector<std::shared_ptr<std::string>> life_keepers;
@@ -6054,12 +6054,12 @@ public:
      */
     void acquired_async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<std::string, std::uint8_t>> params,
+        std::vector<std::tuple<std::string, subscribe_options>> params,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
+        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
         std::vector<std::shared_ptr<std::string>> life_keepers;
@@ -6092,11 +6092,11 @@ public:
      */
     void acquired_async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
+        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
         for (auto const& e : params) {
@@ -6135,12 +6135,12 @@ public:
      */
     void acquired_async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<as::const_buffer, std::uint8_t>> params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
+        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
         for (auto const& e : params) {
@@ -6177,11 +6177,11 @@ public:
      */
     void acquired_async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
+        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
         for (auto&& e : params) {
@@ -6215,12 +6215,12 @@ public:
      */
     void acquired_async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<std::tuple<buffer, std::uint8_t>> cb_params;
+        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
         for (auto&& e : params) {
@@ -7254,13 +7254,13 @@ public:
      */
     void restore_serialized_message(basic_publish_message<PacketIdBytes> msg, any life_keeper) {
         auto packet_id = msg.packet_id();
-        auto qos = msg.qos();
+        qos qos_value = msg.get_qos();
         LockGuard<Mutex> lck (store_mtx_);
         if (packet_id_.insert(packet_id).second) {
             auto ret = store_.emplace(
                 packet_id,
-                qos == qos::at_least_once ? control_packet_type::puback
-                                          : control_packet_type::pubrec,
+                qos_value == qos::at_least_once ? control_packet_type::puback
+                                                : control_packet_type::pubrec,
                 force_move(msg),
                 force_move(life_keeper)
             );
@@ -7273,8 +7273,8 @@ public:
                     [&] (auto& e) {
                         e = store(
                             packet_id,
-                            qos == qos::at_least_once ? control_packet_type::puback
-                                                      : control_packet_type::pubrec,
+                            qos_value == qos::at_least_once ? control_packet_type::puback
+                                                            : control_packet_type::pubrec,
                             force_move(msg),
                             force_move(life_keeper)
                         );
@@ -7359,7 +7359,7 @@ public:
      */
     void restore_v5_serialized_message(v5::basic_publish_message<PacketIdBytes> msg, any life_keeper) {
         auto packet_id = msg.packet_id();
-        auto qos = msg.qos();
+        auto qos = msg.get_qos();
         LockGuard<Mutex> lck (store_mtx_);
         if (packet_id_.insert(packet_id).second) {
             auto ret = store_.emplace(
@@ -7664,10 +7664,10 @@ private:
     acquired_async_subscribe_imp(
         packet_id_t packet_id,
         std::string topic_name,
-        std::uint8_t qos,
+        qos qos_value,
         Args&&... args) {
 
-        std::vector<std::tuple<buffer, std::uint8_t>> params;
+        std::vector<std::tuple<buffer, subscribe_options>> params;
         params.reserve((sizeof...(args) + 2) / 2);
 
         async_send_subscribe(
@@ -7675,7 +7675,7 @@ private:
             any(),
             packet_id,
             force_move(topic_name),
-            qos,
+            qos_value,
             std::forward<Args>(args)...
         );
     }
@@ -7690,10 +7690,10 @@ private:
     acquired_async_subscribe_imp(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t qos,
+        qos qos_value,
         Args&&... args) {
 
-        std::vector<std::tuple<buffer, std::uint8_t>> params;
+        std::vector<std::tuple<buffer, subscribe_options>> params;
         params.reserve((sizeof...(args) + 2) / 2);
 
         async_send_subscribe(
@@ -7701,7 +7701,7 @@ private:
             any(),
             packet_id,
             topic_name,
-            qos,
+            qos_value,
             std::forward<Args>(args)...
         );
     }
@@ -7716,10 +7716,10 @@ private:
     acquired_async_subscribe_imp(
         packet_id_t packet_id,
         std::string topic_name,
-        std::uint8_t qos,
+        qos qos_value,
         Args&&... args) {
 
-        std::vector<std::tuple<buffer, std::uint8_t>> params;
+        std::vector<std::tuple<buffer, subscribe_options>> params;
         params.reserve((sizeof...(args) + 2) / 2);
 
         async_send_subscribe(
@@ -7727,7 +7727,7 @@ private:
             any(),
             packet_id,
             force_move(topic_name),
-            qos,
+            qos_value,
             std::forward<Args>(args)...,
             async_handler_t()
         );
@@ -7743,10 +7743,10 @@ private:
     acquired_async_subscribe_imp(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t qos,
+        qos qos_value,
         Args&&... args) {
 
-        std::vector<std::tuple<buffer, std::uint8_t>> params;
+        std::vector<std::tuple<buffer, subscribe_options>> params;
         params.reserve((sizeof...(args) + 2) / 2);
 
         async_send_subscribe(
@@ -7754,7 +7754,7 @@ private:
             any(),
             packet_id,
             topic_name,
-            qos,
+            qos_value,
             std::forward<Args>(args)...,
             async_handler_t()
         );
@@ -7867,9 +7867,9 @@ private:
     >::type
     async_suback_imp(
         packet_id_t packet_id,
-        std::uint8_t qos,
+        std::uint8_t qos_value,
         Args&&... args) {
-        async_send_suback(std::vector<std::uint8_t>{}, packet_id, qos, std::forward<Args>(args)...);
+        async_send_suback(std::vector<std::uint8_t>{}, packet_id, qos_value, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -7881,8 +7881,8 @@ private:
     >::type
     async_suback_imp(
         packet_id_t packet_id,
-        Args&&... qos) {
-        async_send_suback(std::vector<std::uint8_t>({qos...}), packet_id, async_handler_t());
+        Args&&... qos_values) {
+        async_send_suback(std::vector<std::uint8_t>({qos_values...}), packet_id, async_handler_t());
     }
 
     template <typename... Args>
@@ -7894,9 +7894,9 @@ private:
     >::type
     async_unsuback_imp(
         packet_id_t packet_id,
-        std::uint8_t qos,
+        qos qos_value,
         Args&&... args) {
-        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, qos, std::forward<Args>(args)...);
+        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, qos_value, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -11039,7 +11039,7 @@ private:
     struct subscribe_info {
         packet_id_t packet_id;
         std::vector<v5::property_variant> props;
-        std::vector<std::tuple<buffer, std::uint8_t>> entries;
+        std::vector<std::tuple<buffer, subscribe_options>> entries;
     };
 
     void process_subscribe(
@@ -11142,7 +11142,7 @@ private:
                         ]
                         (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
                             auto option = static_cast<std::uint8_t>(body[0]);
-                            auto requested_qos = subscribe::get_qos(option);
+                            qos requested_qos = subscribe_options(option).get_qos();
                             if (requested_qos != qos::at_most_once &&
                                 requested_qos != qos::at_least_once &&
                                 requested_qos != qos::exactly_once) {
@@ -12000,7 +12000,7 @@ private:
 
     void send_publish(
         buffer topic_name,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         bool dup,
         packet_id_t packet_id,
@@ -12011,13 +12011,13 @@ private:
         auto do_send_publish =
             [&](auto msg, auto const& serialize_publish) {
 
-                if (qos == qos::at_least_once || qos == qos::exactly_once) {
+                if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
                     auto store_msg = msg;
                     store_msg.set_dup(true);
                     LockGuard<Mutex> lck (store_mtx_);
                     store_.emplace(
                         packet_id,
-                        qos == qos::at_least_once
+                        qos_value == qos::at_least_once
                          ? control_packet_type::puback
                          : control_packet_type::pubrec,
                         store_msg,
@@ -12035,7 +12035,7 @@ private:
             do_send_publish(
                 v3_1_1::basic_publish_message<PacketIdBytes>(
                     force_move(topic_name),
-                    qos,
+                    qos_value,
                     retain,
                     dup,
                     packet_id,
@@ -12048,7 +12048,7 @@ private:
             do_send_publish(
                 v5::basic_publish_message<PacketIdBytes>(
                     force_move(topic_name),
-                    qos,
+                    qos_value,
                     retain,
                     dup,
                     packet_id,
@@ -12221,48 +12221,48 @@ private:
 
     template <typename... Args>
     void send_subscribe(
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t qos,
+        subscribe_options option,
         Args&&... args) {
-        params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))), qos);
+        params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))), option);
         send_subscribe(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void send_subscribe(
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         packet_id_t packet_id,
         string_view topic_name,
-        std::uint8_t qos,
+        subscribe_options option,
         Args&&... args) {
-        params.emplace_back(buffer(force_move(topic_name)), qos);
+        params.emplace_back(buffer(force_move(topic_name)), option);
         send_subscribe(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void send_subscribe(
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         packet_id_t packet_id,
         buffer topic_name,
-        std::uint8_t qos,
+        qos qos_value,
         Args&&... args) {
-        params.emplace_back(force_move(topic_name), qos);
+        params.emplace_back(force_move(topic_name), qos_value);
         send_subscribe(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void send_subscribe(
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props = {}
     ) {
         for(auto const& p : params)
         {
             BOOST_ASSERT(
-                subscribe::get_qos(std::get<1>(p)) == qos::at_most_once ||
-                subscribe::get_qos(std::get<1>(p)) == qos::at_least_once ||
-                subscribe::get_qos(std::get<1>(p)) == qos::exactly_once
+                std::get<1>(p).get_qos() == qos::at_most_once ||
+                std::get<1>(p).get_qos() == qos::at_least_once ||
+                std::get<1>(p).get_qos() == qos::exactly_once
             );
         }
         switch (version_) {
@@ -12559,7 +12559,7 @@ private:
 
     void async_send_publish(
         buffer topic_name,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         bool dup,
         packet_id_t packet_id,
@@ -12570,15 +12570,15 @@ private:
 
         auto do_async_send_publish =
             [&](auto msg, auto const& serialize_publish) {
-                if (qos == qos::at_least_once || qos == qos::exactly_once) {
+                if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
                     auto store_msg = msg;
                     store_msg.set_dup(true);
                     {
                         LockGuard<Mutex> lck (store_mtx_);
                         auto ret = store_.emplace(
                             packet_id,
-                            qos == qos::at_least_once ? control_packet_type::puback
-                                                      : control_packet_type::pubrec,
+                            qos_value == qos::at_least_once ? control_packet_type::puback
+                                                            : control_packet_type::pubrec,
                             store_msg,
                             life_keeper
                         );
@@ -12603,7 +12603,7 @@ private:
             do_async_send_publish(
                 v3_1_1::basic_publish_message<PacketIdBytes>(
                     force_move(topic_name),
-                    qos,
+                    qos_value,
                     retain,
                     dup,
                     packet_id,
@@ -12616,7 +12616,7 @@ private:
             do_async_send_publish(
                 v5::basic_publish_message<PacketIdBytes>(
                     force_move(topic_name),
-                    qos,
+                    qos_value,
                     retain,
                     dup,
                     packet_id,
@@ -12805,32 +12805,32 @@ private:
 
     template <typename... Args>
     void async_send_subscribe(
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         any life_keepers,
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::uint8_t qos,
+        qos qos_value,
         Args&&... args) {
-        params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))), qos);
+        params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))), qos_value);
         async_send_subscribe(force_move(params), force_move(life_keepers), packet_id, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void async_send_subscribe(
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         any life_keepers,
         packet_id_t packet_id,
         std::string topic_name,
-        std::uint8_t qos,
+        qos qos_value,
         Args&&... args) {
 
         auto sp_topic = std::make_shared<std::string>(force_move(topic_name));
-        params.emplace_back(buffer(string_view(*sp_topic)), qos);
+        params.emplace_back(buffer(string_view(*sp_topic)), qos_value);
         async_send_subscribe(force_move(params), std::make_pair(force_move(life_keepers), force_move(sp_topic)), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_subscribe(
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         any life_keepers,
         packet_id_t packet_id,
         async_handler_t func) {
@@ -12861,7 +12861,7 @@ private:
     }
 
     void async_send_subscribe(
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         any life_keepers,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
@@ -12896,9 +12896,9 @@ private:
     void async_send_suback(
         std::vector<std::uint8_t> params,
         packet_id_t packet_id,
-        std::uint8_t qos,
+        std::uint8_t qos_value,
         Args&&... args) {
-        params.push_back(qos);
+        params.push_back(qos_value);
         async_send_suback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
@@ -13045,16 +13045,16 @@ private:
 
     template <typename... Args>
     void async_send_unsuback(
-        std::vector<std::uint8_t> params,
+        std::vector<qos> params,
         packet_id_t packet_id,
-        std::uint8_t qos,
+        qos qos_value,
         Args&&... args) {
-        params.push_back(qos);
+        params.push_back(qos_value);
         async_send_unsuback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_unsuback(
-        std::vector<std::uint8_t> params,
+        std::vector<qos> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
         async_handler_t func

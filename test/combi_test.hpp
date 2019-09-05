@@ -51,7 +51,7 @@ inline void do_combi_test(Test const& test) {
         auto c = MQTT_NS::make_tls_client(ios, broker_url, broker_tls_port);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
-        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
@@ -62,7 +62,7 @@ inline void do_combi_test(Test const& test) {
         auto c = MQTT_NS::make_tls_client(ios, broker_url, broker_tls_port, MQTT_NS::protocol_version::v5);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
-        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
@@ -90,7 +90,7 @@ inline void do_combi_test(Test const& test) {
         auto c = MQTT_NS::make_tls_client_ws(ios, broker_url, broker_tls_ws_port);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
-        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
@@ -101,7 +101,7 @@ inline void do_combi_test(Test const& test) {
         auto c = MQTT_NS::make_tls_client_ws(ios, broker_url, broker_tls_ws_port, "/", MQTT_NS::protocol_version::v5);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
-        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
@@ -133,7 +133,7 @@ inline void do_combi_test_sync(Test const& test) {
         auto c = MQTT_NS::make_tls_sync_client(ios, broker_url, broker_tls_port);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
-        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
@@ -144,7 +144,7 @@ inline void do_combi_test_sync(Test const& test) {
         auto c = MQTT_NS::make_tls_sync_client(ios, broker_url, broker_tls_port, MQTT_NS::protocol_version::v5);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
-        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
@@ -172,7 +172,7 @@ inline void do_combi_test_sync(Test const& test) {
         auto c = MQTT_NS::make_tls_sync_client_ws(ios, broker_url, broker_tls_ws_port);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
-        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
@@ -183,7 +183,7 @@ inline void do_combi_test_sync(Test const& test) {
         auto c = MQTT_NS::make_tls_sync_client_ws(ios, broker_url, broker_tls_ws_port, "/", MQTT_NS::protocol_version::v5);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
-        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
@@ -215,7 +215,7 @@ inline void do_combi_test_async(Test const& test) {
         auto c = MQTT_NS::make_tls_async_client(ios, broker_url, broker_tls_port);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
-        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
@@ -226,7 +226,7 @@ inline void do_combi_test_async(Test const& test) {
         auto c = MQTT_NS::make_tls_async_client(ios, broker_url, broker_tls_port, MQTT_NS::protocol_version::v5);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
-        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
@@ -254,7 +254,7 @@ inline void do_combi_test_async(Test const& test) {
         auto c = MQTT_NS::make_tls_async_client_ws(ios, broker_url, broker_tls_ws_port);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
-        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }
@@ -265,7 +265,7 @@ inline void do_combi_test_async(Test const& test) {
         auto c = MQTT_NS::make_tls_async_client_ws(ios, broker_url, broker_tls_ws_port, "/", MQTT_NS::protocol_version::v5);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
-        std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+        std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
         c->set_ca_cert_file(base + "cacert.pem");
         test(ios, c, s, b);
     }

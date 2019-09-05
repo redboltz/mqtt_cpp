@@ -328,7 +328,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    std::vector<std::tuple<MQTT_NS::string_view, std::uint8_t>> v;
+                    std::vector<std::tuple<MQTT_NS::string_view, MQTT_NS::subscribe_options>> v;
                     v.emplace_back("topic1", MQTT_NS::qos::at_most_once);
                     v.emplace_back("topic2", MQTT_NS::qos::exactly_once);
                     c->subscribe(v);
@@ -361,7 +361,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    std::vector<std::tuple<MQTT_NS::string_view, std::uint8_t>> v;
+                    std::vector<std::tuple<MQTT_NS::string_view, MQTT_NS::subscribe_options>> v;
                     v.emplace_back("topic1", MQTT_NS::qos::at_most_once);
                     v.emplace_back("topic2", MQTT_NS::qos::exactly_once);
                     c->subscribe(v);
@@ -641,7 +641,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    std::vector<std::tuple<std::string, std::uint8_t>> v;
+                    std::vector<std::tuple<std::string, MQTT_NS::subscribe_options>> v;
                     v.emplace_back("topic1", MQTT_NS::qos::at_most_once);
                     v.emplace_back("topic2", MQTT_NS::qos::exactly_once);
                     c->async_subscribe(
@@ -680,7 +680,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    std::vector<std::tuple<std::string, std::uint8_t>> v;
+                    std::vector<std::tuple<std::string, MQTT_NS::subscribe_options>> v;
                     v.emplace_back("topic1", MQTT_NS::qos::at_most_once);
                     v.emplace_back("topic2", MQTT_NS::qos::exactly_once);
                     c->async_subscribe(

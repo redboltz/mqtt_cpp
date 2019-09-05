@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
             std::cout << "suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : results) {
                 if (e) {
-                    std::cout << "subscribe success: " << MQTT_NS::qos::to_str(*e) << std::endl;
+                    std::cout << "subscribe success: " << static_cast<MQTT_NS::qos>(*e) << std::endl;
                 }
                 else {
                     std::cout << "subscribe failed" << std::endl;
@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
          MQTT_NS::buffer contents){
             std::cout << "publish received. "
                       << "dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
-                      << " pos: " << MQTT_NS::qos::to_str(MQTT_NS::publish::get_qos(header))
+                      << " qos: " << MQTT_NS::publish::get_qos(header)
                       << " retain: " << MQTT_NS::publish::is_retain(header) << std::endl;
             if (packet_id)
                 std::cout << "packet_id: " << *packet_id << std::endl;

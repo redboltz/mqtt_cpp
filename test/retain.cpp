@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     return true;
                 });
             c->set_unsuback_handler(
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     return true;
                 });
             c->set_unsuback_handler(
@@ -437,7 +437,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                 (packet_id_t packet_id, std::vector<MQTT_NS::optional<std::uint8_t>> results) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     auto ret = chk.match(
                         "h_connack",
                         [&] {

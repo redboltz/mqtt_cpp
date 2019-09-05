@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::exactly_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::exactly_once));
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
                     c->async_publish(
@@ -305,7 +305,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::exactly_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::exactly_once));
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
                     pid_pub = c->async_publish(
@@ -528,7 +528,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::exactly_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::exactly_once));
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
                     pid_pub = c->async_publish(
@@ -732,7 +732,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
                     c->async_publish(
@@ -937,7 +937,7 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     auto topic1 = MQTT_NS::allocate_buffer("topic1");
                     auto contents = MQTT_NS::allocate_buffer("topic1_contents");
                     c->async_publish(
@@ -1147,7 +1147,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::at_least_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_least_once));
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
                     auto ret = c->async_publish_dup(
