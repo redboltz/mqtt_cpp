@@ -13,8 +13,27 @@
 
 #include <variant>
 
-#else  // defined(MQTT_STD_VARIANT)
+namespace MQTT_NS {
 
+using std::variant;
+
+template<typename T, typename U>
+decltype(auto) variant_get(U && arg)
+{
+    return std::get<T>(std::forward<U>(arg));
+}
+
+template<typename T>
+decltype(auto) variant_idx(T const& arg)
+{
+    return arg.index();
+}
+
+using std::visit;
+
+} // namespace MQTT_NS
+
+#else  // defined(MQTT_STD_VARIANT)
 
 // user intentionally defined BOOST_MPL_LIMIT_LIST_SIZE but size is too small
 // NOTE: if BOOST_MPL_LIMIT_LIST_SIZE is not defined, the value is evaluate as 0.
@@ -34,21 +53,24 @@
 #endif // defined(BOOST_MPL_CFG_NO_PREPROCESSED_HEADERS) && BOOST_MPL_LIMIT_LIST_SIZE < 40
 
 #include <boost/variant.hpp>
+#include <boost/variant/get.hpp>
 #include <boost/variant/apply_visitor.hpp>
-
-#endif // defined(MQTT_STD_VARIANT)
 
 namespace MQTT_NS {
 
-#if defined(MQTT_STD_VARIANT)
-
-using std::variant;
-
-using std::visit;
-
-#else  // defined(MQTT_STD_VARIANT)
-
 using boost::variant;
+
+template<typename T, typename U>
+decltype(auto) variant_get(U && arg)
+{
+    return boost::get<T>(std::forward<U>(arg));
+}
+
+template<typename T>
+decltype(auto) variant_idx(T const& arg)
+{
+    return arg.which();
+}
 
 template <typename Visitor, typename... Variants>
 constexpr decltype(auto) visit(Visitor&& vis, Variants&&... vars)
@@ -56,9 +78,8 @@ constexpr decltype(auto) visit(Visitor&& vis, Variants&&... vars)
     return boost::apply_visitor(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
 }
 
-#endif // defined(MQTT_STD_VARIANT)
-
-
 } // namespace MQTT_NS
+
+#endif // defined(MQTT_STD_VARIANT)
 
 #endif // MQTT_VARIANT_HPP

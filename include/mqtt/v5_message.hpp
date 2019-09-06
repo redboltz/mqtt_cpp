@@ -33,6 +33,7 @@
 #include <mqtt/property.hpp>
 #include <mqtt/property_variant.hpp>
 #include <mqtt/property_parse.hpp>
+#include <mqtt/reason_code.hpp>
 
 #include <mqtt/packet_id_type.hpp>
 #include <mqtt/move.hpp>
@@ -403,7 +404,7 @@ class connack_message {
 public:
     connack_message(
         bool session_present,
-        std::uint8_t reason_code,
+        connect_reason_code reason_code,
         properties props
     )
         : fixed_header_(make_fixed_header(control_packet_type::connack, 0b0000)),
@@ -528,7 +529,7 @@ private:
 
     std::uint8_t connect_acknowledge_flags_;
 
-    std::uint8_t reason_code_;
+    connect_reason_code reason_code_;
 
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;

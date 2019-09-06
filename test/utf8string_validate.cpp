@@ -568,7 +568,7 @@ BOOST_AUTO_TEST_CASE( publish_overlength_topic ) {
         c->connect();
         c->set_connack_handler(
             [&]
-            (bool, std::uint8_t) {
+            (bool, MQTT_NS::connect_return_code) {
                 try {
                     c->publish(tp, "topic1_contents", MQTT_NS::qos::at_most_once);
                     return true;
@@ -602,7 +602,7 @@ BOOST_AUTO_TEST_CASE( publish_invalid_topic ) {
         c->connect();
         c->set_connack_handler(
             [&]
-            (bool, std::uint8_t) {
+            (bool, MQTT_NS::connect_return_code) {
                 try {
                     c->publish(tp, "topic1_contents", MQTT_NS::qos::at_most_once);
                     return true;
@@ -630,7 +630,7 @@ BOOST_AUTO_TEST_CASE( subscribe_overlength_topic ) {
         c->connect();
         c->set_connack_handler(
             [&]
-            (bool, std::uint8_t) {
+            (bool, MQTT_NS::connect_return_code) {
                 try {
                     c->subscribe(tp, MQTT_NS::qos::at_most_once);
                     return true;
@@ -658,7 +658,7 @@ BOOST_AUTO_TEST_CASE( subscribe_invalid_topic ) {
         c->connect();
         c->set_connack_handler(
             [&]
-            (bool, std::uint8_t) {
+            (bool, MQTT_NS::connect_return_code) {
                 try {
                     c->subscribe(tp, MQTT_NS::qos::at_most_once);
                     return true;
@@ -686,7 +686,7 @@ BOOST_AUTO_TEST_CASE( unsubscribe_overlength_topic ) {
         c->connect();
         c->set_connack_handler(
             [&]
-            (bool, std::uint8_t) {
+            (bool, MQTT_NS::connect_return_code) {
                 try {
                     c->unsubscribe(tp);
                     return true;
@@ -714,7 +714,7 @@ BOOST_AUTO_TEST_CASE( unsubscribe_invalid_topic ) {
         c->connect();
         c->set_connack_handler(
             [&]
-            (bool, std::uint8_t) {
+            (bool, MQTT_NS::connect_return_code) {
                 try {
                     c->unsubscribe(tp);
                     return true;

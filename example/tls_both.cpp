@@ -30,7 +30,7 @@ void client_proc(
     // Setup handlers
     c->set_connack_handler(
         [&c, &pid_sub1, &pid_sub2]
-        (bool sp, std::uint8_t connack_return_code){
+        (bool sp, MQTT_NS::connect_return_code connack_return_code){
             std::cout << "[client] Connack handler called" << std::endl;
             std::cout << "[client] Clean Session: " << std::boolalpha << sp << std::endl;
             std::cout << "[client] Connack Return Code: "

@@ -244,7 +244,7 @@ struct disconnect_message : detail_v3_1_1::header_only_message {
 
 class connack_message {
 public:
-    connack_message(bool session_present, std::uint8_t return_code)
+    connack_message(bool session_present, connect_return_code return_code)
         : message_ {
               static_cast<char>(make_fixed_header(control_packet_type::connack, 0b0000)),
               0b0010,

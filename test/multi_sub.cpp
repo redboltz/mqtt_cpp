@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
 
         c->set_connack_handler(
             [&chk, &c, &pid_sub]
-            (bool sp, std::uint8_t connack_return_code) {
+            (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                 MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
 
     c1->set_connack_handler(
         [&chk, &c1, &pid_sub1]
-        (bool sp, std::uint8_t connack_return_code) {
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
             MQTT_CHK("h_connack_1");
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
 
     c2->set_connack_handler(
         [&chk, &c2, &pid_sub2]
-        (bool sp, std::uint8_t connack_return_code) {
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
             MQTT_CHK("h_connack_2");
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -407,7 +407,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
 
     c1->set_connack_handler(
         [&chk, &c1, &pid_sub1]
-        (bool sp, std::uint8_t connack_return_code) {
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
             MQTT_CHK("h_connack_1");
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -469,7 +469,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
 
     c2->set_connack_handler(
         [&chk, &c2, &pid_sub2]
-        (bool sp, std::uint8_t connack_return_code) {
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
             MQTT_CHK("h_connack_2");
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -528,7 +528,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
 
     c3->set_connack_handler(
         [&chk, &c3, &c1ready, &c2ready, &c3ready, &pid_pub3]
-        (bool sp, std::uint8_t connack_return_code) {
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
             MQTT_CHK("h_connack_3");
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);

@@ -12,6 +12,71 @@
 
 namespace MQTT_NS {
 namespace v5 {
+
+enum class connect_reason_code : std::uint8_t {
+    success                       = 0x00,
+    unspecified_error             = 0x80,
+    malformed_packet              = 0x81,
+    protocol_error                = 0x82,
+    implementation_specific_error = 0x83,
+    unsupported_protocol_version  = 0x84,
+    client_identifier_not_valid   = 0x85,
+    bad_user_name_or_password     = 0x86,
+    not_authorized                = 0x87,
+    server_unavailable            = 0x88,
+    server_busy                   = 0x89,
+    banned                        = 0x8a,
+    server_shutting_down          = 0x8b,
+    bad_authentication_method     = 0x8c,
+    topic_name_invalid            = 0x90,
+    packet_too_large              = 0x95,
+    quota_exceeded                = 0x97,
+    payload_format_invalid        = 0x99,
+    retain_not_supported          = 0x9a,
+    qos_not_supported             = 0x9b,
+    use_another_server            = 0x9c,
+    server_moved                  = 0x9d,
+    connection_rate_exceeded      = 0x9f,
+};
+
+constexpr
+char const* connect_reason_code_to_str(connect_reason_code v) {
+    switch(v)
+    {
+        case connect_reason_code::success:                       return "success";
+        case connect_reason_code::unspecified_error:             return "unspecified_error";
+        case connect_reason_code::malformed_packet:              return "malformed_packet";
+        case connect_reason_code::protocol_error:                return "protocol_error";
+        case connect_reason_code::implementation_specific_error: return "implementation_specific_error";
+        case connect_reason_code::unsupported_protocol_version:  return "unsupported_protocol_version";
+        case connect_reason_code::client_identifier_not_valid:   return "client_identifier_not_valid";
+        case connect_reason_code::bad_user_name_or_password:     return "bad_user_name_or_password";
+        case connect_reason_code::not_authorized:                return "not_authorized";
+        case connect_reason_code::server_unavailable:            return "server_unavailable";
+        case connect_reason_code::server_busy:                   return "server_busy";
+        case connect_reason_code::banned:                        return "banned";
+        case connect_reason_code::server_shutting_down:          return "server_shutting_down";
+        case connect_reason_code::bad_authentication_method:     return "bad_authentication_method";
+        case connect_reason_code::topic_name_invalid:            return "topic_name_invalid";
+        case connect_reason_code::packet_too_large:              return "packet_too_large";
+        case connect_reason_code::quota_exceeded:                return "quota_exceeded";
+        case connect_reason_code::payload_format_invalid:        return "payload_format_invalid";
+        case connect_reason_code::retain_not_supported:          return "retain_not_supported";
+        case connect_reason_code::qos_not_supported:             return "qos_not_supported";
+        case connect_reason_code::use_another_server:            return "use_another_server";
+        case connect_reason_code::server_moved:                  return "server_moved";
+        case connect_reason_code::connection_rate_exceeded:      return "connection_rate_exceeded";
+        default:                                                 return "unknown_connect_reason_code";
+    }
+}
+
+template<typename Stream>
+Stream & operator<<(Stream & os, connect_reason_code val)
+{
+    os << connect_reason_code_to_str(val);
+    return os;
+}
+
 namespace reason_code {
 
 constexpr std::uint8_t const success                                       = 0x00;

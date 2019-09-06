@@ -38,12 +38,11 @@ int main(int argc, char** argv) {
     // Setup handlers
     c->set_v5_connack_handler( // use v5 handler
         [&c, &pid_sub1, &pid_sub2]
-        (bool sp, std::uint8_t reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
+        (bool sp, MQTT_NS::v5::connect_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout << "[client] Connack handler called" << std::endl;
             std::cout << "[client] Clean Session: " << std::boolalpha << sp << std::endl;
-            std::cout << "[client] Connect Reason Code: "
-                      << static_cast<int>(reason_code) << std::endl;
-            if (reason_code == MQTT_NS::v5::reason_code::success) {
+            std::cout << "[client] Connect Reason Code: " << reason_code << std::endl;
+            if (reason_code == MQTT_NS::v5::connect_reason_code::success) {
                 pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", MQTT_NS::qos::at_most_once);
                 pid_sub2 = c->subscribe(
                     {

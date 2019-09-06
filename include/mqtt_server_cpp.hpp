@@ -17,7 +17,6 @@
 #include <mqtt/subscribe_options.hpp>
 #include <mqtt/remaining_length.hpp>
 #include <mqtt/session_present.hpp>
-#include <mqtt/str_connect_return_code.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
 #include <mqtt/visitor_util.hpp>
 #include <mqtt/will.hpp>
