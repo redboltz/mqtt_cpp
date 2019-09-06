@@ -26,7 +26,7 @@ void client_proc(Client& c) {
     // Setup handlers
     c->set_v5_connack_handler( // use v5 handler
         [&c]
-        (bool sp, std::uint8_t reason_code, std::vector<MQTT_NS::v5::property_variant> props){
+        (bool sp, v5::connect_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> props){
             std::cout << "[client] Connack handler called" << std::endl;
             std::cout << "[client] Clean Session: " << std::boolalpha << sp << std::endl;
             std::cout << "[client] Connect Reason Code: "

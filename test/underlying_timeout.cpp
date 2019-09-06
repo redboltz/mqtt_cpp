@@ -300,11 +300,11 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
     char buf;
 
     as::async_connect(
-#if BOOST_VERSION >= 107000
-        boost::beast::get_lowest_layer(socket),
-#else  // BOOST_VERSION >= 107000
+//#if BOOST_VERSION >= 107000
+//        boost::beast::get_lowest_layer(socket),
+//#else  // BOOST_VERSION >= 107000
         socket.lowest_layer(),
-#endif // BOOST_VERSION >= 107000
+//#endif // BOOST_VERSION >= 107000
         it, end,
         [&]
         (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {

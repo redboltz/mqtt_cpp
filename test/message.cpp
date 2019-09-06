@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE( connect_cbuf ) {
 
 
 BOOST_AUTO_TEST_CASE( connack_cbuf ) {
-    auto m = MQTT_NS::connack_message(true, 0x80);
+    auto m = MQTT_NS::connack_message(true, MQTT_NS::connect_return_code::accepted);
     std::string expected {
         0b0010'0000,
         0b0000'0010,
@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE( connack_cbuf ) {
 }
 
 BOOST_AUTO_TEST_CASE( connack_num_of_cbs ) {
-    auto m = MQTT_NS::connack_message(true, 0x80);
+    auto m = MQTT_NS::connack_message(true, MQTT_NS::connect_return_code::accepted);
     std::string expected {
         0b0010'0000,
         0b0000'0010,

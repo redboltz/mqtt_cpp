@@ -182,15 +182,16 @@ public:
      * @brief Connack handler
      * @param session_present
      *        Session present flag.<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718035<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718036<BR>
      *        3.2.2.2 Session Present
      * @param return_code
      *        connect_return_code<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718035<BR>
+     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718036<BR>
      *        3.2.2.3 Connect Return code
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using connack_handler = std::function<bool(bool session_present, std::uint8_t return_code)>;
+    using connack_handler = std::function<bool(bool session_present, connect_return_code return_code)>;
+
     /**
      * @brief Publish handler
      * @param fixed_header
@@ -382,7 +383,7 @@ public:
      */
     using v5_connack_handler = std::function<
         bool(bool session_present,
-             std::uint8_t reason_code,
+             v5::connect_reason_code reason_code,
              std::vector<v5::property_variant> props)
     >;
 
@@ -3129,7 +3130,7 @@ public:
      */
     void connack(
         bool session_present,
-        std::uint8_t reason_code,
+        variant<connect_return_code, v5::connect_reason_code> reason_code,
         std::vector<v5::property_variant> props = {}
     ) {
         send_connack(session_present, reason_code, force_move(props));
@@ -9996,7 +9997,7 @@ private:
     struct connack_info {
         std::size_t header_len;
         bool session_present;
-        std::uint8_t reason_code;
+        variant<connect_return_code, v5::connect_reason_code> reason_code;
         std::vector<v5::property_variant> props;
     };
 
@@ -10037,7 +10038,16 @@ private:
         switch (phase) {
         case connack_phase::header:
             info.session_present = is_session_present(buf[0]);
-            info.reason_code = static_cast<std::uint8_t>(buf[1]);
+            switch (version_) {
+            case protocol_version::v3_1_1:
+                info.reason_code = static_cast<connect_return_code>(buf[1]);
+                break;
+            case protocol_version::v5:
+                info.reason_code = static_cast<v5::connect_reason_code>(buf[1]);
+                break;
+            default:
+                BOOST_ASSERT(false);
+            }
 
             buf.remove_prefix(info.header_len); // consume buffer
             process_connack_impl(
@@ -10089,7 +10099,7 @@ private:
                     switch (version_) {
                     case protocol_version::v3_1_1:
                         if (h_connack_) {
-                            if (!h_connack_(info.session_present, info.reason_code)) {
+                            if (!h_connack_(info.session_present, variant_get<connect_return_code>(info.reason_code))) {
                                 return;
                             }
                         }
@@ -10097,7 +10107,7 @@ private:
                         break;
                     case protocol_version::v5:
                         if (h_v5_connack_) {
-                            if (!h_v5_connack_(info.session_present, info.reason_code, force_move(info.props))) {
+                            if (!h_v5_connack_(info.session_present, variant_get<v5::connect_reason_code>(info.reason_code), force_move(info.props))) {
                                 return;
                             }
                         }
@@ -10108,7 +10118,13 @@ private:
                     }
                 };
 
-            if (info.reason_code == v5::reason_code::success) {
+            // Note: boost:variant has no featue to query if the variant currently holds a specific type.
+            // MQTT_CPP could create a type traits function to match the provided type to the index in
+            // the boost::variant type list, but for now it does not appear to be needed.
+            if (   (   (0 == variant_idx(info.reason_code))
+                    && (connect_return_code::accepted == variant_get<connect_return_code>(info.reason_code)))
+                || (   (1 == variant_idx(info.reason_code))
+                    && (v5::connect_reason_code::success == variant_get<v5::connect_reason_code>(info.reason_code)))) {
                 if (clean_session_) {
                     LockGuard<Mutex> lck (store_mtx_);
                     store_.clear();
@@ -10209,10 +10225,10 @@ private:
                 ]
                 (buffer topic_name, buffer buf, async_handler_t func, this_type_sp self) mutable {
                     info.topic_name = force_move(topic_name);
-                    auto qos = publish::get_qos(fixed_header_);
-                    if (qos != qos::at_most_once &&
-                        qos != qos::at_least_once &&
-                        qos != qos::exactly_once) {
+                    qos qos_value = publish::get_qos(fixed_header_);
+                    if (qos_value != qos::at_most_once &&
+                        qos_value != qos::at_least_once &&
+                        qos_value != qos::exactly_once) {
                         call_protocol_error_handlers(func);
                         return;
                     }
@@ -10220,7 +10236,7 @@ private:
                         force_move(func),
                         force_move(buf),
                         [&] {
-                            if (qos == qos::at_most_once) {
+                            if (qos_value == qos::at_most_once) {
                                 if (version_ == protocol_version::v5) {
                                     return publish_phase::properties;
                                 }
@@ -11971,7 +11987,7 @@ private:
 
     void send_connack(
         bool session_present,
-        std::uint8_t reason_code,
+        variant<connect_return_code, v5::connect_reason_code> reason_code,
         std::vector<v5::property_variant> props
     ) {
         switch (version_) {
@@ -11979,7 +11995,7 @@ private:
             do_sync_write(
                 v3_1_1::connack_message(
                     session_present,
-                    reason_code
+                    variant_get<connect_return_code>(reason_code)
                 )
             );
             break;
@@ -11987,7 +12003,7 @@ private:
             do_sync_write(
                 v5::connack_message(
                     session_present,
-                    reason_code,
+                    variant_get<v5::connect_reason_code>(reason_code),
                     force_move(props)
                 )
             );
@@ -12527,7 +12543,7 @@ private:
 
     void async_send_connack(
         bool session_present,
-        std::uint8_t reason_code,
+        variant<connect_return_code, v5::connect_reason_code> reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {
@@ -12536,7 +12552,7 @@ private:
             do_async_write(
                 v3_1_1::connack_message(
                     session_present,
-                    reason_code
+                    variant_get<connect_return_code>(reason_code)
                 ),
                 force_move(func)
             );
@@ -12545,7 +12561,7 @@ private:
             do_async_write(
                 v5::connack_message(
                     session_present,
-                    reason_code,
+                    variant_get<v5::connect_reason_code>(reason_code),
                     force_move(props)
                 ),
                 force_move(func)

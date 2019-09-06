@@ -439,7 +439,7 @@ private:
         case MQTT_NS::protocol_version::v5:
             ep.connack(
                 !clean_session && ((act_sess_idx.end() != act_sess_it) || (non_act_sess_idx.end() != non_act_sess_it)),
-                MQTT_NS::v5::reason_code::success,
+                MQTT_NS::v5::connect_reason_code::success,
                 connack_props_
             );
             break;
