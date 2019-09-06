@@ -10,7 +10,7 @@
 #include <string>
 
 #include <mqtt/namespace.hpp>
-#include <mqtt/qos.hpp>
+#include <mqtt/subscribe_options.hpp>
 #include <mqtt/property_variant.hpp>
 #include <mqtt/move.hpp>
 
@@ -34,12 +34,12 @@ public:
     will(buffer topic,
          buffer message,
          bool retain,
-         std::uint8_t qos,
+         qos qos_value,
          std::vector<v5::property_variant> props = {})
         :topic_(force_move(topic)),
          message_(force_move(message)),
          retain_(retain),
-         qos_(qos),
+         qos_(qos_value),
          props_(force_move(props))
     {}
 
@@ -72,9 +72,9 @@ public:
      */
     will(buffer topic,
          buffer message,
-         std::uint8_t qos,
+         qos qos_value,
          std::vector<v5::property_variant> props = {})
-        :will(force_move(topic), force_move(message), false, qos, force_move(props))
+        :will(force_move(topic), force_move(message), false, qos_value, force_move(props))
     {}
 
     buffer const& topic() const {
@@ -92,7 +92,7 @@ public:
     bool retain() const {
         return retain_;
     }
-    std::uint8_t qos() const {
+    qos get_qos() const {
         return qos_;
     }
     std::vector<v5::property_variant> const& props() const {
@@ -106,7 +106,7 @@ private:
     buffer topic_;
     buffer message_;
     bool retain_ = false;
-    std::uint8_t qos_ = 0;
+    qos qos_ = qos::at_most_once;
     std::vector<v5::property_variant> props_;
 };
 

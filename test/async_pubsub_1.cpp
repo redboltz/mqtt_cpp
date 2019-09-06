@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     c->async_publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
                     return true;
                 });
@@ -226,7 +226,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     pid_sub = c->async_subscribe(
-                        std::vector<std::tuple<std::string, std::uint8_t>> {
+                        std::vector<std::tuple<std::string, MQTT_NS::subscribe_options>> {
                             std::make_tuple("topic1", MQTT_NS::qos::at_most_once)
                         }
                     );
@@ -259,7 +259,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     pid_pub = c->async_publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
                     return true;
                 });
@@ -295,7 +295,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     pid_sub = c->async_subscribe(
-                        std::vector<std::tuple<std::string, std::uint8_t>> {
+                        std::vector<std::tuple<std::string, MQTT_NS::subscribe_options>> {
                             std::make_tuple("topic1", MQTT_NS::qos::at_most_once)
                         }
                     );
@@ -449,7 +449,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == 1);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                     pid_pub = c->async_publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                     return true;
                 });
@@ -629,7 +629,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::at_least_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_least_once));
                     c->async_publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
                     return true;
                 });
@@ -821,7 +821,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::at_least_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_least_once));
                     pid_pub = c->async_publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
                     return true;
                 });
@@ -1011,7 +1011,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::qos::at_least_once);
+                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_least_once));
                     pid_pub = c->async_publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                     return true;
                 });

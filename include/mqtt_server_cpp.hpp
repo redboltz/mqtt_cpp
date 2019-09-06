@@ -14,11 +14,10 @@
 #include <mqtt/fixed_header.hpp>
 #include <mqtt/hexdump.hpp>
 #include <mqtt/publish.hpp>
-#include <mqtt/qos.hpp>
+#include <mqtt/subscribe_options.hpp>
 #include <mqtt/remaining_length.hpp>
 #include <mqtt/session_present.hpp>
 #include <mqtt/str_connect_return_code.hpp>
-#include <mqtt/str_qos.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
 #include <mqtt/visitor_util.hpp>
 #include <mqtt/will.hpp>

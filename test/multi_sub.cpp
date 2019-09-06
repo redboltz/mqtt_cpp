@@ -89,8 +89,8 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
                 MQTT_CHK("h_suback");
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(results.size() == 2U);
-                BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
-                BOOST_TEST(*results[1] == MQTT_NS::qos::at_most_once);
+                BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
+                BOOST_TEST(*results[1] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
                 c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
                 return true;
             });
@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
             MQTT_CHK("h_suback_1");
             BOOST_TEST(packet_id == pid_sub1);
             BOOST_TEST(results.size() == 1U);
-            BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
+            BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
             if (++sub_count == 2)
                 c1->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
             return true;
@@ -310,7 +310,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
             MQTT_CHK("h_suback_2");
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
-            BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
+            BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
             if (++sub_count == 2)
                 c2->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
             return true;
@@ -431,7 +431,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
             MQTT_CHK("h_suback_1");
             BOOST_TEST(packet_id == pid_sub1);
             BOOST_TEST(results.size() == 1U);
-            BOOST_TEST(*results[0] == MQTT_NS::qos::at_least_once);
+            BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_least_once));
 
             c1ready = true;
             if (c1ready && c2ready && c3ready) {
@@ -493,7 +493,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
             MQTT_CHK("h_suback_2");
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
-            BOOST_TEST(*results[0] == MQTT_NS::qos::at_least_once);
+            BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_least_once));
 
             c2ready = true;
             if (c1ready && c2ready && c3ready) {

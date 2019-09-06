@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             MQTT_CHK("h_suback_2");
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
-            BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
+            BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
             c1_force_disconnect();
             return true;
         });
@@ -235,7 +235,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             MQTT_CHK("h_suback_2");
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
-            BOOST_TEST(*results[0] == MQTT_NS::qos::at_least_once);
+            BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_least_once));
             c1_force_disconnect();
             return true;
         });
@@ -362,7 +362,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             MQTT_CHK("h_suback_2");
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
-            BOOST_TEST(*results[0] == MQTT_NS::qos::exactly_once);
+            BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::exactly_once));
             c1_force_disconnect();
             return true;
         });
@@ -496,7 +496,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
         (packet_id_t packet_id, std::vector<MQTT_NS::optional<std::uint8_t>> results) {
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
-            BOOST_TEST(*results[0] == MQTT_NS::qos::at_most_once);
+            BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
             auto ret = chk.match(
                 "h_connack_2",
                 [&] {

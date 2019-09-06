@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
 
     std::string path = boost::unit_test::framework::master_test_suite().argv[0];
     std::size_t pos = path.find_last_of("/\\");
-    std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+    std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
 
     boost::beast::websocket::stream<as::ip::tcp::socket> socket(ios);
 
@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
 
     std::string path = boost::unit_test::framework::master_test_suite().argv[0];
     std::size_t pos = path.find_last_of("/\\");
-    std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+    std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
 
     as::ssl::context ctx {as::ssl::context::tlsv12};
     ctx.load_verify_file(base + "cacert.pem");
@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
 
     std::string path = boost::unit_test::framework::master_test_suite().argv[0];
     std::size_t pos = path.find_last_of("/\\");
-    std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+    std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
 
     as::ssl::context ctx {as::ssl::context::tlsv12};
     ctx.load_verify_file(base + "cacert.pem");
@@ -290,7 +290,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
 
     std::string path = boost::unit_test::framework::master_test_suite().argv[0];
     std::size_t pos = path.find_last_of("/\\");
-    std::string base = pos == std::string::npos ? "" : path.substr(0, pos + 1);
+    std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
 
     as::ssl::context ctx {as::ssl::context::tlsv12};
     ctx.load_verify_file(base + "cacert.pem");

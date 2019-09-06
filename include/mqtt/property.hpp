@@ -25,7 +25,7 @@
 #include <mqtt/property_id.hpp>
 #include <mqtt/four_byte_util.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
-#include <mqtt/qos.hpp>
+#include <mqtt/subscribe_options.hpp>
 #include <mqtt/variable_length.hpp>
 #include <mqtt/buffer.hpp>
 #include <mqtt/move.hpp>
@@ -471,11 +471,11 @@ class maximum_qos : public detail::n_bytes_property<1> {
 public:
     using recv = maximum_qos;
     using store = maximum_qos;
-    maximum_qos(std::uint8_t qos)
-        : detail::n_bytes_property<1>(id::maximum_qos, { static_cast<char>(qos) } ) {
-        if (qos != qos::at_most_once &&
-            qos != qos::at_least_once &&
-            qos != qos::exactly_once) throw property_parse_error();
+    maximum_qos(qos value)
+        : detail::n_bytes_property<1>(id::maximum_qos, { static_cast<char>(value) } ) {
+        if (value != qos::at_most_once &&
+            value != qos::at_least_once &&
+            value != qos::exactly_once) throw property_parse_error();
     }
 
     template <typename It>
@@ -708,7 +708,8 @@ typename std::enable_if<
     std::ostream&
 >::type
 operator<<(std::ostream& o, Property const& p) {
-    o << (p.val() == payload_format_indicator::binary ? "binary" : "string");
+    // Note this only compiles because both strings below are the same length.
+    o << ((p.val() == payload_format_indicator::binary) ? "binary" : "string");
     return o;
 }
 

@@ -20,7 +20,7 @@
 #include <mqtt/two_byte_util.hpp>
 #include <mqtt/fixed_header.hpp>
 #include <mqtt/remaining_length.hpp>
-#include <mqtt/qos.hpp>
+#include <mqtt/subscribe_options.hpp>
 #include <mqtt/const_buffer_util.hpp>
 #include <mqtt/will.hpp>
 #include <mqtt/connect_flags.hpp>
@@ -341,7 +341,7 @@ public:
         if (w) {
             connect_flags_ |= connect_flags::will_flag;
             if (w.value().retain()) connect_flags_ |= connect_flags::will_retain;
-            connect_flags::set_will_qos(connect_flags_, w.value().qos());
+            connect_flags::set_will_qos(connect_flags_, w.value().get_qos());
 
             utf8string_check(w.value().topic());
             will_topic_name_ = force_move(w.value().topic());
@@ -502,7 +502,7 @@ class basic_publish_message {
 public:
     basic_publish_message(
         buffer topic_name,
-        std::uint8_t qos,
+        qos qos_value,
         bool retain,
         bool dup,
         typename packet_id_type<PacketIdBytes>::type packet_id,
@@ -516,19 +516,13 @@ public:
               2                      // topic name length
               + topic_name_.size()   // topic name
               + payload_.size()      // payload
-              +
-              [&] () -> typename packet_id_type<PacketIdBytes>::type {
-                  if (qos == qos::at_least_once || qos == qos::exactly_once) {
-                      return PacketIdBytes; // packet_id
-                  }
-                  else {
-                      return 0;
-                  }
-              }()
+              + (  (qos_value == qos::at_least_once || qos_value == qos::exactly_once)
+                 ? PacketIdBytes // packet_id
+                 : 0)
           )
     {
         utf8string_check(topic_name_);
-        publish::set_qos(fixed_header_, qos);
+        publish::set_qos(fixed_header_, qos_value);
         publish::set_retain(fixed_header_, retain);
         publish::set_dup(fixed_header_, dup);
 
@@ -536,8 +530,8 @@ public:
         for (auto e : rb) {
             remaining_length_buf_.push_back(e);
         }
-        if (qos == qos::at_least_once ||
-            qos == qos::exactly_once) {
+        if (qos_value == qos::at_least_once ||
+            qos_value == qos::exactly_once) {
             packet_id_.reserve(PacketIdBytes);
             add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
         }
@@ -546,7 +540,7 @@ public:
     basic_publish_message(buffer buf) {
         if (buf.empty())  throw remaining_length_error();
         fixed_header_ = static_cast<std::uint8_t>(buf.front());
-        auto qos = publish::get_qos(fixed_header_);
+        qos qos_value = get_qos();
         buf.remove_prefix(1);
 
         if (buf.empty()) throw remaining_length_error();
@@ -571,7 +565,7 @@ public:
         utf8string_check(topic_name_);
         buf.remove_prefix(topic_name_length);
 
-        switch (qos) {
+        switch (qos_value) {
         case qos::at_most_once:
             break;
         case qos::at_least_once:
@@ -676,7 +670,7 @@ public:
      * @brief Get qos
      * @return qos
      */
-    std::uint8_t qos() const {
+    qos get_qos() const {
         return publish::get_qos(fixed_header_);
     }
 
@@ -737,20 +731,20 @@ template <std::size_t PacketIdBytes>
 class basic_subscribe_message {
 private:
     struct entry {
-        entry(buffer topic_name, std::uint8_t qos)
+        entry(buffer topic_name, subscribe_options qos_value)
             : topic_name_(force_move(topic_name)),
               topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_name_.size())) },
-              qos_(qos)
+              qos_(qos_value.get_qos())
         {}
 
         buffer topic_name_;
         boost::container::static_vector<char, 2> topic_name_length_buf_;
-        std::uint8_t qos_;
+        qos qos_;
     };
 
 public:
     basic_subscribe_message(
-        std::vector<std::tuple<buffer, std::uint8_t>> params,
+        std::vector<std::tuple<buffer, subscribe_options>> params,
         typename packet_id_type<PacketIdBytes>::type packet_id
     )
         : fixed_header_(make_fixed_header(control_packet_type::subscribe, 0b0010)),
@@ -762,8 +756,7 @@ public:
             auto size = topic_name.size();
             utf8string_check(topic_name);
 
-            auto qos = std::get<1>(e);
-            entries_.emplace_back(force_move(topic_name), qos);
+            entries_.emplace_back(force_move(topic_name), std::get<1>(e));
             remaining_length_ +=
                 2 +                     // topic name length
                 size +                  // topic name

@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
          std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout << "[client] publish received. "
                       << "dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
-                      << " pos: " << MQTT_NS::qos::to_str(MQTT_NS::publish::get_qos(header))
+                      << " qos: " << MQTT_NS::publish::get_qos(header)
                       << " retain: " << MQTT_NS::publish::is_retain(header) << std::endl;
             if (packet_id)
                 std::cout << "[client] packet_id: " << *packet_id << std::endl;
