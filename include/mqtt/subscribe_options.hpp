@@ -61,26 +61,26 @@ struct subscribe_options
     std::uint8_t data_;
 };
 
-subscribe_options operator|(subscribe_options lhs, retain_handling rhs) { lhs |= rhs; return lhs; }
-subscribe_options operator|(subscribe_options lhs, rap rhs) { lhs |= rhs; return lhs; }
-subscribe_options operator|(subscribe_options lhs, nl rhs) { lhs |= rhs; return lhs; }
-subscribe_options operator|(subscribe_options lhs, qos rhs) { lhs |= rhs; return lhs; }
+inline subscribe_options operator|(subscribe_options lhs, retain_handling rhs) { lhs |= rhs; return lhs; }
+inline subscribe_options operator|(subscribe_options lhs, rap rhs) { lhs |= rhs; return lhs; }
+inline subscribe_options operator|(subscribe_options lhs, nl rhs) { lhs |= rhs; return lhs; }
+inline subscribe_options operator|(subscribe_options lhs, qos rhs) { lhs |= rhs; return lhs; }
 
-subscribe_options operator|(retain_handling lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
-subscribe_options operator|(retain_handling lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
-subscribe_options operator|(retain_handling lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
+inline subscribe_options operator|(retain_handling lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
+inline subscribe_options operator|(retain_handling lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
+inline subscribe_options operator|(retain_handling lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
 
-subscribe_options operator|(rap lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
-subscribe_options operator|(rap lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
-subscribe_options operator|(rap lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
+inline subscribe_options operator|(rap lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
+inline subscribe_options operator|(rap lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
+inline subscribe_options operator|(rap lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
 
-subscribe_options operator|(nl lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
-subscribe_options operator|(nl lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
-subscribe_options operator|(nl lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
+inline subscribe_options operator|(nl lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
+inline subscribe_options operator|(nl lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
+inline subscribe_options operator|(nl lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
 
-subscribe_options operator|(qos lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
-subscribe_options operator|(qos lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
-subscribe_options operator|(qos lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
+inline subscribe_options operator|(qos lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
+inline subscribe_options operator|(qos lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
+inline subscribe_options operator|(qos lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
 
 
 constexpr char const* qos_to_str(qos v) {

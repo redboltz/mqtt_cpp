@@ -7894,9 +7894,9 @@ private:
     >::type
     async_unsuback_imp(
         packet_id_t packet_id,
-        qos qos_value,
+        std::uint8_t payload,
         Args&&... args) {
-        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, qos_value, std::forward<Args>(args)...);
+        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, payload, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -7908,8 +7908,8 @@ private:
     >::type
     async_unsuback_imp(
         packet_id_t packet_id,
-        Args&&... qos) {
-        async_send_unsuback(std::vector<std::uint8_t>({qos...}), packet_id, async_handler_t());
+        Args&&... payload) {
+        async_send_unsuback(std::vector<std::uint8_t>({payload...}), packet_id, async_handler_t());
     }
 
     class send_buffer {
@@ -13045,16 +13045,16 @@ private:
 
     template <typename... Args>
     void async_send_unsuback(
-        std::vector<qos> params,
+        std::vector<std::uint8_t> params,
         packet_id_t packet_id,
-        qos qos_value,
+        std::uint8_t payload,
         Args&&... args) {
-        params.push_back(qos_value);
+        params.push_back(payload);
         async_send_unsuback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_unsuback(
-        std::vector<qos> params,
+        std::vector<std::uint8_t> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
         async_handler_t func
