@@ -2311,7 +2311,7 @@ private:
 
 struct auth_message {
     auth_message(
-        optional<std::uint8_t> reason_code,
+        optional<v5::auth_reason_code> reason_code,
         properties props
     )
         : fixed_header_(make_fixed_header(control_packet_type::auth, 0b0000)),
@@ -2443,7 +2443,7 @@ private:
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 
-    optional<std::uint8_t> reason_code_;
+    optional<v5::auth_reason_code> reason_code_;
 
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;

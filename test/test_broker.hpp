@@ -298,7 +298,7 @@ public:
         );
         ep.set_v5_auth_handler(
             [&]
-            (std::uint8_t /*reason_code*/,
+            (MQTT_NS::v5::auth_reason_code /*reason_code*/,
              std::vector<MQTT_NS::v5::property_variant> props
             ) {
                 if (h_auth_props_) h_auth_props_(std::move(props));

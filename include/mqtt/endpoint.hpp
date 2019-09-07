@@ -623,7 +623,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using v5_auth_handler = std::function<
-        bool(std::uint8_t reason_code,
+        bool(v5::auth_reason_code reason_code,
              std::vector<v5::property_variant> props)
     >;
 
@@ -2999,7 +2999,7 @@ public:
      *        3.15.2.2 AUTH Properties
      */
     void auth(
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::auth_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         send_auth(reason_code, force_move(props));
@@ -6567,7 +6567,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718086
      */
     void async_auth(
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::auth_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {},
         async_handler_t func = async_handler_t()) {
         async_send_auth(reason_code, force_move(props), force_move(func));
@@ -11826,7 +11826,7 @@ private:
     };
 
     struct auth_info {
-        std::uint8_t reason_code;
+        v5::auth_reason_code reason_code;
         std::vector<v5::property_variant> props;
     };
 
@@ -11841,7 +11841,7 @@ private:
         }
 
         if (remaining_length_ == 0) {
-            auth_info info { v5::reason_code::success, std::vector<v5::property_variant>() };
+            auth_info info { v5::auth_reason_code::success, std::vector<v5::property_variant>() };
             process_auth_impl(
                 force_move(func),
                 buffer(),
@@ -11890,7 +11890,7 @@ private:
                     info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    info.reason_code = static_cast<v5::auth_reason_code>(body[0]);
                     process_auth_impl(
                         force_move(func),
                         force_move(buf),
@@ -12442,7 +12442,7 @@ private:
     }
 
     void send_auth(
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::auth_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -13135,7 +13135,7 @@ private:
     }
 
     void async_send_auth(
-        std::uint8_t reason,
+        v5::auth_reason_code reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {
