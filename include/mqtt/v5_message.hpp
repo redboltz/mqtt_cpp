@@ -53,7 +53,7 @@ public:
     /**
      * @brief Create empty header_packet_id_message.
      */
-    header_only_message(std::uint8_t type, std::uint8_t flags)
+    header_only_message(control_packet_type type, std::uint8_t flags)
         : message_ { static_cast<char>(make_fixed_header(type, flags)), 0 }
     {}
 

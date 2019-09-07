@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             });
         c->set_is_valid_length_handler(
             [&chk]
-            (std::uint8_t cpt, std::size_t /*len*/) {
+            (MQTT_NS::control_packet_type cpt, std::size_t /*len*/) {
                 bool rval = false;;
                 auto ret = chk.match(
                     "h_connack",

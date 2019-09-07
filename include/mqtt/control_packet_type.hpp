@@ -12,29 +12,58 @@
 
 namespace MQTT_NS {
 
-namespace control_packet_type {
- // reserved    =  0,
-constexpr std::uint8_t const connect     =  1;
-constexpr std::uint8_t const connack     =  2;
-constexpr std::uint8_t const publish     =  3;
-constexpr std::uint8_t const puback      =  4;
-constexpr std::uint8_t const pubrec      =  5;
-constexpr std::uint8_t const pubrel      =  6;
-constexpr std::uint8_t const pubcomp     =  7;
-constexpr std::uint8_t const subscribe   =  8;
-constexpr std::uint8_t const suback      =  9;
-constexpr std::uint8_t const unsubscribe = 10;
-constexpr std::uint8_t const unsuback    = 11;
-constexpr std::uint8_t const pingreq     = 12;
-constexpr std::uint8_t const pingresp    = 13;
-constexpr std::uint8_t const disconnect  = 14;
-constexpr std::uint8_t const auth        = 15;
+enum class control_packet_type : std::uint8_t {
 
-} // namespace control_packet_type
+    // reserved    =  0b0000000,
+    connect     = 0b00010000, // 1
+    connack     = 0b00100000, // 2
+    publish     = 0b00110000, // 3
+    puback      = 0b01000000, // 4
+    pubrec      = 0b01010000, // 5
+    pubrel      = 0b01100000, // 6
+    pubcomp     = 0b01110000, // 7
+    subscribe   = 0b10000000, // 8
+    suback      = 0b10010000, // 9
+    unsubscribe = 0b10100000, // 10
+    unsuback    = 0b10110000, // 11
+    pingreq     = 0b11000000, // 12
+    pingresp    = 0b11010000, // 13
+    disconnect  = 0b11100000, // 14
+    auth        = 0b11110000, // 15
 
-inline
-constexpr std::uint8_t get_control_packet_type(std::uint8_t v) {
-    return static_cast<std::uint8_t>(v >> 4);
+}; // namespace control_packet_type
+
+constexpr control_packet_type get_control_packet_type(std::uint8_t v) {
+    return static_cast<control_packet_type>(v & 0b11110000);
+}
+
+constexpr
+char const* control_packet_type_to_str(control_packet_type v) {
+    switch(v)
+    {
+    // case control_packet_type::reserved:    return "reserved";
+    case control_packet_type::connect:    return "connect";
+    case control_packet_type::connack:    return "connack";
+    case control_packet_type::publish:    return "publish";
+    case control_packet_type::puback:     return "puback";
+    case control_packet_type::pubrec:     return "pubrec";
+    case control_packet_type::pubrel:     return "pubrel";
+    case control_packet_type::pubcomp:    return "pubcomp";
+    case control_packet_type::subscribe:  return "subscribe";
+    case control_packet_type::suback:     return "suback";
+    case control_packet_type::pingreq:    return "pingreq";
+    case control_packet_type::pingresp:   return "pingresp";
+    case control_packet_type::disconnect: return "disconnect";
+    case control_packet_type::auth:       return "auth";
+    default:                              return "unknown_control_packet_type";
+    }
+}
+
+template<typename Stream>
+Stream & operator<<(Stream & os, control_packet_type val)
+{
+    os << control_packet_type_to_str(val);
+    return os;
 }
 
 } // namespace MQTT_NS

@@ -735,7 +735,7 @@ public:
      * @return true if check is success, otherwise false
      */
     using is_valid_length_handler =
-        std::function<bool(std::uint8_t control_packet_type, std::size_t remaining_length)>;
+        std::function<bool(control_packet_type packet_type, std::size_t remaining_length)>;
 
     /**
      * @brief next read handler
@@ -7259,8 +7259,8 @@ public:
         if (packet_id_.insert(packet_id).second) {
             auto ret = store_.emplace(
                 packet_id,
-                qos_value == qos::at_least_once ? control_packet_type::puback
-                                                : control_packet_type::pubrec,
+                ((qos_value == qos::at_least_once) ? control_packet_type::puback
+                                                   : control_packet_type::pubrec),
                 force_move(msg),
                 force_move(life_keeper)
             );
@@ -7273,8 +7273,8 @@ public:
                     [&] (auto& e) {
                         e = store(
                             packet_id,
-                            qos_value == qos::at_least_once ? control_packet_type::puback
-                                                            : control_packet_type::pubrec,
+                            ((qos_value == qos::at_least_once) ? control_packet_type::puback
+                                                               : control_packet_type::pubrec),
                             force_move(msg),
                             force_move(life_keeper)
                         );
@@ -7941,7 +7941,7 @@ private:
     struct store {
         store(
             packet_id_t id,
-            std::uint8_t type,
+            control_packet_type type,
             basic_store_message_variant<PacketIdBytes> smv,
             any life_keeper = any())
             : packet_id_(id)
@@ -7949,13 +7949,13 @@ private:
             , smv_(force_move(smv))
             , life_keeper_(force_move(life_keeper)) {}
         packet_id_t packet_id() const { return packet_id_; }
-        std::uint8_t expected_control_packet_type() const { return expected_control_packet_type_; }
+        control_packet_type expected_control_packet_type() const { return expected_control_packet_type_; }
         basic_message_variant<PacketIdBytes> message() const {
             return get_basic_message_variant<PacketIdBytes>(smv_);
         }
     private:
         packet_id_t packet_id_;
-        std::uint8_t expected_control_packet_type_;
+        control_packet_type expected_control_packet_type_;
         basic_store_message_variant<PacketIdBytes> smv_;
         any life_keeper_;
     };
@@ -7975,7 +7975,7 @@ private:
                         &store::packet_id
                     >,
                     mi::const_mem_fun<
-                        store, std::uint8_t,
+                        store, control_packet_type,
                         &store::expected_control_packet_type
                     >
                 >
