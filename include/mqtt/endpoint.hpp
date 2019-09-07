@@ -503,7 +503,7 @@ public:
      */
     using v5_pubcomp_handler = std::function<
         bool(packet_id_t packet_id,
-             std::uint8_t reason_code,
+             v5::pubcomp_reason_code reason_code,
              std::vector<v5::property_variant> props)
     >;
 
@@ -3213,7 +3213,7 @@ public:
      */
     void pubcomp(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::pubcomp_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         send_pubcomp(packet_id, reason_code, force_move(props));
@@ -6844,7 +6844,7 @@ public:
      */
     void async_pubcomp(
         packet_id_t packet_id,
-        std::uint8_t reason_code,
+        v5::pubcomp_reason_code reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -10901,7 +10901,7 @@ private:
 
     struct pubcomp_info {
         packet_id_t packet_id;
-        std::uint8_t reason_code;
+        v5::pubcomp_reason_code reason_code;
         std::vector<v5::property_variant> props;
     };
 
@@ -10953,7 +10953,7 @@ private:
                         force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
-                                info.reason_code = v5::reason_code::success;
+                                info.reason_code = v5::pubcomp_reason_code::success;
                                 return pubcomp_phase::finish;
                             }
                             return pubcomp_phase::reason_code;
@@ -10975,7 +10975,7 @@ private:
                     info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    info.reason_code = static_cast<v5::pubcomp_reason_code>(body[0]);
                     process_pubcomp_impl(
                         force_move(func),
                         force_move(buf),
@@ -12216,7 +12216,7 @@ private:
 
     void send_pubcomp(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::pubcomp_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -12785,7 +12785,7 @@ private:
 
     void async_send_pubcomp(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason,
+        optional<v5::pubcomp_reason_code> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {

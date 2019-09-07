@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -319,7 +319,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -506,7 +506,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                 });
             c->set_v5_pubcomp_handler(
                 [&chk, &c, &pub_seq_finished, &pid_unsub, &pid_pub]
-                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
@@ -686,7 +686,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -883,7 +883,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -1075,7 +1075,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                 });
             c->set_v5_pubcomp_handler(
                 [&chk, &c, &pub_seq_finished, &pid_pub, &pid_unsub]
-                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
@@ -1258,7 +1258,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -1451,7 +1451,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -1644,7 +1644,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                 });
             c->set_v5_pubcomp_handler(
                 [&chk, &c, &pub_seq_finished, &pid_pub, &pid_unsub]
-                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     pub_seq_finished = true;
@@ -1821,7 +1821,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -1995,7 +1995,7 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -2175,7 +2175,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -2356,7 +2356,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function_buffer ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -2482,7 +2482,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
             });
         c->set_v5_pubcomp_handler(
             []
-            (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                 BOOST_CHECK(false);
                 return true;
             });
@@ -2698,7 +2698,7 @@ BOOST_AUTO_TEST_CASE( puback_prop ) {
             });
         c->set_v5_pubcomp_handler(
             []
-            (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                 BOOST_CHECK(false);
                 return true;
             });
@@ -2911,7 +2911,7 @@ BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
             });
         c->set_v5_pubcomp_handler(
             [&chk, &c, &pub_seq_finished, &pid_pub, &pid_unsub, pubcomp_prop_size, &pubcomp_user_prop_count]
-            (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> props) {
+            (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> props) {
                 MQTT_CHK("h_pubcomp");
                 BOOST_TEST(packet_id == pid_pub);
 
@@ -2990,7 +2990,7 @@ BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
         c->set_v5_pubrel_handler(
             [&c]
             (packet_id_t packet_id, MQTT_NS::v5::pubrel_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
-                c->pubcomp(packet_id, MQTT_NS::v5::reason_code::success, {});
+                c->pubcomp(packet_id, MQTT_NS::v5::pubcomp_reason_code::success, {});
                 return true;
             });
         c->set_close_handler(

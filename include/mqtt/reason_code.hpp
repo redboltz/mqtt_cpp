@@ -349,6 +349,28 @@ Stream & operator<<(Stream & os, pubrel_reason_code val)
     return os;
 }
 
+enum class pubcomp_reason_code : std::uint8_t {
+    success                     = 0x00,
+    packet_identifier_not_found = 0x92,
+};
+
+constexpr
+char const* pubcomp_reason_code_to_str(pubcomp_reason_code v) {
+    switch(v)
+    {
+    case pubcomp_reason_code::success:                      return "success";
+    case pubcomp_reason_code::packet_identifier_not_found:  return "packet_identifier_not_found";
+    default:                                                return "unknown_pubcomp_reason_code";
+    }
+}
+
+template<typename Stream>
+Stream & operator<<(Stream & os, pubcomp_reason_code val)
+{
+    os << pubcomp_reason_code_to_str(val);
+    return os;
+}
+
 namespace reason_code {
 
 constexpr std::uint8_t const success                                       = 0x00;

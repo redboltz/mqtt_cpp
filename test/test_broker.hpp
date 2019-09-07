@@ -190,7 +190,7 @@ public:
             (typename Endpoint::packet_id_t packet_id,
              MQTT_NS::v5::pubrel_reason_code /*reason_code*/,
              std::vector<MQTT_NS::v5::property_variant> /*props*/){
-                ep.pubcomp(packet_id, MQTT_NS::v5::reason_code::success, pubcomp_props_);
+                ep.pubcomp(packet_id, MQTT_NS::v5::pubcomp_reason_code::success, pubcomp_props_);
                 return true;
             });
         ep.set_pubcomp_handler(
@@ -201,7 +201,7 @@ public:
         ep.set_v5_pubcomp_handler(
             [&]
             (typename Endpoint::packet_id_t /*packet_id*/,
-             std::uint8_t /*reason_code*/,
+             MQTT_NS::v5::pubcomp_reason_code /*reason_code*/,
              std::vector<MQTT_NS::v5::property_variant> /*props*/){
                 return true;
             });

@@ -180,7 +180,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });

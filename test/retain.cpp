@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -312,7 +312,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -523,7 +523,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                 });
             c->set_v5_pubcomp_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -683,7 +683,7 @@ BOOST_AUTO_TEST_CASE( prop ) {
             });
         c->set_v5_pubcomp_handler(
             []
-            (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                 BOOST_CHECK(false);
                 return true;
             });

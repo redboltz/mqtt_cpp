@@ -82,10 +82,10 @@ int main(int argc, char** argv) {
         });
     c->set_v5_pubcomp_handler( // use v5 handler
         [&]
-        (packet_id_t packet_id, std::uint8_t reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
+        (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout <<
                 "[client] pubcomp received. packet_id: " << packet_id <<
-                " reason_code: " << static_cast<int>(reason_code) << std::endl;
+                " reason_code: " << reason_code << std::endl;
             disconnect();
             return true;
         });
