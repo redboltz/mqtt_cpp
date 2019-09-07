@@ -708,11 +708,11 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
         });
     c2->set_v5_unsuback_handler(
         [&chk, &c2, &pid_unsub2]
-        (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
             MQTT_CHK("h_unsuback_2");
             BOOST_TEST(packet_id == pid_unsub2);
             BOOST_TEST(reasons.size() == 1U);
-            BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::success);
+            BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
             c2->disconnect();
             return true;
         });

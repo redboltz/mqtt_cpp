@@ -2022,12 +2022,13 @@ template <std::size_t PacketIdBytes>
 class basic_unsuback_message {
 public:
     basic_unsuback_message(
-        std::vector<std::uint8_t> const& reason_codes,
+        std::vector<v5::unsuback_reason_code> reason_codes,
         typename packet_id_type<PacketIdBytes>::type packet_id,
         properties props
     )
         : fixed_header_(make_fixed_header(control_packet_type::unsuback, 0b0000)),
-          remaining_length_(reason_codes.size() + PacketIdBytes),
+          reason_codes_(force_move(reason_codes)),
+          remaining_length_(reason_codes_.size() + PacketIdBytes),
           property_length_(
               std::accumulate(
                   props.begin(),
@@ -2069,10 +2070,6 @@ public:
         for (auto e : rb) {
             remaining_length_buf_.push_back(e);
         }
-        entries_.reserve(reason_codes.size());
-        for (auto e : reason_codes) {
-            entries_.push_back(static_cast<char>(e));
-        }
     }
 
     /**
@@ -2093,7 +2090,7 @@ public:
             v5::add_const_buffer_sequence(ret, p);
         }
 
-        ret.emplace_back(as::buffer(entries_));
+        ret.emplace_back(as::buffer(reinterpret_cast<char const*>(reason_codes_.data()), reason_codes_.size()));
 
         return ret;
     }
@@ -2141,14 +2138,14 @@ public:
             it += static_cast<std::string::difference_type>(v5::size(p));
         }
 
-        ret.append(entries_);
+        ret.append(reinterpret_cast<char const*>(reason_codes_.data()), reason_codes_.size());
 
         return ret;
     }
 
 private:
     std::uint8_t fixed_header_;
-    std::string entries_;
+    std::vector<v5::unsuback_reason_code> reason_codes_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;

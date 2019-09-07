@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::unsuback_reason_code> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     c->disconnect();
                     return true;
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE( sub_v5_options ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::unsuback_reason_code> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     c->disconnect();
                     return true;
@@ -273,7 +273,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::unsuback_reason_code> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     c->disconnect();
                     return true;
@@ -380,7 +380,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::unsuback_reason_code> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     c->disconnect();
                     return true;
@@ -471,7 +471,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::unsuback_reason_code> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     c->async_disconnect();
                     return true;
@@ -586,7 +586,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::unsuback_reason_code> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     c->async_disconnect();
                     return true;
@@ -705,7 +705,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::unsuback_reason_code> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     c->async_disconnect();
                     return true;
@@ -850,7 +850,7 @@ BOOST_AUTO_TEST_CASE( sub_unsub_prop ) {
             });
         c->set_v5_unsuback_handler(
             [&chk, &c]
-            (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::unsuback_reason_code> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                 MQTT_CHK("h_unsuback");
                 c->disconnect();
                 return true;
@@ -959,7 +959,7 @@ BOOST_AUTO_TEST_CASE( suback_unsuback_prop ) {
             });
         c->set_v5_unsuback_handler(
             [&chk, &c, &unsub_user_prop_count, unsuback_prop_size]
-            (packet_id_t /*packet_id*/, std::vector<std::uint8_t> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> props) {
+            (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::unsuback_reason_code> /*reasons*/, std::vector<MQTT_NS::v5::property_variant> props) {
                 MQTT_CHK("h_unsuback");
                 BOOST_TEST(props.size() == unsuback_prop_size);
                 for (auto const& p : props) {

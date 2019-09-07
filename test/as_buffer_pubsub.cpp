@@ -137,11 +137,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
-                (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::success);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -326,11 +326,11 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
-                (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::success);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -516,11 +516,11 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
-                (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::success);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -693,11 +693,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
-                (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::success);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -891,11 +891,11 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
-                (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::success);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -1087,11 +1087,11 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
-                (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::success);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -1261,11 +1261,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
-                (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::success);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -1459,11 +1459,11 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
-                (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::success);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -1655,11 +1655,11 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
-                (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::success);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -1829,11 +1829,11 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
-                (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::success);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -2009,11 +2009,11 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
-                (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::success);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
                     return true;
                 });

@@ -586,7 +586,7 @@ public:
      */
     using v5_unsuback_handler = std::function<
         bool(packet_id_t,
-             std::vector<std::uint8_t> reasons,
+             std::vector<v5::unsuback_reason_code> reasons,
              std::vector<v5::property_variant> props)
     >;
 
@@ -3286,10 +3286,9 @@ public:
     template <typename... Args>
     void unsuback(
         packet_id_t packet_id,
-        std::uint8_t reason,
+        v5::unsuback_reason_code reason,
         Args&&... args) {
-        std::vector<std::uint8_t> params;
-        send_unsuback(params, packet_id, reason, std::forward<Args>(args)...);
+        send_unsuback(std::vector<v5::unsuback_reason_code>{}, packet_id, reason, std::forward<Args>(args)...);
     }
 
     /**
@@ -3306,7 +3305,7 @@ public:
      */
     void unsuback(
         packet_id_t packet_id,
-        std::vector<std::uint8_t> reasons,
+        std::vector<v5::unsuback_reason_code> reasons,
         std::vector<v5::property_variant> props = {}
     ) {
         send_unsuback(force_move(reasons), packet_id, force_move(props));
@@ -6980,7 +6979,7 @@ public:
     template <typename Arg0, typename... Args>
     void async_unsuback(
         packet_id_t packet_id,
-        std::uint8_t reason,
+        v5::unsuback_reason_code reason,
         Arg0&& arg0,
         Args&&... args) {
         async_unsuback_imp(packet_id, reason, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
@@ -6999,10 +6998,10 @@ public:
      */
     void async_unsuback(
         packet_id_t packet_id,
-        std::uint8_t reason,
+        v5::unsuback_reason_code reason,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, reason, force_move(func));
+        async_send_unsuback(std::vector<v5::unsuback_reason_code>{}, packet_id, reason, force_move(func));
     }
 
     /**
@@ -7022,11 +7021,11 @@ public:
      */
     void async_unsuback(
         packet_id_t packet_id,
-        std::uint8_t reason,
+        v5::unsuback_reason_code reason,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, reason, force_move(props), force_move(func));
+        async_send_unsuback(std::vector<v5::unsuback_reason_code>{}, packet_id, reason, force_move(props), force_move(func));
     }
 
     /**
@@ -7042,7 +7041,7 @@ public:
      */
     void async_unsuback(
         packet_id_t packet_id,
-        std::vector<std::uint8_t> reasons,
+        std::vector<v5::unsuback_reason_code> reasons,
         async_handler_t func = async_handler_t()
     ) {
         async_send_unsuback(force_move(reasons), packet_id, std::vector<v5::property_variant>{}, force_move(func));
@@ -7065,7 +7064,7 @@ public:
      */
     void async_unsuback(
         packet_id_t packet_id,
-        std::vector<std::uint8_t> reasons,
+        std::vector<v5::unsuback_reason_code> reasons,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -7895,9 +7894,9 @@ private:
     >::type
     async_unsuback_imp(
         packet_id_t packet_id,
-        std::uint8_t payload,
+        v5::unsuback_reason_code payload,
         Args&&... args) {
-        async_send_unsuback(std::vector<std::uint8_t>{}, packet_id, payload, std::forward<Args>(args)...);
+        async_send_unsuback(std::vector<v5::unsuback_reason_code>{}, packet_id, payload, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -7910,7 +7909,7 @@ private:
     async_unsuback_imp(
         packet_id_t packet_id,
         Args&&... payload) {
-        async_send_unsuback(std::vector<std::uint8_t>({payload...}), packet_id, async_handler_t());
+        async_send_unsuback(std::vector<v5::unsuback_reason_code>({payload...}), packet_id, async_handler_t());
     }
 
     class send_buffer {
@@ -11637,14 +11636,14 @@ private:
                         packet_id_.erase(info.packet_id);
                     }
                     if (h_v5_unsuback_) {
-                        std::vector<std::uint8_t> reasons;
+                        std::vector<v5::unsuback_reason_code> reasons;
                         reasons.resize(body.size());
                         std::transform(
                             body.begin(),
                             body.end(),
                             reasons.begin(),
                             [&](auto const& e) {
-                                return static_cast<uint8_t>(e);
+                                return static_cast<v5::unsuback_reason_code>(e);
                             }
                         );
                         if (!h_v5_unsuback_(info.packet_id, force_move(reasons), force_move(info.props))) {
@@ -12388,16 +12387,16 @@ private:
 
     template <typename... Args>
     void send_unsuback(
-        std::vector<std::uint8_t> params,
+        std::vector<v5::unsuback_reason_code> params,
         packet_id_t packet_id,
-        std::uint8_t reason,
+        v5::unsuback_reason_code reason,
         Args&&... args) {
         params.push_back(reason);
         send_suback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void send_unsuback(
-        std::vector<std::uint8_t> params,
+        std::vector<v5::unsuback_reason_code> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props = {}
     ) {
@@ -13073,16 +13072,16 @@ private:
 
     template <typename... Args>
     void async_send_unsuback(
-        std::vector<std::uint8_t> params,
+        std::vector<v5::unsuback_reason_code> params,
         packet_id_t packet_id,
-        std::uint8_t payload,
+        v5::unsuback_reason_code payload,
         Args&&... args) {
         params.push_back(payload);
         async_send_unsuback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_unsuback(
-        std::vector<std::uint8_t> params,
+        std::vector<v5::unsuback_reason_code> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
         async_handler_t func
