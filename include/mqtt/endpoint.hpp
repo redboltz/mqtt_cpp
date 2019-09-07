@@ -481,7 +481,7 @@ public:
      */
     using v5_pubrel_handler = std::function<
         bool(packet_id_t packet_id,
-             std::uint8_t reason_code,
+             v5::pubrel_reason_code reason_code,
              std::vector<v5::property_variant> props)
     >;
 
@@ -3192,7 +3192,7 @@ public:
      */
     void pubrel(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::pubrel_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {},
         any life_keeper = any()
     ) {
@@ -6805,7 +6805,7 @@ public:
      */
     void async_pubrel(
         packet_id_t packet_id,
-        std::uint8_t reason_code,
+        v5::pubrel_reason_code reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t(),
         any life_keeper = any()
@@ -10735,7 +10735,7 @@ private:
 
     struct pubrel_info {
         packet_id_t packet_id;
-        std::uint8_t reason_code;
+        v5::pubrel_reason_code reason_code;
         std::vector<v5::property_variant> props;
     };
 
@@ -10787,7 +10787,7 @@ private:
                         force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
-                                info.reason_code = v5::reason_code::success;
+                                info.reason_code = v5::pubrel_reason_code::success;
                                 return pubrel_phase::finish;
                             }
                             return pubrel_phase::reason_code;
@@ -10809,7 +10809,7 @@ private:
                     info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    info.reason_code = static_cast<v5::pubrel_reason_code>(body[0]);
                     process_pubrel_impl(
                         force_move(func),
                         force_move(buf),
@@ -12119,7 +12119,7 @@ private:
 
     void send_pubrel(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::pubrel_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {},
         any life_keeper = any()
     ) {
@@ -12169,7 +12169,7 @@ private:
 
     void store_pubrel(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::pubrel_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
 
@@ -12711,7 +12711,7 @@ private:
 
     void async_send_pubrel(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason,
+        optional<v5::pubrel_reason_code> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func,
         any life_keeper = any()

@@ -548,7 +548,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_pubrec");
                     BOOST_TEST(packet_id == pid_pub);
-                    c->pubrel(packet_id, MQTT_NS::v5::reason_code::success, std::move(ps));
+                    c->pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, std::move(ps));
                     c->force_disconnect();
                     return true;
                 });

@@ -1639,7 +1639,7 @@ BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
             (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                 MQTT_CHK("h_pubrec");
                 BOOST_TEST(packet_id == pid_pub);
-                c->async_pubrel(packet_id, MQTT_NS::v5::reason_code::success, std::move(pubrelps));
+                c->async_pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, std::move(pubrelps));
                 return true;
             });
         c->set_v5_pubcomp_handler(
@@ -1690,7 +1690,7 @@ BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
             });
         c->set_v5_pubrel_handler(
             [&c, pubcompps = std::move(pubcompps)]
-            (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            (packet_id_t packet_id, MQTT_NS::v5::pubrel_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                 c->async_pubcomp(packet_id, MQTT_NS::v5::reason_code::success, std::move(pubcompps));
                 return true;
             });

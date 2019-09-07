@@ -2905,7 +2905,7 @@ BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
                     );
                 }
 
-                c->pubrel(packet_id, MQTT_NS::v5::reason_code::success, std::move(pubrelps));
+                c->pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, std::move(pubrelps));
 
                 return true;
             });
@@ -2989,7 +2989,7 @@ BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
             });
         c->set_v5_pubrel_handler(
             [&c]
-            (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            (packet_id_t packet_id, MQTT_NS::v5::pubrel_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                 c->pubcomp(packet_id, MQTT_NS::v5::reason_code::success, {});
                 return true;
             });
