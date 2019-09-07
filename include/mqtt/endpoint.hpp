@@ -604,7 +604,7 @@ public:
      *        3.14.2.2 DISCONNECT Properties
      */
     using v5_disconnect_handler = std::function<
-        void(std::uint8_t reason_code,
+        void(v5::disconnect_reason_code reason_code,
              std::vector<v5::property_variant> props)
     >;
 
@@ -1903,7 +1903,7 @@ public:
      *        3.14.2.2 DISCONNECT Properties
      */
     void disconnect(
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::disconnect_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         if (connected_ && mqtt_connected_) {
@@ -4129,7 +4129,7 @@ public:
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      */
     void async_disconnect(
-        std::uint8_t reason,
+        v5::disconnect_reason_code reason,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -11701,7 +11701,7 @@ private:
     };
 
     struct disconnect_info {
-        std::uint8_t reason_code;
+        v5::disconnect_reason_code reason_code;
         std::vector<v5::property_variant> props;
     };
 
@@ -11711,7 +11711,7 @@ private:
         this_type_sp self
     ) {
         if (remaining_length_ == 0) {
-            disconnect_info info { v5::reason_code::normal_disconnection, std::vector<v5::property_variant>() };
+            disconnect_info info { v5::disconnect_reason_code::normal_disconnection, std::vector<v5::property_variant>() };
             process_disconnect_impl(
                 force_move(func),
                 buffer(),
@@ -11765,7 +11765,7 @@ private:
                     info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    info.reason_code = static_cast<v5::disconnect_reason_code>(body[0]);
                     process_disconnect_impl(
                         force_move(func),
                         force_move(buf),
@@ -12459,7 +12459,7 @@ private:
     }
 
     void send_disconnect(
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::disconnect_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -13157,7 +13157,7 @@ private:
     }
 
     void async_send_disconnect(
-        std::uint8_t reason,
+        v5::disconnect_reason_code reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {

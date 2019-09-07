@@ -1007,7 +1007,7 @@ BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
 
-                c->disconnect(MQTT_NS::v5::reason_code::success, std::move(discon_ps));
+                c->disconnect(MQTT_NS::v5::disconnect_reason_code::normal_disconnection, std::move(discon_ps));
                 BOOST_TEST(c->connected() == true);
                 return true;
             });
