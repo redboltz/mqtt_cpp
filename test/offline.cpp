@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 });
             c->set_v5_pubrec_handler(
                 [&chk, &pid_pub]
-                (packet_id_t packet_id, std::uint8_t /*reason*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code /*reason*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_pubrec");
                     BOOST_TEST(packet_id == pid_pub);
                     return true;

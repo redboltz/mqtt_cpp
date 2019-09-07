@@ -1,4 +1,4 @@
-// Copyright Takatoshi Kondo 2015
+﻿// Copyright Takatoshi Kondo 2015
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -459,7 +459,7 @@ public:
      */
     using v5_pubrec_handler = std::function<
         bool(packet_id_t packet_id,
-             std::uint8_t reason_code,
+             v5::pubrec_reason_code reason_code,
              std::vector<v5::property_variant> props)
     >;
 
@@ -1159,7 +1159,7 @@ public:
      * @brief Get pubrec handler
      * @return handler
      */
-    v5_pubrec_handler const& get_v5_pubrec_handler() const {
+    v5_pubrec_handler const& get_v5__handler() const {
         return h_v5_pubrec_;
     }
 
@@ -3156,20 +3156,20 @@ public:
     }
 
     /**
-     * @brief Send pubrec packet.
+     * @brief Send  packet.
      * @param packet_id packet id corresponding to publish
      * @param reason_code
-     *        PUBREC Reason Code<BR>
+     *         Reason Code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901134<BR>
-     *        3.5.2.1 PUBREC Reason Code
+     *        3.5.2.1  Reason Code
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901135<BR>
-     *        3.5.2.2 PUBREC Properties
+     *        3.5.2.2  Properties
      */
     void pubrec(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::pubrec_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         send_pubrec(packet_id, reason_code, force_move(props));
@@ -6765,7 +6765,7 @@ public:
      */
     void async_pubrec(
         packet_id_t packet_id,
-        std::uint8_t reason_code,
+        v5::pubrec_reason_code reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -10556,7 +10556,7 @@ private:
 
     struct pubrec_info {
         packet_id_t packet_id;
-        std::uint8_t reason_code;
+        v5::pubrec_reason_code reason_code;
         std::vector<v5::property_variant> props;
     };
 
@@ -10608,7 +10608,7 @@ private:
                         force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
-                                info.reason_code = v5::reason_code::success;
+                                info.reason_code = v5::pubrec_reason_code::success;
                                 return pubrec_phase::finish;
                             }
                             return pubrec_phase::reason_code;
@@ -10630,7 +10630,7 @@ private:
                     info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    info.reason_code = static_cast<v5::pubrec_reason_code>(body[0]);
                     process_pubrec_impl(
                         force_move(func),
                         force_move(buf),
@@ -12101,7 +12101,7 @@ private:
 
     void send_pubrec(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::pubrec_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -12686,7 +12686,7 @@ private:
 
     void async_send_pubrec(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason,
+        optional<v5::pubrec_reason_code> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {

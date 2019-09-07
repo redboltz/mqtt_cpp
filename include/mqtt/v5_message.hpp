@@ -1003,7 +1003,7 @@ template <std::size_t PacketIdBytes>
 struct basic_pubrec_message {
     basic_pubrec_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        optional<std::uint8_t> reason_code,
+        optional<pubrec_reason_code> reason_code,
         properties props)
         : fixed_header_(make_fixed_header(control_packet_type::pubrec, 0b0000)),
           reason_code_(reason_code),
@@ -1142,7 +1142,7 @@ struct basic_pubrec_message {
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    optional<std::uint8_t> reason_code_;
+    optional<pubrec_reason_code> reason_code_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;

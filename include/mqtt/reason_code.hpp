@@ -291,6 +291,42 @@ Stream & operator<<(Stream & os, puback_reason_code val)
     return os;
 }
 
+enum class pubrec_reason_code : std::uint8_t {
+    success                       = 0x00,
+    no_matching_subscribers       = 0x10,
+    unspecified_error             = 0x80,
+    implementation_specific_error = 0x83,
+    not_authorized                = 0x87,
+    topic_name_invalid            = 0x90,
+    packet_identifier_in_use      = 0x91,
+    quota_exceeded                = 0x97,
+    payload_format_invalid        = 0x99,
+};
+
+constexpr
+char const* pubrec_reason_code_to_str(pubrec_reason_code v) {
+    switch(v)
+    {
+    case pubrec_reason_code::success:                       return "success";
+    case pubrec_reason_code::no_matching_subscribers:       return "no_matching_subscribers";
+    case pubrec_reason_code::unspecified_error:             return "unspecified_error";
+    case pubrec_reason_code::implementation_specific_error: return "implementation_specific_error";
+    case pubrec_reason_code::not_authorized:                return "not_authorized";
+    case pubrec_reason_code::topic_name_invalid:            return "topic_name_invalid";
+    case pubrec_reason_code::packet_identifier_in_use:      return "packet_identifier_in_use";
+    case pubrec_reason_code::quota_exceeded:                return "quota_exceeded";
+    case pubrec_reason_code::payload_format_invalid:        return "payload_format_invalid";
+    default:                                                return "unknown_pubrec_reason_code";
+    }
+}
+
+template<typename Stream>
+Stream & operator<<(Stream & os, pubrec_reason_code val)
+{
+    os << pubrec_reason_code_to_str(val);
+    return os;
+}
+
 namespace reason_code {
 
 constexpr std::uint8_t const success                                       = 0x00;

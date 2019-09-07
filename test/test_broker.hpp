@@ -174,7 +174,7 @@ public:
         ep.set_v5_pubrec_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::uint8_t /*reason_code*/,
+             MQTT_NS::v5::pubrec_reason_code /*reason_code*/,
              std::vector<MQTT_NS::v5::property_variant> /*props*/){
                 ep.pubrel(packet_id, MQTT_NS::v5::reason_code::success, pubrel_props_);
                 return true;
@@ -637,7 +637,7 @@ private:
                 ep.puback(packet_id.value(), MQTT_NS::v5::puback_reason_code::success, puback_props_);
                 break;
             case MQTT_NS::qos::exactly_once:
-                ep.pubrec(packet_id.value(), MQTT_NS::v5::reason_code::success, pubrec_props_);
+                ep.pubrec(packet_id.value(), MQTT_NS::v5::pubrec_reason_code::success, pubrec_props_);
                 break;
             default:
                 break;
