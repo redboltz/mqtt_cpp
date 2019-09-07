@@ -156,16 +156,16 @@ int main(int argc, char** argv) {
                 });
             ep.set_publish_handler(
                 [&]
-                (std::uint8_t header,
+                (bool is_dup,
+                 MQTT_NS::qos qos_value,
+                 bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
                  MQTT_NS::buffer topic_name,
                  MQTT_NS::buffer contents){
-                    MQTT_NS::qos qos_value = MQTT_NS::publish::get_qos(header);
-                    bool retain = MQTT_NS::publish::is_retain(header);
                     std::cout << "publish received."
-                              << " dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
+                              << " dup: " << std::boolalpha << is_dup
                               << " qos: " << qos_value
-                              << " retain: " << retain << std::endl;
+                              << " retain: " << std::boolalpha << is_retain << std::endl;
                     if (packet_id)
                         std::cout << "packet_id: " << *packet_id << std::endl;
                     std::cout << "topic_name: " << topic_name << std::endl;
@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
                             boost::asio::buffer(contents),
                             std::make_pair(topic_name, contents),
                             std::min(r.first->qos_value, qos_value),
-                            retain
+                            is_retain
                         );
                     }
                     return true;

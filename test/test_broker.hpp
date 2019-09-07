@@ -207,13 +207,17 @@ public:
             });
         ep.set_publish_handler(
             [&]
-            (std::uint8_t header,
+            (bool is_dup,
+             MQTT_NS::qos qos_value,
+             bool is_retain,
              MQTT_NS::optional<typename Endpoint::packet_id_t> packet_id,
              MQTT_NS::buffer topic_name,
              MQTT_NS::buffer contents){
                 return publish_handler(
                     ep,
-                    header,
+                    is_dup,
+                    qos_value,
+                    is_retain,
                     packet_id,
                     std::move(topic_name),
                     std::move(contents),
@@ -222,7 +226,9 @@ public:
             });
         ep.set_v5_publish_handler(
             [&]
-            (std::uint8_t header,
+            (bool is_dup,
+             MQTT_NS::qos qos_value,
+             bool is_retain,
              MQTT_NS::optional<typename Endpoint::packet_id_t> packet_id,
              MQTT_NS::buffer topic_name,
              MQTT_NS::buffer contents,
@@ -231,7 +237,9 @@ public:
                 if (h_publish_props_) h_publish_props_(props);
                 return publish_handler(
                     ep,
-                    header,
+                            is_dup,
+                            qos_value,
+                            is_retain,
                     packet_id,
                     std::move(topic_name),
                     std::move(contents),
@@ -603,14 +611,15 @@ private:
     template <typename Endpoint>
     bool publish_handler(
         Endpoint& ep,
-        std::uint8_t header,
+        bool is_dup,
+        MQTT_NS::qos qos_value,
+        bool is_retain,
         MQTT_NS::optional<typename Endpoint::packet_id_t> packet_id,
         MQTT_NS::buffer topic_name,
         MQTT_NS::buffer contents,
         std::vector<MQTT_NS::v5::property_variant> props) {
+        (void)is_dup;
 
-        MQTT_NS::qos qos_value = MQTT_NS::publish::get_qos(header);
-        bool is_retain = MQTT_NS::publish::is_retain(header);
         do_publish(
             std::move(topic_name),
             std::move(contents),

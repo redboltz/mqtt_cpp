@@ -62,7 +62,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             });
         c->set_publish_handler(
             []
-            (std::uint8_t /*header*/,
+            (bool /* is_dup */,
+             MQTT_NS::qos /* qos_value */,
+             bool /* is_retain */,
              MQTT_NS::optional<packet_id_t> ,
              MQTT_NS::string_view /*topic*/,
              MQTT_NS::string_view /*contents*/) {
