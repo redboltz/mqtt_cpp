@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 });
             c->set_v5_puback_handler(
                 [&chk, &c]
-                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_TEST(packet_id == 1);
                     MQTT_CHK("h_puback");
                     {

@@ -437,7 +437,7 @@ public:
      */
     using v5_puback_handler = std::function<
         bool(packet_id_t packet_id,
-             std::uint8_t reason_code,
+             v5::puback_reason_code reason_code,
              std::vector<v5::property_variant> props)
     >;
 
@@ -3149,7 +3149,7 @@ public:
      */
     void puback(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::puback_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         send_puback(packet_id, reason_code, force_move(props));
@@ -6727,7 +6727,7 @@ public:
      */
     void async_puback(
         packet_id_t packet_id,
-        std::uint8_t reason_code,
+        v5::puback_reason_code reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -10405,7 +10405,7 @@ private:
 
     struct puback_info {
         packet_id_t packet_id;
-        std::uint8_t reason_code;
+        v5::puback_reason_code reason_code;
         std::vector<v5::property_variant> props;
     };
 
@@ -10457,7 +10457,7 @@ private:
                         force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
-                                info.reason_code = v5::reason_code::success;
+                                info.reason_code = v5::puback_reason_code::success;
                                 return puback_phase::finish;
                             }
                             return puback_phase::reason_code;
@@ -10479,7 +10479,7 @@ private:
                     info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    info.reason_code = static_cast<v5::puback_reason_code>(body[0]);
                     process_puback_impl(
                         force_move(func),
                         force_move(buf),
@@ -12081,7 +12081,7 @@ private:
 
     void send_puback(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::puback_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -12649,7 +12649,7 @@ private:
 
     void async_send_puback(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason,
+        optional<v5::puback_reason_code> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {

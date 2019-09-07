@@ -56,10 +56,10 @@ void client_proc(
         });
     c->set_v5_puback_handler( // use v5 handler
         [&]
-        (packet_id_t packet_id, std::uint8_t reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
+        (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout <<
                 "[client] puback received. packet_id: " << packet_id <<
-                " reason_code: " << static_cast<int>(reason_code) << std::endl;
+                " reason_code: " << reason_code << std::endl;
             disconnect();
             return true;
         });
@@ -243,10 +243,10 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 });
             ep.set_v5_puback_handler( // use v5 handler
                 [&]
-                (packet_id_t packet_id, std::uint8_t reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
+                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
                     std::cout <<
                         "[server] puback received. packet_id: " << packet_id <<
-                        " reason_code: " << static_cast<int>(reason_code) << std::endl;
+                        " reason_code: " << reason_code << std::endl;
                     return true;
                 });
             ep.set_v5_pubrec_handler( // use v5 handler

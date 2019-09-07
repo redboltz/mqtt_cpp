@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 });
             c->set_v5_puback_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::puback_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -343,7 +343,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                 });
             c->set_v5_puback_handler(
                 [&chk, &c, &pid_pub, &pid_unsub]
-                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     auto topic1 = std::make_shared<std::string>("topic1");
@@ -559,7 +559,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                 });
             c->set_v5_puback_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::puback_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -769,7 +769,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                 });
             c->set_v5_puback_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::puback_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
@@ -990,7 +990,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                 });
             c->set_v5_puback_handler(
                 [&chk, &pid_pub]
-                (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     return true;
@@ -1206,7 +1206,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                 });
             c->set_v5_puback_handler(
                 []
-                (packet_id_t, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t, MQTT_NS::v5::puback_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     BOOST_CHECK(false);
                     return true;
                 });
