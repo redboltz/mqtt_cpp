@@ -92,18 +92,18 @@ int main(int argc, char** argv) {
     c->set_v5_suback_handler( // use v5 handler
         [&]
         (packet_id_t packet_id,
-         std::vector<std::uint8_t> reasons,
+         std::vector<MQTT_NS::v5::suback_reason_code> reasons,
          std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout << "[client] suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : reasons) {
                 switch (e) {
-                case MQTT_NS::v5::reason_code::granted_qos_0:
+                case MQTT_NS::v5::suback_reason_code::granted_qos_0:
                     std::cout << "[client] subscribe success: qos0" << std::endl;
                     break;
-                case MQTT_NS::v5::reason_code::granted_qos_1:
+                case MQTT_NS::v5::suback_reason_code::granted_qos_1:
                     std::cout << "[client] subscribe success: qos1" << std::endl;
                     break;
-                case MQTT_NS::v5::reason_code::granted_qos_2:
+                case MQTT_NS::v5::suback_reason_code::granted_qos_2:
                     std::cout << "[client] subscribe success: qos2" << std::endl;
                     break;
                 default:

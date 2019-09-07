@@ -83,18 +83,18 @@ void client_proc(
     c->set_v5_suback_handler( // use v5 handler
         [&]
         (packet_id_t packet_id,
-         std::vector<std::uint8_t> reasons,
+         std::vector<MQTT_NS::v5::suback_reason_code> reasons,
          std::vector<MQTT_NS::v5::property_variant> /*props*/){
             std::cout << "[client] suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : reasons) {
                 switch (e) {
-                case MQTT_NS::v5::reason_code::granted_qos_0:
+                case MQTT_NS::v5::suback_reason_code::granted_qos_0:
                     std::cout << "[client] subscribe success: qos0" << std::endl;
                     break;
-                case MQTT_NS::v5::reason_code::granted_qos_1:
+                case MQTT_NS::v5::suback_reason_code::granted_qos_1:
                     std::cout << "[client] subscribe success: qos1" << std::endl;
                     break;
-                case MQTT_NS::v5::reason_code::granted_qos_2:
+                case MQTT_NS::v5::suback_reason_code::granted_qos_2:
                     std::cout << "[client] subscribe success: qos2" << std::endl;
                     break;
                 default:
@@ -309,13 +309,13 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                  std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> entries,
                  std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     std::cout << "[server] subscribe received. packet_id: " << packet_id << std::endl;
-                    std::vector<std::uint8_t> res;
+                    std::vector<MQTT_NS::v5::suback_reason_code> res;
                     res.reserve(entries.size());
                     for (auto const& e : entries) {
                         MQTT_NS::buffer topic = std::get<0>(e);
                         MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
                         std::cout << "[server] topic: " << topic  << " qos: " << qos_value << std::endl;
-                        res.emplace_back(static_cast<std::uint8_t>(qos_value));
+                        res.emplace_back(static_cast<MQTT_NS::v5::suback_reason_code>(qos_value));
                         subs.emplace(std::move(topic), ep.shared_from_this(), qos_value);
                     }
                     ep.suback(packet_id, res);
