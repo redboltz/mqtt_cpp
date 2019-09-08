@@ -776,7 +776,10 @@ private:
                                         if (ec) {
                                             return;
                                         }
-                                        auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
+                                        // TODO: The use of force_move on this line of code causes
+                                        // a static assertion that socket is a const object when
+                                        // TLS is enabled, and WS is enabled, with Boost 1.70, and gcc 8.3.0
+                                        auto sp = std::make_shared<endpoint_t>(socket, version_);
                                         if (h_accept_) h_accept_(*sp);
                                     }
                                 );

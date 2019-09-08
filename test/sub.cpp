@@ -9,6 +9,7 @@
 #include "checker.hpp"
 
 #include <mqtt/optional.hpp>
+#include <mqtt/subscribe_options.hpp>
 
 BOOST_AUTO_TEST_SUITE(test_sub)
 
@@ -156,12 +157,10 @@ BOOST_AUTO_TEST_CASE( sub_v5_options ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    std::uint8_t option = 0;
-                    MQTT_NS::subscribe::set_qos(option, MQTT_NS::qos::at_most_once);
-                    MQTT_NS::subscribe::set_no_local(option, true);
-                    MQTT_NS::subscribe::set_retain_as_published(option, true);
-                    MQTT_NS::subscribe::set_retain_handling(option, 2);
-                    c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                    c->subscribe("topic1",   MQTT_NS::nl::yes
+                                           | MQTT_NS::rap::retain
+                                           | MQTT_NS::qos::at_most_once
+                                           | MQTT_NS::retain_handling::not_send);
                     return true;
                 });
             c->set_v5_suback_handler(

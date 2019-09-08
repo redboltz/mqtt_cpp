@@ -55,7 +55,6 @@
 #include <mqtt/property_variant.hpp>
 #include <mqtt/protocol_version.hpp>
 #include <mqtt/reason_code.hpp>
-#include <mqtt/subscribe.hpp>
 #include <mqtt/buffer.hpp>
 #include <mqtt/shared_ptr_array.hpp>
 #include <mqtt/type_erased_socket.hpp>
@@ -2242,11 +2241,11 @@ public:
         std::vector<v5::property_variant> props = {}
     ) {
         if (register_packet_id(packet_id)) {
-            std::vector<std::tuple<buffer, std::uint8_t>> buf_params;
+            std::vector<std::tuple<buffer, subscribe_options>> buf_params;
             buf_params.reserve(params.size());
             for(auto&& p : params)
             {
-                buf_params.emplace_back(buffer(force_move(std::get<0>(p))));
+                buf_params.emplace_back(buffer(std::get<0>(p)), std::get<1>(p));
             }
             acquired_subscribe(packet_id, force_move(buf_params), force_move(props));
             return true;
@@ -11141,8 +11140,8 @@ private:
                             topic_filter = force_move(topic_filter)
                         ]
                         (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                            auto option = static_cast<std::uint8_t>(body[0]);
-                            qos requested_qos = subscribe_options(option).get_qos();
+                            subscribe_options option(static_cast<std::uint8_t>(body[0]));
+                            qos requested_qos = option.get_qos();
                             if (requested_qos != qos::at_most_once &&
                                 requested_qos != qos::at_least_once &&
                                 requested_qos != qos::exactly_once) {

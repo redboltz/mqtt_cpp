@@ -37,51 +37,59 @@ enum class qos : std::uint8_t
 
 struct subscribe_options
 {
-    subscribe_options(std::uint8_t value) : data_(value) { }
-    subscribe_options(retain_handling value) : data_(static_cast<std::uint8_t>(value)) { }
-    subscribe_options(rap value) : data_(static_cast<std::uint8_t>(value)) { }
-    subscribe_options(nl value) : data_(static_cast<std::uint8_t>(value)) { }
-    subscribe_options(qos value) : data_(static_cast<std::uint8_t>(value)) { }
+    subscribe_options(void) = delete;
+    ~subscribe_options(void) = default;
+    subscribe_options(subscribe_options &&) = default;
+    subscribe_options(subscribe_options const&) = default;
+    subscribe_options& operator=(subscribe_options &&) = default;
+    subscribe_options& operator=(subscribe_options const&) = default;
 
-    subscribe_options& operator|=(retain_handling value) { data_ |= static_cast<std::uint8_t>(value); return *this; }
-    subscribe_options& operator|=(rap value) { data_ |= static_cast<std::uint8_t>(value); return *this; }
-    subscribe_options& operator|=(nl value) { data_ |= static_cast<std::uint8_t>(value); return *this; }
-    subscribe_options& operator|=(qos value) { data_ |= static_cast<std::uint8_t>(value); return *this; }
+    explicit constexpr subscribe_options(std::uint8_t value) : data_(value) { }
 
-    retain_handling get_retain_handling() const
+    constexpr subscribe_options(retain_handling value) : data_(static_cast<std::uint8_t>(value)) { }
+    constexpr subscribe_options(rap value) : data_(static_cast<std::uint8_t>(value)) { }
+    constexpr subscribe_options(nl value) : data_(static_cast<std::uint8_t>(value)) { }
+    constexpr subscribe_options(qos value) : data_(static_cast<std::uint8_t>(value)) { }
+
+    constexpr subscribe_options& operator|=(retain_handling value) { data_ |= static_cast<std::uint8_t>(value); return *this; }
+    constexpr subscribe_options& operator|=(rap value) { data_ |= static_cast<std::uint8_t>(value); return *this; }
+    constexpr subscribe_options& operator|=(nl value) { data_ |= static_cast<std::uint8_t>(value); return *this; }
+    constexpr subscribe_options& operator|=(qos value) { data_ |= static_cast<std::uint8_t>(value); return *this; }
+
+    constexpr retain_handling get_retain_handling() const
     { return static_cast<retain_handling>(data_ & 0b00110000); }
-    rap get_rap() const
+    constexpr rap get_rap() const
     { return static_cast<rap>(data_ & 0b00001000); }
-    nl get_nl() const
+    constexpr nl get_nl() const
     { return static_cast<nl>(data_ & 0b00000100); }
-    qos get_qos() const
+    constexpr qos get_qos() const
     { return static_cast<qos>(data_ & 0b00000011); }
 
-    operator std::uint8_t() const { return data_; }
+    explicit constexpr operator std::uint8_t() const { return data_; }
+private:
     std::uint8_t data_;
 };
 
-inline subscribe_options operator|(subscribe_options lhs, retain_handling rhs) { lhs |= rhs; return lhs; }
-inline subscribe_options operator|(subscribe_options lhs, rap rhs) { lhs |= rhs; return lhs; }
-inline subscribe_options operator|(subscribe_options lhs, nl rhs) { lhs |= rhs; return lhs; }
-inline subscribe_options operator|(subscribe_options lhs, qos rhs) { lhs |= rhs; return lhs; }
+constexpr subscribe_options operator|(subscribe_options lhs, retain_handling rhs) { lhs |= rhs; return lhs; }
+constexpr subscribe_options operator|(subscribe_options lhs, rap rhs) { lhs |= rhs; return lhs; }
+constexpr subscribe_options operator|(subscribe_options lhs, nl rhs) { lhs |= rhs; return lhs; }
+constexpr subscribe_options operator|(subscribe_options lhs, qos rhs) { lhs |= rhs; return lhs; }
 
-inline subscribe_options operator|(retain_handling lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
-inline subscribe_options operator|(retain_handling lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
-inline subscribe_options operator|(retain_handling lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(retain_handling lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(retain_handling lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(retain_handling lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
 
-inline subscribe_options operator|(rap lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
-inline subscribe_options operator|(rap lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
-inline subscribe_options operator|(rap lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(rap lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(rap lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(rap lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
 
-inline subscribe_options operator|(nl lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
-inline subscribe_options operator|(nl lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
-inline subscribe_options operator|(nl lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(nl lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(nl lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(nl lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
 
-inline subscribe_options operator|(qos lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
-inline subscribe_options operator|(qos lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
-inline subscribe_options operator|(qos lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
-
+constexpr subscribe_options operator|(qos lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(qos lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(qos lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
 
 constexpr char const* qos_to_str(qos v) {
     char const * const str[] = {
