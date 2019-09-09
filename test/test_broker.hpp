@@ -147,7 +147,7 @@ public:
         );
         ep.set_v5_disconnect_handler(
             [&]
-            (std::uint8_t /*reason_code*/, std::vector<MQTT_NS::v5::property_variant> props) {
+            (MQTT_NS::v5::disconnect_reason_code /*reason_code*/, std::vector<MQTT_NS::v5::property_variant> props) {
                 if (h_disconnect_props_) h_disconnect_props_(std::move(props));
                 return
                     disconnect_handler(ep);

@@ -128,10 +128,10 @@ int main(int argc, char** argv) {
             );
             ep.set_v5_disconnect_handler( // use v5 handler
                 [&]
-                (std::uint8_t reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (MQTT_NS::v5::disconnect_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     std::cout <<
                         "[server]disconnect received." <<
-                        " reason_code: " << static_cast<int>(reason_code) << std::endl;
+                        " reason_code: " << reason_code << std::endl;
                     close_proc(connections, subs, ep.shared_from_this());
                 });
             ep.set_v5_puback_handler( // use v5 handler

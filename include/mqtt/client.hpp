@@ -531,7 +531,7 @@ public:
      */
     void disconnect(
         boost::posix_time::time_duration const& timeout,
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::disconnect_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -567,7 +567,7 @@ public:
      *        3.14.2.2 DISCONNECT Properties
      */
     void disconnect(
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::disconnect_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -624,7 +624,7 @@ public:
      */
     void async_disconnect(
         boost::posix_time::time_duration const& timeout,
-        optional<std::uint8_t> reason_code,
+        optional<v5::disconnect_reason_code> reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -677,7 +677,7 @@ public:
      * @param func A callback function that is called when async operation will finish.
      */
     void async_disconnect(
-        optional<std::uint8_t> reason_code,
+        optional<v5::disconnect_reason_code> reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
