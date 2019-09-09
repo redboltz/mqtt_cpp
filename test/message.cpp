@@ -73,24 +73,18 @@ BOOST_AUTO_TEST_CASE( connect_cbuf ) {
 
 
 BOOST_AUTO_TEST_CASE( connack_cbuf ) {
-    auto m = MQTT_NS::connack_message(true, 0x80);
+    auto m = MQTT_NS::connack_message(true, MQTT_NS::connect_return_code::server_unavailable);
     std::string expected {
         0b0010'0000,
         0b0000'0010,
         0b0000'0001,
-        static_cast<char>(0b1000'0000u),
+        0b0000'0011,
     };
     BOOST_TEST(m.continuous_buffer() == expected);
 }
 
 BOOST_AUTO_TEST_CASE( connack_num_of_cbs ) {
-    auto m = MQTT_NS::connack_message(true, 0x80);
-    std::string expected {
-        0b0010'0000,
-        0b0000'0010,
-        0b0000'0001,
-        static_cast<char>(0b1000'0000u),
-    };
+    auto m = MQTT_NS::connack_message(true, MQTT_NS::connect_return_code::server_unavailable);
     BOOST_TEST(m.num_of_const_buffer_sequence() == 1);
 }
 

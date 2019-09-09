@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE( connect ) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]
-                (bool sp, std::uint8_t connack_return_code) {
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(c->connected() == true);
                     BOOST_TEST(sp == false);
@@ -44,11 +44,11 @@ BOOST_AUTO_TEST_CASE( connect ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c]
-                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(c->connected() == true);
                     BOOST_TEST(sp == false);
-                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
 
                     c->disconnect();
                     BOOST_TEST(c->connected() == true);
@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE( connect_no_strand ) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]
-                (bool sp, std::uint8_t connack_return_code) {
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -108,10 +108,10 @@ BOOST_AUTO_TEST_CASE( connect_no_strand ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c]
-                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
-                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -156,7 +156,7 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk]
-                (bool sp, std::uint8_t connack_return_code) {
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -166,10 +166,10 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk]
-                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
-                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     return true;
                 });
             break;
@@ -224,7 +224,7 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &tim]
-                (bool sp, std::uint8_t connack_return_code) {
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -249,10 +249,10 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c, &tim]
-                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
-                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     tim.expires_from_now(boost::posix_time::seconds(2));
                     tim.async_wait(
                         [&chk, &c, &tim](boost::system::error_code const& ec) {
@@ -325,7 +325,7 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&first, &chk, &c]
-                (bool sp, std::uint8_t connack_return_code) {
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     if (first) {
                         MQTT_CHK("h_connack1");
                     }
@@ -341,7 +341,7 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&first, &chk, &c]
-                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     if (first) {
                         MQTT_CHK("h_connack1");
                     }
@@ -349,7 +349,7 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
                         MQTT_CHK("h_connack2");
                     }
                     BOOST_TEST(sp == false);
-                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -399,7 +399,7 @@ BOOST_AUTO_TEST_CASE( nocid ) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c]
-                (bool sp, std::uint8_t connack_return_code) {
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -410,10 +410,10 @@ BOOST_AUTO_TEST_CASE( nocid ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c]
-                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
-                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -455,7 +455,7 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk]
-                (bool sp, std::uint8_t connack_return_code) {
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::identifier_rejected);
@@ -465,10 +465,10 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk]
-                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
-                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::identifier_rejected);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::client_identifier_not_valid);
                     return true;
                 });
             break;
@@ -523,7 +523,7 @@ BOOST_AUTO_TEST_CASE( noclean ) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &connect, &c]
-                (bool sp, std::uint8_t connack_return_code) {
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     switch (connect) {
                     case 0:
                         MQTT_CHK("h_connack1");
@@ -550,7 +550,7 @@ BOOST_AUTO_TEST_CASE( noclean ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &connect, &c]
-                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     switch (connect) {
                     case 0:
                         MQTT_CHK("h_connack1");
@@ -575,7 +575,7 @@ BOOST_AUTO_TEST_CASE( noclean ) {
                         BOOST_TEST(sp == true);
                         break;
                     }
-                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -640,7 +640,7 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &s]
-                (bool sp, std::uint8_t connack_return_code) {
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -652,10 +652,10 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c, &s]
-                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
-                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     s.broker().set_disconnect_delay(boost::posix_time::seconds(2));
                     c->disconnect(boost::posix_time::seconds(1));
                     return true;
@@ -700,7 +700,7 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &s]
-                (bool sp, std::uint8_t connack_return_code) {
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -712,10 +712,10 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c, &s]
-                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
-                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     s.broker().set_disconnect_delay(boost::posix_time::seconds(1));
                     c->disconnect(boost::posix_time::seconds(2));
                     return true;
@@ -760,7 +760,7 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &s]
-                (bool sp, std::uint8_t connack_return_code) {
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -772,10 +772,10 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c, &s]
-                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
-                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     s.broker().set_disconnect_delay(boost::posix_time::seconds(2));
                     c->async_disconnect(boost::posix_time::seconds(1));
                     return true;
@@ -820,7 +820,7 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
                 [&chk, &c, &s]
-                (bool sp, std::uint8_t connack_return_code) {
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
@@ -832,10 +832,10 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c, &s]
-                (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
-                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     s.broker().set_disconnect_delay(boost::posix_time::seconds(1));
                     c->async_disconnect(boost::posix_time::seconds(2));
                     return true;
@@ -1001,11 +1001,11 @@ BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
 
         c->set_v5_connack_handler(
             [&chk, &c, discon_ps = std::move(discon_ps)]
-            (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                 MQTT_CHK("h_connack");
                 BOOST_TEST(c->connected() == true);
                 BOOST_TEST(sp == false);
-                BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
 
                 c->disconnect(MQTT_NS::v5::reason_code::success, std::move(discon_ps));
                 BOOST_TEST(c->connected() == true);
@@ -1075,11 +1075,11 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
 
         c->set_v5_connack_handler(
             [&chk, &c, &user_prop_count, prop_size]
-            (bool sp, std::uint8_t connack_return_code, std::vector<MQTT_NS::v5::property_variant> props) {
+            (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> props) {
                 MQTT_CHK("h_connack");
                 BOOST_TEST(c->connected() == true);
                 BOOST_TEST(sp == false);
-                BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                 BOOST_TEST(props.size() == prop_size);
 
                 for (auto const& p : props) {

@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
 
         c->set_connack_handler(
             [&chk, &c]
-            (bool sp, std::uint8_t connack_return_code) {
+            (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                 MQTT_CHK("h_connack");
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);

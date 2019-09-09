@@ -410,9 +410,22 @@ private:
         // If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1 [MQTT-3.1.3-7].
         // If it's a not a clean session, but no client id is provided, we would have no way to map this
         // connection's session to a new connection later. So the connection must be rejected.
-        if (client_id.empty() && !clean_session) {
-            ep.connack(false, MQTT_NS::connect_return_code::identifier_rejected);
-            return false;
+        switch (ep.get_protocol_version()) {
+        case MQTT_NS::protocol_version::v3_1_1:
+            if (client_id.empty() && !clean_session) {
+                ep.connack(false, MQTT_NS::connect_return_code::identifier_rejected);
+                return false;
+            }
+            break;
+        case MQTT_NS::protocol_version::v5:
+            if (client_id.empty() && !clean_session) {
+                ep.connack(false, MQTT_NS::v5::connect_reason_code::client_identifier_not_valid);
+                return false;
+            }
+            break;
+        default:
+            BOOST_ASSERT(false);
+            break;
         }
 
         auto spep = ep.shared_from_this();
@@ -439,7 +452,7 @@ private:
         case MQTT_NS::protocol_version::v5:
             ep.connack(
                 !clean_session && ((act_sess_idx.end() != act_sess_it) || (non_act_sess_idx.end() != non_act_sess_it)),
-                MQTT_NS::v5::reason_code::success,
+                MQTT_NS::v5::connect_reason_code::success,
                 connack_props_
             );
             break;
