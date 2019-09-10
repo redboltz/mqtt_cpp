@@ -8,7 +8,7 @@ Important note https://github.com/redboltz/mqtt_cpp/wiki/News.
 
 ## Overview
 
-mqtt_cpp is a header only library. It requires C++14 and the Boost Libraries 1.57.0 or later (See [#33](https://github.com/redboltz/mqtt_cpp/issues/33)).
+mqtt_cpp is a header only library. It requires C++14 and the Boost Libraries 1.66.0 or later.
 
 Add mqtt_cpp/include to your include path. Then, include `mqtt_cpp.hpp` and/or `mqtt_server_cpp.hpp` as follows:
 
