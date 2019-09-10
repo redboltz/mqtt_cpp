@@ -34,6 +34,7 @@
 #include <mqtt/property.hpp>
 #include <mqtt/string_check.hpp>
 #include <mqtt/move.hpp>
+#include <mqtt/reason_code.hpp>
 
 namespace MQTT_NS {
 
@@ -855,7 +856,7 @@ template <std::size_t PacketIdBytes>
 class basic_suback_message {
 public:
     basic_suback_message(
-        std::vector<std::uint8_t> params,
+        std::vector<suback_reason_code> params,
         typename packet_id_type<PacketIdBytes>::type packet_id
     )
         : fixed_header_(make_fixed_header(control_packet_type::suback, 0b0000)),

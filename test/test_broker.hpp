@@ -663,26 +663,40 @@ private:
         // allows the server to grant a lower QOS than requested
         // So we reply with the QOS setting that was granted
         // not the one requested.
-        std::vector<std::uint8_t> res;
-        res.reserve(entries.size());
-        for (auto const& e : entries) {
-            MQTT_NS::buffer topic = std::get<0>(e);
-            MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
-            res.emplace_back(static_cast<std::uint8_t>(qos_value));
-            // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
-            // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
-            subs_.emplace(std::move(topic), ep.shared_from_this(), qos_value);
-        }
         switch (ep.get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
+        {
+            std::vector<MQTT_NS::suback_reason_code> res;
+            res.reserve(entries.size());
+            for (auto const& e : entries) {
+                MQTT_NS::buffer topic = std::get<0>(e);
+                MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
+                res.emplace_back(static_cast<MQTT_NS::suback_reason_code>(qos_value)); // converts to granted_qos_x
+                // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
+                // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
+                subs_.emplace(std::move(topic), ep.shared_from_this(), qos_value);
+            }
             // Acknowledge the subscriptions, and the registered QOS settings
-            ep.suback(packet_id, res);
+            ep.suback(packet_id, MQTT_NS::force_move(res));
             break;
+        }
         case MQTT_NS::protocol_version::v5:
+        {
+            std::vector<MQTT_NS::v5::suback_reason_code> res;
+            res.reserve(entries.size());
+            for (auto const& e : entries) {
+                MQTT_NS::buffer topic = std::get<0>(e);
+                MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
+                res.emplace_back(static_cast<MQTT_NS::v5::suback_reason_code>(qos_value)); // converts to granted_qos_x
+                // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
+                // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
+                subs_.emplace(std::move(topic), ep.shared_from_this(), qos_value);
+            }
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
-            ep.suback(packet_id, res, suback_props_);
+            ep.suback(packet_id, MQTT_NS::force_move(res), suback_props_);
             break;
+        }
         default:
             BOOST_ASSERT(false);
             break;

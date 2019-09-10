@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             });
         c->set_suback_handler(
             [&chk, &c]
-            (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<std::uint8_t>> /*results*/) {
+            (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> /*results*/) {
                 MQTT_CHK("h_suback");
                 c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
                 return true;

@@ -86,11 +86,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t packet_id, std::vector<MQTT_NS::optional<std::uint8_t>> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == 1);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == static_cast<std::uint8_t>(MQTT_NS::qos::at_most_once));
+                    BOOST_TEST(*results[0] == MQTT_NS::suback_reason_code::granted_qos_0);
                     BOOST_TEST(c->publish(
                                    0,
                                    "topic1",
@@ -186,11 +186,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 });
             c->set_v5_suback_handler(
                 [&chk, &c]
-                (packet_id_t packet_id, std::vector<std::uint8_t> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::v5::suback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == 1);
                     BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::reason_code::granted_qos_0);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
                     BOOST_TEST(c->publish(
                                    0,
                                    "topic1",

@@ -11,6 +11,33 @@
 #include <mqtt/namespace.hpp>
 
 namespace MQTT_NS {
+
+enum class suback_reason_code : std::uint8_t {
+    granted_qos_0                          = 0x00,
+    granted_qos_1                          = 0x01,
+    granted_qos_2                          = 0x02,
+    unspecified_error                      = 0x80,
+};
+
+constexpr
+char const* suback_reason_code_to_str(suback_reason_code v) {
+    switch(v)
+    {
+    case suback_reason_code::granted_qos_0:                          return "granted_qos_0";
+    case suback_reason_code::granted_qos_1:                          return "granted_qos_1";
+    case suback_reason_code::granted_qos_2:                          return "granted_qos_2";
+    case suback_reason_code::unspecified_error:                      return "unspecified_error";
+    default:                                                         return "unknown_suback_reason_code";
+    }
+}
+
+template<typename Stream>
+Stream & operator<<(Stream & os, suback_reason_code val)
+{
+    os << suback_reason_code_to_str(val);
+    return os;
+}
+
 namespace v5 {
 
 enum class connect_reason_code : std::uint8_t {
@@ -150,6 +177,49 @@ template<typename Stream>
 Stream & operator<<(Stream & os, disconnect_reason_code val)
 {
     os << disconnect_reason_code_to_str(val);
+    return os;
+}
+
+
+enum class suback_reason_code : std::uint8_t {
+    granted_qos_0                          = 0x00,
+    granted_qos_1                          = 0x01,
+    granted_qos_2                          = 0x02,
+    unspecified_error                      = 0x80,
+    implementation_specific_error          = 0x83,
+    not_authorized                         = 0x87,
+    topic_filter_invalid                   = 0x8f,
+    packet_identifier_in_use               = 0x91,
+    quota_exceeded                         = 0x97,
+    shared_subscriptions_not_supported     = 0x9e,
+    subscription_identifiers_not_supported = 0xa1,
+    wildcard_subscriptions_not_supported   = 0xa2,
+};
+
+constexpr
+char const* suback_reason_code_to_str(suback_reason_code v) {
+    switch(v)
+    {
+    case suback_reason_code::granted_qos_0:                          return "granted_qos_0";
+    case suback_reason_code::granted_qos_1:                          return "granted_qos_1";
+    case suback_reason_code::granted_qos_2:                          return "granted_qos_2";
+    case suback_reason_code::unspecified_error:                      return "unspecified_error";
+    case suback_reason_code::implementation_specific_error:          return "implementation_specific_error";
+    case suback_reason_code::not_authorized:                         return "not_authorized";
+    case suback_reason_code::topic_filter_invalid:                   return "topic_filter_invalid";
+    case suback_reason_code::packet_identifier_in_use:               return "packet_identifier_in_use";
+    case suback_reason_code::quota_exceeded:                         return "quota_exceeded";
+    case suback_reason_code::shared_subscriptions_not_supported:     return "shared_subscriptions_not_supported";
+    case suback_reason_code::subscription_identifiers_not_supported: return "subscription_identifiers_not_supported";
+    case suback_reason_code::wildcard_subscriptions_not_supported:   return "wildcard_subscriptions_not_supported";
+    default:                                                         return "unknown_suback_reason_code";
+    }
+}
+
+template<typename Stream>
+Stream & operator<<(Stream & os, suback_reason_code val)
+{
+    os << suback_reason_code_to_str(val);
     return os;
 }
 

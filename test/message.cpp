@@ -310,7 +310,7 @@ BOOST_AUTO_TEST_CASE( subscribe_cbuf ) {
 }
 
 BOOST_AUTO_TEST_CASE( suback_cbuf ) {
-    auto m = MQTT_NS::suback_message(std::vector<std::uint8_t>{1}, 2);
+    auto m = MQTT_NS::suback_message(std::vector<MQTT_NS::suback_reason_code>{MQTT_NS::suback_reason_code::granted_qos_1}, 2);
     std::string expected {
         static_cast<char>(0b1001'0000u),
         3,

@@ -1714,7 +1714,7 @@ template <std::size_t PacketIdBytes>
 class basic_suback_message {
 public:
     basic_suback_message(
-        std::vector<std::uint8_t> reason_codes,
+        std::vector<suback_reason_code> reason_codes,
         typename packet_id_type<PacketIdBytes>::type packet_id,
         properties props
     )

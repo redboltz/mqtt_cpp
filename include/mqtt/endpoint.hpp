@@ -278,7 +278,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using suback_handler = std::function<bool(packet_id_t packet_id,
-                                              std::vector<MQTT_NS::optional<std::uint8_t>> qoss)>;
+                                              std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> qoss)>;
 
     /**
      * @brief Unsubscribe handler
@@ -544,7 +544,7 @@ public:
      */
     using v5_suback_handler = std::function<
         bool(packet_id_t packet_id,
-             std::vector<std::uint8_t> reasons,
+             std::vector<MQTT_NS::v5::suback_reason_code> reasons,
              std::vector<v5::property_variant> props)
     >;
 
@@ -3234,10 +3234,11 @@ public:
     template <typename... Args>
     void suback(
         packet_id_t packet_id,
+        variant<suback_reason_code, v5::suback_reason_code> arg0,
         Args&&... args) {
-        std::vector<std::uint8_t> params;
-        params.reserve(sizeof...(args));
-        send_suback(params, packet_id, std::forward<Args>(args)...);
+        variant<std::vector<suback_reason_code>, std::vector<v5::suback_reason_code>> params;
+        visit([](auto & vect){ vect.reserve(1 + sizeof...(args)); }, params);
+        send_suback(force_move(params), packet_id, std::move(arg0), std::forward<Args>(args)...);
     }
 
     /**
@@ -3254,7 +3255,7 @@ public:
      */
     void suback(
         packet_id_t packet_id,
-        std::vector<std::uint8_t> reasons,
+        variant<std::vector<suback_reason_code>, std::vector<v5::suback_reason_code>> reasons,
         std::vector<v5::property_variant> props = {}
     ) {
         send_suback(force_move(reasons), packet_id, force_move(props));
@@ -6888,7 +6889,7 @@ public:
      */
     void async_suback(
         packet_id_t packet_id,
-        std::uint8_t reason,
+        variant<suback_reason_code, v5::suback_reason_code> reason,
         async_handler_t func = async_handler_t()
     ) {
         async_send_suback(std::vector<std::uint8_t>{}, packet_id, reason, std::vector<v5::property_variant>{}, force_move(func));
@@ -6911,7 +6912,7 @@ public:
      */
     void async_suback(
         packet_id_t packet_id,
-        std::uint8_t reason,
+        variant<suback_reason_code, v5::suback_reason_code> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -6931,7 +6932,7 @@ public:
      */
     void async_suback(
         packet_id_t packet_id,
-        std::vector<std::uint8_t> reasons,
+        variant<std::vector<suback_reason_code>, std::vector<v5::suback_reason_code>> reasons,
         async_handler_t func = async_handler_t()
     ) {
         async_send_suback(force_move(reasons), packet_id, std::vector<v5::property_variant>{}, force_move(func));
@@ -6954,7 +6955,7 @@ public:
      */
     void async_suback(
         packet_id_t packet_id,
-        std::vector<std::uint8_t> reasons,
+        variant<std::vector<suback_reason_code>, std::vector<v5::suback_reason_code>> reasons,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -11319,18 +11320,18 @@ private:
                     switch (version_) {
                     case protocol_version::v3_1_1:
                         if (h_suback_) {
-                            std::vector<optional<std::uint8_t>> results;
+                            std::vector<optional<suback_reason_code>> results;
                             results.resize(body.size());
                             std::transform(
                                 body.begin(),
                                 body.end(),
                                 results.begin(),
-                                [&](auto const& e) -> optional<std::uint8_t> {
+                                [&](auto const& e) -> optional<suback_reason_code> {
                                     if (e & variable_length_continue_flag) {
                                         return nullopt;
                                     }
                                     else {
-                                        return static_cast<std::uint8_t>(e);
+                                        return static_cast<suback_reason_code>(e);
                                     }
                                 }
                             );
@@ -11342,14 +11343,14 @@ private:
                         break;
                     case protocol_version::v5:
                         if (h_v5_suback_) {
-                            std::vector<std::uint8_t> reasons;
+                            std::vector<v5::suback_reason_code> reasons;
                             reasons.resize(body.size());
                             std::transform(
                                 body.begin(),
                                 body.end(),
                                 reasons.begin(),
                                 [&](auto const& e) {
-                                    return static_cast<uint8_t>(e);
+                                    return static_cast<v5::suback_reason_code>(e);
                                 }
                             );
                             if (!h_v5_suback_(info.packet_id, force_move(reasons), force_move(info.props))) {
@@ -12295,25 +12296,25 @@ private:
 
     template <typename... Args>
     void send_suback(
-        std::vector<std::uint8_t> params,
+        variant<std::vector<suback_reason_code>, std::vector<v5::suback_reason_code>> params,
         packet_id_t packet_id,
-        std::uint8_t reason,
+        variant<suback_reason_code, v5::suback_reason_code> reason,
         Args&&... args) {
-        params.push_back(reason);
+        visit([reason](auto & vect){ vect.push_back(reason); }, params);
         send_suback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void send_suback(
-        std::vector<std::uint8_t> params,
+        variant<std::vector<suback_reason_code>, std::vector<v5::suback_reason_code>> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
-            do_sync_write(v3_1_1::basic_suback_message<PacketIdBytes>(force_move(params), packet_id));
+            do_sync_write(v3_1_1::basic_suback_message<PacketIdBytes>(force_move(variant_get<std::vector<suback_reason_code>>(params)), packet_id));
             break;
         case protocol_version::v5:
-            do_sync_write(v5::basic_suback_message<PacketIdBytes>(force_move(params), packet_id, force_move(props)));
+            do_sync_write(v5::basic_suback_message<PacketIdBytes>(force_move(variant_get<std::vector<v5::suback_reason_code>>(params)), packet_id, force_move(props)));
             break;
         default:
             BOOST_ASSERT(false);
@@ -12909,16 +12910,28 @@ private:
 
     template <typename... Args>
     void async_send_suback(
-        std::vector<std::uint8_t> params,
+        variant<std::vector<suback_reason_code>, std::vector<v5::suback_reason_code>> params,
         packet_id_t packet_id,
-        std::uint8_t qos_value,
+        variant<suback_reason_code, v5::suback_reason_code> reason_code,
         Args&&... args) {
-        params.push_back(qos_value);
+        if((0 == variant_idx(params)) && (0 == variant_idx(reason_code)))
+        {
+            variant_get<std::vector<suback_reason_code>>(params).push_back(variant_get<suback_reason_code>(reason_code));
+        }
+        else if((1 == variant_idx(params)) && (1 == variant_idx(reason_code)))
+        {
+            variant_get<std::vector<v5::suback_reason_code>>(params).push_back(variant_get<v5::suback_reason_code>(reason_code));
+        }
+        else
+        {
+            BOOST_ASSERT(false);
+        }
+
         async_send_suback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_suback(
-        std::vector<std::uint8_t> params,
+        variant<std::vector<suback_reason_code>, std::vector<v5::suback_reason_code>> params,
         packet_id_t packet_id,
         std::vector<v5::property_variant> props,
         async_handler_t func
@@ -12926,12 +12939,12 @@ private:
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
-                v3_1_1::basic_suback_message<PacketIdBytes>(force_move(params), packet_id), force_move(func)
+                v3_1_1::basic_suback_message<PacketIdBytes>(force_move(variant_get<std::vector<suback_reason_code>>(params)), packet_id), force_move(func)
             );
             break;
         case protocol_version::v5:
             do_async_write(
-                v5::basic_suback_message<PacketIdBytes>(force_move(params), packet_id, force_move(props)), force_move(func)
+                v5::basic_suback_message<PacketIdBytes>(force_move(variant_get<std::vector<v5::suback_reason_code>>(params)), packet_id, force_move(props)), force_move(func)
             );
             break;
         default:
