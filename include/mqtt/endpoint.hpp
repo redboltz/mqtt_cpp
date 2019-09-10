@@ -13838,8 +13838,8 @@ private:
                         if (!h_v5_unsuback_(info.packet_id, force_move(reasons), force_move(info.props))) {
                             return;
                         }
-                        h_mqtt_message_processed_(force_move(func));
                     }
+                    h_mqtt_message_processed_(force_move(func));
                 },
                 force_move(self)
             );
