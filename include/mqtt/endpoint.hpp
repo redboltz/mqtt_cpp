@@ -1474,6 +1474,60 @@ public:
         async_read_control_packet_type(force_move(session_life_keeper));
     }
 
+    /**
+     * @brief clear_all_handlers
+     */
+    void clear_all_handlers(void) {
+        // Avoid destructor being called
+        // until the end of this function
+        auto lifekeeper = this->shared_from_this();
+
+        // MQTT common handlers
+        h_pingreq_ = {};
+        h_pingresp_ = {};
+
+        // MQTT v3_1_1 handlers
+        h_connect_ = {};
+        h_connack_ = {};
+        h_publish_ = {};
+        h_puback_ = {};
+        h_pubrec_ = {};
+        h_pubrel_ = {};
+        h_pubcomp_ = {};
+        h_subscribe_ = {};
+        h_suback_ = {};
+        h_unsubscribe_ = {};
+        h_unsuback_ = {};
+        h_disconnect_ = {};
+
+        // MQTT v5 handlers
+        h_v5_connect_ = {};
+        h_v5_connack_ = {};
+        h_v5_publish_ = {};
+        h_v5_puback_ = {};
+        h_v5_pubrec_ = {};
+        h_v5_pubrel_ = {};
+        h_v5_pubcomp_ = {};
+        h_v5_subscribe_ = {};
+        h_v5_suback_ = {};
+        h_v5_unsubscribe_ = {};
+        h_v5_unsuback_ = {};
+        h_v5_disconnect_ = {};
+        h_v5_auth_ = {};
+
+        // original handlers
+        h_close_ = {};
+        h_error_ = {};
+        h_pub_res_sent_ = {};
+        h_serialize_publish_ = {};
+        h_serialize_v5_publish_ = {};
+        h_serialize_pubrel_ = {};
+        h_serialize_v5_pubrel_ = {};
+        h_serialize_remove_ = {};
+        h_pre_send_ = {};
+        h_is_valid_length_ = {};
+    }
+
     // Blocking APIs
 
     /**
@@ -7583,10 +7637,9 @@ protected:
     }
 
     void async_read_control_packet_type(any session_life_keeper) {
-        auto self = shared_from_this();
         socket_->async_read(
             as::buffer(buf_.data(), 1),
-            [this, self = force_move(self), session_life_keeper = force_move(session_life_keeper)](
+            [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred) mutable {
                 if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;

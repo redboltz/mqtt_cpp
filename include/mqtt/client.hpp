@@ -847,11 +847,10 @@ private:
         ws_endpoint<as::ip::tcp::socket, Strand>& socket,
         std::vector<v5::property_variant> props,
         any session_life_keeper) {
-        auto self = this->shared_from_this();
         socket.async_handshake(
             host_,
             path_,
-            [this, self, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
+            [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 start_session(force_move(props), force_move(session_life_keeper));
@@ -866,10 +865,9 @@ private:
         tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         std::vector<v5::property_variant> props,
         any session_life_keeper) {
-        auto self = this->shared_from_this();
         socket.async_handshake(
             as::ssl::stream_base::client,
-            [this, self, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
+            [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 start_session(force_move(props), force_move(session_life_keeper));
@@ -885,13 +883,13 @@ private:
         auto self = this->shared_from_this();
         socket.next_layer().async_handshake(
             as::ssl::stream_base::client,
-            [this, self, session_life_keeper = force_move(session_life_keeper), &socket, props = force_move(props)]
+            [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper), &socket, props = force_move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 socket.async_handshake(
                     host_,
                     path_,
-                    [this, self, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
+                    [this, self = force_move(self), session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
                     (boost::system::error_code const& ec) mutable {
                         if (base::handle_close_or_error(ec)) return;
                         start_session(force_move(props), force_move(session_life_keeper));
@@ -904,10 +902,9 @@ private:
 
     template <typename Iterator>
     void connect_impl(Socket& socket, Iterator it, Iterator end, std::vector<v5::property_variant> props, any session_life_keeper) {
-        auto self = this->shared_from_this();
         as::async_connect(
             socket.lowest_layer(), it, end,
-            [this, self, &socket, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
+            [this, self = this->shared_from_this(), &socket, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
             (boost::system::error_code const& ec, Iterator) mutable {
                 base::set_close_handler([this](){ handle_close(); });
                 base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
