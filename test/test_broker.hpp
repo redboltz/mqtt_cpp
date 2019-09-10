@@ -771,7 +771,7 @@ private:
             break;
         case MQTT_NS::protocol_version::v5:
             if (h_unsubscribe_props_) h_unsubscribe_props_(props);
-            ep.unsuback(packet_id, std::vector<std::uint8_t>(topics.size(), MQTT_NS::v5::reason_code::success), unsuback_props_);
+            ep.unsuback(packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code>(topics.size(), MQTT_NS::v5::unsuback_reason_code::success), unsuback_props_);
             break;
         default:
             BOOST_ASSERT(false);

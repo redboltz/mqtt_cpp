@@ -223,6 +223,39 @@ Stream & operator<<(Stream & os, suback_reason_code val)
     return os;
 }
 
+
+enum class unsuback_reason_code : std::uint8_t {
+    success                       = 0x00,
+    no_subscription_existed       = 0x11,
+    unspecified_error             = 0x80,
+    implementation_specific_error = 0x83,
+    not_authorized                = 0x87,
+    topic_filter_invalid          = 0x8f,
+    packet_identifier_in_use      = 0x91,
+};
+
+constexpr
+char const* unsuback_reason_code_to_str(unsuback_reason_code v) {
+    switch(v)
+    {
+    case unsuback_reason_code::success:                       return "success";
+    case unsuback_reason_code::no_subscription_existed:       return "no_subscription_existed";
+    case unsuback_reason_code::unspecified_error:             return "unspecified_error";
+    case unsuback_reason_code::implementation_specific_error: return "implementation_specific_error";
+    case unsuback_reason_code::not_authorized:                return "not_authorized";
+    case unsuback_reason_code::topic_filter_invalid:          return "topic_filter_invalid";
+    case unsuback_reason_code::packet_identifier_in_use:      return "packet_identifier_in_use";
+    default:                                                  return "unknown_unsuback_reason_code";
+    }
+}
+
+template<typename Stream>
+Stream & operator<<(Stream & os, unsuback_reason_code val)
+{
+    os << unsuback_reason_code_to_str(val);
+    return os;
+}
+
 namespace reason_code {
 
 constexpr std::uint8_t const success                                       = 0x00;
