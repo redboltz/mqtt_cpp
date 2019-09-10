@@ -103,15 +103,8 @@ IF(MQTT_BUILD_TESTS)
     FIND_PACKAGE (Boost 1.66.0 REQUIRED COMPONENTS chrono timer unit_test_framework)
 ENDIF()
 
-IF (NOT MQTT_BEAST_INCLUDE_DIR)
-    IF (${Boost_VERSION} LESS 106600)
-        SET (MQTT_BEAST_INCLUDE_DIR "external/beast/include")
-    ENDIF ()
-ENDIF ()
-
 INCLUDE_DIRECTORIES (
     ${Boost_INCLUDE_DIR}
-    ${MQTT_BEAST_INCLUDE_DIR}
     include
 )
 
