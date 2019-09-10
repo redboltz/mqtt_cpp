@@ -170,12 +170,11 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
         }
     );
     s.set_accept_handler(
-        [&](con_t& ep) {
-            using packet_id_t = typename std::remove_reference_t<decltype(ep)>::packet_id_t;
+        [&](con_sp_t spep) {
+            using packet_id_t = con_sp_t::element_type::packet_id_t;
             std::cout << "[server] accept" << std::endl;
-            auto sp = ep.shared_from_this();
-            ep.start_session(
-                [&, sp] // keeping ep's lifetime as sp until session finished
+            spep->start_session(
+                [&, spep] // keeping ep's lifetime as sp until session finished
                 (boost::system::error_code const& ec) {
                     std::cout << "[server] session end: " << ec.message() << std::endl;
                     s.close();
@@ -183,22 +182,22 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
             );
 
             // set connection (lower than MQTT) level handlers
-            ep.set_close_handler(
-                [&]
+            spep->set_close_handler(
+                [&, spep]
                 (){
                     std::cout << "[server] closed." << std::endl;
-                    close_proc(connections, subs, ep.shared_from_this());
+                    close_proc(connections, subs, spep);
                 });
-            ep.set_error_handler(
-                [&]
+            spep->set_error_handler(
+                [&, spep]
                 (boost::system::error_code const& ec){
                     std::cout << "[server] error: " << ec.message() << std::endl;
-                    close_proc(connections, subs, ep.shared_from_this());
+                    close_proc(connections, subs, spep);
                 });
 
             // set MQTT level handlers
-            ep.set_connect_handler(
-                [&]
+            spep->set_connect_handler(
+                [&, spep]
                 (MQTT_NS::buffer client_id,
                  MQTT_NS::optional<MQTT_NS::buffer> username,
                  MQTT_NS::optional<MQTT_NS::buffer> password,
@@ -211,42 +210,42 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     std::cout << "[server] password     : " << (password ? password.value() : "none"_mb) << std::endl;
                     std::cout << "[server] clean_session: " << std::boolalpha << clean_session << std::endl;
                     std::cout << "[server] keep_alive   : " << keep_alive << std::endl;
-                    connections.insert(ep.shared_from_this());
-                    ep.connack(false, MQTT_NS::connect_return_code::accepted);
+                    connections.insert(spep);
+                    spep->connack(false, MQTT_NS::connect_return_code::accepted);
                     return true;
                 }
             );
-            ep.set_disconnect_handler(
-                [&]
+            spep->set_disconnect_handler(
+                [&, spep]
                 (){
                     std::cout << "[server] disconnect received." << std::endl;
-                    close_proc(connections, subs, ep.shared_from_this());
+                    close_proc(connections, subs, spep);
                 });
-            ep.set_puback_handler(
-                [&]
+            spep->set_puback_handler(
+                []
                 (packet_id_t packet_id){
                     std::cout << "[server] puback received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
-            ep.set_pubrec_handler(
-                [&]
+            spep->set_pubrec_handler(
+                []
                 (packet_id_t packet_id){
                     std::cout << "[server] pubrec received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
-            ep.set_pubrel_handler(
-                [&]
+            spep->set_pubrel_handler(
+                []
                 (packet_id_t packet_id){
                     std::cout << "[server] pubrel received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
-            ep.set_pubcomp_handler(
-                [&]
+            spep->set_pubcomp_handler(
+                []
                 (packet_id_t packet_id){
                     std::cout << "[server] pubcomp received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
-            ep.set_publish_handler(
+            spep->set_publish_handler(
                 [&]
                 (std::uint8_t header,
                  MQTT_NS::optional<packet_id_t> packet_id,
@@ -275,8 +274,8 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     }
                     return true;
                 });
-            ep.set_subscribe_handler(
-                [&]
+            spep->set_subscribe_handler(
+                [&, spep]
                 (packet_id_t packet_id,
                  std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> entries) {
                     std::cout << "[server]subscribe received. packet_id: " << packet_id << std::endl;
@@ -287,13 +286,13 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                         MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
                         std::cout << "[server] topic: " << topic  << " qos: " << qos_value << std::endl;
                         res.emplace_back(static_cast<MQTT_NS::suback_reason_code>(qos_value));
-                        subs.emplace(std::move(topic), ep.shared_from_this(), qos_value);
+                        subs.emplace(std::move(topic), spep, qos_value);
                     }
-                    ep.suback(packet_id, res);
+                    spep->suback(packet_id, res);
                     return true;
                 }
             );
-            ep.set_unsubscribe_handler(
+            spep->set_unsubscribe_handler(
                 [&]
                 (packet_id_t packet_id,
                  std::vector<MQTT_NS::buffer> topics) {
@@ -301,7 +300,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     for (auto const& topic : topics) {
                         subs.erase(topic);
                     }
-                    ep.unsuback(packet_id);
+                    spep->unsuback(packet_id);
                     return true;
                 }
             );

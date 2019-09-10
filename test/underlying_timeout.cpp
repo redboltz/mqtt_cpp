@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
         ioc);
 
     server.set_accept_handler(
-        [&](MQTT_NS::server_ws<>::endpoint_t& /*ep*/) {
+        [&](std::shared_ptr<MQTT_NS::server_ws<>::endpoint_t> /*ep*/) {
             BOOST_TEST(false);
         }
     );
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
         ioc);
 
     server.set_accept_handler(
-        [&](MQTT_NS::server_tls_ws<>::endpoint_t& /*ep*/) {
+        [&](std::shared_ptr<MQTT_NS::server_tls_ws<>::endpoint_t> /*ep*/) {
             BOOST_TEST(false);
         }
     );
@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
         ioc);
 
     server.set_accept_handler(
-        [&](MQTT_NS::server_tls_ws<>::endpoint_t& /*ep*/) {
+        [&](std::shared_ptr<MQTT_NS::server_tls_ws<>::endpoint_t> /*ep*/) {
             BOOST_TEST(false);
         }
     );
@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
         ioc);
 
     server.set_accept_handler(
-        [&](MQTT_NS::server_tls<>::endpoint_t& /*ep*/) {
+        [&](std::shared_ptr<MQTT_NS::server_tls<>::endpoint_t> /*ep*/) {
             BOOST_TEST(false);
         }
     );
