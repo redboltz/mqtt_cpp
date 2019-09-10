@@ -1,3 +1,7 @@
+## 6.0.5
+* Fixed receive stop problem when unsuback handler is not set. (#408)
+* Updated minimum boost requirement to 1.66.0. (#410)
+
 ## 6.0.4
 * Fixed invalid subscribe qos comparison on receive. (#385)
 
