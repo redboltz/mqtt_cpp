@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
 #endif // BOOST_VERSION >= 107000
         it, end,
         [&]
-        (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {
+        (boost::system::error_code const& ec, auto) {
             if (ec) {
                 std::cout << ec.message() << std::endl;
             }
@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
 #endif // BOOST_VERSION >= 107000
         it, end,
         [&]
-        (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {
+        (boost::system::error_code const& ec, auto) {
             if (ec) {
                 std::cout << ec.message() << std::endl;
             }
@@ -216,7 +216,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
 #endif // BOOST_VERSION >= 107000
         it, end,
         [&]
-        (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {
+        (boost::system::error_code const& ec, auto) {
             if (ec) {
                 std::cout << ec.message() << std::endl;
             }
@@ -303,7 +303,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
         socket.lowest_layer(),
         it, end,
         [&]
-        (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {
+        (boost::system::error_code const& ec, auto) {
             if (ec) {
                 std::cout << ec.message() << std::endl;
             }

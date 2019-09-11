@@ -8,6 +8,7 @@
 #define MQTT_TCP_ENDPOINT_HPP
 
 #include <boost/asio.hpp>
+#include <boost/asio/bind_executor.hpp>
 
 #if !defined(MQTT_NO_TLS)
 #include <boost/asio/ssl.hpp>
@@ -68,7 +69,11 @@ public:
         as::async_read(
             tcp_,
             std::forward<MutableBufferSequence>(buffers),
-            strand_.wrap(std::forward<ReadHandler>(handler)));
+            as::bind_executor(
+                strand_,
+                std::forward<ReadHandler>(handler)
+            )
+        );
     }
 
     template <typename... Args>
@@ -83,13 +88,19 @@ public:
         as::async_write(
             tcp_,
             std::forward<ConstBufferSequence>(buffers),
-            strand_.wrap(std::forward<WriteHandler>(handler))
+            as::bind_executor(
+                strand_,
+                std::forward<WriteHandler>(handler)
+            )
         );
     }
 
     template <typename PostHandler>
     void post(PostHandler&& handler) {
-        strand_.post(std::forward<PostHandler>(handler));
+        as::post(
+            strand_,
+            std::forward<PostHandler>(handler)
+        );
     }
 
 private:

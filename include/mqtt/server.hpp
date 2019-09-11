@@ -98,7 +98,8 @@ public:
                 config_(acceptor_.value());
             }
             catch (boost::system::system_error const& e) {
-                ioc_accept_.post(
+                as::post(
+                    ioc_accept_,
                     [this, ec = e.code()] {
                         if (h_error_) h_error_(ec);
                     }
@@ -244,7 +245,8 @@ public:
                 config_(acceptor_.value());
             }
             catch (boost::system::system_error const& e) {
-                ioc_accept_.post(
+                as::post(
+                    ioc_accept_,
                     [this, ec = e.code()] {
                         if (h_error_) h_error_(ec);
                     }
@@ -441,7 +443,8 @@ public:
                 config_(acceptor_.value());
             }
             catch (boost::system::system_error const& e) {
-                ioc_accept_.post(
+                as::post(
+                    ioc_accept_,
                     [this, ec = e.code()] {
                         if (h_error_) h_error_(ec);
                     }
@@ -655,7 +658,8 @@ public:
                 config_(acceptor_.value());
             }
             catch (boost::system::system_error const& e) {
-                ioc_accept_.post(
+                as::post(
+                    ioc_accept_,
                     [this, ec = e.code()] {
                         if (h_error_) h_error_(ec);
                     }

@@ -908,7 +908,7 @@ private:
         as::async_connect(
             socket.lowest_layer(), it, end,
             [this, self, &socket, func = force_move(func), props = force_move(props)]
-            (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) mutable {
+            (boost::system::error_code const& ec, Iterator) mutable {
                 base::set_close_handler([this](){ handle_close(); });
                 base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
                 if (!ec) {
