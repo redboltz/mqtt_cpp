@@ -1037,14 +1037,14 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
         });
     c2->set_v5_pubrec_handler(
         [&chk, &pid_pub]
-        (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
             return true;
         });
     c2->set_v5_pubcomp_handler(
         [&chk, &c2, &pid_pub]
-        (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == pid_pub);
             c2->disconnect();
@@ -1208,10 +1208,10 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
         });
     c1->set_v5_pubrec_handler(
         [&chk, &c1, &pid_pub, ps = std::move(ps)]
-        (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
-            c1->pubrel(packet_id, MQTT_NS::v5::reason_code::success, std::move(ps));
+            c1->pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, std::move(ps));
             c1->force_disconnect();
             return true;
         });
@@ -1232,7 +1232,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
         });
     c2->set_v5_pubcomp_handler(
         [&chk, &c2]
-        (packet_id_t packet_id, std::uint8_t, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == 1);
             c2->disconnect();

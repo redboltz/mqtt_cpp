@@ -53,7 +53,7 @@ public:
     /**
      * @brief Create empty header_packet_id_message.
      */
-    header_only_message(std::uint8_t type, std::uint8_t flags)
+    header_only_message(control_packet_type type, std::uint8_t flags)
         : message_ { static_cast<char>(make_fixed_header(type, flags)), 0 }
     {}
 
@@ -1003,7 +1003,7 @@ template <std::size_t PacketIdBytes>
 struct basic_pubrec_message {
     basic_pubrec_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        optional<std::uint8_t> reason_code,
+        optional<pubrec_reason_code> reason_code,
         properties props)
         : fixed_header_(make_fixed_header(control_packet_type::pubrec, 0b0000)),
           reason_code_(reason_code),
@@ -1142,7 +1142,7 @@ struct basic_pubrec_message {
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    optional<std::uint8_t> reason_code_;
+    optional<pubrec_reason_code> reason_code_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
@@ -1155,7 +1155,7 @@ template <std::size_t PacketIdBytes>
 struct basic_pubrel_message {
     basic_pubrel_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        optional<std::uint8_t> reason_code,
+        optional<v5::pubrel_reason_code> reason_code,
         properties props)
         : fixed_header_(make_fixed_header(control_packet_type::pubrel, 0b0000)),
           reason_code_(reason_code),
@@ -1244,7 +1244,7 @@ struct basic_pubrel_message {
             return;
         }
 
-        reason_code_ = static_cast<std::uint8_t>(buf.front());
+        reason_code_ = static_cast<v5::pubrel_reason_code>(buf.front());
         buf.remove_prefix(1);
 
         auto len_consume = variable_length(
@@ -1372,7 +1372,7 @@ struct basic_pubrel_message {
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    optional<std::uint8_t> reason_code_;
+    optional<v5::pubrel_reason_code> reason_code_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
@@ -1386,7 +1386,7 @@ template <std::size_t PacketIdBytes>
 struct basic_pubcomp_message {
     basic_pubcomp_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        optional<std::uint8_t> reason_code,
+        optional<pubcomp_reason_code> reason_code,
         properties props)
         : fixed_header_(make_fixed_header(control_packet_type::pubcomp, 0b0000)),
           reason_code_(reason_code),
@@ -1525,7 +1525,7 @@ struct basic_pubcomp_message {
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    optional<std::uint8_t> reason_code_;
+    optional<pubcomp_reason_code> reason_code_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
@@ -2311,7 +2311,7 @@ private:
 
 struct auth_message {
     auth_message(
-        optional<std::uint8_t> reason_code,
+        optional<v5::auth_reason_code> reason_code,
         properties props
     )
         : fixed_header_(make_fixed_header(control_packet_type::auth, 0b0000)),
@@ -2443,7 +2443,7 @@ private:
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 
-    optional<std::uint8_t> reason_code_;
+    optional<v5::auth_reason_code> reason_code_;
 
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;

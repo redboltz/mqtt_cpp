@@ -1,4 +1,4 @@
-// Copyright Takatoshi Kondo 2015
+﻿// Copyright Takatoshi Kondo 2015
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -459,7 +459,7 @@ public:
      */
     using v5_pubrec_handler = std::function<
         bool(packet_id_t packet_id,
-             std::uint8_t reason_code,
+             v5::pubrec_reason_code reason_code,
              std::vector<v5::property_variant> props)
     >;
 
@@ -481,7 +481,7 @@ public:
      */
     using v5_pubrel_handler = std::function<
         bool(packet_id_t packet_id,
-             std::uint8_t reason_code,
+             v5::pubrel_reason_code reason_code,
              std::vector<v5::property_variant> props)
     >;
 
@@ -503,7 +503,7 @@ public:
      */
     using v5_pubcomp_handler = std::function<
         bool(packet_id_t packet_id,
-             std::uint8_t reason_code,
+             v5::pubcomp_reason_code reason_code,
              std::vector<v5::property_variant> props)
     >;
 
@@ -623,7 +623,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using v5_auth_handler = std::function<
-        bool(std::uint8_t reason_code,
+        bool(v5::auth_reason_code reason_code,
              std::vector<v5::property_variant> props)
     >;
 
@@ -735,7 +735,7 @@ public:
      * @return true if check is success, otherwise false
      */
     using is_valid_length_handler =
-        std::function<bool(std::uint8_t control_packet_type, std::size_t remaining_length)>;
+        std::function<bool(control_packet_type packet_type, std::size_t remaining_length)>;
 
     /**
      * @brief next read handler
@@ -1159,7 +1159,7 @@ public:
      * @brief Get pubrec handler
      * @return handler
      */
-    v5_pubrec_handler const& get_v5_pubrec_handler() const {
+    v5_pubrec_handler const& get_v5__handler() const {
         return h_v5_pubrec_;
     }
 
@@ -2999,7 +2999,7 @@ public:
      *        3.15.2.2 AUTH Properties
      */
     void auth(
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::auth_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         send_auth(reason_code, force_move(props));
@@ -3156,20 +3156,20 @@ public:
     }
 
     /**
-     * @brief Send pubrec packet.
+     * @brief Send  packet.
      * @param packet_id packet id corresponding to publish
      * @param reason_code
-     *        PUBREC Reason Code<BR>
+     *         Reason Code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901134<BR>
-     *        3.5.2.1 PUBREC Reason Code
+     *        3.5.2.1  Reason Code
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901135<BR>
-     *        3.5.2.2 PUBREC Properties
+     *        3.5.2.2  Properties
      */
     void pubrec(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::pubrec_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         send_pubrec(packet_id, reason_code, force_move(props));
@@ -3192,7 +3192,7 @@ public:
      */
     void pubrel(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::pubrel_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {},
         any life_keeper = any()
     ) {
@@ -3213,7 +3213,7 @@ public:
      */
     void pubcomp(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::pubcomp_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         send_pubcomp(packet_id, reason_code, force_move(props));
@@ -6567,7 +6567,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718086
      */
     void async_auth(
-        optional<std::uint8_t> reason_code = nullopt,
+        optional<v5::auth_reason_code> reason_code = nullopt,
         std::vector<v5::property_variant> props = {},
         async_handler_t func = async_handler_t()) {
         async_send_auth(reason_code, force_move(props), force_move(func));
@@ -6765,7 +6765,7 @@ public:
      */
     void async_pubrec(
         packet_id_t packet_id,
-        std::uint8_t reason_code,
+        v5::pubrec_reason_code reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -6805,7 +6805,7 @@ public:
      */
     void async_pubrel(
         packet_id_t packet_id,
-        std::uint8_t reason_code,
+        v5::pubrel_reason_code reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t(),
         any life_keeper = any()
@@ -6844,7 +6844,7 @@ public:
      */
     void async_pubcomp(
         packet_id_t packet_id,
-        std::uint8_t reason_code,
+        v5::pubcomp_reason_code reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()
     ) {
@@ -7259,8 +7259,8 @@ public:
         if (packet_id_.insert(packet_id).second) {
             auto ret = store_.emplace(
                 packet_id,
-                qos_value == qos::at_least_once ? control_packet_type::puback
-                                                : control_packet_type::pubrec,
+                ((qos_value == qos::at_least_once) ? control_packet_type::puback
+                                                   : control_packet_type::pubrec),
                 force_move(msg),
                 force_move(life_keeper)
             );
@@ -7273,8 +7273,8 @@ public:
                     [&] (auto& e) {
                         e = store(
                             packet_id,
-                            qos_value == qos::at_least_once ? control_packet_type::puback
-                                                            : control_packet_type::pubrec,
+                            ((qos_value == qos::at_least_once) ? control_packet_type::puback
+                                                               : control_packet_type::pubrec),
                             force_move(msg),
                             force_move(life_keeper)
                         );
@@ -7941,7 +7941,7 @@ private:
     struct store {
         store(
             packet_id_t id,
-            std::uint8_t type,
+            control_packet_type type,
             basic_store_message_variant<PacketIdBytes> smv,
             any life_keeper = any())
             : packet_id_(id)
@@ -7949,13 +7949,13 @@ private:
             , smv_(force_move(smv))
             , life_keeper_(force_move(life_keeper)) {}
         packet_id_t packet_id() const { return packet_id_; }
-        std::uint8_t expected_control_packet_type() const { return expected_control_packet_type_; }
+        control_packet_type expected_control_packet_type() const { return expected_control_packet_type_; }
         basic_message_variant<PacketIdBytes> message() const {
             return get_basic_message_variant<PacketIdBytes>(smv_);
         }
     private:
         packet_id_t packet_id_;
-        std::uint8_t expected_control_packet_type_;
+        control_packet_type expected_control_packet_type_;
         basic_store_message_variant<PacketIdBytes> smv_;
         any life_keeper_;
     };
@@ -7975,7 +7975,7 @@ private:
                         &store::packet_id
                     >,
                     mi::const_mem_fun<
-                        store, std::uint8_t,
+                        store, control_packet_type,
                         &store::expected_control_packet_type
                     >
                 >
@@ -10556,7 +10556,7 @@ private:
 
     struct pubrec_info {
         packet_id_t packet_id;
-        std::uint8_t reason_code;
+        v5::pubrec_reason_code reason_code;
         std::vector<v5::property_variant> props;
     };
 
@@ -10608,7 +10608,7 @@ private:
                         force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
-                                info.reason_code = v5::reason_code::success;
+                                info.reason_code = v5::pubrec_reason_code::success;
                                 return pubrec_phase::finish;
                             }
                             return pubrec_phase::reason_code;
@@ -10630,7 +10630,7 @@ private:
                     info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    info.reason_code = static_cast<v5::pubrec_reason_code>(body[0]);
                     process_pubrec_impl(
                         force_move(func),
                         force_move(buf),
@@ -10735,7 +10735,7 @@ private:
 
     struct pubrel_info {
         packet_id_t packet_id;
-        std::uint8_t reason_code;
+        v5::pubrel_reason_code reason_code;
         std::vector<v5::property_variant> props;
     };
 
@@ -10787,7 +10787,7 @@ private:
                         force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
-                                info.reason_code = v5::reason_code::success;
+                                info.reason_code = v5::pubrel_reason_code::success;
                                 return pubrel_phase::finish;
                             }
                             return pubrel_phase::reason_code;
@@ -10809,7 +10809,7 @@ private:
                     info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    info.reason_code = static_cast<v5::pubrel_reason_code>(body[0]);
                     process_pubrel_impl(
                         force_move(func),
                         force_move(buf),
@@ -10901,7 +10901,7 @@ private:
 
     struct pubcomp_info {
         packet_id_t packet_id;
-        std::uint8_t reason_code;
+        v5::pubcomp_reason_code reason_code;
         std::vector<v5::property_variant> props;
     };
 
@@ -10953,7 +10953,7 @@ private:
                         force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
-                                info.reason_code = v5::reason_code::success;
+                                info.reason_code = v5::pubcomp_reason_code::success;
                                 return pubcomp_phase::finish;
                             }
                             return pubcomp_phase::reason_code;
@@ -10975,7 +10975,7 @@ private:
                     info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    info.reason_code = static_cast<v5::pubcomp_reason_code>(body[0]);
                     process_pubcomp_impl(
                         force_move(func),
                         force_move(buf),
@@ -11826,7 +11826,7 @@ private:
     };
 
     struct auth_info {
-        std::uint8_t reason_code;
+        v5::auth_reason_code reason_code;
         std::vector<v5::property_variant> props;
     };
 
@@ -11841,7 +11841,7 @@ private:
         }
 
         if (remaining_length_ == 0) {
-            auth_info info { v5::reason_code::success, std::vector<v5::property_variant>() };
+            auth_info info { v5::auth_reason_code::success, std::vector<v5::property_variant>() };
             process_auth_impl(
                 force_move(func),
                 buffer(),
@@ -11890,7 +11890,7 @@ private:
                     info = force_move(info)
                 ]
                 (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                    info.reason_code = static_cast<std::uint8_t>(body[0]);
+                    info.reason_code = static_cast<v5::auth_reason_code>(body[0]);
                     process_auth_impl(
                         force_move(func),
                         force_move(buf),
@@ -12101,7 +12101,7 @@ private:
 
     void send_pubrec(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::pubrec_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -12119,7 +12119,7 @@ private:
 
     void send_pubrel(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::pubrel_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {},
         any life_keeper = any()
     ) {
@@ -12169,7 +12169,7 @@ private:
 
     void store_pubrel(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::pubrel_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
 
@@ -12216,7 +12216,7 @@ private:
 
     void send_pubcomp(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::pubcomp_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -12442,7 +12442,7 @@ private:
     }
 
     void send_auth(
-        optional<std::uint8_t> reason = nullopt,
+        optional<v5::auth_reason_code> reason = nullopt,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -12686,7 +12686,7 @@ private:
 
     void async_send_pubrec(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason,
+        optional<v5::pubrec_reason_code> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {
@@ -12711,7 +12711,7 @@ private:
 
     void async_send_pubrel(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason,
+        optional<v5::pubrel_reason_code> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func,
         any life_keeper = any()
@@ -12785,7 +12785,7 @@ private:
 
     void async_send_pubcomp(
         packet_id_t packet_id,
-        optional<std::uint8_t> reason,
+        optional<v5::pubcomp_reason_code> reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {
@@ -13135,7 +13135,7 @@ private:
     }
 
     void async_send_auth(
-        std::uint8_t reason,
+        v5::auth_reason_code reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {

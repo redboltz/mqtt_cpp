@@ -174,9 +174,9 @@ public:
         ep.set_v5_pubrec_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::uint8_t /*reason_code*/,
+             MQTT_NS::v5::pubrec_reason_code /*reason_code*/,
              std::vector<MQTT_NS::v5::property_variant> /*props*/){
-                ep.pubrel(packet_id, MQTT_NS::v5::reason_code::success, pubrel_props_);
+                ep.pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, pubrel_props_);
                 return true;
             });
         ep.set_pubrel_handler(
@@ -188,9 +188,9 @@ public:
         ep.set_v5_pubrel_handler(
             [&]
             (typename Endpoint::packet_id_t packet_id,
-             std::uint8_t /*reason_code*/,
+             MQTT_NS::v5::pubrel_reason_code /*reason_code*/,
              std::vector<MQTT_NS::v5::property_variant> /*props*/){
-                ep.pubcomp(packet_id, MQTT_NS::v5::reason_code::success, pubcomp_props_);
+                ep.pubcomp(packet_id, MQTT_NS::v5::pubcomp_reason_code::success, pubcomp_props_);
                 return true;
             });
         ep.set_pubcomp_handler(
@@ -201,7 +201,7 @@ public:
         ep.set_v5_pubcomp_handler(
             [&]
             (typename Endpoint::packet_id_t /*packet_id*/,
-             std::uint8_t /*reason_code*/,
+             MQTT_NS::v5::pubcomp_reason_code /*reason_code*/,
              std::vector<MQTT_NS::v5::property_variant> /*props*/){
                 return true;
             });
@@ -298,7 +298,7 @@ public:
         );
         ep.set_v5_auth_handler(
             [&]
-            (std::uint8_t /*reason_code*/,
+            (MQTT_NS::v5::auth_reason_code /*reason_code*/,
              std::vector<MQTT_NS::v5::property_variant> props
             ) {
                 if (h_auth_props_) h_auth_props_(std::move(props));
@@ -637,7 +637,7 @@ private:
                 ep.puback(packet_id.value(), MQTT_NS::v5::puback_reason_code::success, puback_props_);
                 break;
             case MQTT_NS::qos::exactly_once:
-                ep.pubrec(packet_id.value(), MQTT_NS::v5::reason_code::success, pubrec_props_);
+                ep.pubrec(packet_id.value(), MQTT_NS::v5::pubrec_reason_code::success, pubrec_props_);
                 break;
             default:
                 break;
