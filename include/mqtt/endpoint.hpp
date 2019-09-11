@@ -59,6 +59,8 @@
 #include <mqtt/shared_ptr_array.hpp>
 #include <mqtt/type_erased_socket.hpp>
 #include <mqtt/move.hpp>
+#include <mqtt/deprecated.hpp>
+#include <mqtt/deprecated_msg.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -3232,6 +3234,7 @@ public:
      *        3.9.2.1 SUBACK Properties
      */
     template <typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_SUBACK)
     void suback(
         packet_id_t packet_id,
         variant<suback_reason_code, v5::suback_reason_code> arg0,
@@ -3239,6 +3242,27 @@ public:
         variant<std::vector<suback_reason_code>, std::vector<v5::suback_reason_code>> params;
         visit([](auto & vect){ vect.reserve(1 + sizeof...(args)); }, params);
         send_suback(force_move(params), packet_id, std::move(arg0), std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Send suback packet. This function is for broker.
+     * @param packet_id packet id corresponding to subscribe
+     * @param reason
+     *        reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
+     *        3.9.3 SUBACK Payload
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
+     *        3.9.2.1 SUBACK Properties
+     */
+    void suback(
+        packet_id_t packet_id,
+        variant<suback_reason_code, v5::suback_reason_code> reason,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        variant<std::vector<suback_reason_code>, std::vector<v5::suback_reason_code>> params;
+        send_suback(force_move(params), packet_id, std::move(reason), std::move(props));
     }
 
     /**
@@ -3284,11 +3308,32 @@ public:
      *        3.11.2.1 UNSUBACK Properties
      */
     template <typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_UNSUBACK)
     void unsuback(
         packet_id_t packet_id,
         v5::unsuback_reason_code reason,
         Args&&... args) {
         send_unsuback(std::vector<v5::unsuback_reason_code>{}, packet_id, reason, std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Send unsuback packet. This function is for broker.
+     * @param packet_id packet id corresponding to subscribe
+     * @param reason
+     *        reason_code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
+     *        3.11.3 UNSUBACK Payload
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
+     *        3.11.2.1 UNSUBACK Properties
+     */
+    void unsuback(
+        packet_id_t packet_id,
+        v5::unsuback_reason_code reason,
+        std::vector<v5::property_variant> props = {}
+    ) {
+        send_unsuback(std::vector<v5::unsuback_reason_code>{}, packet_id, reason, std::move(reason), std::move(props));
     }
 
     /**
@@ -6867,6 +6912,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_SUBACK)
     void async_suback(
         packet_id_t packet_id,
         std::uint8_t reason,
@@ -6977,6 +7023,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
     template <typename Arg0, typename... Args>
+    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_UNSUBACK)
     void async_unsuback(
         packet_id_t packet_id,
         v5::unsuback_reason_code reason,
