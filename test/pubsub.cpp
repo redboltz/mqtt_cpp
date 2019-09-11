@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_SUITE(test_pubsub)
 using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -186,14 +186,14 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
         bool pub_seq_finished = false;
@@ -382,14 +382,14 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -571,14 +571,14 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -749,14 +749,14 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -941,14 +941,14 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -1137,14 +1137,14 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -1317,14 +1317,14 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -1510,14 +1510,14 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -1706,14 +1706,14 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( publish_function ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -1880,14 +1880,14 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -2054,14 +2054,14 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( publish_dup_function ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -2235,14 +2235,14 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( publish_dup_function_buffer ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -2416,14 +2416,14 @@ BOOST_AUTO_TEST_CASE( publish_dup_function_buffer ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) return;
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
@@ -2590,14 +2590,14 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( puback_prop ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& b) {
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) return;
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
@@ -2751,14 +2751,14 @@ BOOST_AUTO_TEST_CASE( puback_prop ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& b) {
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) return;
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
@@ -3005,7 +3005,7 @@ BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);

@@ -18,10 +18,10 @@ namespace MQTT_NS {
 namespace as = boost::asio;
 
 struct null_strand {
-    null_strand(as::io_service& ios) : ios_(ios) {}
+    null_strand(as::io_context& ioc) : ioc_(ioc) {}
     template <typename Func>
     void post(Func&& f) {
-        ios_.post([f = std::forward<Func>(f)] () mutable { std::forward<Func>(f)(); });
+        ioc_.post([f = std::forward<Func>(f)] () mutable { std::forward<Func>(f)(); });
     }
     template <typename Func>
     void dispatch(Func&& f) {
@@ -32,7 +32,7 @@ struct null_strand {
         return std::forward<Func>(f);
     }
 private:
-    as::io_service& ios_;
+    as::io_context& ioc_;
 };
 
 } // namespace MQTT_NS

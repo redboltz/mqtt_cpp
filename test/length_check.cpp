@@ -13,7 +13,7 @@
 BOOST_AUTO_TEST_SUITE(test_length_check)
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) return;
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 return rval;
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);

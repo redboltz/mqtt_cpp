@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    boost::asio::io_service ios;
+    boost::asio::io_context ioc;
 
     std::uint16_t pid_sub1;
     std::uint16_t pid_sub2;
@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     int count = 0;
     // Create no TLS client
     // You can set the protocol_version to connect. If you don't set it, v3_1_1 is used.
-    auto c = MQTT_NS::make_sync_client(ios, argv[1], argv[2], MQTT_NS::protocol_version::v5);
+    auto c = MQTT_NS::make_sync_client(ioc, argv[1], argv[2], MQTT_NS::protocol_version::v5);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
 
     auto disconnect = [&] {
@@ -142,5 +142,5 @@ int main(int argc, char** argv) {
     // Connect
     c->connect();
 
-    ios.run();
+    ioc.run();
 }

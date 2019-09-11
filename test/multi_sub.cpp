@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_SUITE(test_multi_sub)
 using namespace std::literals::string_literals;
 
 BOOST_AUTO_TEST_CASE( multi_channel ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) return;
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
@@ -137,22 +137,22 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
                 return true;
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
     int sub_count = 0;
 
     std::uint16_t pid_sub1;
     std::uint16_t pid_unsub1;
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_clean_session(true);
     c1->set_client_id("cid1");
 
@@ -259,7 +259,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
             return true;
         });
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_clean_session(true);
     c2->set_client_id("cid2");
 
@@ -343,22 +343,22 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
     c1->connect();
     c2->connect();
 
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
     // c3 --publish--> topic1 ----> c1, c2
 
     bool c1ready = false;
     bool c2ready = false;
     bool c3ready = false;
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
-    auto c3 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
+    auto c3 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_clean_session(true);
     c2->set_clean_session(true);
     c3->set_clean_session(true);
@@ -574,7 +574,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
     c2->connect();
     c3->connect();
 
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 

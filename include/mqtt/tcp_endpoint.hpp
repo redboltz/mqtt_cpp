@@ -23,9 +23,9 @@ template <typename Socket, typename Strand>
 class tcp_endpoint {
 public:
     template <typename... Args>
-    tcp_endpoint(as::io_service& ios, Args&&... args)
-        :tcp_(ios, std::forward<Args>(args)...),
-         strand_(ios) {
+    tcp_endpoint(as::io_context& ioc, Args&&... args)
+        :tcp_(ioc, std::forward<Args>(args)...),
+         strand_(ioc) {
     }
 
     template <typename... Args>
@@ -33,8 +33,8 @@ public:
         tcp_.lowest_layer().close(std::forward<Args>(args)...);
     }
 
-    as::io_service& get_io_service() {
-        return tcp_.get_io_service();
+    as::io_context& get_io_context() {
+        return tcp_.get_io_context();
     }
 
     Socket& socket() { return tcp_; }

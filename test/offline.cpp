@@ -11,7 +11,7 @@
 BOOST_AUTO_TEST_SUITE(test_offline)
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -132,14 +132,14 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             });
         MQTT_CHK("start");
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -275,14 +275,14 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             });
         MQTT_CHK("start");
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -429,14 +429,14 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             });
         MQTT_CHK("start");
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -567,7 +567,7 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
             });
         MQTT_CHK("start");
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_async(test);

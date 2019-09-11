@@ -25,14 +25,14 @@ namespace as = boost::asio;
 
 class test_server_tls : ctx_init {
 public:
-    test_server_tls(as::io_service& ios, test_broker& b)
+    test_server_tls(as::io_context& ioc, test_broker& b)
         : server_(
             as::ip::tcp::endpoint(
                 as::ip::tcp::v4(), broker_tls_port
             ),
             std::move(ctx),
-            ios,
-            ios,
+            ioc,
+            ioc,
             [](auto& acceptor) {
                 acceptor.set_option(as::ip::tcp::acceptor::reuse_address(true));
             }

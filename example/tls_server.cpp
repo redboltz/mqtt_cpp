@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
         std::cout << argv[0] << " port server_crt server_key" << std::endl;
         return -1;
     }
-    boost::asio::io_service ios;
+    boost::asio::io_context ioc;
 
     std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[1]);
     std::string cert = argv[2];
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
             port
         ),
         std::move(ctx),
-        ios
+        ioc
     );
 
     s.set_error_handler(
@@ -230,5 +230,5 @@ int main(int argc, char** argv) {
 
     s.listen();
 
-    ios.run();
+    ioc.run();
 }

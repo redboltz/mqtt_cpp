@@ -35,9 +35,9 @@ using con_sp_t = std::shared_ptr<MQTT_NS::server<>::endpoint_t>;
 
 class test_broker {
 public:
-    test_broker(as::io_service& ios)
-        :ios_(ios),
-         tim_disconnect_(ios_)
+    test_broker(as::io_context& ioc)
+        :ioc_(ioc),
+         tim_disconnect_(ioc_)
     {}
 
     // [begin] for test setting
@@ -1193,7 +1193,7 @@ private:
         >
     >;
 
-    as::io_service& ios_; ///< The boost asio context to run this broker on.
+    as::io_context& ioc_; ///< The boost asio context to run this broker on.
     as::deadline_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
     MQTT_NS::optional<boost::posix_time::time_duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
 

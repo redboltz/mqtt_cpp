@@ -274,7 +274,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    boost::asio::io_service ios;
+    boost::asio::io_context ioc;
     std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[1]);
 
     // server
@@ -283,7 +283,7 @@ int main(int argc, char** argv) {
             boost::asio::ip::tcp::v4(),
             boost::lexical_cast<std::uint16_t>(argv[1])
         ),
-        ios
+        ioc
     );
 
     // You can set a specific protocol_version if you want to limit accepting version.
@@ -296,9 +296,9 @@ int main(int argc, char** argv) {
 
     // client
     // You can set the protocol_version to connect. If you don't set it, v3_1_1 is used.
-    auto c = MQTT_NS::make_sync_client(ios, "localhost", port, MQTT_NS::protocol_version::v5);
+    auto c = MQTT_NS::make_sync_client(ioc, "localhost", port, MQTT_NS::protocol_version::v5);
 
     client_proc(c);
 
-    ios.run();
+    ioc.run();
 }
