@@ -8,6 +8,7 @@
 #define MQTT_TCP_ENDPOINT_HPP
 
 #include <boost/asio.hpp>
+#include <boost/asio/bind_executor.hpp>
 
 #if !defined(MQTT_NO_TLS)
 #include <boost/asio/ssl.hpp>
@@ -23,9 +24,9 @@ template <typename Socket, typename Strand>
 class tcp_endpoint {
 public:
     template <typename... Args>
-    tcp_endpoint(as::io_service& ios, Args&&... args)
-        :tcp_(ios, std::forward<Args>(args)...),
-         strand_(ios) {
+    tcp_endpoint(as::io_context& ioc, Args&&... args)
+        :tcp_(ioc, std::forward<Args>(args)...),
+         strand_(ioc) {
     }
 
     template <typename... Args>
@@ -33,8 +34,8 @@ public:
         tcp_.lowest_layer().close(std::forward<Args>(args)...);
     }
 
-    as::io_service& get_io_service() {
-        return tcp_.get_io_service();
+    as::io_context& get_io_context() {
+        return tcp_.get_io_context();
     }
 
     Socket& socket() { return tcp_; }
@@ -68,7 +69,11 @@ public:
         as::async_read(
             tcp_,
             std::forward<MutableBufferSequence>(buffers),
-            strand_.wrap(std::forward<ReadHandler>(handler)));
+            as::bind_executor(
+                strand_,
+                std::forward<ReadHandler>(handler)
+            )
+        );
     }
 
     template <typename... Args>
@@ -83,13 +88,19 @@ public:
         as::async_write(
             tcp_,
             std::forward<ConstBufferSequence>(buffers),
-            strand_.wrap(std::forward<WriteHandler>(handler))
+            as::bind_executor(
+                strand_,
+                std::forward<WriteHandler>(handler)
+            )
         );
     }
 
     template <typename PostHandler>
     void post(PostHandler&& handler) {
-        strand_.post(std::forward<PostHandler>(handler));
+        as::post(
+            strand_,
+            std::forward<PostHandler>(handler)
+        );
     }
 
 private:

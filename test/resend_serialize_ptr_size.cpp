@@ -38,15 +38,15 @@ void set_serialize_handlers(Client const& c, Serialized& serialized) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_client_id("cid1");
     c2->set_clean_session(false);
 
@@ -142,21 +142,21 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_client_id("cid1");
     c2->set_clean_session(false);
 
@@ -259,21 +259,21 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         });
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_client_id("cid1");
     c2->set_clean_session(false);
 
@@ -376,21 +376,21 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
         });
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_client_id("cid1");
     c2->set_clean_session(false);
 
@@ -499,7 +499,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
         });
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
@@ -530,15 +530,15 @@ void set_v5_serialize_handlers(Client const& c, Serialized& serialized) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid1");
     c2->set_clean_session(false);
 
@@ -710,21 +710,21 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
 
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid1");
     c2->set_clean_session(false);
 
@@ -833,22 +833,22 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
         });
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_auto_pub_response(false);
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid1");
     c2->set_clean_session(false);
 
@@ -1007,21 +1007,21 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
         });
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid1");
     c2->set_clean_session(false);
 
@@ -1136,7 +1136,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
         });
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }

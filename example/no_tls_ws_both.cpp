@@ -317,7 +317,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    boost::asio::io_service ios;
+    boost::asio::io_context ioc;
     std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[1]);
 
     // server
@@ -326,7 +326,7 @@ int main(int argc, char** argv) {
             boost::asio::ip::tcp::v4(),
             port
         ),
-        ios
+        ioc
     );
     std::set<con_sp_t> connections;
     mi_sub_con subs;
@@ -337,7 +337,7 @@ int main(int argc, char** argv) {
     std::uint16_t pid_sub1;
     std::uint16_t pid_sub2;
 
-    auto c = MQTT_NS::make_sync_client_ws(ios, "localhost", port);
+    auto c = MQTT_NS::make_sync_client_ws(ioc, "localhost", port);
 
     int count = 0;
     auto disconnect = [&] {
@@ -346,5 +346,5 @@ int main(int argc, char** argv) {
     client_proc(c, pid_sub1, pid_sub2, disconnect);
 
 
-    ios.run();
+    ioc.run();
 }

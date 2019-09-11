@@ -17,11 +17,11 @@ BOOST_AUTO_TEST_SUITE(test_will)
 using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( will_qos0 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
         if (++c1fd_count == 2) c1->force_disconnect();
     };
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_client_id("cid2");
     c2->set_clean_session(true);
 
@@ -142,16 +142,16 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
     c1->connect();
     c2->connect();
 
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( will_qos1 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
@@ -161,7 +161,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
         if (++c1fd_count == 2) c1->force_disconnect();
     };
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_client_id("cid2");
     c2->set_clean_session(true);
 
@@ -267,17 +267,17 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
     c1->connect();
     c2->connect();
 
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( will_qos2 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
@@ -287,7 +287,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
         if (++c1fd_count == 2) c1->force_disconnect();
     };
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_client_id("cid2");
     c2->set_clean_session(true);
 
@@ -399,16 +399,16 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
     c1->connect();
     c2->connect();
 
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( will_retain ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
@@ -418,7 +418,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
         if (++c1fd_count == 2) c1->force_disconnect();
     };
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_client_id("cid2");
     c2->set_clean_session(true);
 
@@ -561,16 +561,16 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
     c1->connect();
     c2->connect();
 
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( overlength_message ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     std::string wm(0x10000, 'a');
@@ -578,7 +578,7 @@ BOOST_AUTO_TEST_CASE( overlength_message ) {
     c1->set_clean_session(true);
     c1->connect();
     try {
-        ios.run();
+        ioc.run();
         BOOST_CHECK(false);
     }
     catch (MQTT_NS::will_message_length_error const&) {
@@ -587,11 +587,11 @@ BOOST_AUTO_TEST_CASE( overlength_message ) {
 }
 
 BOOST_AUTO_TEST_CASE( will_prop ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
@@ -623,7 +623,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
         if (++c1fd_count == 2) c1->force_disconnect();
     };
 
-    auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid2");
     c2->set_clean_session(true);
 
@@ -787,7 +787,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
     c1->connect();
     c2->connect();
 
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 

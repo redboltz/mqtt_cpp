@@ -20,14 +20,14 @@ BOOST_AUTO_TEST_CASE( dummy ) {
 #if defined(MQTT_USE_WS)
 
 BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
-    as::io_service ios;
+    as::io_context ioc;
 
     // server
     MQTT_NS::server_ws<> server(
         as::ip::tcp::endpoint(
             as::ip::tcp::v4(),
             broker_notls_ws_port),
-        ios);
+        ioc);
 
     server.set_accept_handler(
         [&](MQTT_NS::server_ws<>::endpoint_t& /*ep*/) {
@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
     server.listen();
 
     // client
-    as::ip::tcp::resolver r(ios);
+    as::ip::tcp::resolver r(ioc);
 #if BOOST_VERSION < 106600
     as::ip::tcp::resolver::query q(broker_url, std::to_string(broker_notls_ws_port));
     auto it = r.resolve(q);
@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
     std::size_t pos = path.find_last_of("/\\");
     std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
 
-    boost::beast::websocket::stream<as::ip::tcp::socket> socket(ios);
+    boost::beast::websocket::stream<as::ip::tcp::socket> socket(ioc);
 
     char buf;
 
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
 #endif // BOOST_VERSION >= 107000
         it, end,
         [&]
-        (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {
+        (boost::system::error_code const& ec, auto) {
             if (ec) {
                 std::cout << ec.message() << std::endl;
             }
@@ -85,13 +85,13 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
         }
     );
 
-    ios.run();
+    ioc.run();
 }
 
 #if !defined(MQTT_NO_TLS)
 
 BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
-    as::io_service ios;
+    as::io_context ioc;
 
     // server
     ctx_init ci;
@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
             as::ip::tcp::v4(),
             broker_tls_ws_port),
         std::move(ci.ctx),
-        ios);
+        ioc);
 
     server.set_accept_handler(
         [&](MQTT_NS::server_tls_ws<>::endpoint_t& /*ep*/) {
@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
     server.listen();
 
     // client
-    as::ip::tcp::resolver r(ios);
+    as::ip::tcp::resolver r(ioc);
 #if BOOST_VERSION < 106600
     as::ip::tcp::resolver::query q(broker_url, std::to_string(broker_tls_ws_port));
     auto it = r.resolve(q);
@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
     as::ssl::context ctx {as::ssl::context::tlsv12};
     ctx.load_verify_file(base + "cacert.pem");
     ctx.set_verify_mode(as::ssl::verify_peer);
-    boost::beast::websocket::stream<as::ssl::stream<as::ip::tcp::socket>> socket(ios, ctx);
+    boost::beast::websocket::stream<as::ssl::stream<as::ip::tcp::socket>> socket(ioc, ctx);
 
     char buf;
 
@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
 #endif // BOOST_VERSION >= 107000
         it, end,
         [&]
-        (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {
+        (boost::system::error_code const& ec, auto) {
             if (ec) {
                 std::cout << ec.message() << std::endl;
             }
@@ -161,11 +161,11 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
         }
     );
 
-    ios.run();
+    ioc.run();
 }
 
 BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
-    as::io_service ios;
+    as::io_context ioc;
 
     // server
     ctx_init ci;
@@ -174,7 +174,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
             as::ip::tcp::v4(),
             broker_tls_ws_port),
         std::move(ci.ctx),
-        ios);
+        ioc);
 
     server.set_accept_handler(
         [&](MQTT_NS::server_tls_ws<>::endpoint_t& /*ep*/) {
@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
     server.listen();
 
     // client
-    as::ip::tcp::resolver r(ios);
+    as::ip::tcp::resolver r(ioc);
 #if BOOST_VERSION < 106600
     as::ip::tcp::resolver::query q(broker_url, std::to_string(broker_tls_ws_port));
     auto it = r.resolve(q);
@@ -204,7 +204,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
     as::ssl::context ctx {as::ssl::context::tlsv12};
     ctx.load_verify_file(base + "cacert.pem");
     ctx.set_verify_mode(as::ssl::verify_peer);
-    boost::beast::websocket::stream<as::ssl::stream<as::ip::tcp::socket>> socket(ios, ctx);
+    boost::beast::websocket::stream<as::ssl::stream<as::ip::tcp::socket>> socket(ioc, ctx);
 
     char buf;
 
@@ -216,7 +216,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
 #endif // BOOST_VERSION >= 107000
         it, end,
         [&]
-        (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {
+        (boost::system::error_code const& ec, auto) {
             if (ec) {
                 std::cout << ec.message() << std::endl;
             }
@@ -246,7 +246,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
         }
     );
 
-    ios.run();
+    ioc.run();
 }
 
 #endif // !defined(MQTT_NO_TLS)
@@ -256,7 +256,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
 #if !defined(MQTT_NO_TLS)
 
 BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
-    as::io_service ios;
+    as::io_context ioc;
 
     // server
     ctx_init ci;
@@ -265,7 +265,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
             as::ip::tcp::v4(),
             broker_tls_port),
         std::move(ci.ctx),
-        ios);
+        ioc);
 
     server.set_accept_handler(
         [&](MQTT_NS::server_tls<>::endpoint_t& /*ep*/) {
@@ -277,7 +277,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
     server.listen();
 
     // client
-    as::ip::tcp::resolver r(ios);
+    as::ip::tcp::resolver r(ioc);
 #if BOOST_VERSION < 106600
     as::ip::tcp::resolver::query q(broker_url, std::to_string(broker_tls_port));
     auto it = r.resolve(q);
@@ -295,7 +295,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
     as::ssl::context ctx {as::ssl::context::tlsv12};
     ctx.load_verify_file(base + "cacert.pem");
     ctx.set_verify_mode(as::ssl::verify_peer);
-    as::ssl::stream<as::ip::tcp::socket> socket(ios, ctx);
+    as::ssl::stream<as::ip::tcp::socket> socket(ioc, ctx);
 
     char buf;
 
@@ -303,7 +303,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
         socket.lowest_layer(),
         it, end,
         [&]
-        (boost::system::error_code const& ec, as::ip::tcp::resolver::iterator) {
+        (boost::system::error_code const& ec, auto) {
             if (ec) {
                 std::cout << ec.message() << std::endl;
             }
@@ -322,7 +322,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
         }
     );
 
-    ios.run();
+    ioc.run();
 }
 
 #endif // !defined(MQTT_NO_TLS)

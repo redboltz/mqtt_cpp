@@ -59,14 +59,14 @@ int main(int argc, char** argv) {
         std::cout << argv[0] << " port" << std::endl;
         return -1;
     }
-    boost::asio::io_service ios;
+    boost::asio::io_context ioc;
 
     auto s = MQTT_NS::server<>(
         boost::asio::ip::tcp::endpoint(
             boost::asio::ip::tcp::v4(),
             boost::lexical_cast<std::uint16_t>(argv[1])
         ),
-        ios
+        ioc
     );
 
     s.set_error_handler(
@@ -233,5 +233,5 @@ int main(int argc, char** argv) {
 
     s.listen();
 
-    ios.run();
+    ioc.run();
 }

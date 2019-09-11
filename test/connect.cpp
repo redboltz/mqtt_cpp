@@ -13,7 +13,7 @@ BOOST_AUTO_TEST_SUITE(test_connect)
 using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( connect ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         c->set_client_id("cid1");
         c->set_user_name("dummy");
         c->set_password("dummy");
@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE( connect ) {
             });
         c->connect();
         BOOST_TEST(c->connected() == false);
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE( connect ) {
 }
 
 BOOST_AUTO_TEST_CASE( connect_no_strand ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -133,14 +133,14 @@ BOOST_AUTO_TEST_CASE( connect_no_strand ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( keep_alive ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -198,14 +198,14 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
             });
         c->set_keep_alive_sec(3);
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
             cont("h_close"),
         };
 
-        boost::asio::deadline_timer tim(ios);
+        boost::asio::deadline_timer tim(ioc);
         switch (c->get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
@@ -297,14 +297,14 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
             });
         c->set_keep_alive_sec_ping_ms(3, 3 * 1000);
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( connect_again ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -378,14 +378,14 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( nocid ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         c->set_clean_session(true);
 
         checker chk = {
@@ -435,14 +435,14 @@ BOOST_AUTO_TEST_CASE( nocid ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( nocid_noclean ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
 
         checker chk = {
             // connect
@@ -489,14 +489,14 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
                 s.close();
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( noclean ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         c->set_client_id("cid1");
 
         checker chk = {
@@ -618,14 +618,14 @@ BOOST_AUTO_TEST_CASE( noclean ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -678,14 +678,14 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
                 s.close();
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -738,14 +738,14 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -798,14 +798,14 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
                 s.close();
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_async(test);
 }
 
 BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -858,14 +858,14 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
                 BOOST_CHECK(false);
             });
         c->connect();
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_async(test);
 }
 
 BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& b) {
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) return;
 
         c->set_client_id("cid1");
@@ -1026,14 +1026,14 @@ BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
             });
         c->connect(std::move(con_ps));
         BOOST_TEST(c->connected() == false);
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);
 }
 
 BOOST_AUTO_TEST_CASE( connack_prop ) {
-    auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& b) {
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) return;
 
         c->set_client_id("cid1");
@@ -1174,7 +1174,7 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
             });
         c->connect();
         BOOST_TEST(c->connected() == false);
-        ios.run();
+        ioc.run();
         BOOST_TEST(chk.all());
     };
     do_combi_test_sync(test);

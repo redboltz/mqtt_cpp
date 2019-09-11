@@ -33,7 +33,7 @@ namespace MQTT_NS {
 namespace as = boost::asio;
 
 template <
-    typename Strand = as::io_service::strand,
+    typename Strand = as::io_context::strand,
     typename Mutex = std::mutex,
     template<typename...> class LockGuard = std::lock_guard,
     std::size_t PacketIdBytes = 2
@@ -58,13 +58,13 @@ public:
     template <typename AsioEndpoint, typename AcceptorConfig>
     server(
         AsioEndpoint&& ep,
-        as::io_service& ios_accept,
-        as::io_service& ios_con,
+        as::io_context& ioc_accept,
+        as::io_context& ioc_con,
         AcceptorConfig&& config)
         : ep_(std::forward<AsioEndpoint>(ep)),
-          ios_accept_(ios_accept),
-          ios_con_(ios_con),
-          acceptor_(as::ip::tcp::acceptor(ios_accept_, ep_)),
+          ioc_accept_(ioc_accept),
+          ioc_con_(ioc_con),
+          acceptor_(as::ip::tcp::acceptor(ioc_accept_, ep_)),
           config_(std::forward<AcceptorConfig>(config)) {
         config_(acceptor_.value());
     }
@@ -72,33 +72,34 @@ public:
     template <typename AsioEndpoint>
     server(
         AsioEndpoint&& ep,
-        as::io_service& ios_accept,
-        as::io_service& ios_con)
-        : server(std::forward<AsioEndpoint>(ep), ios_accept, ios_con, [](as::ip::tcp::acceptor&) {}) {}
+        as::io_context& ioc_accept,
+        as::io_context& ioc_con)
+        : server(std::forward<AsioEndpoint>(ep), ioc_accept, ioc_con, [](as::ip::tcp::acceptor&) {}) {}
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server(
         AsioEndpoint&& ep,
-        as::io_service& ios,
+        as::io_context& ioc,
         AcceptorConfig&& config)
-        : server(std::forward<AsioEndpoint>(ep), ios, ios, std::forward<AcceptorConfig>(config)) {}
+        : server(std::forward<AsioEndpoint>(ep), ioc, ioc, std::forward<AcceptorConfig>(config)) {}
 
     template <typename AsioEndpoint>
     server(
         AsioEndpoint&& ep,
-        as::io_service& ios)
-        : server(std::forward<AsioEndpoint>(ep), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
+        as::io_context& ioc)
+        : server(std::forward<AsioEndpoint>(ep), ioc, ioc, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
         close_request_ = false;
 
         if (!acceptor_) {
             try {
-                acceptor_.emplace(ios_accept_, ep_);
+                acceptor_.emplace(ioc_accept_, ep_);
                 config_(acceptor_.value());
             }
             catch (boost::system::system_error const& e) {
-                ios_accept_.post(
+                as::post(
+                    ioc_accept_,
                     [this, ec = e.code()] {
                         if (h_error_) h_error_(ec);
                     }
@@ -142,7 +143,7 @@ public:
 private:
     void do_accept() {
         if (close_request_) return;
-        auto socket = std::make_shared<socket_t>(ios_con_);
+        auto socket = std::make_shared<socket_t>(ioc_con_);
         acceptor_.value().async_accept(
             socket->lowest_layer(),
             [this, socket]
@@ -161,8 +162,8 @@ private:
 
 private:
     as::ip::tcp::endpoint ep_;
-    as::io_service& ios_accept_;
-    as::io_service& ios_con_;
+    as::io_context& ioc_accept_;
+    as::io_context& ioc_con_;
     optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
@@ -174,7 +175,7 @@ private:
 #if !defined(MQTT_NO_TLS)
 
 template <
-    typename Strand = as::io_service::strand,
+    typename Strand = as::io_context::strand,
     typename Mutex = std::mutex,
     template<typename...> class LockGuard = std::lock_guard,
     std::size_t PacketIdBytes = 2
@@ -200,13 +201,13 @@ public:
     server_tls(
         AsioEndpoint&& ep,
         as::ssl::context&& ctx,
-        as::io_service& ios_accept,
-        as::io_service& ios_con,
+        as::io_context& ioc_accept,
+        as::io_context& ioc_con,
         AcceptorConfig&& config)
         : ep_(std::forward<AsioEndpoint>(ep)),
-          ios_accept_(ios_accept),
-          ios_con_(ios_con),
-          acceptor_(as::ip::tcp::acceptor(ios_accept_, ep_)),
+          ioc_accept_(ioc_accept),
+          ioc_con_(ioc_con),
+          acceptor_(as::ip::tcp::acceptor(ioc_accept_, ep_)),
           config_(std::forward<AcceptorConfig>(config)),
           ctx_(force_move(ctx)) {
         config_(acceptor_.value());
@@ -216,35 +217,36 @@ public:
     server_tls(
         AsioEndpoint&& ep,
         as::ssl::context&& ctx,
-        as::io_service& ios_accept,
-        as::io_service& ios_con)
-        : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ios_accept, ios_con, [](as::ip::tcp::acceptor&) {}) {}
+        as::io_context& ioc_accept,
+        as::io_context& ioc_con)
+        : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc_accept, ioc_con, [](as::ip::tcp::acceptor&) {}) {}
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls(
         AsioEndpoint&& ep,
         as::ssl::context&& ctx,
-        as::io_service& ios,
+        as::io_context& ioc,
         AcceptorConfig&& config)
-        : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ios, ios, std::forward<AcceptorConfig>(config)) {}
+        : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc, ioc, std::forward<AcceptorConfig>(config)) {}
 
     template <typename AsioEndpoint>
     server_tls(
         AsioEndpoint&& ep,
         as::ssl::context&& ctx,
-        as::io_service& ios)
-        : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
+        as::io_context& ioc)
+        : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc, ioc, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
         close_request_ = false;
 
         if (!acceptor_) {
             try {
-                acceptor_.emplace(ios_accept_, ep_);
+                acceptor_.emplace(ioc_accept_, ep_);
                 config_(acceptor_.value());
             }
             catch (boost::system::system_error const& e) {
-                ios_accept_.post(
+                as::post(
+                    ioc_accept_,
                     [this, ec = e.code()] {
                         if (h_error_) h_error_(ec);
                     }
@@ -300,7 +302,7 @@ public:
 private:
     void do_accept() {
         if (close_request_) return;
-        auto socket = std::make_shared<socket_t>(ios_con_, ctx_);
+        auto socket = std::make_shared<socket_t>(ioc_con_, ctx_);
         auto ps = socket.get();
         acceptor_.value().async_accept(
             ps->lowest_layer(),
@@ -312,7 +314,7 @@ private:
                     return;
                 }
                 auto underlying_finished = std::make_shared<bool>(false);
-                auto tim = std::make_shared<as::deadline_timer>(ios_con_);
+                auto tim = std::make_shared<as::deadline_timer>(ioc_con_);
                 tim->expires_from_now(underlying_connect_timeout_);
                 tim->async_wait(
                     [socket, tim, underlying_finished]
@@ -344,8 +346,8 @@ private:
 
 private:
     as::ip::tcp::endpoint ep_;
-    as::io_service& ios_accept_;
-    as::io_service& ios_con_;
+    as::io_context& ioc_accept_;
+    as::io_context& ioc_con_;
     optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
@@ -376,7 +378,7 @@ private:
 };
 
 template <
-    typename Strand = as::io_service::strand,
+    typename Strand = as::io_context::strand,
     typename Mutex = std::mutex,
     template<typename...> class LockGuard = std::lock_guard,
     std::size_t PacketIdBytes = 2
@@ -401,13 +403,13 @@ public:
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_ws(
         AsioEndpoint&& ep,
-        as::io_service& ios_accept,
-        as::io_service& ios_con,
+        as::io_context& ioc_accept,
+        as::io_context& ioc_con,
         AcceptorConfig&& config)
         : ep_(std::forward<AsioEndpoint>(ep)),
-          ios_accept_(ios_accept),
-          ios_con_(ios_con),
-          acceptor_(as::ip::tcp::acceptor(ios_accept_, ep_)),
+          ioc_accept_(ioc_accept),
+          ioc_con_(ioc_con),
+          acceptor_(as::ip::tcp::acceptor(ioc_accept_, ep_)),
           config_(std::forward<AcceptorConfig>(config)) {
         config_(acceptor_.value());
     }
@@ -415,33 +417,34 @@ public:
     template <typename AsioEndpoint>
     server_ws(
         AsioEndpoint&& ep,
-        as::io_service& ios_accept,
-        as::io_service& ios_con)
-        : server_ws(std::forward<AsioEndpoint>(ep), ios_accept, ios_con, [](as::ip::tcp::acceptor&) {}) {}
+        as::io_context& ioc_accept,
+        as::io_context& ioc_con)
+        : server_ws(std::forward<AsioEndpoint>(ep), ioc_accept, ioc_con, [](as::ip::tcp::acceptor&) {}) {}
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_ws(
         AsioEndpoint&& ep,
-        as::io_service& ios,
+        as::io_context& ioc,
         AcceptorConfig&& config)
-        : server_ws(std::forward<AsioEndpoint>(ep), ios, ios, std::forward<AcceptorConfig>(config)) {}
+        : server_ws(std::forward<AsioEndpoint>(ep), ioc, ioc, std::forward<AcceptorConfig>(config)) {}
 
     template <typename AsioEndpoint>
     server_ws(
         AsioEndpoint&& ep,
-        as::io_service& ios)
-        : server_ws(std::forward<AsioEndpoint>(ep), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
+        as::io_context& ioc)
+        : server_ws(std::forward<AsioEndpoint>(ep), ioc, ioc, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
         close_request_ = false;
 
         if (!acceptor_) {
             try {
-                acceptor_.emplace(ios_accept_, ep_);
+                acceptor_.emplace(ioc_accept_, ep_);
                 config_(acceptor_.value());
             }
             catch (boost::system::system_error const& e) {
-                ios_accept_.post(
+                as::post(
+                    ioc_accept_,
                     [this, ec = e.code()] {
                         if (h_error_) h_error_(ec);
                     }
@@ -497,7 +500,7 @@ public:
 private:
     void do_accept() {
         if (close_request_) return;
-        auto socket = std::make_shared<socket_t>(ios_con_);
+        auto socket = std::make_shared<socket_t>(ioc_con_);
         auto ps = socket.get();
         acceptor_.value().async_accept(
             ps->next_layer(),
@@ -509,7 +512,7 @@ private:
                     return;
                 }
                 auto underlying_finished = std::make_shared<bool>(false);
-                auto tim = std::make_shared<as::deadline_timer>(ios_con_);
+                auto tim = std::make_shared<as::deadline_timer>(ioc_con_);
                 tim->expires_from_now(underlying_connect_timeout_);
                 tim->async_wait(
                     [socket, tim, underlying_finished]
@@ -570,8 +573,8 @@ private:
 
 private:
     as::ip::tcp::endpoint ep_;
-    as::io_service& ios_accept_;
-    as::io_service& ios_con_;
+    as::io_context& ioc_accept_;
+    as::io_context& ioc_con_;
     optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
@@ -585,7 +588,7 @@ private:
 #if !defined(MQTT_NO_TLS)
 
 template <
-    typename Strand = as::io_service::strand,
+    typename Strand = as::io_context::strand,
     typename Mutex = std::mutex,
     template<typename...> class LockGuard = std::lock_guard,
     std::size_t PacketIdBytes = 2
@@ -611,13 +614,13 @@ public:
     server_tls_ws(
         AsioEndpoint&& ep,
         as::ssl::context&& ctx,
-        as::io_service& ios_accept,
-        as::io_service& ios_con,
+        as::io_context& ioc_accept,
+        as::io_context& ioc_con,
         AcceptorConfig&& config)
         : ep_(std::forward<AsioEndpoint>(ep)),
-          ios_accept_(ios_accept),
-          ios_con_(ios_con),
-          acceptor_(as::ip::tcp::acceptor(ios_accept_, ep_)),
+          ioc_accept_(ioc_accept),
+          ioc_con_(ioc_con),
+          acceptor_(as::ip::tcp::acceptor(ioc_accept_, ep_)),
           config_(std::forward<AcceptorConfig>(config)),
           ctx_(force_move(ctx)) {
         config_(acceptor_.value());
@@ -627,35 +630,36 @@ public:
     server_tls_ws(
         AsioEndpoint&& ep,
         as::ssl::context&& ctx,
-        as::io_service& ios_accept,
-        as::io_service& ios_con)
-        : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ios_accept, ios_con, [](as::ip::tcp::acceptor&) {}) {}
+        as::io_context& ioc_accept,
+        as::io_context& ioc_con)
+        : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc_accept, ioc_con, [](as::ip::tcp::acceptor&) {}) {}
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls_ws(
         AsioEndpoint&& ep,
         as::ssl::context&& ctx,
-        as::io_service& ios,
+        as::io_context& ioc,
         AcceptorConfig&& config)
-        : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ios, ios, std::forward<AcceptorConfig>(config)) {}
+        : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc, ioc, std::forward<AcceptorConfig>(config)) {}
 
     template <typename AsioEndpoint>
     server_tls_ws(
         AsioEndpoint&& ep,
         as::ssl::context&& ctx,
-        as::io_service& ios)
-        : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ios, ios, [](as::ip::tcp::acceptor&) {}) {}
+        as::io_context& ioc)
+        : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc, ioc, [](as::ip::tcp::acceptor&) {}) {}
 
     void listen() {
         close_request_ = false;
 
         if (!acceptor_) {
             try {
-                acceptor_.emplace(ios_accept_, ep_);
+                acceptor_.emplace(ioc_accept_, ep_);
                 config_(acceptor_.value());
             }
             catch (boost::system::system_error const& e) {
-                ios_accept_.post(
+                as::post(
+                    ioc_accept_,
                     [this, ec = e.code()] {
                         if (h_error_) h_error_(ec);
                     }
@@ -711,7 +715,7 @@ public:
 private:
     void do_accept() {
         if (close_request_) return;
-        auto socket = std::make_shared<socket_t>(ios_con_, ctx_);
+        auto socket = std::make_shared<socket_t>(ioc_con_, ctx_);
         acceptor_.value().async_accept(
             socket->next_layer().next_layer(),
             [this, socket]
@@ -722,7 +726,7 @@ private:
                     return;
                 }
                 auto underlying_finished = std::make_shared<bool>(false);
-                auto tim = std::make_shared<as::deadline_timer>(ios_con_);
+                auto tim = std::make_shared<as::deadline_timer>(ioc_con_);
                 tim->expires_from_now(underlying_connect_timeout_);
                 tim->async_wait(
                     [socket, tim, underlying_finished]
@@ -794,8 +798,8 @@ private:
 
 private:
     as::ip::tcp::endpoint ep_;
-    as::io_service& ios_accept_;
-    as::io_service& ios_con_;
+    as::io_context& ioc_accept_;
+    as::io_context& ioc_con_;
     optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};

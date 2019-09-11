@@ -16,10 +16,10 @@
 BOOST_AUTO_TEST_SUITE(test_pubsub_no_strand)
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
-    auto c = MQTT_NS::make_client_no_strand(ios, broker_url, broker_notls_port);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
+    auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_clean_session(true);
 
@@ -114,15 +114,15 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             return true;
         });
     c->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
-    auto c = MQTT_NS::make_client_no_strand(ios, broker_url, broker_notls_port);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
+    auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_clean_session(true);
 
@@ -218,15 +218,15 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             return true;
         });
     c->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
-    auto c = MQTT_NS::make_client_no_strand(ios, broker_url, broker_notls_port);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
+    auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_clean_session(true);
 
@@ -324,15 +324,15 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             return true;
         });
     c->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
-    auto c = MQTT_NS::make_client_no_strand(ios, broker_url, broker_notls_port);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
+    auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_clean_session(true);
 
@@ -425,15 +425,15 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             return true;
         });
     c->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
-    auto c = MQTT_NS::make_client_no_strand(ios, broker_url, broker_notls_port);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
+    auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_clean_session(true);
 
@@ -538,15 +538,15 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             return true;
         });
     c->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
-    auto c = MQTT_NS::make_client_no_strand(ios, broker_url, broker_notls_port);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
+    auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_clean_session(true);
 
@@ -653,15 +653,15 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             return true;
         });
     c->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
-    auto c = MQTT_NS::make_client_no_strand(ios, broker_url, broker_notls_port);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
+    auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_clean_session(true);
 
@@ -754,15 +754,15 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             return true;
         });
     c->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
-    auto c = MQTT_NS::make_client_no_strand(ios, broker_url, broker_notls_port);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
+    auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_clean_session(true);
 
@@ -867,15 +867,15 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             return true;
         });
     c->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
-    auto c = MQTT_NS::make_client_no_strand(ios, broker_url, broker_notls_port);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
+    auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_clean_session(true);
 
@@ -982,15 +982,15 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             return true;
         });
     c->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( publish_function ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
-    auto c = MQTT_NS::make_client_no_strand(ios, broker_url, broker_notls_port);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
+    auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_clean_session(true);
 
@@ -1083,7 +1083,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
             return true;
         });
     c->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(chk.all());
 }
 

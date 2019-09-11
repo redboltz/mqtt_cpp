@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    boost::asio::io_service ios;
+    boost::asio::io_context ioc;
 
     std::string host = argv[1];
     auto port = boost::lexical_cast<std::uint16_t>(argv[2]);
@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 
     int count = 0;
     // Create TLS client
-    auto c = MQTT_NS::make_tls_sync_client_ws(ios, host, port);
+    auto c = MQTT_NS::make_tls_sync_client_ws(ioc, host, port);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
 
@@ -131,5 +131,5 @@ int main(int argc, char** argv) {
     // Connect
     c->connect();
 
-    ios.run();
+    ioc.run();
 }
