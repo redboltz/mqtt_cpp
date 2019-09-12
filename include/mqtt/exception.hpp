@@ -11,6 +11,7 @@
 #include <sstream>
 
 #include <boost/system/error_code.hpp>
+#include <boost/assert.hpp>
 
 #include <mqtt/namespace.hpp>
 #include <mqtt/utf8encoded_strings.hpp>

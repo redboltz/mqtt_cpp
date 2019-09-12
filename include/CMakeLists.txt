@@ -43,5 +43,28 @@ ENDIF ()
 
 target_link_libraries(mqtt_cpp_iface INTERFACE Boost::system Threads::Threads)
 
+list(APPEND CHK_INCLUDE_DIRS -I${Boost_INCLUDE_DIR} -I${CMAKE_CURRENT_SOURCE_DIR})
+IF (NOT MQTT_NO_TLS)
+    list(APPEND CHK_INCLUDE_DIRS -I${OPENSSL_INCLUDE_DIR})
+    IF (MQTT_OPENSSL_INCLUDE_DIR)
+        list(APPEND CHK_INCLUDE_DIRS -I${MQTT_OPENSSL_INCLUDE_DIR})
+    ENDIF ()
+ENDIF ()
+
+#str to list
+string(REPLACE " " ";" CHK_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+string(REPLACE " " ";" CHK_ENV_CXXFLAGS $ENV{CXXFLAGS})
+
+FOREACH (HDR ${HDR_MQTT})
+    get_filename_component(HDR_WE ${HDR} NAME_WE)
+    set(CHK_TARGET "${HDR_WE}.chk")
+    add_custom_target(
+        ${CHK_TARGET}
+        COMMAND ${CMAKE_CXX_COMPILER} -c ${CHK_ENV_CXX_FLAGS} ${CHK_CXX_FLAGS} ${CHK_INCLUDE_DIRS} ${HDR}
+        VERBATIM
+    )
+   add_dependencies(check_deps ${CHK_TARGET})
+ENDFOREACH ()
+
 install(FILES ${HDR_ROOT} DESTINATION ${ROOT_INCLUDE_TARGET})
 install(FILES ${HDR_MQTT} DESTINATION ${ROOT_MQTT_TARGET})
