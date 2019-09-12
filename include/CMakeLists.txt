@@ -53,7 +53,9 @@ ENDIF ()
 
 #str to list
 string(REPLACE " " ";" CHK_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-string(REPLACE " " ";" CHK_ENV_CXXFLAGS $ENV{CXXFLAGS})
+IF ($ENV{CXXFLAGS})
+    string(REPLACE " " ";" CHK_ENV_CXXFLAGS $ENV{CXXFLAGS})
+ENDIF ()
 
 FOREACH (HDR ${HDR_MQTT})
     get_filename_component(HDR_WE ${HDR} NAME_WE)
