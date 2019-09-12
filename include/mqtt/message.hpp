@@ -35,6 +35,7 @@
 #include <mqtt/string_check.hpp>
 #include <mqtt/move.hpp>
 #include <mqtt/reason_code.hpp>
+#include <mqtt/connect_return_code.hpp>
 
 namespace MQTT_NS {
 

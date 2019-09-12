@@ -127,6 +127,8 @@ IF (MQTT_BUILD_EXAMPLES)
     ADD_SUBDIRECTORY (example)
 ENDIF ()
 
+ADD_CUSTOM_TARGET(check_deps)
+
 ADD_SUBDIRECTORY (include)
 
 # Doxygen
