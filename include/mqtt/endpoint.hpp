@@ -282,7 +282,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using suback_handler = std::function<bool(packet_id_t packet_id,
-                                              std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> qoss)>;
+                                              std::vector<MQTT_NS::suback_reason_code> qoss)>;
 
     /**
      * @brief Unsubscribe handler
@@ -11341,19 +11341,23 @@ private:
                     switch (version_) {
                     case protocol_version::v3_1_1:
                         if (h_suback_) {
-                            std::vector<optional<suback_reason_code>> results;
+                            // TODO: We can avoid an allocation by casting the raw bytes of the
+                            // mqtt::buffer that is being parsed, and instead call the suback
+                            // handler with an std::span and the mqtt::buffer (as lifekeeper)
+                            std::vector<suback_reason_code> results;
                             results.resize(body.size());
                             std::transform(
                                 body.begin(),
                                 body.end(),
                                 results.begin(),
-                                [&](auto const& e) -> optional<suback_reason_code> {
-                                    if (e & variable_length_continue_flag) {
-                                        return nullopt;
-                                    }
-                                    else {
-                                        return static_cast<suback_reason_code>(e);
-                                    }
+                                // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180880
+                                // The SUBACK Packet sent by the Server to the Client MUST
+                                // contain a return code for each Topic Filter/QoS pair.
+                                // This return code MUST either show the maximum QoS that
+                                // was granted for that Subscription or indicate that the
+                                // subscription failed [MQTT-3.8.4-5].
+                                [&](auto const& e) -> suback_reason_code {
+                                    return static_cast<suback_reason_code>(e);
                                 }
                             );
                             if (!h_suback_(info.packet_id, force_move(results))) {
@@ -11364,12 +11368,22 @@ private:
                         break;
                     case protocol_version::v5:
                         if (h_v5_suback_) {
+                            // TODO: We can avoid an allocation by casting the raw bytes of the
+                            // mqtt::buffer that is being parsed, and instead call the suback
+                            // handler with an std::span and the mqtt::buffer (as lifekeeper)
                             std::vector<v5::suback_reason_code> reasons;
                             reasons.resize(body.size());
                             std::transform(
                                 body.begin(),
                                 body.end(),
                                 reasons.begin(),
+                                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901170
+                                // The SUBACK packet sent by the Server to the Client MUST
+                                // contain a Reason Code for each Topic Filter/Subscription
+                                // Option pair [MQTT-3.8.4-6].
+                                // This Reason Code MUST either show the maximum QoS that
+                                // was granted for that Subscription or indicate that the
+                                // subscription failed [MQTT-3.8.4-7].
                                 [&](auto const& e) {
                                     return static_cast<v5::suback_reason_code>(e);
                                 }

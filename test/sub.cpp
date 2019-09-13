@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     c->unsubscribe("topic1");
                     return true;
@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE( sub_v5_options ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     c->unsubscribe("topic1");
                     return true;
@@ -236,7 +236,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     c->unsubscribe( { MQTT_NS::string_view{"topic1"}, MQTT_NS::string_view{"topic2"} } );
                     return true;
@@ -335,7 +335,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     std::vector<MQTT_NS::string_view> v
                         {
@@ -439,7 +439,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     c->async_unsubscribe("topic1", [](boost::system::error_code const&) {});
                     return true;
@@ -536,7 +536,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     c->async_unsubscribe(
                         std::vector<std::string> {
@@ -651,7 +651,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     std::vector<std::string> v
                         {
