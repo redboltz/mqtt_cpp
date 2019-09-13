@@ -121,14 +121,16 @@ int main(int argc, char** argv) {
         });
     c->set_publish_handler(
         [&]
-        (std::uint8_t header,
+        (bool is_dup,
+         MQTT_NS::qos qos_value,
+         bool is_retain,
          MQTT_NS::optional<packet_id_t> packet_id,
          MQTT_NS::string_view topic_name,
          MQTT_NS::string_view contents){
             std::cout << "publish received. "
-                      << "dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
-                      << " qos: " << MQTT_NS::publish::get_qos(header)
-                      << " retain: " << MQTT_NS::publish::is_retain(header) << std::endl;
+                      << "dup: " << std::boolalpha << is_dup
+                      << " qos: " << qos_value
+                      << " retain: " << is_retain << std::endl;
             if (packet_id)
                 std::cout << "packet_id: " << *packet_id << std::endl;
             std::cout << "topic_name: " << topic_name << std::endl;

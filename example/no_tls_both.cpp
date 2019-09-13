@@ -98,14 +98,16 @@ void client_proc(
         });
     c->set_publish_handler(
         [&]
-        (std::uint8_t header,
+        (bool dup,
+         MQTT_NS::qos qos_value,
+         bool retain,
          MQTT_NS::optional<packet_id_t> packet_id,
          MQTT_NS::buffer topic_name,
          MQTT_NS::buffer contents){
             std::cout << "[client] publish received. "
-                      << "dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
-                      << " qos: " << MQTT_NS::publish::get_qos(header)
-                      << " retain: " << MQTT_NS::publish::is_retain(header) << std::endl;
+                      << "dup: " << std::boolalpha << dup
+                      << " qos: " << qos_value
+                      << " retain: " << std::boolalpha << retain << std::endl;
             if (packet_id)
                 std::cout << "[client] packet_id: " << *packet_id << std::endl;
             std::cout << "[client] topic_name: " << topic_name << std::endl;
@@ -248,16 +250,16 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 });
             ep.set_publish_handler(
                 [&]
-                (std::uint8_t header,
+                (bool dup,
+                 MQTT_NS::qos qos_value,
+                 bool retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
                  MQTT_NS::buffer topic_name,
                  MQTT_NS::buffer contents){
-                    MQTT_NS::qos qos_value = MQTT_NS::publish::get_qos(header);
-                    bool retain = MQTT_NS::publish::is_retain(header);
                     std::cout << "[server] publish received."
-                              << " dup: " << std::boolalpha << MQTT_NS::publish::is_dup(header)
+                              << " dup: " << std::boolalpha << dup
                               << " qos: " << qos_value
-                              << " retain: " << retain << std::endl;
+                              << " retain: " << std::boolalpha << retain << std::endl;
                     if (packet_id)
                         std::cout << "[server] packet_id: " << *packet_id << std::endl;
                     std::cout << "[server] topic_name: " << topic_name << std::endl;

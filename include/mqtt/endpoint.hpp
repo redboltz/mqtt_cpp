@@ -210,7 +210,9 @@ public:
      *        Published contents
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using publish_handler = std::function<bool(std::uint8_t fixed_header,
+    using publish_handler = std::function<bool(bool dup,
+                                               qos qos_value,
+                                               bool retain,
                                                MQTT_NS::optional<packet_id_t> packet_id,
                                                MQTT_NS::buffer topic_name,
                                                MQTT_NS::buffer contents)>;
@@ -414,7 +416,9 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using v5_publish_handler = std::function<
-        bool(std::uint8_t fixed_header,
+        bool(bool dup,
+             qos qos_value,
+             bool retain,
              MQTT_NS::optional<packet_id_t> packet_id,
              MQTT_NS::buffer topic_name,
              MQTT_NS::buffer contents,
@@ -10360,7 +10364,13 @@ private:
                             switch (version_) {
                             case protocol_version::v3_1_1:
                                 if (h_publish_) {
-                                    if (!h_publish_(fixed_header_, info.packet_id, force_move(info.topic_name), force_move(payload))) {
+                                    if (!h_publish_(
+                                                publish::is_dup(fixed_header_),
+                                                publish::get_qos(fixed_header_),
+                                                publish::is_retain(fixed_header_),
+                                                info.packet_id,
+                                                force_move(info.topic_name),
+                                                force_move(payload))) {
                                         return false;
                                     }
                                 }
@@ -10369,11 +10379,13 @@ private:
                             case protocol_version::v5:
                                 if (h_v5_publish_) {
                                     if (!h_v5_publish_(
-                                            fixed_header_,
-                                            info.packet_id,
-                                            force_move(info.topic_name),
-                                            force_move(payload),
-                                            force_move(info.props)
+                                                publish::is_dup(fixed_header_),
+                                                publish::get_qos(fixed_header_),
+                                                publish::is_retain(fixed_header_),
+                                                info.packet_id,
+                                                force_move(info.topic_name),
+                                                force_move(payload),
+                                                force_move(info.props)
                                         )
                                     ) {
                                         return false;
