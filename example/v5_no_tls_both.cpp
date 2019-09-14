@@ -231,7 +231,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     std::cout << "[server] clean_session: " << std::boolalpha << clean_session << std::endl;
                     std::cout << "[server] keep_alive   : " << keep_alive << std::endl;
                     connections.insert(ep.shared_from_this());
-                    ep.connack(false, MQTT_NS::connect_return_code::accepted);
+                    ep.connack(false, MQTT_NS::v5::connect_reason_code::success);
                     return true;
                 }
             );
