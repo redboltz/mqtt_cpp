@@ -1,3 +1,6 @@
+## 6.0.6
+* Fixed server side endpoint lifetime management problem. (#439, #440)
+
 ## 6.0.5
 * Fixed receive stop problem when unsuback handler is not set. (#408)
 * Updated minimum boost requirement to 1.66.0. (#410)
