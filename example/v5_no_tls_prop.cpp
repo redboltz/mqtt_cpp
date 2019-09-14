@@ -250,7 +250,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                         MQTT_NS::v5::property::authentication_method("test authentication method"_mb),
                         MQTT_NS::v5::property::authentication_data("test authentication data"_mb)
                     };
-                    ep.connack(false, MQTT_NS::connect_return_code::accepted, std::move(connack_ps));
+                    ep.connack(false, MQTT_NS::v5::connect_reason_code::success, std::move(connack_ps));
                     return true;
                 }
             );
