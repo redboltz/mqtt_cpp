@@ -566,13 +566,9 @@ BOOST_AUTO_TEST_CASE( noclean ) {
                         break;
                     case 3:
                         MQTT_CHK("h_connack4");
-                        // If clean session is not provided, than there will be a session present
-                        // if there was ever a previous connection, even if clean session was provided
-                        // on the previous connection.
-                        // This is because MQTTv5 change the semantics of the flag to "clean start"
-                        // such that it only effects the start of the session.
-                        // Post Session cleanup is handled with a timer, not with the  clean session flag.
-                        BOOST_TEST(sp == true);
+                        // The previous connection is not set Session Expiry Interval.
+                        // That means session state is cleared on close.
+                        BOOST_TEST(sp == false);
                         break;
                     }
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
@@ -603,7 +599,22 @@ BOOST_AUTO_TEST_CASE( noclean ) {
                 case 2:
                     MQTT_CHK("h_close3");
                     c->set_clean_session(false);
-                    c->connect();
+                    switch (c->get_protocol_version()) {
+                    case MQTT_NS::protocol_version::v3_1_1:
+                        c->connect();
+                        break;
+                    case MQTT_NS::protocol_version::v5:
+                        // set session_expiry_interval as infinity.
+                        c->connect(
+                            std::vector<MQTT_NS::v5::property_variant>{
+                                MQTT_NS::v5::property::session_expiry_interval(0xFFFFFFFFUL)
+                            }
+                        );
+                        break;
+                    default:
+                        BOOST_CHECK(false);
+                        break;
+                    }
                     ++connect;
                     break;
                 case 3:
