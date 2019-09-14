@@ -7,31 +7,11 @@
 #include "test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "test_util.hpp"
 
 BOOST_AUTO_TEST_SUITE(test_resend)
 
 using namespace MQTT_NS::literals;
-
-template <typename Client>
-inline void connect_no_clean(Client& c) {
-    c->set_clean_session(false);
-    switch (c->get_protocol_version()) {
-    case MQTT_NS::protocol_version::v3_1_1:
-        c->connect();
-        break;
-    case MQTT_NS::protocol_version::v5:
-        // set session_expiry_interval as infinity.
-        c->connect(
-            std::vector<MQTT_NS::v5::property_variant>{
-                MQTT_NS::v5::property::session_expiry_interval(0xFFFFFFFFUL)
-                    }
-        );
-        break;
-    default:
-        BOOST_CHECK(false);
-        break;
-    }
-}
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& b) {
