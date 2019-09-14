@@ -12,6 +12,27 @@ BOOST_AUTO_TEST_SUITE(test_resend_serialize_ptr_size)
 
 using namespace MQTT_NS::literals;
 
+template <typename Client>
+inline void connect_no_clean(Client& c) {
+    c->set_clean_session(false);
+    switch (c->get_protocol_version()) {
+    case MQTT_NS::protocol_version::v3_1_1:
+        c->connect();
+        break;
+    case MQTT_NS::protocol_version::v5:
+        // set session_expiry_interval as infinity.
+        c->connect(
+            std::vector<MQTT_NS::v5::property_variant>{
+                MQTT_NS::v5::property::session_expiry_interval(0xFFFFFFFFUL)
+                    }
+        );
+        break;
+    default:
+        BOOST_CHECK(false);
+        break;
+    }
+}
+
 template <typename Client, typename Elem>
 inline
 void restore_serialized_message(Client const& c, Elem const& e) {
@@ -48,7 +69,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
     auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -59,6 +79,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
     std::uint16_t pid_pub;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -104,17 +125,29 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client ditect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
 
     c2->set_connack_handler(
@@ -158,7 +191,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 
     auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -169,6 +201,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 
     std::uint16_t pid_pub;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -215,17 +248,29 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client ditect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
 
     c2->set_connack_handler(
@@ -275,7 +320,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 
     auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -286,6 +330,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 
     std::uint16_t pid_pub;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -331,17 +376,29 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client ditect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
     c1->set_pubrec_handler(
         [&chk, &c1, &pid_pub]
@@ -392,7 +449,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
 
     auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -404,6 +460,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     std::uint16_t pid_pub1;
     std::uint16_t pid_pub2;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -452,17 +509,29 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error1");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client ditect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
     c2->set_connack_handler(
         [&chk]
@@ -540,7 +609,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
 
     auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -551,6 +619,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
 
     std::uint16_t pid_pub;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -654,13 +723,9 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
                 "h_close1",
                 [&] {
                     MQTT_CHK("h_connack2");
-                    // If clean session is not provided, than there will be a session present
-                    // if there was ever a previous connection, even if clean session was provided
-                    // on the previous connection.
-                    // This is because MQTTv5 change the semantics of the flag to "clean start"
-                    // such that it only effects the start of the session.
-                    // Post Session cleanup is handled with a timer, not with the  clean session flag.
-                    BOOST_TEST(sp == true);
+                    // The previous connection is not set Session Expiry Interval.
+                    // That means session state is cleared on close.
+                    BOOST_TEST(sp == false);
                     pid_pub = c1->publish_at_least_once("topic1", "topic1_contents", false, std::move(ps));
                     c1->force_disconnect();
                 }
@@ -672,17 +737,29 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client ditect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
 
     c2->set_v5_connack_handler(
@@ -726,7 +803,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
 
     auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -737,6 +813,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
 
     std::uint16_t pid_pub;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -771,13 +848,9 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
                 "h_close1",
                 [&] {
                     MQTT_CHK("h_connack2");
-                    // If clean session is not provided, than there will be a session present
-                    // if there was ever a previous connection, even if clean session was provided
-                    // on the previous connection.
-                    // This is because MQTTv5 change the semantics of the flag to "clean start"
-                    // such that it only effects the start of the session.
-                    // Post Session cleanup is handled with a timer, not with the  clean session flag.
-                    BOOST_TEST(sp == true);
+                    // The previous connection is not set Session Expiry Interval.
+                    // That means session state is cleared on close.
+                    BOOST_TEST(sp == false);
                     pid_pub = c1->publish_exactly_once("topic1", "topic1_contents");
                     c1->force_disconnect();
                 }
@@ -789,17 +862,29 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client ditect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
 
     c2->set_v5_connack_handler(
@@ -850,7 +935,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
 
     auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -861,6 +945,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
 
     std::uint16_t pid_pub;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -944,13 +1029,9 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
                 "h_close1",
                 [&] {
                     MQTT_CHK("h_connack2");
-                    // If clean session is not provided, than there will be a session present
-                    // if there was ever a previous connection, even if clean session was provided
-                    // on the previous connection.
-                    // This is because MQTTv5 change the semantics of the flag to "clean start"
-                    // such that it only effects the start of the session.
-                    // Post Session cleanup is handled with a timer, not with the  clean session flag.
-                    BOOST_TEST(sp == true);
+                    // The previous connection is not set Session Expiry Interval.
+                    // That means session state is cleared on close.
+                    BOOST_TEST(sp == false);
                     pid_pub = c1->publish_exactly_once("topic1", "topic1_contents");
                 }
             );
@@ -961,17 +1042,29 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
                 restore_v5_serialized_message(c2, e);
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client ditect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
     c1->set_v5_pubrec_handler(
         [&chk, &c1, &pid_pub, ps = std::move(ps)]
@@ -1023,7 +1116,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
 
     auto c2 = MQTT_NS::make_client(ios, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -1035,6 +1127,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
     std::uint16_t pid_pub1;
     std::uint16_t pid_pub2;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -1070,13 +1163,9 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
                 "h_close1",
                 [&] {
                     MQTT_CHK("h_connack2");
-                    // If clean session is not provided, than there will be a session present
-                    // if there was ever a previous connection, even if clean session was provided
-                    // on the previous connection.
-                    // This is because MQTTv5 change the semantics of the flag to "clean start"
-                    // such that it only effects the start of the session.
-                    // Post Session cleanup is handled with a timer, not with the  clean session flag.
-                    BOOST_TEST(sp == true);
+                    // The previous connection is not set Session Expiry Interval.
+                    // That means session state is cleared on close.
+                    BOOST_TEST(sp == false);
                     pid_pub1 = c1->publish_at_least_once("topic1", "topic1_contents1");
                     pid_pub2 = c1->publish_at_least_once("topic1", "topic1_contents2");
                     c1->force_disconnect();
@@ -1089,17 +1178,29 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error1");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client ditect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
     c2->set_v5_connack_handler(
         [&chk]

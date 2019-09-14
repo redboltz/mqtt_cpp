@@ -405,7 +405,28 @@ private:
         std::vector<MQTT_NS::v5::property_variant> props
     ) {
 
-        if (ep.get_protocol_version() == MQTT_NS::protocol_version::v5 && h_connect_props_) h_connect_props_(props);
+        MQTT_NS::optional<boost::posix_time::time_duration> session_expiry_interval;
+
+        if (ep.get_protocol_version() == MQTT_NS::protocol_version::v5) {
+            for (auto const& p : props) {
+                MQTT_NS::visit(
+                    MQTT_NS::make_lambda_visitor<void>(
+                        [&session_expiry_interval](MQTT_NS::v5::property::session_expiry_interval const& t) {
+                            if (t.val() != 0) {
+                                session_expiry_interval.emplace(boost::posix_time::seconds(t.val()));
+                            }
+                        },
+                        [](auto&& ...) {
+                        }
+                    ),
+                    p
+                );
+            }
+
+            if (h_connect_props_) {
+                h_connect_props_(props);
+            }
+        }
 
         // If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1 [MQTT-3.1.3-7].
         // If it's a not a clean session, but no client id is provided, we would have no way to map this
@@ -465,7 +486,14 @@ private:
         if(act_sess_it == act_sess_idx.end()) {
             // If we have a saved session, we can transfer the state from it
             // to the active_session container.
-            if(non_act_sess_it != non_act_sess_idx.end()) {
+            if(non_act_sess_it == non_act_sess_idx.end()) {
+                auto const& ret = active_sessions_.emplace(client_id, spep, std::move(will), std::move(session_expiry_interval));
+                act_sess_it = ret.first;
+                BOOST_ASSERT(ret.second);
+                BOOST_ASSERT(act_sess_it->client_id == client_id);
+                BOOST_ASSERT(act_sess_it == act_sess_idx.find(client_id));
+            }
+            else {
                 session_state state;
                 non_act_sess_idx.modify(non_act_sess_it, [&](session_state & val) { state = val; });
                 state.con = spep;
@@ -479,32 +507,9 @@ private:
                 BOOST_ASSERT(act_sess_it == act_sess_idx.find(client_id));
                 BOOST_ASSERT(active_sessions_.project<tag_con>(act_sess_it) == active_sessions_.get<tag_con>().find(spep));
             }
-            else {
-                auto const& ret = active_sessions_.emplace(client_id, spep, std::move(will));
-                act_sess_it = ret.first;
-                BOOST_ASSERT(ret.second);
-                BOOST_ASSERT(act_sess_it->client_id == client_id);
-                BOOST_ASSERT(act_sess_it == act_sess_idx.find(client_id));
-            }
         }
         else {
             // Disconnect the existing connection
-
-            // Completely cut this endpoint off from the broker!
-            act_sess_it->con->set_close_handler();
-            act_sess_it->con->set_error_handler();
-            act_sess_it->con->set_v5_connect_handler();
-            act_sess_it->con->set_v5_disconnect_handler();
-            act_sess_it->con->set_v5_puback_handler();
-            act_sess_it->con->set_v5_pubrec_handler();
-            act_sess_it->con->set_v5_pubrel_handler();
-            act_sess_it->con->set_v5_pubcomp_handler();
-            act_sess_it->con->set_v5_publish_handler();
-            act_sess_it->con->set_v5_subscribe_handler();
-            act_sess_it->con->set_v5_unsubscribe_handler();
-            act_sess_it->con->set_pingreq_handler();
-            act_sess_it->con->set_pingresp_handler();
-            act_sess_it->con->set_v5_auth_handler();
 
             // Force disconnect the client.
             // This shuts down the socket directly.
@@ -875,22 +880,6 @@ private:
         // Hold the lifetime of this endpoint until the function exits.
         auto spep = ep.shared_from_this();
 
-        // Completely cut this endpoint off from the broker!
-        ep.set_close_handler();
-        ep.set_error_handler();
-        ep.set_v5_connect_handler();
-        ep.set_v5_disconnect_handler();
-        ep.set_v5_puback_handler();
-        ep.set_v5_pubrec_handler();
-        ep.set_v5_pubrel_handler();
-        ep.set_v5_pubcomp_handler();
-        ep.set_v5_publish_handler();
-        ep.set_v5_subscribe_handler();
-        ep.set_v5_unsubscribe_handler();
-        ep.set_pingreq_handler();
-        ep.set_pingresp_handler();
-        ep.set_v5_auth_handler();
-
         auto & act_sess_idx = active_sessions_.get<tag_con>();
         auto act_sess_it = act_sess_idx.find(spep);
 
@@ -901,7 +890,8 @@ private:
 
         MQTT_NS::buffer client_id;
         MQTT_NS::optional<MQTT_NS::will> will;
-        if(ep.clean_session() && (ep.get_protocol_version() == MQTT_NS::protocol_version::v3_1_1)) {
+        bool session_clear = !act_sess_it->session_expiry_interval;
+        if (ep.clean_session() && session_clear) {
             client_id = std::move(act_sess_it->client_id);
             will = std::move(act_sess_it->will);
             act_sess_idx.erase(act_sess_it);
@@ -915,8 +905,7 @@ private:
             BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().count(client_id) == 0);
             BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().find(client_id) == non_active_sessions_.get<tag_client_id>().end());
         }
-        else
-        {
+        else {
             session_state state = std::move(*act_sess_it);
             client_id = state.client_id;
             will = std::move(state.will);
@@ -945,9 +934,8 @@ private:
         {
             auto& idx = subs_.get<tag_con>();
             auto const& range = boost::make_iterator_range(idx.equal_range(spep));
-            // In v3_1_1, we need to clear any subscriptions at the end of the session.
-            // In v5, we always save them, and clear them at the beginning of a session.
-            if (ep.clean_session() && (ep.get_protocol_version() == MQTT_NS::protocol_version::v3_1_1)) {
+            // In v3_1_1, sessin_expiry_interval is not set. So clean on close.
+            if (ep.clean_session() && session_clear) {
                 // Remove all subscriptions for this clientid
                 idx.erase(range.begin(), range.end());
             }
@@ -1001,8 +989,16 @@ private:
      */
     struct session_state {
         // TODO: Currently not fully implemented...
-        session_state(MQTT_NS::buffer client_id, con_sp_t con, MQTT_NS::optional<MQTT_NS::will> will)
-            :client_id(std::move(client_id)), con(std::move(con)), will(std::move(will)) {}
+        session_state(
+            MQTT_NS::buffer client_id,
+            con_sp_t con,
+            MQTT_NS::optional<MQTT_NS::will> will,
+            MQTT_NS::optional<boost::posix_time::time_duration> session_expiry_interval = MQTT_NS::nullopt)
+            :client_id(std::move(client_id)),
+             con(std::move(con)),
+             will(std::move(will)),
+             session_expiry_interval(std::move(session_expiry_interval))
+        {}
 
         session_state() = default;
         session_state(session_state &&) = default;

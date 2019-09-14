@@ -10,6 +10,18 @@
 
 BOOST_AUTO_TEST_SUITE(test_offline)
 
+template <typename Client>
+inline void connect_no_clean(Client& c) {
+    c->set_clean_session(false);
+    if (c->get_protocol_version() == MQTT_NS::protocol_version::v5) {
+        // set session_expiry_interval as infinity.
+        c->connect(std::vector<MQTT_NS::v5::property_variant>{MQTT_NS::v5::property::session_expiry_interval(0xFFFFFFFFUL)});
+    }
+    else {
+        c->connect();
+    }
+}
+
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     auto test = [](boost::asio::io_service& ios, auto& c, auto& s, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
@@ -79,13 +91,9 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                         "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            // If clean session is not provided, than there will be a session present
-                            // if there was ever a previous connection, even if clean session was provided
-                            // on the previous connection.
-                            // This is because MQTTv5 change the semantics of the flag to "clean start"
-                            // such that it only effects the start of the session.
-                            // Post Session cleanup is handled with a timer, not with the  clean session flag.
-                            BOOST_TEST(sp == true);
+                            // The previous connection is not set Session Expiry Interval.
+                            // That means session state is cleared on close.
+                            BOOST_TEST(sp == false);
                         }
                     );
                     BOOST_TEST(ret);
@@ -115,7 +123,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                         // offline publish
                         pid_pub = c->publish_at_least_once("topic1", "topic1_contents");
                         c->set_clean_session(false);
-                        c->connect();
+                        connect_no_clean(c);
                     },
                     "h_puback",
                     [&] {
@@ -215,13 +223,9 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                         "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            // If clean session is not provided, than there will be a session present
-                            // if there was ever a previous connection, even if clean session was provided
-                            // on the previous connection.
-                            // This is because MQTTv5 change the semantics of the flag to "clean start"
-                            // such that it only effects the start of the session.
-                            // Post Session cleanup is handled with a timer, not with the  clean session flag.
-                            BOOST_TEST(sp == true);
+                            // The previous connection is not set Session Expiry Interval.
+                            // That means session state is cleared on close.
+                            BOOST_TEST(sp == false);
                         }
                     );
                     BOOST_TEST(ret);
@@ -258,7 +262,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                         // offline publish
                         pid_pub = c->publish_exactly_once("topic1", "topic1_contents");
                         c->set_clean_session(false);
-                        c->connect();
+                        connect_no_clean(c);
                     },
                     "h_pubcomp",
                     [&] {
@@ -364,13 +368,9 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                         "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            // If clean session is not provided, than there will be a session present
-                            // if there was ever a previous connection, even if clean session was provided
-                            // on the previous connection.
-                            // This is because MQTTv5 change the semantics of the flag to "clean start"
-                            // such that it only effects the start of the session.
-                            // Post Session cleanup is handled with a timer, not with the  clean session flag.
-                            BOOST_TEST(sp == true);
+                            // The previous connection is not set Session Expiry Interval.
+                            // That means session state is cleared on close.
+                            BOOST_TEST(sp == false);
                         }
                     );
                     BOOST_TEST(ret);
@@ -412,7 +412,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                         pid_pub1 = c->publish_at_least_once(/*topic_base()*/ + "987/topic1", "topic1_contents1");
                         pid_pub2 = c->publish_at_least_once(/*topic_base()*/ + "987/topic1", "topic1_contents2");
                         c->set_clean_session(false);
-                        c->connect();
+                        connect_no_clean(c);
                     },
                     "h_puback2",
                     [&] {
@@ -505,13 +505,9 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                         "h_pub_finish",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            // If clean session is not provided, than there will be a session present
-                            // if there was ever a previous connection, even if clean session was provided
-                            // on the previous connection.
-                            // This is because MQTTv5 change the semantics of the flag to "clean start"
-                            // such that it only effects the start of the session.
-                            // Post Session cleanup is handled with a timer, not with the  clean session flag.
-                            BOOST_TEST(sp == true);
+                            // The previous connection is not set Session Expiry Interval.
+                            // That means session state is cleared on close.
+                            BOOST_TEST(sp == false);
                         }
                     );
                     BOOST_TEST(ret);
@@ -548,8 +544,7 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                                 MQTT_CHK("h_pub_finish");
                             }
                         );
-                        c->set_clean_session(false);
-                        c->connect();
+                        connect_no_clean(c);
                     },
                     "h_puback",
                     [&] {
