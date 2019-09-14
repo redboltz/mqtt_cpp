@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
     std::uint16_t pid_pub;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::deadline_timer tim(ios);
 
     checker chk = {
         cont("start"),
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 
     std::uint16_t pid_pub;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::deadline_timer tim(ios);
 
     checker chk = {
         cont("start"),
@@ -330,7 +330,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 
     std::uint16_t pid_pub;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::deadline_timer tim(ios);
 
     checker chk = {
         cont("start"),
@@ -460,7 +460,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     std::uint16_t pid_pub1;
     std::uint16_t pid_pub2;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::deadline_timer tim(ios);
 
     checker chk = {
         cont("start"),
@@ -619,7 +619,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
 
     std::uint16_t pid_pub;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::deadline_timer tim(ios);
 
     checker chk = {
         cont("start"),
@@ -813,7 +813,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
 
     std::uint16_t pid_pub;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::deadline_timer tim(ios);
 
     checker chk = {
         cont("start"),
@@ -945,7 +945,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
 
     std::uint16_t pid_pub;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::deadline_timer tim(ios);
 
     checker chk = {
         cont("start"),
@@ -1127,7 +1127,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
     std::uint16_t pid_pub1;
     std::uint16_t pid_pub2;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::deadline_timer tim(ios);
 
     checker chk = {
         cont("start"),
