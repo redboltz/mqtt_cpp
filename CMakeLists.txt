@@ -3,6 +3,7 @@ PROJECT (mqtt_cpp)
 
 OPTION(MQTT_BUILD_EXAMPLES "Enable building example applications" ON)
 OPTION(MQTT_BUILD_TESTS "Enable building test applications" ON)
+OPTION(MQTT_ALWAYS_SEND_REASON_CODE "Always send a reason code, even if the standard says it may be optionally omitted." ON)
 OPTION(MQTT_USE_STATIC_BOOST "Statically link with boost libraries" OFF)
 OPTION(MQTT_USE_TLS "Enable building TLS code" OFF)
 OPTION(MQTT_USE_WS "Enable building WebSockets code" OFF)
@@ -16,6 +17,14 @@ OPTION(MQTT_STD_SHARED_PTR_ARRAY "Use std::shared_ptr<char[]> from C++17 instead
 IF ((CMAKE_VERSION VERSION_GREATER 3.1) OR
     (CMAKE_VERSION VERSION_EQUAL 3.1))
     CMAKE_POLICY(SET CMP0054 NEW)
+ENDIF ()
+
+IF (NOT MQTT_ALWAYS_SEND_REASON_CODE)
+    MESSAGE (STATUS "Always send reason code disabled")
+    SET (CMAKE_CXX_FLAGS "-DMQTT_ALWAYS_SEND_REASON_CODE=false ${CMAKE_CXX_FLAGS}")
+ELSE ()
+    MESSAGE (STATUS "Always send reason code enabled")
+    SET (CMAKE_CXX_FLAGS "-DMQTT_ALWAYS_SEND_REASON_CODE=true ${CMAKE_CXX_FLAGS}")
 ENDIF ()
 
 IF (MQTT_USE_STATIC_BOOST)
