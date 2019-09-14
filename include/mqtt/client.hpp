@@ -449,8 +449,8 @@ public:
      * Before calling connect(), call set_xxx member functions to configure the connection.
      * @param func finish handler that is called when the session is finished
      */
-    void connect(async_handler_t func = async_handler_t()) {
-        connect(std::vector<v5::property_variant>{}, force_move(func));
+    void connect(any session_life_keeper = any()) {
+        connect(std::vector<v5::property_variant>{}, force_move(session_life_keeper));
     }
 
     /**
@@ -461,7 +461,7 @@ public:
      *        3.1.2.11 CONNECT Properties
      * @param func finish handler that is called when the session is finished
      */
-    void connect(std::vector<v5::property_variant> props, async_handler_t func = async_handler_t()) {
+    void connect(std::vector<v5::property_variant> props, any session_life_keeper = any()) {
         as::ip::tcp::resolver r(ioc_);
 #if BOOST_VERSION < 106600
         as::ip::tcp::resolver::query q(host_, port_);
@@ -473,7 +473,7 @@ public:
         auto end = eps.end();
 #endif // BOOST_VERSION < 106600
         setup_socket(socket_);
-        connect_impl(*socket_, it, end, force_move(props), force_move(func));
+        connect_impl(*socket_, it, end, force_move(props), force_move(session_life_keeper));
     }
 
     /**
@@ -483,8 +483,8 @@ public:
      *               You can configure the socket prior to connect.
      * @param func finish handler that is called when the session is finished
      */
-    void connect(std::shared_ptr<Socket>&& socket, async_handler_t func = async_handler_t()) {
-        connect(force_move(socket), std::vector<v5::property_variant>{}, force_move(func));
+    void connect(std::shared_ptr<Socket>&& socket, any session_life_keeper = any()) {
+        connect(force_move(socket), std::vector<v5::property_variant>{}, force_move(session_life_keeper));
     }
 
     /**
@@ -497,7 +497,7 @@ public:
      *        3.1.2.11 CONNECT Properties
      * @param func finish handler that is called when the session is finished
      */
-    void connect(std::shared_ptr<Socket>&& socket, std::vector<v5::property_variant> props, async_handler_t func = async_handler_t()) {
+    void connect(std::shared_ptr<Socket>&& socket, std::vector<v5::property_variant> props, any session_life_keeper = any()) {
         as::ip::tcp::resolver r(ioc_);
 #if BOOST_VERSION < 106600
         as::ip::tcp::resolver::query q(host_, port_);
@@ -510,7 +510,7 @@ public:
 #endif // BOOST_VERSION < 106600
         socket_ = force_move(socket);
         base::socket_optional().emplace(socket_);
-        connect_impl(*socket_, it, end, force_move(props), force_move(func));
+        connect_impl(*socket_, it, end, force_move(props), force_move(session_life_keeper));
     }
 
     /**
@@ -805,8 +805,8 @@ private:
 
 #endif // !defined(MQTT_NO_TLS)
 
-    void start_session(std::vector<v5::property_variant> props, async_handler_t func) {
-        base::async_read_control_packet_type(force_move(func));
+    void start_session(std::vector<v5::property_variant> props, any session_life_keeper) {
+        base::async_read_control_packet_type(force_move(session_life_keeper));
         // sync base::connect() refer to parameters only in the function.
         // So they can be passed as view.
         base::connect(
@@ -837,8 +837,8 @@ private:
     void handshake_socket(
         tcp_endpoint<as::ip::tcp::socket, Strand>&,
         std::vector<v5::property_variant> props,
-        async_handler_t func) {
-        start_session(force_move(props), force_move(func));
+        any session_life_keeper) {
+        start_session(force_move(props), force_move(session_life_keeper));
     }
 
 #if defined(MQTT_USE_WS)
@@ -846,15 +846,15 @@ private:
     void handshake_socket(
         ws_endpoint<as::ip::tcp::socket, Strand>& socket,
         std::vector<v5::property_variant> props,
-        async_handler_t func) {
+        any session_life_keeper) {
         auto self = this->shared_from_this();
         socket.async_handshake(
             host_,
             path_,
-            [this, self, func = force_move(func), props = force_move(props)]
+            [this, self, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
-                start_session(force_move(props), force_move(func));
+                start_session(force_move(props), force_move(session_life_keeper));
             });
     }
 #endif // defined(MQTT_USE_WS)
@@ -865,14 +865,14 @@ private:
     void handshake_socket(
         tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         std::vector<v5::property_variant> props,
-        async_handler_t func) {
+        any session_life_keeper) {
         auto self = this->shared_from_this();
         socket.async_handshake(
             as::ssl::stream_base::client,
-            [this, self, func = force_move(func), props = force_move(props)]
+            [this, self, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
-                start_session(force_move(props), force_move(func));
+                start_session(force_move(props), force_move(session_life_keeper));
             });
     }
 
@@ -881,20 +881,20 @@ private:
     void handshake_socket(
         ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         std::vector<v5::property_variant> props,
-        async_handler_t func) {
+        any session_life_keeper) {
         auto self = this->shared_from_this();
         socket.next_layer().async_handshake(
             as::ssl::stream_base::client,
-            [this, self, func = force_move(func), &socket, props = force_move(props)]
+            [this, self, session_life_keeper = force_move(session_life_keeper), &socket, props = force_move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 socket.async_handshake(
                     host_,
                     path_,
-                    [this, self, func = force_move(func), props = force_move(props)]
+                    [this, self, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
                     (boost::system::error_code const& ec) mutable {
                         if (base::handle_close_or_error(ec)) return;
-                        start_session(force_move(props), force_move(func));
+                        start_session(force_move(props), force_move(session_life_keeper));
                     });
             });
     }
@@ -903,11 +903,11 @@ private:
 #endif // defined(MQTT_NO_TLS)
 
     template <typename Iterator>
-    void connect_impl(Socket& socket, Iterator it, Iterator end, std::vector<v5::property_variant> props, async_handler_t func) {
+    void connect_impl(Socket& socket, Iterator it, Iterator end, std::vector<v5::property_variant> props, any session_life_keeper) {
         auto self = this->shared_from_this();
         as::async_connect(
             socket.lowest_layer(), it, end,
-            [this, self, &socket, func = force_move(func), props = force_move(props)]
+            [this, self, &socket, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
             (boost::system::error_code const& ec, Iterator) mutable {
                 base::set_close_handler([this](){ handle_close(); });
                 base::set_error_handler([this](boost::system::error_code const& ec){ handle_error(ec); });
@@ -926,7 +926,7 @@ private:
                     }
                 }
                 if (base::handle_close_or_error(ec)) return;
-                handshake_socket(socket, force_move(props), force_move(func));
+                handshake_socket(socket, force_move(props), force_move(session_life_keeper));
             });
     }
 

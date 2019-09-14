@@ -83,13 +83,7 @@ int main(int argc, char** argv) {
             using packet_id_t = typename std::remove_reference_t<decltype(ep)>::packet_id_t;
             std::cout << "[server]accept" << std::endl;
             auto sp = ep.shared_from_this();
-            ep.start_session(
-                [&, sp] // keeping ep's lifetime as sp until session finished
-                (boost::system::error_code const& ec) {
-                    std::cout << "[server]session end: " << ec.message() << std::endl;
-                    s.close();
-                }
-            );
+            ep.start_session(sp); // keeping ep's lifetime as sp until session finished
 
             // set connection (lower than MQTT) level handlers
             ep.set_close_handler( // this handler doesn't depend on MQTT protocol version

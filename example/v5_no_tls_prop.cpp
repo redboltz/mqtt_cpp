@@ -151,13 +151,14 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
         [&](con_t& ep) {
             std::cout << "[server] accept" << std::endl;
             auto sp = ep.shared_from_this();
-            ep.start_session(
-                [&, sp] // keeping ep's lifetime as sp until session finished
-                (boost::system::error_code const& ec) {
-                    std::cout << "[server] session end: " << ec.message() << std::endl;
+            // For server close if ep is closed.
+            auto g = MQTT_NS::shared_scope_guard(
+                [&] {
+                    std::cout << "[server] session end" << std::endl;
                     s.close();
                 }
             );
+            ep.start_session(std::make_tuple(std::move(sp), std::move(g)));
 
             // set connection (lower than MQTT) level handlers
             ep.set_close_handler( // this handler doesn't depend on MQTT protocol version

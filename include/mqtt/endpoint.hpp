@@ -88,8 +88,8 @@ public:
         :async_send_store_{async_send_store},
          h_mqtt_message_processed_(
              [this]
-             (async_handler_t func) {
-                 async_read_control_packet_type(force_move(func));
+             (any session_life_keeper) {
+                 async_read_control_packet_type(force_move(session_life_keeper));
              }
          ),
          version_(version)
@@ -106,8 +106,8 @@ public:
          async_send_store_{async_send_store},
          h_mqtt_message_processed_(
              [this]
-             (async_handler_t func) {
-                 async_read_control_packet_type(force_move(func));
+             (any session_life_keeper) {
+                 async_read_control_packet_type(force_move(session_life_keeper));
              }
          ),
          version_(version)
@@ -749,7 +749,7 @@ public:
      * @param func A callback function that is called when async operation will finish.
      */
     using mqtt_message_processed_handler =
-        std::function<void(async_handler_t func)>;
+        std::function<void(any session_life_keeper)>;
 
     endpoint(this_type const&) = delete;
     endpoint(this_type&&) = delete;
@@ -1470,8 +1470,8 @@ public:
      * @param func finish handler that is called when the session is finished
      *
      */
-    void start_session(async_handler_t func = async_handler_t()) {
-        async_read_control_packet_type(force_move(func));
+    void start_session(any session_life_keeper = any()) {
+        async_read_control_packet_type(force_move(session_life_keeper));
     }
 
     // Blocking APIs
@@ -3359,6 +3359,7 @@ public:
     ) {
         send_unsuback(force_move(reasons), packet_id, force_move(props));
     }
+
 
     /**
      * @brief Publish
@@ -7136,6 +7137,7 @@ public:
         async_send_unsuback(packet_id, force_move(func));
     }
 
+
     /**
      * @brief Clear stored publish message that has packet_id.
      * @param packet_id packet id corresponding to stored publish
@@ -7503,8 +7505,8 @@ public:
         else {
             h_mqtt_message_processed_ =
                 [this]
-                (async_handler_t func) {
-                    async_read_control_packet_type(force_move(func));
+                (any session_life_keeper) {
+                    async_read_control_packet_type(force_move(session_life_keeper));
             };
         }
     }
@@ -7522,8 +7524,8 @@ public:
      *        If you call this function, you need to set manual receive mode
      *        using set_auto_next_read(false);
      */
-    void async_read_next_message(async_handler_t func) {
-        async_read_control_packet_type(force_move(func));
+    void async_read_next_message(any session_life_keeper) {
+        async_read_control_packet_type(force_move(session_life_keeper));
     }
 
      /**
@@ -7580,15 +7582,15 @@ protected:
         return socket_;
     }
 
-    void async_read_control_packet_type(async_handler_t func) {
+    void async_read_control_packet_type(any session_life_keeper) {
         auto self = shared_from_this();
         socket_->async_read(
             as::buffer(buf_.data(), 1),
-            [this, self = force_move(self), func = force_move(func)](
+            [this, self = force_move(self), session_life_keeper = force_move(session_life_keeper)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred) mutable {
-                if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
-                handle_control_packet_type(force_move(func), force_move(self));
+                if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
+                handle_control_packet_type(force_move(session_life_keeper), force_move(self));
             }
         );
     }
@@ -7649,22 +7651,11 @@ protected:
 
 private:
 
-    bool check_error(
-        boost::system::error_code const& ec,
-        async_handler_t const& func) {
-        if (handle_close_or_error(ec)) {
-            if (func) func(ec);
-            return false;
-        }
-        return true;
-    }
-
     bool check_transferred_length(
         std::size_t bytes_transferred,
-        std::size_t bytes_expected,
-        async_handler_t const& func) {
+        std::size_t bytes_expected) {
         if (bytes_transferred != bytes_expected) {
-            call_message_size_error_handlers(func);
+            call_message_size_error_handlers();
             return false;
         }
         return true;
@@ -7672,31 +7663,19 @@ private:
 
     bool check_error_and_transferred_length(
         boost::system::error_code const& ec,
-        async_handler_t const& func,
         std::size_t bytes_transferred,
         std::size_t bytes_expected) {
-        if (!check_error(ec, func)) return false;
-        if (!check_transferred_length(bytes_transferred, bytes_expected, func)) return false;
+        if (handle_close_or_error(ec)) return false;
+        if (!check_transferred_length(bytes_transferred, bytes_expected)) return false;
         return true;
     }
 
-    void call_error_handlers(boost::system::error_code const& ec, async_handler_t const& func) {
-        handle_error(ec);
-        if (func) func(ec);
+    void call_message_size_error_handlers() {
+        handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
     }
 
-    void call_message_size_error_handlers(async_handler_t const& func) {
-        call_error_handlers(
-            boost::system::errc::make_error_code(boost::system::errc::message_size),
-            func
-        );
-    }
-
-    void call_protocol_error_handlers(async_handler_t const& func) {
-        call_error_handlers(
-            boost::system::errc::make_error_code(boost::system::errc::protocol_error),
-            func
-        );
+    void call_protocol_error_handlers() {
+        handle_error(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
     }
 
     template <typename T>
@@ -7709,7 +7688,7 @@ private:
     typename std::enable_if<
         std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
+            any
         >::value
     >::type
     acquired_async_subscribe_imp(
@@ -7735,7 +7714,7 @@ private:
     typename std::enable_if<
         std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
+            any
         >::value
     >::type
     acquired_async_subscribe_imp(
@@ -7761,7 +7740,7 @@ private:
     typename std::enable_if<
         !std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
+            any
         >::value
     >::type
     acquired_async_subscribe_imp(
@@ -7780,7 +7759,7 @@ private:
             force_move(topic_name),
             qos_value,
             std::forward<Args>(args)...,
-            async_handler_t()
+            any()
         );
     }
 
@@ -7788,7 +7767,7 @@ private:
     typename std::enable_if<
         !std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
+            any
         >::value
     >::type
     acquired_async_subscribe_imp(
@@ -7807,7 +7786,7 @@ private:
             topic_name,
             qos_value,
             std::forward<Args>(args)...,
-            async_handler_t()
+            any()
         );
     }
 
@@ -7815,7 +7794,7 @@ private:
     typename std::enable_if<
         std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
+            any
         >::value
     >::type
     acquired_async_unsubscribe_imp(
@@ -7839,7 +7818,7 @@ private:
     typename std::enable_if<
         std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
+            any
         >::value
     >::type
     acquired_async_unsubscribe_imp(
@@ -7863,7 +7842,7 @@ private:
     typename std::enable_if<
         !std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
+            any
         >::value
     >::type
     acquired_async_unsubscribe_imp(
@@ -7880,7 +7859,7 @@ private:
             packet_id,
             force_move(topic_name),
             std::forward<Args>(args)...,
-            async_handler_t()
+            any()
         );
     }
 
@@ -7888,7 +7867,7 @@ private:
     typename std::enable_if<
         !std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
+            any
         >::value
     >::type
     acquired_async_unsubscribe_imp(
@@ -7905,7 +7884,7 @@ private:
             packet_id,
             topic_name,
             std::forward<Args>(args)...,
-            async_handler_t()
+            any()
         );
     }
 
@@ -7913,7 +7892,7 @@ private:
     typename std::enable_if<
         std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
+            any
         >::value
     >::type
     async_suback_imp(
@@ -7927,20 +7906,20 @@ private:
     typename std::enable_if<
         !std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
+            any
         >::value
     >::type
     async_suback_imp(
         packet_id_t packet_id,
         Args&&... qos_values) {
-        async_send_suback(std::vector<std::uint8_t>({qos_values...}), packet_id, async_handler_t());
+        async_send_suback(std::vector<std::uint8_t>({qos_values...}), packet_id, any());
     }
 
     template <typename... Args>
     typename std::enable_if<
         std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
+            any
         >::value
     >::type
     async_unsuback_imp(
@@ -7954,13 +7933,13 @@ private:
     typename std::enable_if<
         !std::is_convertible<
             typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            async_handler_t
+            any
         >::value
     >::type
     async_unsuback_imp(
         packet_id_t packet_id,
         Args&&... payload) {
-        async_send_unsuback(std::vector<v5::unsuback_reason_code>({payload...}), packet_id, async_handler_t());
+        async_send_unsuback(std::vector<v5::unsuback_reason_code>({payload...}), packet_id, any());
     }
 
     class send_buffer {
@@ -8044,17 +8023,17 @@ private:
         >
     >;
 
-    void handle_control_packet_type(async_handler_t func, this_type_sp self) {
+    void handle_control_packet_type(any session_life_keeper, this_type_sp self) {
         fixed_header_ = static_cast<std::uint8_t>(buf_.front());
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
         socket_->async_read(
             as::buffer(buf_.data(), 1),
-            [this, self = force_move(self), func = force_move(func)] (
+            [this, self = force_move(self), session_life_keeper = force_move(session_life_keeper)] (
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred) mutable {
-                if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
-                handle_remaining_length(force_move(func), force_move(self));
+                if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
+                handle_remaining_length(force_move(session_life_keeper), force_move(self));
             }
         );
     }
@@ -8065,28 +8044,25 @@ private:
         return multiplier <= 128 * 128 * 128 * 128;
     }
 
-    void handle_remaining_length(async_handler_t func, this_type_sp self) {
+    void handle_remaining_length(any session_life_keeper, this_type_sp self) {
         if (!calc_variable_length(remaining_length_, remaining_length_multiplier_, buf_.front())) {
             handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
-            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return;
         }
         if (buf_.front() & variable_length_continue_flag) {
             socket_->async_read(
                 as::buffer(buf_.data(), 1),
-                [this, self = force_move(self), func = force_move(func)](
+                [this, self = force_move(self), session_life_keeper = force_move(session_life_keeper)](
                     boost::system::error_code const& ec,
                     std::size_t bytes_transferred) mutable {
                     if (handle_close_or_error(ec)) {
-                        if (func) func(ec);
                         return;
                     }
                     if (bytes_transferred != 1) {
                         handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
-                    handle_remaining_length(force_move(func), force_move(self));
+                    handle_remaining_length(force_move(session_life_keeper), force_move(self));
                 }
             );
         }
@@ -8156,83 +8132,82 @@ private:
                 };
             if (!check()) {
                 handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return;
             }
 
-            process_payload(force_move(func), force_move(self));
+            process_payload(force_move(session_life_keeper), force_move(self));
         }
     }
 
-    void process_payload(async_handler_t func, this_type_sp self) {
+    void process_payload(any session_life_keeper, this_type_sp self) {
         auto control_packet_type = get_control_packet_type(fixed_header_);
         switch (control_packet_type) {
         case control_packet_type::connect:
-            process_connect(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+            process_connect(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::connack:
-            process_connack(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+            process_connack(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::publish:
             if (mqtt_connected_) {
-                process_publish(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                process_publish(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::puback:
             if (mqtt_connected_) {
-                process_puback(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                process_puback(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::pubrec:
             if (mqtt_connected_) {
-                process_pubrec(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                process_pubrec(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::pubrel:
             if (mqtt_connected_) {
-                process_pubrel(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                process_pubrel(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::pubcomp:
             if (mqtt_connected_) {
-                process_pubcomp(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                process_pubcomp(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::subscribe:
             if (mqtt_connected_) {
-                process_subscribe(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                process_subscribe(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::suback:
             if (mqtt_connected_) {
-                process_suback(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                process_suback(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::unsubscribe:
             if (mqtt_connected_) {
-                process_unsubscribe(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                process_unsubscribe(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::unsuback:
             if (mqtt_connected_) {
-                process_unsuback(force_move(func), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                process_unsuback(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             break;
         case control_packet_type::pingreq:
             if (mqtt_connected_) {
-                process_pingreq(force_move(func));
+                process_pingreq(force_move(session_life_keeper));
             }
             break;
         case control_packet_type::pingresp:
             if (mqtt_connected_) {
-                process_pingresp(force_move(func));
+                process_pingresp(force_move(session_life_keeper));
             }
             break;
         case control_packet_type::disconnect:
-            process_disconnect(func, remaining_length_ < packet_bulk_read_limit_, force_move(self));
+            process_disconnect(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::auth:
-            process_auth(func, remaining_length_ < packet_bulk_read_limit_, force_move(self));
+            process_auth(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         default:
             break;
@@ -8241,14 +8216,14 @@ private:
 
     // primitive read functions
     void process_nbytes(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         std::size_t size,
-        std::function<void(buffer, buffer, async_handler_t, this_type_sp)> handler,
+        std::function<void(buffer, buffer, any, this_type_sp)> handler,
         this_type_sp self
     ) {
         if (remaining_length_ < size) {
-            call_message_size_error_handlers(func);
+            call_message_size_error_handlers();
             return;
         }
         remaining_length_ -= size;
@@ -8261,17 +8236,17 @@ private:
                 [
                     this,
                     self = force_move(self),
-                    func = force_move(func),
+                    session_life_keeper = force_move(session_life_keeper),
                     handler = force_move(handler),
                     buf = buffer(string_view(ptr, size), force_move(spa))
                 ]
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) mutable {
-                    if (!check_error_and_transferred_length(ec, func, bytes_transferred, buf.size())) return;
+                    if (!check_error_and_transferred_length(ec, bytes_transferred, buf.size())) return;
                     handler(
                         force_move(buf),
                         buffer(),
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(self)
                     );
                 }
@@ -8279,13 +8254,13 @@ private:
         }
         else {
             if (buf.size() < size) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             socket_->post(
                 [
                     self = force_move(self),
-                    func = force_move(func),
+                    session_life_keeper = force_move(session_life_keeper),
                     buf = force_move(buf),
                     size,
                     handler = force_move(handler)
@@ -8294,7 +8269,7 @@ private:
                     handler(
                         buf.substr(0, size),
                         buf.substr(size),
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(self)
                     );
                 }
@@ -8304,13 +8279,13 @@ private:
 
     template <std::size_t Bytes>
     void process_fixed_length(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
-        std::function<void(std::size_t, buffer, async_handler_t, this_type_sp)> handler,
+        std::function<void(std::size_t, buffer, any, this_type_sp)> handler,
         this_type_sp self
     ) {
         if (remaining_length_ < Bytes) {
-            call_message_size_error_handlers(func);
+            call_message_size_error_handlers();
             return;
         }
 
@@ -8322,19 +8297,19 @@ private:
                 [
                     this,
                     self = force_move(self),
-                    func = force_move(func),
+                    session_life_keeper = force_move(session_life_keeper),
                     handler = force_move(handler)
                 ]
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) mutable {
-                    if (!check_error_and_transferred_length(ec, func, bytes_transferred, Bytes)) return;
+                    if (!check_error_and_transferred_length(ec, bytes_transferred, Bytes)) return;
                     handler(
                         make_packet_id<Bytes>::apply(
                             buf_.data(),
                             std::next(buf_.data(), boost::numeric_cast<buffer::difference_type>(Bytes))
                         ),
                         buffer(),
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(self)
                     );
                 }
@@ -8344,7 +8319,7 @@ private:
             socket_->post(
                [
                     self = force_move(self),
-                    func = force_move(func),
+                    session_life_keeper = force_move(session_life_keeper),
                     buf = force_move(buf),
                     handler = force_move(handler)
                ]
@@ -8358,7 +8333,7 @@ private:
                     handler(
                         packet_id,
                         force_move(buf),
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(self)
                     );
                }
@@ -8368,13 +8343,13 @@ private:
 
     // This function isn't used for remaining lengh.
     void process_variable_length(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
-        std::function<void(std::size_t, buffer, async_handler_t, this_type_sp)> handler,
+        std::function<void(std::size_t, buffer, any, this_type_sp)> handler,
         this_type_sp self
     ) {
         process_variable_length_impl(
-            force_move(func),
+            force_move(session_life_keeper),
             force_move(buf),
             force_move(handler),
             0,
@@ -8384,15 +8359,15 @@ private:
     }
 
     void process_variable_length_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
-        std::function<void(std::size_t, buffer, async_handler_t, this_type_sp)> handler,
+        std::function<void(std::size_t, buffer, any, this_type_sp)> handler,
         std::size_t size,
         std::size_t multiplier,
         this_type_sp self
     ) {
         if (remaining_length_ == 0) {
-            call_message_size_error_handlers(func);
+            call_message_size_error_handlers();
             return;
         }
         --remaining_length_;
@@ -8403,22 +8378,22 @@ private:
         auto proc =
             [this]
             (
-                async_handler_t&& func,
+                any&& session_life_keeper,
                 buffer&& buf,
-                std::function<void(std::size_t, buffer, async_handler_t, this_type_sp)>&& handler,
+                std::function<void(std::size_t, buffer, any, this_type_sp)>&& handler,
                 std::size_t size,
                 std::size_t multiplier,
                 this_type_sp&& self
             ) mutable {
                 if (!calc_variable_length(size, multiplier, buf.front())) {
-                    call_message_size_error_handlers(func);
+                    call_message_size_error_handlers();
                     return;
                 }
                 if (buf.front() & variable_length_continue_flag) {
                     BOOST_ASSERT(!buf.empty());
                     buf.remove_prefix(1);
                     process_variable_length_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         force_move(handler),
                         size,
@@ -8431,7 +8406,7 @@ private:
                     handler(
                         size,
                         force_move(buf),
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(self)
                     );
                 }
@@ -8443,7 +8418,7 @@ private:
                 [
                     this,
                     self = force_move(self),
-                    func = force_move(func),
+                    session_life_keeper = force_move(session_life_keeper),
                     handler = force_move(handler),
                     size,
                     multiplier,
@@ -8451,9 +8426,9 @@ private:
                 ]
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) mutable {
-                    if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
+                    if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                     proc(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         buffer(string_view(buf_.data(), 1)), // buf_'s lifetime is handled by `self`
                         force_move(handler),
                         size,
@@ -8466,7 +8441,7 @@ private:
         else {
             socket_->post(
                 [
-                    func = force_move(func),
+                    session_life_keeper = force_move(session_life_keeper),
                     handler = force_move(handler),
                     buf = force_move(buf),
                     size,
@@ -8476,7 +8451,7 @@ private:
                 ]
                 () mutable {
                     proc(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         force_move(handler),
                         size,
@@ -8489,36 +8464,36 @@ private:
     }
 
     void process_packet_id(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
-        std::function<void(packet_id_t, buffer, async_handler_t, this_type_sp)> handler,
+        std::function<void(packet_id_t, buffer, any, this_type_sp)> handler,
         this_type_sp self
     ) {
         process_fixed_length<sizeof(packet_id_t)>(
-            force_move(func),
+            force_move(session_life_keeper),
             force_move(buf),
             [
                 handler = force_move(handler)
             ]
-            (std::size_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
-                handler(static_cast<packet_id_t>(packet_id), force_move(buf), force_move(func), force_move(self));
+            (std::size_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                handler(static_cast<packet_id_t>(packet_id), force_move(buf), force_move(session_life_keeper), force_move(self));
             },
             force_move(self)
         );
     }
 
     void process_binary(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
-        std::function<void(buffer, buffer, async_handler_t, this_type_sp)> handler,
+        std::function<void(buffer, buffer, any, this_type_sp)> handler,
         this_type_sp self
     ) {
         if (remaining_length_ < 2) {
-            call_message_size_error_handlers(func);
+            call_message_size_error_handlers();
             return;
         }
         process_fixed_length<2>(
-            force_move(func),
+            force_move(session_life_keeper),
             force_move(buf),
             [
                 this,
@@ -8526,14 +8501,14 @@ private:
             ]
             (std::size_t size,
              buffer buf,
-             async_handler_t func,
+             any session_life_keeper,
              this_type_sp self) mutable {
                 if (remaining_length_ < size) {
-                    call_message_size_error_handlers(func);
+                    call_message_size_error_handlers();
                     return;
                 }
                 process_nbytes(
-                    force_move(func),
+                    force_move(session_life_keeper),
                     force_move(buf),
                     size,
                     force_move(handler),
@@ -8545,22 +8520,22 @@ private:
     }
 
     void process_string(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
-        std::function<void(buffer, buffer, async_handler_t, this_type_sp)> handler,
+        std::function<void(buffer, buffer, any, this_type_sp)> handler,
         this_type_sp self
     ) {
         process_binary(
-            force_move(func),
+            force_move(session_life_keeper),
             force_move(buf),
             [this, handler = force_move(handler)]
-            (buffer str, buffer buf, async_handler_t func, this_type_sp self) mutable {
+            (buffer str, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                 auto r = utf8string::validate_contents(str);
                 if (r != utf8string::validation::well_formed) {
-                    call_protocol_error_handlers(func);
+                    call_protocol_error_handlers();
                     return;
                 }
-                handler(force_move(str), force_move(buf), force_move(func), force_move(self));
+                handler(force_move(str), force_move(buf), force_move(session_life_keeper), force_move(self));
             },
             force_move(self)
         );
@@ -8568,25 +8543,25 @@ private:
 
 
     void process_properties(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
-        std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t, this_type_sp)> handler,
+        std::function<void(std::vector<v5::property_variant>, buffer, any, this_type_sp)> handler,
         this_type_sp self
     ) {
         process_variable_length(
-            force_move(func),
+            force_move(session_life_keeper),
             force_move(buf),
             [
                 this,
                 handler = force_move(handler)
             ]
-            (std::size_t property_length, buffer buf, async_handler_t func, this_type_sp self) mutable {
+            (std::size_t property_length, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                 if (property_length > remaining_length_) {
-                    call_message_size_error_handlers(func);
+                    call_message_size_error_handlers();
                     return;
                 }
                 if (property_length == 0) {
-                    handler(std::vector<v5::property_variant>(), force_move(buf), force_move(func), force_move(self));
+                    handler(std::vector<v5::property_variant>(), force_move(buf), force_move(session_life_keeper), force_move(self));
                     return;
                 }
 
@@ -8620,16 +8595,16 @@ private:
                         [
                             this,
                             self = force_move(self),
-                            func = force_move(func),
+                            session_life_keeper = force_move(session_life_keeper),
                             handler = force_move(handler),
                             property_length,
                             result
                         ]
                         (boost::system::error_code const& ec,
                          std::size_t bytes_transferred) mutable {
-                            if (!check_error_and_transferred_length(ec, func, bytes_transferred, result.len)) return;
+                            if (!check_error_and_transferred_length(ec, bytes_transferred, result.len)) return;
                             process_property_id(
-                                force_move(func),
+                                force_move(session_life_keeper),
                                 buffer(string_view(result.address, result.len), result.spa),
                                 property_length,
                                 std::vector<v5::property_variant>(),
@@ -8644,14 +8619,14 @@ private:
                         [
                             this,
                             self = force_move(self),
-                            func = force_move(func),
+                            session_life_keeper = force_move(session_life_keeper),
                             buf = force_move(buf),
                             handler = force_move(handler),
                             property_length
                         ]
                         () mutable {
                             process_property_id(
-                                force_move(func),
+                                force_move(session_life_keeper),
                                 force_move(buf),
                                 property_length,
                                 std::vector<v5::property_variant>(),
@@ -8667,16 +8642,16 @@ private:
     }
 
     void process_property_id(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         std::size_t property_length_rest,
         std::vector<v5::property_variant> props,
-        std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t, this_type_sp)> handler,
+        std::function<void(std::vector<v5::property_variant>, buffer, any, this_type_sp)> handler,
         this_type_sp self
     ) {
 
         if (property_length_rest == 0) {
-            handler(force_move(props), force_move(buf), force_move(func), force_move(self));
+            handler(force_move(props), force_move(buf), force_move(session_life_keeper), force_move(self));
             return;
         }
 
@@ -8687,16 +8662,16 @@ private:
                 [
                     this,
                     self = force_move(self),
-                    func = force_move(func),
+                    session_life_keeper = force_move(session_life_keeper),
                     props = force_move(props),
                     handler = force_move(handler),
                     property_length_rest
                 ]
                 (boost::system::error_code const& ec,
                  std::size_t bytes_transferred) mutable {
-                    if (!check_error_and_transferred_length(ec, func, bytes_transferred, 1)) return;
+                    if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                     process_property_body(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         buffer(),
                         static_cast<v5::property::id>(buf_.front()),
                         property_length_rest - 1,
@@ -8712,7 +8687,7 @@ private:
                 [
                     this,
                     self = force_move(self),
-                    func = force_move(func),
+                    session_life_keeper = force_move(session_life_keeper),
                     buf = force_move(buf),
                     props = force_move(props),
                     handler = force_move(handler),
@@ -8722,7 +8697,7 @@ private:
                     auto id = static_cast<v5::property::id>(buf.front());
                     buf.remove_prefix(1);
                     process_property_body(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         id,
                         property_length_rest - 1,
@@ -8736,19 +8711,19 @@ private:
     }
 
     void process_property_body(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         v5::property::id id,
         std::size_t property_length_rest,
         std::vector<v5::property_variant> props,
-        std::function<void(std::vector<v5::property_variant>, buffer, async_handler_t, this_type_sp)> handler,
+        std::function<void(std::vector<v5::property_variant>, buffer, any, this_type_sp)> handler,
         this_type_sp self
     ) {
 
         static constexpr std::size_t const length_bytes = 2;
 
         if (property_length_rest == 0) {
-            call_message_size_error_handlers(func);
+            call_message_size_error_handlers();
             return;
         }
 
@@ -8756,11 +8731,11 @@ private:
         case v5::property::id::payload_format_indicator: {
             std::size_t const len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -8769,12 +8744,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::payload_format_indicator(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -8788,11 +8763,11 @@ private:
         case v5::property::id::message_expiry_interval: {
             std::size_t const len = 4;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -8801,12 +8776,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::message_expiry_interval(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -8819,7 +8794,7 @@ private:
         } break;
         case v5::property::id::content_type: {
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
@@ -8827,13 +8802,13 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::content_type(force_move(body), true)
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -8846,7 +8821,7 @@ private:
         } break;
         case v5::property::id::response_topic: {
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
@@ -8854,13 +8829,13 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::response_topic(force_move(body), true)
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -8873,7 +8848,7 @@ private:
         } break;
         case v5::property::id::correlation_data: {
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
@@ -8881,13 +8856,13 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::correlation_data(force_move(body), true)
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -8900,7 +8875,7 @@ private:
         } break;
         case v5::property::id::subscription_identifier: {
             process_variable_length(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
@@ -8909,14 +8884,14 @@ private:
                     property_length_rest,
                     remaining_length_before = remaining_length_
                 ]
-                (std::size_t size, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::size_t size, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     auto consumed = remaining_length_before - remaining_length_;
                     auto rest = property_length_rest - consumed;
                     props.emplace_back(
                         v5::property::subscription_identifier(size)
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -8930,11 +8905,11 @@ private:
         case v5::property::id::session_expiry_interval: {
             std::size_t const len = 4;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -8943,12 +8918,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::session_expiry_interval(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -8961,7 +8936,7 @@ private:
         } break;
         case v5::property::id::assigned_client_identifier: {
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
@@ -8969,13 +8944,13 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::assigned_client_identifier(force_move(body), true)
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -8990,11 +8965,11 @@ private:
         case v5::property::id::server_keep_alive: {
             std::size_t const len = 2;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9003,12 +8978,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::server_keep_alive(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9021,7 +8996,7 @@ private:
         } break;
         case v5::property::id::authentication_method: {
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
@@ -9029,13 +9004,13 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::authentication_method(force_move(body), true)
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9048,7 +9023,7 @@ private:
         } break;
         case v5::property::id::authentication_data: {
             process_binary(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
@@ -9056,13 +9031,13 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::authentication_data(force_move(body))
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9076,11 +9051,11 @@ private:
         case v5::property::id::request_problem_information: {
             std::size_t const len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9089,12 +9064,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::request_problem_information(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9108,11 +9083,11 @@ private:
         case v5::property::id::will_delay_interval: {
             std::size_t const len = 4;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9121,12 +9096,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::will_delay_interval(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9140,11 +9115,11 @@ private:
         case v5::property::id::request_response_information: {
             std::size_t const len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9153,12 +9128,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::request_response_information(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9171,7 +9146,7 @@ private:
         } break;
         case v5::property::id::response_information: {
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
@@ -9179,13 +9154,13 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::response_information(force_move(body), true)
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9198,7 +9173,7 @@ private:
         } break;
         case v5::property::id::server_reference: {
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
@@ -9206,13 +9181,13 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::server_reference(force_move(body), true)
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9225,7 +9200,7 @@ private:
         } break;
         case v5::property::id::reason_string: {
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
@@ -9233,13 +9208,13 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::reason_string(force_move(body), true)
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9253,11 +9228,11 @@ private:
         case v5::property::id::receive_maximum: {
             std::size_t const len = 2;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9266,12 +9241,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::receive_maximum(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9285,11 +9260,11 @@ private:
         case v5::property::id::topic_alias_maximum: {
             std::size_t const len = 2;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9298,12 +9273,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::topic_alias_maximum(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9317,11 +9292,11 @@ private:
         case v5::property::id::topic_alias: {
             std::size_t const len = 2;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9330,12 +9305,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::topic_alias(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9349,11 +9324,11 @@ private:
         case v5::property::id::maximum_qos: {
             std::size_t const len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9362,12 +9337,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::maximum_qos(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9381,11 +9356,11 @@ private:
         case v5::property::id::retain_available: {
             std::size_t const len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9394,12 +9369,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::retain_available(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9412,7 +9387,7 @@ private:
         } break;
         case v5::property::id::user_property: {
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
@@ -9420,10 +9395,10 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer key, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer key, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     auto rest = property_length_rest - length_bytes - key.size();
                     process_string(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [
                             this,
@@ -9432,7 +9407,7 @@ private:
                             key = force_move(key),
                             property_length_rest = rest
                         ]
-                        (buffer val, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                        (buffer val, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                             auto rest = property_length_rest - length_bytes - val.size();
                             props.emplace_back(
                                 v5::property::user_property(
@@ -9443,7 +9418,7 @@ private:
                                 )
                             );
                             process_property_id(
-                                force_move(func),
+                                force_move(session_life_keeper),
                                 force_move(buf),
                                 rest,
                                 force_move(props),
@@ -9460,11 +9435,11 @@ private:
         case v5::property::id::maximum_packet_size: {
             std::size_t const len = 4;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9473,12 +9448,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::maximum_packet_size(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9492,11 +9467,11 @@ private:
         case v5::property::id::wildcard_subscription_available: {
             std::size_t const len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9505,12 +9480,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::wildcard_subscription_available(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9524,11 +9499,11 @@ private:
         case v5::property::id::subscription_identifier_available: {
             std::size_t const len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9537,12 +9512,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::subscription_identifier_available(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9556,11 +9531,11 @@ private:
         case v5::property::id::shared_subscription_available: {
             std::size_t const len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers(func);
+                call_message_size_error_handlers();
                 return;
             }
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 len,
                 [
@@ -9569,12 +9544,12 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     props.emplace_back(
                         v5::property::shared_subscription_available(body.begin(), body.end())
                     );
                     process_property_id(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
@@ -9592,7 +9567,7 @@ private:
 
     template <typename NextFunc, typename NextPhase, typename Info>
     void process_header(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         std::size_t header_len,
         NextFunc&& next_func,
@@ -9608,7 +9583,7 @@ private:
                 as::buffer(ptr, remaining_length_),
                 [
                     this,
-                    func = force_move(func),
+                    session_life_keeper = force_move(session_life_keeper),
                     buf = buffer(string_view(ptr, remaining_length_), force_move(spa)),
                     next_func = std::forward<NextFunc>(next_func),
                     next_phase,
@@ -9616,9 +9591,9 @@ private:
                     self = force_move(self)
                 ]
                 (boost::system::error_code const& ec, std::size_t bytes_transferred) mutable {
-                    if (!check_error_and_transferred_length(ec, func, bytes_transferred, remaining_length_)) return;
+                    if (!check_error_and_transferred_length(ec, bytes_transferred, remaining_length_)) return;
                     (this->*next_func)(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         next_phase,
                         force_move(info),
@@ -9631,7 +9606,7 @@ private:
 
         if (header_len == 0) {
             (this->*next_func)(
-                force_move(func),
+                force_move(session_life_keeper),
                 buffer(),
                 next_phase,
                 force_move(info),
@@ -9644,7 +9619,7 @@ private:
             as::buffer(buf_.data(), header_len),
             [
                 this,
-                func = force_move(func),
+                session_life_keeper = force_move(session_life_keeper),
                 header_len,
                 next_func = std::forward<NextFunc>(next_func),
                 next_phase,
@@ -9653,9 +9628,9 @@ private:
             ]
             (boost::system::error_code const& ec,
              std::size_t bytes_transferred) mutable {
-                if (!check_error_and_transferred_length(ec, func, bytes_transferred, header_len)) return;
+                if (!check_error_and_transferred_length(ec, bytes_transferred, header_len)) return;
                 (this->*next_func)(
-                    force_move(func),
+                    force_move(session_life_keeper),
                     buffer(string_view(buf_.data(), header_len)),
                     next_phase,
                     force_move(info),
@@ -9691,7 +9666,7 @@ private:
     };
 
     void process_connect(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
@@ -9703,7 +9678,7 @@ private:
             2;   // KeepAlive
 
         if (remaining_length_ < header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
@@ -9711,7 +9686,7 @@ private:
         info.header_len = header_len;
 
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_connect_impl,
@@ -9722,7 +9697,7 @@ private:
     }
 
     void process_connect_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         connect_phase phase,
         connect_info&& info,
@@ -9732,19 +9707,13 @@ private:
         case connect_phase::header: {
             static constexpr char protocol_name[] = { 0x00, 0x04, 'M', 'Q', 'T', 'T' };
             if (std::memcmp(buf.data(), protocol_name, sizeof(protocol_name)) != 0) {
-                call_protocol_error_handlers(func);
+                call_protocol_error_handlers();
                 return;
             }
             std::size_t i = sizeof(protocol_name);
             auto version = static_cast<protocol_version>(buf[i++]);
             if (version != protocol_version::v3_1_1 && version != protocol_version::v5) {
-                if (func) {
-                    func(
-                        boost::system::errc::make_error_code(
-                            boost::system::errc::protocol_not_supported
-                        )
-                    );
-                }
+                call_protocol_error_handlers();
                 return;
             }
 
@@ -9752,13 +9721,7 @@ private:
                 version_ = version;
             }
             else if (version_ != version) {
-                if (func) {
-                    func(
-                        boost::system::errc::make_error_code(
-                            boost::system::errc::protocol_not_supported
-                        )
-                    );
-                }
+                call_protocol_error_handlers();
                 return;
             }
 
@@ -9769,7 +9732,7 @@ private:
 
             buf.remove_prefix(info.header_len); // consume buffer
             process_connect_impl(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [&] {
                     if (version_ == protocol_version::v5) {
@@ -9783,7 +9746,7 @@ private:
         } break;
         case connect_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
@@ -9792,12 +9755,12 @@ private:
                 (
                     std::vector<v5::property_variant> props,
                     buffer buf,
-                    async_handler_t func,
+                    any session_life_keeper,
                     this_type_sp self
                 ) mutable {
                     info.props = force_move(props);
                     process_connect_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         connect_phase::client_id,
                         force_move(info),
@@ -9809,17 +9772,17 @@ private:
             break;
         case connect_phase::client_id:
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer client_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer client_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.client_id = force_move(client_id);
                     auto connect_flag = info.connect_flag;
                     process_connect_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [&] {
                             if (connect_flags::has_will_flag(connect_flag)) {
@@ -9847,32 +9810,32 @@ private:
             auto topic_message_proc =
                 [this]
                 (
-                    async_handler_t&& func,
+                    any&& session_life_keeper,
                     buffer&& buf,
                     connect_info&& info,
                     this_type_sp&& self
                 ) mutable {
                     process_string(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [
                             this,
                             info = force_move(info)
                         ]
-                        (buffer will_topic, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                        (buffer will_topic, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                             info.will_topic = force_move(will_topic);
                             process_binary(
-                                force_move(func),
+                                force_move(session_life_keeper),
                                 force_move(buf),
                                 [
                                     this,
                                     info = force_move(info)
                                 ]
-                                (buffer will_payload, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                                (buffer will_payload, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                                     info.will_payload = force_move(will_payload);
                                     auto connect_flag = info.connect_flag;
                                     process_connect_impl(
-                                        force_move(func),
+                                        force_move(session_life_keeper),
                                         force_move(buf),
                                         [&] {
                                             if (connect_flags::has_user_name_flag(connect_flag)) {
@@ -9896,16 +9859,16 @@ private:
 
             if (version_ == protocol_version::v5) {
                 process_properties(
-                    force_move(func),
+                    force_move(session_life_keeper),
                     force_move(buf),
                     [
                         info = force_move(info),
                         topic_message_proc
                     ]
-                    (std::vector<v5::property_variant> will_props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                    (std::vector<v5::property_variant> will_props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                         info.will_props = force_move(will_props);
                         topic_message_proc(
-                            force_move(func),
+                            force_move(session_life_keeper),
                             force_move(buf),
                             force_move(info),
                             force_move(self)
@@ -9916,7 +9879,7 @@ private:
                 return;
             }
             topic_message_proc(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 force_move(info),
                 force_move(self)
@@ -9924,17 +9887,17 @@ private:
         } break;
         case connect_phase::user_name:
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer user_name, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer user_name, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.user_name = force_move(user_name);
                     auto connect_flag = info.connect_flag;
                     process_connect_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [&] {
                             if (connect_flags::has_password_flag(connect_flag)) {
@@ -9951,16 +9914,16 @@ private:
             break;
         case connect_phase::password:
             process_binary(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer password, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer password, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.password = force_move(password);
                     process_connect_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         connect_phase::finish,
                         force_move(info),
@@ -9998,7 +9961,7 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
                 if (h_v5_connect_) {
@@ -10027,7 +9990,7 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -10052,7 +10015,7 @@ private:
     };
 
     void process_connack(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
@@ -10061,14 +10024,14 @@ private:
             1;   // Reason Code
 
         if (remaining_length_ < header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         connack_info info;
         info.header_len = header_len;
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_connack_impl,
@@ -10079,7 +10042,7 @@ private:
     }
 
     void process_connack_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         connack_phase phase,
         connack_info&& info,
@@ -10101,7 +10064,7 @@ private:
 
             buf.remove_prefix(info.header_len); // consume buffer
             process_connack_impl(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [&] {
                     if (version_ == protocol_version::v5) {
@@ -10115,16 +10078,16 @@ private:
             break;
         case connack_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_connack_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         connack_phase::finish,
                         force_move(info),
@@ -10142,7 +10105,7 @@ private:
             auto connack_proc =
                 [this]
                 (
-                    async_handler_t&& func,
+                    any&& session_life_keeper,
                     connack_info&& info
                 ) mutable {
 
@@ -10153,7 +10116,7 @@ private:
                                 return;
                             }
                         }
-                        h_mqtt_message_processed_(force_move(func));
+                        h_mqtt_message_processed_(force_move(session_life_keeper));
                         break;
                     case protocol_version::v5:
                         if (h_v5_connack_) {
@@ -10161,7 +10124,7 @@ private:
                                 return;
                             }
                         }
-                        h_mqtt_message_processed_(force_move(func));
+                        h_mqtt_message_processed_(force_move(session_life_keeper));
                         break;
                     default:
                         BOOST_ASSERT(false);
@@ -10188,7 +10151,7 @@ private:
                         auto org = get_mqtt_message_processed_handler();
                         set_mqtt_message_processed_handler(
                             []
-                            (async_handler_t) {
+                            (any) {
                             }
                         );
 
@@ -10196,7 +10159,7 @@ private:
                             [
                                 this,
                                 self = force_move(self),
-                                func = force_move(func),
+                                session_life_keeper = force_move(session_life_keeper),
                                 connack_proc = force_move(connack_proc),
                                 org = force_move(org),
                                 info = force_move(info)
@@ -10205,7 +10168,7 @@ private:
                                 // All stored messages are sent, then restore the original handler
                                 // and do the connack process. If it returns true, read the next mqtt message.
                                 set_mqtt_message_processed_handler(force_move(org));
-                                connack_proc(force_move(func), force_move(info));
+                                connack_proc(force_move(session_life_keeper), force_move(info));
                             };
                         async_send_store(force_move(async_connack_proc));
                         return;
@@ -10213,7 +10176,7 @@ private:
                     send_store();
                 }
             }
-            connack_proc(force_move(func), force_move(info));
+            connack_proc(force_move(session_life_keeper), force_move(info));
         } break;
         }
     }
@@ -10234,7 +10197,7 @@ private:
     };
 
     void process_publish(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
@@ -10242,12 +10205,12 @@ private:
             2; // topic name length
 
         if (remaining_length_ < min_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             0,
             &this_type::process_publish_impl,
@@ -10258,7 +10221,7 @@ private:
     }
 
     void process_publish_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         publish_phase phase,
         publish_info&& info,
@@ -10267,23 +10230,23 @@ private:
         switch (phase) {
         case publish_phase::topic_name:
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer topic_name, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer topic_name, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.topic_name = force_move(topic_name);
                     qos qos_value = publish::get_qos(fixed_header_);
                     if (qos_value != qos::at_most_once &&
                         qos_value != qos::at_least_once &&
                         qos_value != qos::exactly_once) {
-                        call_protocol_error_handlers(func);
+                        call_protocol_error_handlers();
                         return;
                     }
                     process_publish_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [&] {
                             if (qos_value == qos::at_most_once) {
@@ -10303,16 +10266,16 @@ private:
             break;
         case publish_phase::packet_id:
             process_packet_id(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_publish_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [&] {
                             if (version_ == protocol_version::v5) {
@@ -10330,16 +10293,16 @@ private:
             break;
         case publish_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_publish_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         publish_phase::payload,
                         force_move(info),
@@ -10351,14 +10314,14 @@ private:
             break;
         case publish_phase::payload:
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 remaining_length_,
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer payload, buffer /*buf*/, async_handler_t func, this_type_sp /*self*/) mutable {
+                (buffer payload, buffer /*buf*/, any session_life_keeper, this_type_sp /*self*/) mutable {
                     auto handler_call =
                         [&] {
                             switch (version_) {
@@ -10374,7 +10337,7 @@ private:
                                         return false;
                                     }
                                 }
-                                h_mqtt_message_processed_(force_move(func));
+                                h_mqtt_message_processed_(force_move(session_life_keeper));
                                 break;
                             case protocol_version::v5:
                                 if (h_v5_publish_) {
@@ -10391,7 +10354,7 @@ private:
                                         return false;
                                     }
                                 }
-                                h_mqtt_message_processed_(force_move(func));
+                                h_mqtt_message_processed_(force_move(session_life_keeper));
                                 break;
                             default:
                                 BOOST_ASSERT(false);
@@ -10410,13 +10373,13 @@ private:
                                         send_puback(*info.packet_id);
                                     }
                                 },
-                                [this, &info, &func] {
+                                [this, &info, &session_life_keeper] {
                                     if (connected_) {
                                         async_send_puback(
                                             *info.packet_id,
                                             nullopt,
                                             std::vector<v5::property_variant>{},
-                                            func
+                                            [session_life_keeper](auto){}
                                         );
                                     }
                                 }
@@ -10432,13 +10395,13 @@ private:
                                         send_pubrec(*info.packet_id);
                                     }
                                 },
-                                [this, &info, &func] {
+                                [this, &info, &session_life_keeper] {
                                     if (connected_) {
                                         async_send_pubrec(
                                             *info.packet_id,
                                             nullopt,
                                             std::vector<v5::property_variant>{},
-                                            func
+                                            [session_life_keeper](auto){}
                                         );
                                     }
                                 }
@@ -10469,7 +10432,7 @@ private:
     };
 
     void process_puback(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
@@ -10477,13 +10440,13 @@ private:
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         puback_info info;
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_puback_impl,
@@ -10494,7 +10457,7 @@ private:
     }
 
     void process_puback_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         puback_phase phase,
         puback_info&& info,
@@ -10503,16 +10466,16 @@ private:
         switch (phase) {
         case puback_phase::packet_id:
             process_packet_id(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_puback_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
@@ -10530,17 +10493,17 @@ private:
             break;
         case puback_phase::reason_code:
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 1, // reason_code
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::puback_reason_code>(body[0]);
                     process_puback_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         puback_phase::properties,
                         force_move(info),
@@ -10552,16 +10515,16 @@ private:
             break;
         case puback_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_puback_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         puback_phase::finish,
                         force_move(info),
@@ -10587,7 +10550,7 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
                 if (h_v5_puback_) {
@@ -10595,7 +10558,7 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -10620,7 +10583,7 @@ private:
     };
 
     void process_pubrec(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
@@ -10628,13 +10591,13 @@ private:
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         pubrec_info info;
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_pubrec_impl,
@@ -10645,7 +10608,7 @@ private:
     }
 
     void process_pubrec_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         pubrec_phase phase,
         pubrec_info&& info,
@@ -10654,16 +10617,16 @@ private:
         switch (phase) {
         case pubrec_phase::packet_id:
             process_packet_id(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_pubrec_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
@@ -10681,17 +10644,17 @@ private:
             break;
         case pubrec_phase::reason_code:
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 1, // reason_code
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::pubrec_reason_code>(body[0]);
                     process_pubrec_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         pubrec_phase::properties,
                         force_move(info),
@@ -10703,16 +10666,16 @@ private:
             break;
         case pubrec_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_pubrec_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         pubrec_phase::finish,
                         force_move(info),
@@ -10748,7 +10711,7 @@ private:
                                     info.packet_id,
                                     nullopt,
                                     std::vector<v5::property_variant>{},
-                                    func
+                                    [session_life_keeper](auto){}
                                 );
                             }
                             else {
@@ -10765,7 +10728,7 @@ private:
                     }
                 }
                 res();
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
                 if (h_v5_pubrec_) {
@@ -10774,7 +10737,7 @@ private:
                     }
                 }
                 res();
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -10799,7 +10762,7 @@ private:
     };
 
     void process_pubrel(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
@@ -10807,13 +10770,13 @@ private:
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         pubrel_info info;
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_pubrel_impl,
@@ -10824,7 +10787,7 @@ private:
     }
 
     void process_pubrel_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         pubrel_phase phase,
         pubrel_info&& info,
@@ -10833,16 +10796,16 @@ private:
         switch (phase) {
         case pubrel_phase::packet_id:
             process_packet_id(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_pubrel_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
@@ -10860,17 +10823,17 @@ private:
             break;
         case pubrel_phase::reason_code:
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 1, // reason_code
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::pubrel_reason_code>(body[0]);
                     process_pubrel_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         pubrel_phase::properties,
                         force_move(info),
@@ -10882,16 +10845,16 @@ private:
             break;
         case pubrel_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_pubrel_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         pubrel_phase::finish,
                         force_move(info),
@@ -10916,7 +10879,7 @@ private:
                                     info.packet_id,
                                     nullopt,
                                     std::vector<v5::property_variant>{},
-                                    func
+                                    [session_life_keeper](auto){}
                                 );
                             }
                         }
@@ -10931,7 +10894,7 @@ private:
                     }
                 }
                 res();
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
                 if (h_v5_pubrel_) {
@@ -10940,7 +10903,7 @@ private:
                     }
                 }
                 res();
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -10965,7 +10928,7 @@ private:
     };
 
     void process_pubcomp(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
@@ -10973,13 +10936,13 @@ private:
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         pubcomp_info info;
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_pubcomp_impl,
@@ -10990,7 +10953,7 @@ private:
     }
 
     void process_pubcomp_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         pubcomp_phase phase,
         pubcomp_info&& info,
@@ -10999,16 +10962,16 @@ private:
         switch (phase) {
         case pubcomp_phase::packet_id:
             process_packet_id(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_pubcomp_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
@@ -11026,17 +10989,17 @@ private:
             break;
         case pubcomp_phase::reason_code:
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 1, // reason_code
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::pubcomp_reason_code>(body[0]);
                     process_pubcomp_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         pubcomp_phase::properties,
                         force_move(info),
@@ -11048,16 +11011,16 @@ private:
             break;
         case pubcomp_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_pubcomp_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         pubcomp_phase::finish,
                         force_move(info),
@@ -11084,7 +11047,7 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
                 if (h_v5_pubcomp_) {
@@ -11092,7 +11055,7 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -11117,7 +11080,7 @@ private:
     };
 
     void process_subscribe(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
@@ -11125,13 +11088,13 @@ private:
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         subscribe_info info;
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_subscribe_impl,
@@ -11142,7 +11105,7 @@ private:
     }
 
     void process_subscribe_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         subscribe_phase phase,
         subscribe_info&& info,
@@ -11151,16 +11114,16 @@ private:
         switch (phase) {
         case subscribe_phase::packet_id:
             process_packet_id(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_subscribe_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [&] {
                             if (version_ == protocol_version::v5) {
@@ -11177,16 +11140,16 @@ private:
             break;
         case subscribe_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_subscribe_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         subscribe_phase::topic,
                         force_move(info),
@@ -11198,15 +11161,15 @@ private:
             break;
         case subscribe_phase::topic:
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer topic_filter, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer topic_filter, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     process_nbytes(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         1, // requested_qos
                         [
@@ -11214,18 +11177,18 @@ private:
                             info = force_move(info),
                             topic_filter = force_move(topic_filter)
                         ]
-                        (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                        (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                             subscribe_options option(static_cast<std::uint8_t>(body[0]));
                             qos requested_qos = option.get_qos();
                             if (requested_qos != qos::at_most_once &&
                                 requested_qos != qos::at_least_once &&
                                 requested_qos != qos::exactly_once) {
-                                call_protocol_error_handlers(func);
+                                call_protocol_error_handlers();
                                 return;
                             }
                             info.entries.emplace_back(force_move(topic_filter), option);
                             process_subscribe_impl(
-                                force_move(func),
+                                force_move(session_life_keeper),
                                 force_move(buf),
                                 [&] {
                                     if (remaining_length_ == 0) {
@@ -11251,7 +11214,7 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
                 if (h_v5_subscribe_) {
@@ -11259,7 +11222,7 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -11282,7 +11245,7 @@ private:
     };
 
     void process_suback(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
@@ -11290,13 +11253,13 @@ private:
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         suback_info info;
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_suback_impl,
@@ -11307,7 +11270,7 @@ private:
     }
 
     void process_suback_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         suback_phase phase,
         suback_info&& info,
@@ -11316,16 +11279,16 @@ private:
         switch (phase) {
         case suback_phase::packet_id:
             process_packet_id(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_suback_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [&] {
                             if (version_ == protocol_version::v5) {
@@ -11342,16 +11305,16 @@ private:
             break;
         case suback_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_suback_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         suback_phase::reasons,
                         force_move(info),
@@ -11363,14 +11326,14 @@ private:
             break;
         case suback_phase::reasons:
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 remaining_length_, // Reason Codes
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer body, buffer /*buf*/, async_handler_t func, this_type_sp /*self*/) mutable {
+                (buffer body, buffer /*buf*/, any session_life_keeper, this_type_sp /*self*/) mutable {
                     {
                         LockGuard<Mutex> lck (store_mtx_);
                         packet_id_.erase(info.packet_id);
@@ -11397,7 +11360,7 @@ private:
                                 return;
                             }
                         }
-                        h_mqtt_message_processed_(force_move(func));
+                        h_mqtt_message_processed_(force_move(session_life_keeper));
                         break;
                     case protocol_version::v5:
                         if (h_v5_suback_) {
@@ -11415,7 +11378,7 @@ private:
                                 return;
                             }
                         }
-                        h_mqtt_message_processed_(force_move(func));
+                        h_mqtt_message_processed_(force_move(session_life_keeper));
                         break;
                     default:
                         BOOST_ASSERT(false);
@@ -11443,7 +11406,7 @@ private:
     };
 
     void process_unsubscribe(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
@@ -11451,13 +11414,13 @@ private:
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         unsubscribe_info info;
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_unsubscribe_impl,
@@ -11468,7 +11431,7 @@ private:
     }
 
     void process_unsubscribe_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         unsubscribe_phase phase,
         unsubscribe_info&& info,
@@ -11477,16 +11440,16 @@ private:
         switch (phase) {
         case unsubscribe_phase::packet_id:
             process_packet_id(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     process_unsubscribe_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [&] {
                             if (version_ == protocol_version::v5) {
@@ -11503,16 +11466,16 @@ private:
             break;
         case unsubscribe_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_unsubscribe_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         unsubscribe_phase::topic,
                         force_move(info),
@@ -11524,16 +11487,16 @@ private:
             break;
         case unsubscribe_phase::topic:
             process_string(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer topic_filter, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer topic_filter, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.entries.emplace_back(force_move(topic_filter));
                     process_unsubscribe_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         [&] {
                             if (remaining_length_ == 0) {
@@ -11556,7 +11519,7 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
                 if (h_v5_unsubscribe_) {
@@ -11564,7 +11527,7 @@ private:
                         return;
                     }
                 }
-                h_mqtt_message_processed_(force_move(func));
+                h_mqtt_message_processed_(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -11587,7 +11550,7 @@ private:
     };
 
     void process_unsuback(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
@@ -11595,13 +11558,13 @@ private:
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         unsuback_info info;
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_unsuback_impl,
@@ -11612,7 +11575,7 @@ private:
     }
 
     void process_unsuback_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         unsuback_phase phase,
         unsuback_info&& info,
@@ -11621,13 +11584,13 @@ private:
         switch (phase) {
         case unsuback_phase::packet_id:
             process_packet_id(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (packet_id_t packet_id, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     {
                         LockGuard<Mutex> lck (store_mtx_);
@@ -11640,11 +11603,11 @@ private:
                                 return;
                             }
                         }
-                        h_mqtt_message_processed_(force_move(func));
+                        h_mqtt_message_processed_(force_move(session_life_keeper));
                         break;
                     case protocol_version::v5:
                         process_unsuback_impl(
-                            force_move(func),
+                            force_move(session_life_keeper),
                             force_move(buf),
                             unsuback_phase::properties,
                             force_move(info),
@@ -11660,16 +11623,16 @@ private:
             break;
         case unsuback_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_unsuback_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         unsuback_phase::reasons,
                         force_move(info),
@@ -11681,14 +11644,14 @@ private:
             break;
         case unsuback_phase::reasons:
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 remaining_length_, // Reason Codes
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer body, buffer /*buf*/, async_handler_t func, this_type_sp /*self*/) mutable {
+                (buffer body, buffer /*buf*/, any session_life_keeper, this_type_sp /*self*/) mutable {
                     BOOST_ASSERT(version_ == protocol_version::v5);
                     {
                         LockGuard<Mutex> lck (store_mtx_);
@@ -11709,7 +11672,7 @@ private:
                             return;
                         }
                     }
-                    h_mqtt_message_processed_(force_move(func));
+                    h_mqtt_message_processed_(force_move(session_life_keeper));
                 },
                 force_move(self)
             );
@@ -11720,35 +11683,35 @@ private:
     // process pingreq
 
     void process_pingreq(
-        async_handler_t func
+        any session_life_keeper
     ) {
         std::size_t const header_len = 0;
 
         if (remaining_length_ != header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
         if (h_pingreq_) {
             if (!h_pingreq_()) return;
         }
-        h_mqtt_message_processed_(force_move(func));
+        h_mqtt_message_processed_(force_move(session_life_keeper));
     }
 
     // process pingresp
 
     void process_pingresp(
-        async_handler_t func
+        any session_life_keeper
     ) {
         std::size_t const header_len = 0;
 
         if (remaining_length_ != header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
         if (h_pingresp_) {
             if (!h_pingresp_()) return;
         }
-        h_mqtt_message_processed_(force_move(func));
+        h_mqtt_message_processed_(force_move(session_life_keeper));
     }
 
     // process disconnect
@@ -11765,14 +11728,14 @@ private:
     };
 
     void process_disconnect(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
         if (remaining_length_ == 0) {
             disconnect_info info { v5::disconnect_reason_code::normal_disconnection, std::vector<v5::property_variant>() };
             process_disconnect_impl(
-                force_move(func),
+                force_move(session_life_keeper),
                 buffer(),
                 disconnect_phase::finish,
                 force_move(info),
@@ -11782,7 +11745,7 @@ private:
         }
 
         if (version_ != protocol_version::v5) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
@@ -11790,13 +11753,13 @@ private:
             1; // Reason Code
 
         if (remaining_length_ < header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         disconnect_info info;
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_disconnect_impl,
@@ -11807,7 +11770,7 @@ private:
     }
 
     void process_disconnect_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         disconnect_phase phase,
         disconnect_info&& info,
@@ -11816,17 +11779,17 @@ private:
         switch (phase) {
         case disconnect_phase::reason_code:
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 1, // reason_code
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::disconnect_reason_code>(body[0]);
                     process_disconnect_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         disconnect_phase::properties,
                         force_move(info),
@@ -11838,16 +11801,16 @@ private:
             break;
         case disconnect_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_disconnect_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         disconnect_phase::finish,
                         force_move(info),
@@ -11863,16 +11826,10 @@ private:
                 if (h_disconnect_) {
                     h_disconnect_();
                 }
-                if (func) {
-                    func(boost::system::errc::make_error_code(boost::system::errc::success));
-                }
                 break;
             case protocol_version::v5:
                 if (h_v5_disconnect_) {
                     h_v5_disconnect_(info.reason_code, force_move(info.props));
-                }
-                if (func) {
-                    func(boost::system::errc::make_error_code(boost::system::errc::success));
                 }
                 break;
             default:
@@ -11896,19 +11853,19 @@ private:
     };
 
     void process_auth(
-        async_handler_t func,
+        any session_life_keeper,
         bool all_read,
         this_type_sp self
     ) {
         if (version_ != protocol_version::v5) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         if (remaining_length_ == 0) {
             auth_info info { v5::auth_reason_code::success, std::vector<v5::property_variant>() };
             process_auth_impl(
-                force_move(func),
+                force_move(session_life_keeper),
                 buffer(),
                 auth_phase::finish,
                 force_move(info),
@@ -11921,13 +11878,13 @@ private:
             1; // Reason Code
 
         if (remaining_length_ < header_len) {
-            call_protocol_error_handlers(func);
+            call_protocol_error_handlers();
             return;
         }
 
         auth_info info;
         process_header(
-            force_move(func),
+            force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_auth_impl,
@@ -11938,7 +11895,7 @@ private:
     }
 
     void process_auth_impl(
-        async_handler_t func,
+        any session_life_keeper,
         buffer buf,
         auth_phase phase,
         auth_info&& info,
@@ -11947,17 +11904,17 @@ private:
         switch (phase) {
         case auth_phase::reason_code:
             process_nbytes(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 1, // reason_code
                 [
                     this,
                     info = force_move(info)
                 ]
-                (buffer body, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::auth_reason_code>(body[0]);
                     process_auth_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         auth_phase::properties,
                         force_move(info),
@@ -11969,16 +11926,16 @@ private:
             break;
         case auth_phase::properties:
             process_properties(
-                force_move(func),
+                force_move(session_life_keeper),
                 force_move(buf),
                 [
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, async_handler_t func, this_type_sp self) mutable {
+                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_auth_impl(
-                        force_move(func),
+                        force_move(session_life_keeper),
                         force_move(buf),
                         auth_phase::finish,
                         force_move(info),
@@ -11995,7 +11952,7 @@ private:
                     return;
                 }
             }
-            h_mqtt_message_processed_(force_move(func));
+            h_mqtt_message_processed_(force_move(session_life_keeper));
             break;
         }
     }

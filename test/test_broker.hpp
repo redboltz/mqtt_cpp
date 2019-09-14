@@ -76,11 +76,7 @@ public:
         auto sp = ep.shared_from_this();
         ep.socket().lowest_layer().set_option(as::ip::tcp::no_delay(true));
         ep.set_auto_pub_response(false);
-        ep.start_session(
-            [sp] // keeping ep's lifetime as sp until session finished
-            (boost::system::error_code const& /*ec*/) {
-            }
-        );
+        ep.start_session(sp); // keeping ep's lifetime as sp until session finished
 
         // set connection (lower than MQTT) level handlers
         ep.set_close_handler(
