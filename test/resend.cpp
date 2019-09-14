@@ -237,7 +237,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 // TCP level disconnection detecting timing is unpredictable.
                 // Sometimes broker first, sometimes the client (this test) first.
                 // This test assume that the broker detects first, so I set timer.
-                // If client ditect the disconnection first, then reconnect with
+                // If client detect the disconnection first, then reconnect with
                 // existing client id. And it is overwritten at broker.
                 // Then error handler in the broker called, assertion failed due to
                 // no corresponding connection exists
@@ -406,7 +406,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 // TCP level disconnection detecting timing is unpredictable.
                 // Sometimes broker first, sometimes the client (this test) first.
                 // This test assume that the broker detects first, so I set timer.
-                // If client ditect the disconnection first, then reconnect with
+                // If client detect the disconnection first, then reconnect with
                 // existing client id. And it is overwritten at broker.
                 // Then error handler in the broker called, assertion failed due to
                 // no corresponding connection exists
@@ -626,7 +626,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 // TCP level disconnection detecting timing is unpredictable.
                 // Sometimes broker first, sometimes the client (this test) first.
                 // This test assume that the broker detects first, so I set timer.
-                // If client ditect the disconnection first, then reconnect with
+                // If client detect the disconnection first, then reconnect with
                 // existing client id. And it is overwritten at broker.
                 // Then error handler in the broker called, assertion failed due to
                 // no corresponding connection exists
@@ -814,7 +814,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                         // TCP level disconnection detecting timing is unpredictable.
                         // Sometimes broker first, sometimes the client (this test) first.
                         // This test assume that the broker detects first, so I set timer.
-                        // If client ditect the disconnection first, then reconnect with
+                        // If client detect the disconnection first, then reconnect with
                         // existing client id. And it is overwritten at broker.
                         // Then error handler in the broker called, assertion failed due to
                         // no corresponding connection exists
@@ -832,7 +832,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                         // TCP level disconnection detecting timing is unpredictable.
                         // Sometimes broker first, sometimes the client (this test) first.
                         // This test assume that the broker detects first, so I set timer.
-                        // If client ditect the disconnection first, then reconnect with
+                        // If client detect the disconnection first, then reconnect with
                         // existing client id. And it is overwritten at broker.
                         // Then error handler in the broker called, assertion failed due to
                         // no corresponding connection exists
@@ -1016,7 +1016,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 // TCP level disconnection detecting timing is unpredictable.
                 // Sometimes broker first, sometimes the client (this test) first.
                 // This test assume that the broker detects first, so I set timer.
-                // If client ditect the disconnection first, then reconnect with
+                // If client detect the disconnection first, then reconnect with
                 // existing client id. And it is overwritten at broker.
                 // Then error handler in the broker called, assertion failed due to
                 // no corresponding connection exists
