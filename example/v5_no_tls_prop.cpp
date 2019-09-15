@@ -148,35 +148,37 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
         }
     );
     s.set_accept_handler( // this handler doesn't depend on MQTT protocol version
-        [&](con_t& ep) {
+        [&s, &connections](con_sp_t spep) {
+            auto& ep = *spep;
+            std::weak_ptr<con_t> wp(spep);
+
             std::cout << "[server] accept" << std::endl;
-            auto sp = ep.shared_from_this();
             // For server close if ep is closed.
             auto g = MQTT_NS::shared_scope_guard(
-                [&] {
+                [&s] {
                     std::cout << "[server] session end" << std::endl;
                     s.close();
                 }
             );
-            ep.start_session(std::make_tuple(std::move(sp), std::move(g)));
+            ep.start_session(std::make_tuple(std::move(spep), std::move(g)));
 
             // set connection (lower than MQTT) level handlers
             ep.set_close_handler( // this handler doesn't depend on MQTT protocol version
-                [&]
+                [&connections, wp]
                 (){
                     std::cout << "[server] closed." << std::endl;
-                    connections.erase(ep.shared_from_this());
+                    connections.erase(wp.lock());
                 });
             ep.set_error_handler( // this handler doesn't depend on MQTT protocol version
-                [&]
+                [&connections, wp]
                 (boost::system::error_code const& ec){
                     std::cout << "[server] error: " << ec.message() << std::endl;
-                    connections.erase(ep.shared_from_this());
+                    connections.erase(wp.lock());
                 });
 
             // set MQTT level handlers
             ep.set_v5_connect_handler( // use v5 handler
-                [&]
+                [&connections, wp]
                 (MQTT_NS::buffer client_id,
                  MQTT_NS::optional<MQTT_NS::buffer> const& username,
                  MQTT_NS::optional<MQTT_NS::buffer> const& password,
@@ -229,7 +231,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                         );
                     }
 
-                    connections.insert(ep.shared_from_this());
+                    connections.insert(wp.lock());
 
                     std::vector<MQTT_NS::v5::property_variant> connack_ps {
                         MQTT_NS::v5::property::session_expiry_interval(0),
@@ -251,17 +253,17 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                         MQTT_NS::v5::property::authentication_method("test authentication method"_mb),
                         MQTT_NS::v5::property::authentication_data("test authentication data"_mb)
                     };
-                    ep.connack(false, MQTT_NS::v5::connect_reason_code::success, std::move(connack_ps));
+                    wp.lock()->connack(false, MQTT_NS::v5::connect_reason_code::success, std::move(connack_ps));
                     return true;
                 }
             );
             ep.set_v5_disconnect_handler( // use v5 handler
-                [&]
+                [&connections, wp]
                 (MQTT_NS::v5::disconnect_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     std::cout <<
                         "[server] disconnect received." <<
                         " reason_code: " << reason_code << std::endl;
-                    connections.erase(ep.shared_from_this());
+                    connections.erase(wp.lock());
                 });
         }
     );

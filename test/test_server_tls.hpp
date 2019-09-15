@@ -43,8 +43,8 @@ public:
         );
 
         server_.set_accept_handler(
-            [&](MQTT_NS::server_tls<>::endpoint_t& ep) {
-                b_.handle_accept(ep);
+            [&](std::shared_ptr<MQTT_NS::server_tls<>::endpoint_t> spep) {
+                b_.handle_accept(MQTT_NS::force_move(spep));
             }
         );
 

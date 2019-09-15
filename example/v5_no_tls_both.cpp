@@ -188,36 +188,38 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
         }
     );
     s.set_accept_handler( // this handler doesn't depend on MQTT protocol version
-        [&](con_t& ep) {
+        [&s, &connections, &subs](con_sp_t spep) {
+            auto& ep = *spep;
+            std::weak_ptr<con_t> wp(spep);
+
             using packet_id_t = typename std::remove_reference_t<decltype(ep)>::packet_id_t;
             std::cout << "[server] accept" << std::endl;
-            auto sp = ep.shared_from_this();
             // For server close if ep is closed.
             auto g = MQTT_NS::shared_scope_guard(
-                [&] {
+                [&s] {
                     std::cout << "[server] session end" << std::endl;
                     s.close();
                 }
             );
-            ep.start_session(std::make_tuple(std::move(sp), std::move(g)));
+            ep.start_session(std::make_tuple(std::move(spep), std::move(g)));
 
             // set connection (lower than MQTT) level handlers
-            ep.set_close_handler( // this handler doesn't depend on MQTT protocol version
-                [&]
+            ep.set_close_handler(
+                [&connections, &subs, wp]
                 (){
                     std::cout << "[server] closed." << std::endl;
-                    close_proc(connections, subs, ep.shared_from_this());
+                    close_proc(connections, subs, wp.lock());
                 });
-            ep.set_error_handler( // this handler doesn't depend on MQTT protocol version
-                [&]
+            ep.set_error_handler(
+                [&connections, &subs, wp]
                 (boost::system::error_code const& ec){
                     std::cout << "[server] error: " << ec.message() << std::endl;
-                    close_proc(connections, subs, ep.shared_from_this());
+                    close_proc(connections, subs, wp.lock());
                 });
 
             // set MQTT level handlers
             ep.set_v5_connect_handler( // use v5 handler
-                [&]
+                [&connections, wp]
                 (MQTT_NS::buffer client_id,
                  MQTT_NS::optional<MQTT_NS::buffer> const& username,
                  MQTT_NS::optional<MQTT_NS::buffer> const& password,
@@ -231,21 +233,21 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     std::cout << "[server] password     : " << (password ? password.value() : "none"_mb) << std::endl;
                     std::cout << "[server] clean_session: " << std::boolalpha << clean_session << std::endl;
                     std::cout << "[server] keep_alive   : " << keep_alive << std::endl;
-                    connections.insert(ep.shared_from_this());
-                    ep.connack(false, MQTT_NS::v5::connect_reason_code::success);
+                    connections.insert(wp.lock());
+                    wp.lock()->connack(false, MQTT_NS::v5::connect_reason_code::success);
                     return true;
                 }
             );
             ep.set_v5_disconnect_handler( // use v5 handler
-                [&]
+                [&connections, &subs, wp]
                 (MQTT_NS::v5::disconnect_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
                     std::cout <<
                         "[server] disconnect received." <<
                         " reason_code: " << reason_code << std::endl;
-                    close_proc(connections, subs, ep.shared_from_this());
+                    close_proc(connections, subs, wp.lock());
                 });
             ep.set_v5_puback_handler( // use v5 handler
-                [&]
+                []
                 (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
                     std::cout <<
                         "[server] puback received. packet_id: " << packet_id <<
@@ -253,7 +255,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     return true;
                 });
             ep.set_v5_pubrec_handler( // use v5 handler
-                [&]
+                []
                 (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
                     std::cout <<
                         "[server] pubrec received. packet_id: " << packet_id <<
@@ -261,7 +263,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     return true;
                 });
             ep.set_v5_pubrel_handler( // use v5 handler
-                [&]
+                []
                 (packet_id_t packet_id, MQTT_NS::v5::pubrel_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
                     std::cout <<
                         "[server] pubrel received. packet_id: " << packet_id <<
@@ -269,7 +271,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     return true;
                 });
             ep.set_v5_pubcomp_handler( // use v5 handler
-                [&]
+                []
                 (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
                     std::cout <<
                         "[server] pubcomp received. packet_id: " << packet_id <<
@@ -277,7 +279,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     return true;
                 });
             ep.set_v5_publish_handler( // use v5 handler
-                [&]
+                [&subs]
                 (bool is_dup,
                  MQTT_NS::qos qos_value,
                  bool is_retain,
@@ -307,7 +309,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     return true;
                 });
             ep.set_v5_subscribe_handler( // use v5 handler
-                [&]
+                [&subs, wp]
                 (packet_id_t packet_id,
                  std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> entries,
                  std::vector<MQTT_NS::v5::property_variant> /*props*/) {
@@ -319,14 +321,14 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                         MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
                         std::cout << "[server] topic: " << topic  << " qos: " << qos_value << std::endl;
                         res.emplace_back(static_cast<MQTT_NS::v5::suback_reason_code>(qos_value));
-                        subs.emplace(std::move(topic), ep.shared_from_this(), qos_value);
+                        subs.emplace(std::move(topic), wp.lock(), qos_value);
                     }
-                    ep.suback(packet_id, res);
+                    wp.lock()->suback(packet_id, res);
                     return true;
                 }
             );
             ep.set_v5_unsubscribe_handler( // use v5 handler
-                [&]
+                [&subs, wp]
                 (packet_id_t packet_id,
                  std::vector<MQTT_NS::buffer> topics,
                  std::vector<MQTT_NS::v5::property_variant> /*props*/) {
@@ -334,7 +336,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     for (auto const& topic : topics) {
                         subs.erase(topic);
                     }
-                    ep.unsuback(packet_id);
+                    wp.lock()->unsuback(packet_id);
                     return true;
                 }
             );

@@ -47,7 +47,7 @@ public:
      * @brief Accept handler
      * @param ep endpoint of the connecting client
      */
-    using accept_handler = std::function<void(endpoint_t& ep)>;
+    using accept_handler = std::function<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
      * @brief Error handler
@@ -154,7 +154,7 @@ private:
                     return;
                 }
                 auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
-                if (h_accept_) h_accept_(*sp);
+                if (h_accept_) h_accept_(force_move(sp));
                 do_accept();
             }
         );
@@ -189,7 +189,7 @@ public:
      * @brief Accept handler
      * @param ep endpoint of the connecting client
      */
-    using accept_handler = std::function<void(endpoint_t& ep)>;
+    using accept_handler = std::function<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
      * @brief Error handler
@@ -336,7 +336,7 @@ private:
                             return;
                         }
                         auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
-                        if (h_accept_) h_accept_(*sp);
+                        if (h_accept_) h_accept_(force_move(sp));
                     }
                 );
                 do_accept();
@@ -392,7 +392,7 @@ public:
      * @brief Accept handler
      * @param ep endpoint of the connecting client
      */
-    using accept_handler = std::function<void(endpoint_t& ep)>;
+    using accept_handler = std::function<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
      * @brief Error handler
@@ -561,7 +561,7 @@ private:
                                     return;
                                 }
                                 auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
-                                if (h_accept_) h_accept_(*sp);
+                                if (h_accept_) h_accept_(force_move(sp));
                             }
                         );
                     }
@@ -602,7 +602,7 @@ public:
      * @brief Accept handler
      * @param ep endpoint of the connecting client
      */
-    using accept_handler = std::function<void(endpoint_t& ep)>;
+    using accept_handler = std::function<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
      * @brief Error handler
@@ -784,7 +784,7 @@ private:
                                         // a static assertion that socket is a const object when
                                         // TLS is enabled, and WS is enabled, with Boost 1.70, and gcc 8.3.0
                                         auto sp = std::make_shared<endpoint_t>(socket, version_);
-                                        if (h_accept_) h_accept_(*sp);
+                                        if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 );
                             }
