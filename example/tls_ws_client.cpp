@@ -91,15 +91,10 @@ int main(int argc, char** argv) {
         });
     c->set_suback_handler(
         [&]
-        (packet_id_t packet_id, std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> results){
+        (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results){
             std::cout << "suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : results) {
-                if (e) {
-                    std::cout << "subscribe success: " << static_cast<MQTT_NS::qos>(*e) << std::endl;
-                }
-                else {
-                    std::cout << "subscribe failed" << std::endl;
-                }
+                std::cout << "[client] subscribe result: " << e << std::endl;
             }
             if (packet_id == pid_sub1) {
                 c->publish("mqtt_client_cpp/topic1", "test1", MQTT_NS::qos::at_most_once);

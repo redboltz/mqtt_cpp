@@ -86,11 +86,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t packet_id, std::vector<MQTT_NS::optional<MQTT_NS::suback_reason_code>> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == 1);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(*results[0] == MQTT_NS::suback_reason_code::granted_qos_0);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_0);
                     BOOST_TEST(c->publish(
                                    0,
                                    "topic1",
