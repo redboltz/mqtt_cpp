@@ -13993,10 +13993,16 @@ private:
                 if (h_disconnect_) {
                     h_disconnect_();
                 }
+                if (func) {
+                    func(boost::system::errc::make_error_code(boost::system::errc::success));
+                }
                 break;
             case protocol_version::v5:
                 if (h_v5_disconnect_) {
                     h_v5_disconnect_(info.reason_code, force_move(info.props));
+                }
+                if (func) {
+                    func(boost::system::errc::make_error_code(boost::system::errc::success));
                 }
                 break;
             default:
@@ -14679,7 +14685,8 @@ private:
         if (!connected_) return;
         if (h_pre_send_) h_pre_send_();
         socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
-        if (ec) handle_error(ec);
+        // If ec is set as error, the error will be handled by async_read.
+        // If `handle_error(ec);` is called here, error_handler would be called twice.
     }
 
     // Non blocking (async) senders
