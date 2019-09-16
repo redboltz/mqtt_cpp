@@ -181,6 +181,9 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     s.close();
                 }
             );
+            // Pass spep to keep lifetime.
+            // It makes sure wp.lock() never return nullptr in the handlers below
+            // including close_handler and error_handler.
             ep.start_session(std::make_tuple(std::move(spep), std::move(g)));
 
             // set connection (lower than MQTT) level handlers
@@ -188,13 +191,17 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 [&connections, &subs, wp]
                 (){
                     std::cout << "[server] closed." << std::endl;
-                    close_proc(connections, subs, wp.lock());
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    close_proc(connections, subs, sp);
                 });
             ep.set_error_handler(
                 [&connections, &subs, wp]
                 (boost::system::error_code const& ec){
                     std::cout << "[server] error: " << ec.message() << std::endl;
-                    close_proc(connections, subs, wp.lock());
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    close_proc(connections, subs, sp);
                 });
 
             // set MQTT level handlers
@@ -212,8 +219,10 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     std::cout << "[server] password     : " << (password ? password.value() : "none"_mb) << std::endl;
                     std::cout << "[server] clean_session: " << std::boolalpha << clean_session << std::endl;
                     std::cout << "[server] keep_alive   : " << keep_alive << std::endl;
-                    connections.insert(wp.lock());
-                    wp.lock()->connack(false, MQTT_NS::connect_return_code::accepted);
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    connections.insert(sp);
+                    sp->connack(false, MQTT_NS::connect_return_code::accepted);
                     return true;
                 }
             );
@@ -221,7 +230,9 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 [&connections, &subs, wp]
                 (){
                     std::cout << "[server] disconnect received." << std::endl;
-                    close_proc(connections, subs, wp.lock());
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    close_proc(connections, subs, sp);
                 });
             ep.set_puback_handler(
                 []
@@ -283,14 +294,16 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     std::cout << "[server]subscribe received. packet_id: " << packet_id << std::endl;
                     std::vector<MQTT_NS::suback_reason_code> res;
                     res.reserve(entries.size());
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
                     for (auto const& e : entries) {
                         MQTT_NS::buffer topic = std::get<0>(e);
                         MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
                         std::cout << "[server] topic: " << topic  << " qos: " << qos_value << std::endl;
                         res.emplace_back(static_cast<MQTT_NS::suback_reason_code>(qos_value));
-                        subs.emplace(std::move(topic), wp.lock(), qos_value);
+                        subs.emplace(std::move(topic), sp, qos_value);
                     }
-                    wp.lock()->suback(packet_id, res);
+                    sp->suback(packet_id, res);
                     return true;
                 }
             );
@@ -302,7 +315,9 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     for (auto const& topic : topics) {
                         subs.erase(topic);
                     }
-                    wp.lock()->unsuback(packet_id);
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    sp->unsuback(packet_id);
                     return true;
                 }
             );

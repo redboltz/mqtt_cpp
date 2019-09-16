@@ -160,6 +160,9 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                     s.close();
                 }
             );
+            // Pass spep to keep lifetime.
+            // It makes sure wp.lock() never return nullptr in the handlers below
+            // including close_handler and error_handler.
             ep.start_session(std::make_tuple(std::move(spep), std::move(g)));
 
             // set connection (lower than MQTT) level handlers
@@ -167,13 +170,17 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                 [&connections, wp]
                 (){
                     std::cout << "[server] closed." << std::endl;
-                    connections.erase(wp.lock());
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    connections.erase(sp);
                 });
             ep.set_error_handler( // this handler doesn't depend on MQTT protocol version
                 [&connections, wp]
                 (boost::system::error_code const& ec){
                     std::cout << "[server] error: " << ec.message() << std::endl;
-                    connections.erase(wp.lock());
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    connections.erase(sp);
                 });
 
             // set MQTT level handlers
@@ -231,7 +238,9 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                         );
                     }
 
-                    connections.insert(wp.lock());
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    connections.insert(sp);
 
                     std::vector<MQTT_NS::v5::property_variant> connack_ps {
                         MQTT_NS::v5::property::session_expiry_interval(0),
@@ -253,7 +262,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                         MQTT_NS::v5::property::authentication_method("test authentication method"_mb),
                         MQTT_NS::v5::property::authentication_data("test authentication data"_mb)
                     };
-                    wp.lock()->connack(false, MQTT_NS::v5::connect_reason_code::success, std::move(connack_ps));
+                    sp->connack(false, MQTT_NS::v5::connect_reason_code::success, std::move(connack_ps));
                     return true;
                 }
             );
@@ -263,7 +272,9 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                     std::cout <<
                         "[server] disconnect received." <<
                         " reason_code: " << reason_code << std::endl;
-                    connections.erase(wp.lock());
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    connections.erase(sp);
                 });
         }
     );
