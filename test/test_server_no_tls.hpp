@@ -14,6 +14,8 @@
 namespace mi = boost::multi_index;
 namespace as = boost::asio;
 
+using con_t = MQTT_NS::server<>::endpoint_t;
+using con_sp_t = std::shared_ptr<con_t>;
 
 class test_server_no_tls {
 public:
@@ -34,7 +36,7 @@ public:
         );
 
         server_.set_accept_handler(
-            [&](std::shared_ptr<MQTT_NS::server<>::endpoint_t> spep) {
+            [&](con_sp_t spep) {
                 b_.handle_accept(MQTT_NS::force_move(spep));
             }
         );
