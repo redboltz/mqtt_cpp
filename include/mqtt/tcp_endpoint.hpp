@@ -10,9 +10,9 @@
 #include <boost/asio.hpp>
 #include <boost/asio/bind_executor.hpp>
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 #include <boost/asio/ssl.hpp>
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 #include <mqtt/namespace.hpp>
 
@@ -55,12 +55,12 @@ public:
         tcp_.async_accept(std::forward<Args>(args)...);
     }
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     template <typename... Args>
     void async_handshake(Args&& ... args) {
         tcp_.async_handshake(std::forward<Args>(args)...);
     }
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
     template <typename MutableBufferSequence, typename ReadHandler>
     void async_read(

@@ -19,9 +19,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/asio.hpp>
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 #include <boost/asio/ssl.hpp>
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 #include <mqtt/tcp_endpoint.hpp>
 
@@ -102,7 +102,7 @@ public:
     make_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     /**
      * @brief Create tls client with strand.
      * @param ioc io_context object.
@@ -147,7 +147,7 @@ public:
     friend std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>
     make_tls_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
     /**
      * @brief Create no tls client with strand.
@@ -194,7 +194,7 @@ public:
     make_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     /**
      * @brief Create tls client with strand.
      * @param ioc io_context object.
@@ -239,7 +239,7 @@ public:
     friend std::shared_ptr<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>
     make_tls_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
     /**
      * @brief Set client id.
@@ -314,7 +314,7 @@ public:
         will_ = force_move(w);
     }
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     /**
      * @brief Call boost::asio::context::set_default_verify_paths
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_default_verify_paths.html
@@ -406,7 +406,7 @@ public:
     void set_verify_callback(VerifyCallback&& callback) {
         ctx_.set_verify_callback(std::forward<VerifyCallback>(callback));
     }
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
     /**
      * @brief Set a keep alive second and a ping milli seconds.
@@ -768,9 +768,9 @@ protected:
          path_(force_move(path))
 #endif // defined(MQTT_USE_WS)
     {
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
         ctx_.set_verify_mode(as::ssl::verify_peer);
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
     }
 
 private:
@@ -788,7 +788,7 @@ private:
     }
 #endif // defined(MQTT_USE_WS)
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     template <typename Strand>
     void setup_socket(std::shared_ptr<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
         socket = std::make_shared<Socket>(ioc_, ctx_);
@@ -803,7 +803,7 @@ private:
     }
 #endif // defined(MQTT_USE_WS)
 
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
     void start_session(std::vector<v5::property_variant> props, any session_life_keeper) {
         base::async_read_control_packet_type(force_move(session_life_keeper));
@@ -859,7 +859,7 @@ private:
     }
 #endif // defined(MQTT_USE_WS)
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 
     template <typename Strand>
     void handshake_socket(
@@ -900,7 +900,7 @@ private:
     }
 #endif // defined(MQTT_USE_WS)
 
-#endif // defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
     template <typename Iterator>
     void connect_impl(Socket& socket, Iterator it, Iterator end, std::vector<v5::property_variant> props, any session_life_keeper) {
@@ -982,9 +982,9 @@ private:
     optional<std::string> user_name_;
     optional<std::string> password_;
     bool async_pingreq_ = false;
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     as::ssl::context ctx_{as::ssl::context::tlsv12};
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
     close_handler h_close_;
     error_handler h_error_;
 #if defined(MQTT_USE_WS)
@@ -1094,7 +1094,7 @@ make_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16_t po
 
 #endif // defined(MQTT_USE_WS)
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 
 inline std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>
 make_tls_client(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
@@ -1198,7 +1198,7 @@ make_tls_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16_
 
 #endif // defined(MQTT_USE_WS)
 
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 
 // 32bit Packet Id (experimental)
@@ -1305,7 +1305,7 @@ make_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::uint16_t
 
 #endif // defined(MQTT_USE_WS)
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 
 inline std::shared_ptr<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>
 make_tls_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
@@ -1409,7 +1409,7 @@ make_tls_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::uint
 
 #endif // defined(MQTT_USE_WS)
 
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 } // namespace MQTT_NS
 

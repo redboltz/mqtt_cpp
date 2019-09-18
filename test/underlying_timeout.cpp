@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
     ioc.run();
 }
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 
 BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
     as::io_context ioc;
@@ -249,11 +249,11 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
     ioc.run();
 }
 
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 #endif // defined(MQTT_USE_WS)
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 
 BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
     as::io_context ioc;
@@ -325,6 +325,6 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
     ioc.run();
 }
 
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 BOOST_AUTO_TEST_SUITE_END()

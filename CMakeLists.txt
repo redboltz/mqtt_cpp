@@ -4,7 +4,7 @@ PROJECT (mqtt_cpp)
 OPTION(MQTT_BUILD_EXAMPLES "Enable building example applications" ON)
 OPTION(MQTT_BUILD_TESTS "Enable building test applications" ON)
 OPTION(MQTT_USE_STATIC_BOOST "Statically link with boost libraries" OFF)
-OPTION(MQTT_NO_TLS "Disable building TLS code" ON)
+OPTION(MQTT_USE_TLS "Enable building TLS code" OFF)
 OPTION(MQTT_USE_WS "Enable building WebSockets code" OFF)
 OPTION(MQTT_USE_STR_CHECK "Enable UTF8 String check" ON)
 OPTION(MQTT_STD_VARIANT "Use std::variant from C++17 instead of boost::variant" OFF)
@@ -24,11 +24,11 @@ ELSE ()
     SET (Boost_USE_STATIC_LIBS OFF) # only find shared libs
 ENDIF ()
 
-IF (MQTT_NO_TLS)
+IF (NOT MQTT_USE_TLS)
     MESSAGE (STATUS "TLS disabled")
-    SET (CMAKE_CXX_FLAGS "-DMQTT_NO_TLS ${CMAKE_CXX_FLAGS}")
 ELSE ()
     MESSAGE (STATUS "TLS enabled")
+    SET (CMAKE_CXX_FLAGS "-DMQTT_USE_TLS ${CMAKE_CXX_FLAGS}")
     FIND_PACKAGE (OpenSSL)
 ENDIF ()
 
@@ -108,7 +108,7 @@ INCLUDE_DIRECTORIES (
     include
 )
 
-IF (NOT MQTT_NO_TLS)
+IF (MQTT_USE_TLS)
     INCLUDE_DIRECTORIES (
         ${OPENSSL_INCLUDE_DIR}
         ${MQTT_OPENSSL_INCLUDE_DIR}

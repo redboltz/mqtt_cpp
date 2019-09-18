@@ -14,9 +14,9 @@
 
 #include <mqtt/namespace.hpp>
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 #include <boost/asio/ssl.hpp>
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 #include <mqtt/tcp_endpoint.hpp>
 
@@ -172,7 +172,7 @@ private:
     protocol_version version_ = protocol_version::undetermined;
 };
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 
 template <
     typename Strand = as::io_context::strand,
@@ -358,7 +358,7 @@ private:
     boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
 };
 
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 #if defined(MQTT_USE_WS)
 
@@ -585,7 +585,7 @@ private:
 };
 
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 
 template <
     typename Strand = as::io_context::strand,
@@ -810,7 +810,7 @@ private:
     boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
 };
 
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 #endif // defined(MQTT_USE_WS)
 

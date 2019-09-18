@@ -73,7 +73,7 @@ public:
     make_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     /**
      * @brief Create tls async_client with strand.
      * @param ioc io_context object.
@@ -118,7 +118,7 @@ public:
     friend std::shared_ptr<async_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>
     make_tls_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
     /**
      * @brief Create no tls async_client with strand.
@@ -165,7 +165,7 @@ public:
     make_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     /**
      * @brief Create tls async_client with strand.
      * @param ioc io_context object.
@@ -210,7 +210,7 @@ public:
     friend std::shared_ptr<async_client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>
     make_tls_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 
     /**
@@ -376,7 +376,7 @@ make_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint1
 
 #endif // defined(MQTT_USE_WS)
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 
 inline std::shared_ptr<async_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>
 make_tls_async_client(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
@@ -480,7 +480,7 @@ make_tls_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::u
 
 #endif // defined(MQTT_USE_WS)
 
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 
 // 32bit Packet Id (experimental)
@@ -587,7 +587,7 @@ make_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::ui
 
 #endif // defined(MQTT_USE_WS)
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 
 inline std::shared_ptr<async_client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>
 make_tls_async_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
@@ -691,7 +691,7 @@ make_tls_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std
 
 #endif // defined(MQTT_USE_WS)
 
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 } // namespace MQTT_NS
 

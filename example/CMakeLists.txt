@@ -9,7 +9,7 @@ LIST (APPEND exec_PROGRAMS
     broker.cpp
 )
 
-IF (NOT MQTT_NO_TLS)
+IF (MQTT_USE_TLS)
     LIST (APPEND exec_PROGRAMS
         tls_client.cpp
         tls_server.cpp
@@ -23,7 +23,7 @@ IF (MQTT_USE_WS)
         no_tls_ws_server.cpp
         no_tls_ws_both.cpp
     )
-    IF (NOT MQTT_NO_TLS)
+    IF (MQTT_USE_TLS)
         LIST (APPEND exec_PROGRAMS
             tls_ws_client.cpp
             tls_ws_server.cpp
@@ -36,7 +36,7 @@ LIST (APPEND MQTT_LINK_LIBRARIES
     ${Boost_SYSTEM_LIBRARY}
     ${CMAKE_THREAD_LIBS_INIT}
 )
-IF (NOT MQTT_NO_TLS)
+IF (MQTT_USE_TLS)
     LIST (APPEND MQTT_LINK_LIBRARIES
         ${OPENSSL_LIBRARIES}
         ${CMAKE_DL_LIBS}
