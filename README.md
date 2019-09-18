@@ -70,6 +70,20 @@ If you want to use MQTT on WebSocket, you need to define `MQTT_USE_WS` macro. mq
     * WebSocket
       * [example/tls_ws_both.cpp](https://github.com/redboltz/mqtt_cpp/blob/master/example/tls_ws_both.cpp)
 
+## Usage in cmake project
+
+Add following lines to your `CMakeLists.txt`
+
+```
+set(LIBNAME "your_project_name")
+add_library(${LIBNAME} <your dependencies here>)
+
+find_package(mqtt_cpp REQUIRED)
+target_link_libraries(${LIBNAME} LINK_PUBLIC mqtt_cpp::mqtt_cpp)
+```
+
+This uses the `mqtt_cpp::mqtt_cpp` target and includes all necessary link dependencies.
+
 ## Test
 
 You can build tests and examples as follows:

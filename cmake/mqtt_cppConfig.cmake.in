@@ -1,0 +1,9 @@
+find_package(Boost REQUIRED COMPONENTS system)
+find_package(Threads REQUIRED)
+
+if(NOT TARGET mqtt_cpp::mqtt_cpp)
+  get_filename_component(MQTT_CPP_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY)
+  include("${MQTT_CPP_CMAKE_DIR}/mqtt_cppTargets.cmake")
+endif()
+
+set(mqtt_cpp_LIBRARIES mqtt_cpp::mqtt_cpp)
