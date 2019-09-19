@@ -17,7 +17,9 @@
 
 #endif // defined(MQTT_STD_VARIANT)
 
-namespace mqtt {
+#include <mqtt/namespace.hpp>
+
+namespace MQTT_NS {
 
 #if defined(MQTT_STD_OPTIONAL)
 
@@ -33,6 +35,6 @@ static const auto nullopt = boost::none;
 
 #endif // defined(MQTT_STD_OPTIONAL)
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_OPTIONAL_HPP

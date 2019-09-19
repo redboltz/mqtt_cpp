@@ -9,8 +9,9 @@
 
 #include <memory>
 #include <utility>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 template <typename Proc>
 inline auto unique_scope_guard(Proc&& proc) {
@@ -18,6 +19,6 @@ inline auto unique_scope_guard(Proc&& proc) {
     return std::unique_ptr<void, decltype(deleter)>(&deleter, std::move(deleter));
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_UNIQUE_SCOPE_GUARD_HPP

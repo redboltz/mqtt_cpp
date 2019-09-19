@@ -1,3 +1,77 @@
+## 6.0.4
+* Fixed invalid subscribe qos comparison on receive. (#385)
+
+## 6.0.3
+* Fixed sync subscribe/unsubscribe with properties APIs dispatch to deprecated APIs problem. (#383)
+
+## 6.0.2
+* Fixed moved from object access problem. (#378)
+* Fixed unexpected copy fallback of move operations. (#378)
+
+## 6.0.1
+* Fixed compile error of `acquired_async_publish_dup()`. (#376)
+
+## 6.0.0
+* Supressed warnings. (#367, #368, #369, #370, #371)
+* Set `[[deprecated]]` attribute to derecated APIs. They will be removed on verion 7.0.0. (#364, #372)
+* Added `mqtt::buffer` based APIs. (#364)
+* Added user defined namespace support. User can define `MQTT_NS` (default `mqtt`). (#360)
+* Improved test. (#357)
+* Improved test broker. (#353)
+* Added allocation fuction for `mqtt::buffer`. (#349)
+* Supported old version of boost type_erasure. (#347)
+* <<<< breaking change >>>> Adde zero copy receiving functionality. Callback handlers take `mqtt::buffer` parameter instead of `mqtt::string_view`. It can hold the lifetime. (#339, #358, #359, )
+* Improved CI. (#333, #346)
+
+## 5.0.1
+* Improved CI. (#330)
+* Fixed invalid std::any inclusion on mqtt::any. (#328)
+
+## 5.0.0
+* Fixed invalid pointer comparison. (#324)
+* Fixed user_property value length. (#323)
+* Added `store` type alias for each properties. (#319)
+* Fixed `BOOST_MPL_LIMIT_LIST_SIZE` comparison. (#318)
+* Removed `BOOST_ASSERT` from test code to improve exception message. (#315)
+* Code refactoring. (#313)
+* Added default parameter to `async_send_pubrel`'s `life_keeper`. (#312)
+* Added async version of stored message sending after `CONNACK` received. (#311)
+* <<<< breaking change >>>> Removed unnecessery callback invokation. (#309)
+* Fixed moved from object access. (#308)
+* <<<< breaking change >>>> Added properties and life_keeper parameter to pubrel and async_publrel. (#307)
+* Added reuse_address flag to the test broker to avoid "address already in use" on travis-ci. (#306)
+* <<<< breaking change >>>> Fixed TCP accepting process. After TCP accepting, do the next accepting process immediately. Due to the fix, Socket is updated to shared_ptr from unique_ptr. (#299)
+* <<<< breaking change >>>> Added underlying connect timeout. It can treat well with TCP connected but TLS handshake not sending attack. (#296)
+* Added stream output operator for properties. (#293)
+* Replaced byte sequence creation macro with function. (#291)
+* Fixed static boost support. (#290)
+* <<<< breaking change >>>> Fixed property allocation management. (#288)
+* Improved MSVC support for test. (#286)
+* Added codecov for CI. (#285, #276, #275, #273)
+* Added `MQTT_BUILD_EXAMPLES` flag to cmake to shorten CI time. (#284)
+* Added non_ref/ref types conversion for properties. (#283)
+* Added tests. (#278, #276)
+* Improve travis-ci. (#274)
+* Migrate from appveyor azure devops build pipelines that supports 10 parallel build. (#270)
+* Fixed pingreq async/sync send. (#267)
+
+## 4.0.0
+* Added getting ssl keylog callback for debugging. (#256)
+* Fixed re-listen logic for servers. Now we can re-listen after accept is failed. (#252, #254)
+* Fixed restore lifetime management to avoid accessing memory after destroyed (#251)
+* Removed BOOST_ASSERT checking in the case that actually happens if invalid message is received (#249, #250)
+* Added MQTT v5 support (#226, #245, #257, #258, #259)
+* Added connection overwrite behavior on `test_broker` (#210)
+* Added `async_client` and `sync_client` to avoid misusing async and sync APIs. `client` is still remained that can use both sync and async APIs. (#208)
+* Added concatenating `const_buffer` functionality on asynchronous packet sending (#207)
+* Improved documents (#198, #214, #219, #229, #235)
+* Added switching option between `std` and `boost` (#188, #209)
+* Improved build mechanisim (#184, #201, #253)
+* Code refactoring (#183, #189, #190, #193, #195, #197, #199, #202, #203, #211, #215, #216, #220, #227, #234, #236, #238, #239, #240, #242)
+* Support configure time switches for using std::varient or std::optional instead of the boost versions (#182)
+* Allow inheriting classes to construct mqtt::client (#181)
+* <<<< Breaking change >> Replaced fixed_header type from `char` to `std::uint8_t`. Fixed `-Wconversion` warnings. See https://github.com/redboltz/mqtt_cpp/pull/180/files (#180)
+
 ## 3.1.0
 * Fixed inefficient passed by value. (#174)
 * Fixed unsugscribe message packet id position for continuours buffer. (#167)

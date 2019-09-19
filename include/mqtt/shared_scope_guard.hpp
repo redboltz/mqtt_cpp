@@ -9,8 +9,9 @@
 
 #include <memory>
 #include <utility>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 template <typename Proc>
 inline auto shared_scope_guard(Proc&& proc) {
@@ -18,6 +19,6 @@ inline auto shared_scope_guard(Proc&& proc) {
     return std::shared_ptr<void>(nullptr, std::move(deleter));
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_SHARED_SCOPE_GUARD_HPP

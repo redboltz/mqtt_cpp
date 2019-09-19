@@ -8,8 +8,9 @@
 #define MQTT_PROTOCOL_VERSION_HPP
 
 #include <cstdint>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 enum class protocol_version {
     undetermined  = 0,
@@ -17,6 +18,6 @@ enum class protocol_version {
     v5            = 5,
 };
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_PROTOCOL_VERSION_HPP

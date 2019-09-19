@@ -8,8 +8,9 @@
 #define MQTT_PROPERTY_ID_HPP
 
 #include <cstdint>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace v5 {
 
@@ -49,6 +50,6 @@ enum class id {
 
 } // namespace v5
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_PROPERTY_ID_HPP

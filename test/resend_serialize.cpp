@@ -7,9 +7,12 @@
 #include "test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "test_util.hpp"
 
 BOOST_AUTO_TEST_SUITE(test_resend_serialize)
 
+using namespace MQTT_NS::literals;
+
 template <typename Client, typename Packet>
 inline
 typename std::enable_if<
@@ -17,7 +20,7 @@ typename std::enable_if<
 >::type
 restore_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_serialized_message(
-        mqtt::publish_message(packet.begin(), packet.end()),
+        MQTT_NS::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size()))),
         []{}
     );
 }
@@ -29,7 +32,7 @@ typename std::enable_if<
 >::type
 restore_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_serialized_message(
-        mqtt::publish_32_message(packet.begin(), packet.end()),
+        MQTT_NS::publish_32_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size()))),
         []{}
     );
 }
@@ -41,7 +44,7 @@ typename std::enable_if<
 >::type
 restore_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_serialized_message(
-        mqtt::pubrel_message(packet.begin(), packet.end())
+        MQTT_NS::pubrel_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size())))
     );
 }
 
@@ -52,7 +55,7 @@ typename std::enable_if<
 >::type
 restore_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_serialized_message(
-        mqtt::pubrel_32_message(packet.begin(), packet.end())
+        MQTT_NS::pubrel_32_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size())))
     );
 }
 
@@ -65,10 +68,10 @@ typename std::enable_if<
 set_serialize_handlers(Client const& c, Serialized& serialized) {
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_serialize_handlers(
-        [&serialized](mqtt::publish_message msg) {
+        [&serialized](MQTT_NS::publish_message msg) {
             serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
         },
-        [&serialized](mqtt::pubrel_message msg) {
+        [&serialized](MQTT_NS::pubrel_message msg) {
             BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
             serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
         },
@@ -87,10 +90,10 @@ typename std::enable_if<
 set_serialize_handlers(Client const& c, Serialized& serialized) {
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_serialize_handlers(
-        [&serialized](mqtt::publish_32_message msg) {
+        [&serialized](MQTT_NS::publish_32_message msg) {
             serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
         },
-        [&serialized](mqtt::pubrel_32_message msg) {
+        [&serialized](MQTT_NS::pubrel_32_message msg) {
             BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
             serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
         },
@@ -103,17 +106,16 @@ set_serialize_handlers(Client const& c, Serialized& serialized) {
 
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -130,6 +132,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
     std::uint16_t pid_pub;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -151,8 +154,8 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
     c1->set_connack_handler(
         [&chk, &c1, &pid_pub]
-        (bool sp, std::uint8_t connack_return_code) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+            BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             auto ret = chk.match(
                 "start",
                 [&] {
@@ -164,7 +167,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 [&] {
                     MQTT_CHK("h_connack2");
                     BOOST_TEST(sp == false);
-                    pid_pub = c1->publish_at_least_once("topic1", "topic1_contents");
+                    pid_pub = c1->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
                     c1->force_disconnect();
                 }
             );
@@ -175,11 +178,10 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
@@ -193,13 +195,26 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                     restore_serialized_pubrel_message(c2, packet);
                 }
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client detect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
 
     c2->set_connack_handler(
         [&chk]
-        (bool sp, std::uint8_t connack_return_code) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+            BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
             return true;
@@ -221,23 +236,22 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -254,6 +268,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 
     std::uint16_t pid_pub;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -276,8 +291,8 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 
     c1->set_connack_handler(
         [&chk, &c1, &pid_pub]
-        (bool sp, std::uint8_t connack_return_code) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+            BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             auto ret = chk.match(
                 "start",
                 [&] {
@@ -289,7 +304,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 [&] {
                     MQTT_CHK("h_connack2");
                     BOOST_TEST(sp == false);
-                    pid_pub = c1->publish_exactly_once("topic1", "topic1_contents");
+                    pid_pub = c1->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                     c1->force_disconnect();
                 }
             );
@@ -300,11 +315,10 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
@@ -318,13 +332,26 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                     restore_serialized_pubrel_message(c2, packet);
                 }
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client detect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
 
     c2->set_connack_handler(
         [&chk]
-        (bool sp, std::uint8_t connack_return_code) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+            BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
             return true;
@@ -352,23 +379,22 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         });
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -385,6 +411,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 
     std::uint16_t pid_pub;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -407,8 +434,8 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 
     c1->set_connack_handler(
         [&chk, &c1, &pid_pub]
-        (bool sp, std::uint8_t connack_return_code) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+            BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             auto ret = chk.match(
                 "start",
                 [&] {
@@ -420,7 +447,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 [&] {
                     MQTT_CHK("h_connack2");
                     BOOST_TEST(sp == false);
-                    pid_pub = c1->publish_exactly_once("topic1", "topic1_contents");
+                    pid_pub = c1->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                 }
             );
             BOOST_TEST(ret);
@@ -430,11 +457,10 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
@@ -448,7 +474,20 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                     restore_serialized_pubrel_message(c2, packet);
                 }
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client detect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
     c1->set_pubrec_handler(
         [&chk, &c1, &pid_pub]
@@ -461,8 +500,8 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 
     c2->set_connack_handler(
         [&chk]
-        (bool sp, std::uint8_t connack_return_code) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+            BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
             return true;
@@ -483,23 +522,22 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
         });
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -517,6 +555,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     std::uint16_t pid_pub1;
     std::uint16_t pid_pub2;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -540,8 +579,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
 
     c1->set_connack_handler(
         [&chk, &c1, &pid_pub1, &pid_pub2]
-        (bool sp, std::uint8_t connack_return_code) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+            BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             auto ret = chk.match(
                 "start",
                 [&] {
@@ -553,8 +592,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 [&] {
                     MQTT_CHK("h_connack2");
                     BOOST_TEST(sp == false);
-                    pid_pub1 = c1->publish_at_least_once("topic1", "topic1_contents1");
-                    pid_pub2 = c1->publish_at_least_once("topic1", "topic1_contents2");
+                    pid_pub1 = c1->publish("topic1", "topic1_contents1", MQTT_NS::qos::at_least_once);
+                    pid_pub2 = c1->publish("topic1", "topic1_contents2", MQTT_NS::qos::at_least_once);
                     c1->force_disconnect();
                 }
             );
@@ -565,11 +604,10 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error1");
             for (auto const& e : serialized) {
@@ -583,12 +621,25 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                     restore_serialized_pubrel_message(c2, packet);
                 }
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client detect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
     c2->set_connack_handler(
         [&chk]
-        (bool sp, std::uint8_t connack_return_code) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+            BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
             return true;
@@ -620,7 +671,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
         });
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
@@ -632,7 +683,7 @@ typename std::enable_if<
 >::type
 restore_v5_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
-        mqtt::v5::publish_message(packet.begin(), packet.end()),
+        MQTT_NS::v5::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size()))),
         boost::any()
     );
 }
@@ -644,7 +695,7 @@ typename std::enable_if<
 >::type
 restore_v5_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
-        mqtt::v5::publish_32_message(packet.begin(), packet.end()),
+        MQTT_NS::v5::publish_32_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size()))),
         boost::any()
     );
 }
@@ -656,7 +707,7 @@ typename std::enable_if<
 >::type
 restore_v5_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
-        mqtt::v5::pubrel_message(packet.begin(), packet.end()),
+        MQTT_NS::v5::pubrel_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size()))),
         boost::any()
     );
 }
@@ -668,7 +719,7 @@ typename std::enable_if<
 >::type
 restore_v5_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
-        mqtt::v5::pubrel_32_message(packet.begin(), packet.end()),
+        MQTT_NS::v5::pubrel_32_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size()))),
         boost::any()
     );
 }
@@ -682,10 +733,10 @@ typename std::enable_if<
 set_v5_serialize_handlers(Client const& c, Serialized& serialized) {
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_v5_serialize_handlers(
-        [&serialized](mqtt::v5::publish_message msg) {
+        [&serialized](MQTT_NS::v5::publish_message msg) {
             serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
         },
-        [&serialized](mqtt::v5::pubrel_message msg) {
+        [&serialized](MQTT_NS::v5::pubrel_message msg) {
             BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
             serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
         },
@@ -704,10 +755,10 @@ typename std::enable_if<
 set_v5_serialize_handlers(Client const& c, Serialized& serialized) {
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_v5_serialize_handlers(
-        [&serialized](mqtt::v5::publish_32_message msg) {
+        [&serialized](MQTT_NS::v5::publish_32_message msg) {
             serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
         },
-        [&serialized](mqtt::v5::pubrel_32_message msg) {
+        [&serialized](MQTT_NS::v5::pubrel_32_message msg) {
             BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
             serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
         },
@@ -719,17 +770,16 @@ set_v5_serialize_handlers(Client const& c, Serialized& serialized) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port, mqtt::protocol_version::v5);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port, mqtt::protocol_version::v5);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -746,6 +796,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
 
     std::uint16_t pid_pub;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -765,41 +816,41 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
         cont("h_close2"),
     };
 
-    std::vector<mqtt::v5::property_variant> ps {
-        mqtt::v5::property::payload_format_indicator(mqtt::v5::property::payload_format_indicator::string),
-        mqtt::v5::property::message_expiry_interval(0x12345678UL),
-        mqtt::v5::property::topic_alias(0x1234U),
-        mqtt::v5::property::response_topic("response topic"),
-        mqtt::v5::property::correlation_data("correlation data"),
-        mqtt::v5::property::user_property("key1", "val1"),
-        mqtt::v5::property::user_property("key2", "val2"),
-        mqtt::v5::property::subscription_identifier(123),
+    std::vector<MQTT_NS::v5::property_variant> ps {
+        MQTT_NS::v5::property::payload_format_indicator(MQTT_NS::v5::property::payload_format_indicator::string),
+        MQTT_NS::v5::property::message_expiry_interval(0x12345678UL),
+        MQTT_NS::v5::property::topic_alias(0x1234U),
+        MQTT_NS::v5::property::response_topic("response topic"_mb),
+        MQTT_NS::v5::property::correlation_data("correlation data"_mb),
+        MQTT_NS::v5::property::user_property("key1"_mb, "val1"_mb),
+        MQTT_NS::v5::property::user_property("key2"_mb, "val2"_mb),
+        MQTT_NS::v5::property::subscription_identifier(123),
     };
 
     std::size_t user_prop_count = 0;
     b.set_publish_props_handler(
-        [&user_prop_count, size = ps.size()] (std::vector<mqtt::v5::property_variant> const& props) {
+        [&user_prop_count, size = ps.size()] (std::vector<MQTT_NS::v5::property_variant> const& props) {
             BOOST_TEST(props.size() == size);
 
             for (auto const& p : props) {
-                mqtt::visit(
-                    mqtt::make_lambda_visitor<void>(
-                        [&](mqtt::v5::property::payload_format_indicator const& t) {
-                            BOOST_TEST(t.val() == mqtt::v5::property::payload_format_indicator::string);
+                MQTT_NS::visit(
+                    MQTT_NS::make_lambda_visitor<void>(
+                        [&](MQTT_NS::v5::property::payload_format_indicator const& t) {
+                            BOOST_TEST(t.val() == MQTT_NS::v5::property::payload_format_indicator::string);
                         },
-                        [&](mqtt::v5::property::message_expiry_interval const& t) {
+                        [&](MQTT_NS::v5::property::message_expiry_interval const& t) {
                             BOOST_TEST(t.val() == 0x12345678UL);
                         },
-                        [&](mqtt::v5::property::topic_alias const& t) {
+                        [&](MQTT_NS::v5::property::topic_alias const& t) {
                             BOOST_TEST(t.val() == 0x1234U);
                         },
-                        [&](mqtt::v5::property::response_topic_ref const& t) {
+                        [&](MQTT_NS::v5::property::response_topic const& t) {
                             BOOST_TEST(t.val() == "response topic");
                         },
-                        [&](mqtt::v5::property::correlation_data_ref const& t) {
+                        [&](MQTT_NS::v5::property::correlation_data const& t) {
                             BOOST_TEST(t.val() == "correlation data");
                         },
-                        [&](mqtt::v5::property::user_property_ref const& t) {
+                        [&](MQTT_NS::v5::property::user_property const& t) {
                             switch (user_prop_count++) {
                             case 0:
                                 BOOST_TEST(t.key() == "key1");
@@ -822,7 +873,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
                                 break;
                             }
                         },
-                        [&](mqtt::v5::property::subscription_identifier const& t) {
+                        [&](MQTT_NS::v5::property::subscription_identifier const& t) {
                             BOOST_TEST(t.val() == 123U);
                         },
                         [&](auto&& ...) {
@@ -837,8 +888,8 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
 
     c1->set_v5_connack_handler(
         [&chk, &c1, &pid_pub, ps = std::move(ps)]
-        (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             auto ret = chk.match(
                 "start",
                 [&] {
@@ -849,8 +900,10 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
                 "h_close1",
                 [&, ps = std::move(ps)] {
                     MQTT_CHK("h_connack2");
+                    // The previous connection is not set Session Expiry Interval.
+                    // That means session state is cleared on close.
                     BOOST_TEST(sp == false);
-                    pid_pub = c1->publish_at_least_once("topic1", "topic1_contents", false, std::move(ps));
+                    pid_pub = c1->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once, false, std::move(ps));
                     c1->force_disconnect();
                 }
             );
@@ -861,11 +914,10 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
@@ -879,13 +931,26 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
                     restore_v5_serialized_pubrel_message(c2, packet);
                 }
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client detect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
 
     c2->set_v5_connack_handler(
         [&chk]
-        (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
             return true;
@@ -898,7 +963,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
         });
     c2->set_v5_puback_handler(
         [&chk, &c2, &pid_pub]
-        (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
             MQTT_CHK("h_puback");
             BOOST_TEST(packet_id == pid_pub);
             c2->disconnect();
@@ -907,23 +972,22 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
 
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port, mqtt::protocol_version::v5);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port, mqtt::protocol_version::v5);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -940,6 +1004,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
 
     std::uint16_t pid_pub;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -962,8 +1027,8 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
 
     c1->set_v5_connack_handler(
         [&chk, &c1, &pid_pub]
-        (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             auto ret = chk.match(
                 "start",
                 [&] {
@@ -974,8 +1039,10 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
                 "h_close1",
                 [&] {
                     MQTT_CHK("h_connack2");
+                    // The previous connection is not set Session Expiry Interval.
+                    // That means session state is cleared on close.
                     BOOST_TEST(sp == false);
-                    pid_pub = c1->publish_exactly_once("topic1", "topic1_contents");
+                    pid_pub = c1->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                     c1->force_disconnect();
                 }
             );
@@ -986,11 +1053,10 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
@@ -1004,13 +1070,26 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
                     restore_v5_serialized_pubrel_message(c2, packet);
                 }
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client detect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
 
     c2->set_v5_connack_handler(
         [&chk]
-        (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
             return true;
@@ -1023,14 +1102,14 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
         });
     c2->set_v5_pubrec_handler(
         [&chk, &pid_pub]
-        (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
             return true;
         });
     c2->set_v5_pubcomp_handler(
         [&chk, &c2, &pid_pub]
-        (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == pid_pub);
             c2->disconnect();
@@ -1038,24 +1117,23 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
         });
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port, mqtt::protocol_version::v5);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_auto_pub_response(false);
 
-    auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port, mqtt::protocol_version::v5);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -1072,6 +1150,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
 
     std::uint16_t pid_pub;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -1092,23 +1171,23 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
         cont("h_close2"),
     };
 
-    std::vector<mqtt::v5::property_variant> ps {
-        mqtt::v5::property::reason_string("test success"),
-        mqtt::v5::property::user_property("key1", "val1"),
-        mqtt::v5::property::user_property("key2", "val2"),
+    std::vector<MQTT_NS::v5::property_variant> ps {
+        MQTT_NS::v5::property::reason_string("test success"_mb),
+        MQTT_NS::v5::property::user_property("key1"_mb, "val1"_mb),
+        MQTT_NS::v5::property::user_property("key2"_mb, "val2"_mb),
     };
     std::size_t user_prop_count = 0;
 
     b.set_pubrel_props_handler(
-        [&user_prop_count, size = ps.size()] (std::vector<mqtt::v5::property_variant> const& props) {
+        [&user_prop_count, size = ps.size()] (std::vector<MQTT_NS::v5::property_variant> const& props) {
             BOOST_TEST(props.size() == size);
             for (auto const& p : props) {
-                mqtt::visit(
-                    mqtt::make_lambda_visitor<void>(
-                        [&](mqtt::v5::property::reason_string_ref const& t) {
+                MQTT_NS::visit(
+                    MQTT_NS::make_lambda_visitor<void>(
+                        [&](MQTT_NS::v5::property::reason_string const& t) {
                             BOOST_TEST(t.val() == "test success");
                         },
-                        [&](mqtt::v5::property::user_property_ref const& t) {
+                        [&](MQTT_NS::v5::property::user_property const& t) {
                             switch (user_prop_count++) {
                             case 0:
                                 BOOST_TEST(t.key() == "key1");
@@ -1143,8 +1222,8 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
 
     c1->set_v5_connack_handler(
         [&chk, &c1, &pid_pub]
-        (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             auto ret = chk.match(
                 "start",
                 [&] {
@@ -1155,8 +1234,10 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
                 "h_close1",
                 [&] {
                     MQTT_CHK("h_connack2");
+                    // The previous connection is not set Session Expiry Interval.
+                    // That means session state is cleared on close.
                     BOOST_TEST(sp == false);
-                    pid_pub = c1->publish_exactly_once("topic1", "topic1_contents");
+                    pid_pub = c1->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                 }
             );
             BOOST_TEST(ret);
@@ -1166,11 +1247,10 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
@@ -1184,22 +1264,35 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
                     restore_v5_serialized_pubrel_message(c2, packet);
                 }
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client detect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
     c1->set_v5_pubrec_handler(
         [&chk, &c1, &pid_pub, ps = std::move(ps)]
-        (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
-            c1->pubrel(packet_id, mqtt::v5::reason_code::success, std::move(ps));
+            c1->pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, std::move(ps));
             c1->force_disconnect();
             return true;
         });
 
     c2->set_v5_connack_handler(
         [&chk]
-        (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
             return true;
@@ -1212,7 +1305,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
         });
     c2->set_v5_pubcomp_handler(
         [&chk, &c2]
-        (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == 1);
             c2->disconnect();
@@ -1220,23 +1313,22 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
         });
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
-    boost::asio::io_service ios;
-    test_broker b(ios);
-    test_server_no_tls s(ios, b);
+    boost::asio::io_context ioc;
+    test_broker b(ioc);
+    test_server_no_tls s(ioc, b);
 
-    auto c1 = mqtt::make_client(ios, broker_url, broker_notls_port, mqtt::protocol_version::v5);
+    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    auto c2 = mqtt::make_client(ios, broker_url, broker_notls_port, mqtt::protocol_version::v5);
+    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c2->set_client_id("cid1");
-    c2->set_clean_session(false);
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c1)>::packet_id_t;
 
@@ -1254,6 +1346,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
     std::uint16_t pid_pub1;
     std::uint16_t pid_pub2;
 
+    boost::asio::deadline_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -1277,8 +1370,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
 
     c1->set_v5_connack_handler(
         [&chk, &c1, &pid_pub1, &pid_pub2]
-        (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             auto ret = chk.match(
                 "start",
                 [&] {
@@ -1289,9 +1382,11 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
                 "h_close1",
                 [&] {
                     MQTT_CHK("h_connack2");
+                    // The previous connection is not set Session Expiry Interval.
+                    // That means session state is cleared on close.
                     BOOST_TEST(sp == false);
-                    pid_pub1 = c1->publish_at_least_once("topic1", "topic1_contents1");
-                    pid_pub2 = c1->publish_at_least_once("topic1", "topic1_contents2");
+                    pid_pub1 = c1->publish("topic1", "topic1_contents1", MQTT_NS::qos::at_least_once);
+                    pid_pub2 = c1->publish("topic1", "topic1_contents2", MQTT_NS::qos::at_least_once);
                     c1->force_disconnect();
                 }
             );
@@ -1302,11 +1397,10 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
         [&chk, &c1]
         () {
             MQTT_CHK("h_close1");
-            c1->set_clean_session(false);
-            c1->connect();
+            connect_no_clean(c1);
         });
     c1->set_error_handler(
-        [&chk, &c2, &serialized]
+        [&chk, &c2, &serialized, &tim]
         (boost::system::error_code const&) {
             MQTT_CHK("h_error1");
             for (auto const& e : serialized) {
@@ -1320,12 +1414,25 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
                     restore_v5_serialized_pubrel_message(c2, packet);
                 }
             }
-            c2->connect();
+            // TCP level disconnection detecting timing is unpredictable.
+            // Sometimes broker first, sometimes the client (this test) first.
+            // This test assume that the broker detects first, so I set timer.
+            // If client detect the disconnection first, then reconnect with
+            // existing client id. And it is overwritten at broker.
+            // Then error handler in the broker called, assertion failed due to
+            // no corresponding connection exists
+            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.async_wait(
+                [&c2] (boost::system::error_code const& ec) {
+                    BOOST_ASSERT(ec == boost::system::errc::success);
+                    connect_no_clean(c2);
+                }
+            );
         });
     c2->set_v5_connack_handler(
         [&chk]
-        (bool sp, std::uint8_t connack_return_code, std::vector<mqtt::v5::property_variant> /*props*/) {
-            BOOST_TEST(connack_return_code == mqtt::connect_return_code::accepted);
+        (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+            BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
             return true;
@@ -1338,7 +1445,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
         });
     c2->set_v5_puback_handler(
         [&chk, &c2, &pid_pub1, &pid_pub2]
-        (packet_id_t packet_id, std::uint8_t, std::vector<mqtt::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
             auto ret = chk.match(
                 "start",
                 [&] {
@@ -1357,7 +1464,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
         });
     MQTT_CHK("start");
     c1->connect();
-    ios.run();
+    ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
 }

@@ -29,15 +29,19 @@ void client_proc(
     // Setup handlers
     c->set_connack_handler(
         [&c, &pid_sub1, &pid_sub2]
-        (bool sp, std::uint8_t connack_return_code){
+        (bool sp, MQTT_NS::connect_return_code connack_return_code){
             std::cout << "[client] Connack handler called" << std::endl;
             std::cout << "[client] Clean Session: " << std::boolalpha << sp << std::endl;
             std::cout << "[client] Connack Return Code: "
-                      << mqtt::connect_return_code_to_str(connack_return_code) << std::endl;
-            if (connack_return_code == mqtt::connect_return_code::accepted) {
-                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", mqtt::qos::at_most_once);
-                pid_sub2 = c->subscribe("mqtt_client_cpp/topic2_1", mqtt::qos::at_least_once,
-                                       "mqtt_client_cpp/topic2_2", mqtt::qos::exactly_once);
+                      << MQTT_NS::connect_return_code_to_str(connack_return_code) << std::endl;
+            if (connack_return_code == MQTT_NS::connect_return_code::accepted) {
+                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", MQTT_NS::qos::at_most_once);
+                pid_sub2 = c->subscribe(
+                    {
+                        { "mqtt_client_cpp/topic2_1", MQTT_NS::qos::at_least_once },
+                        { "mqtt_client_cpp/topic2_2", MQTT_NS::qos::exactly_once }
+                    }
+                );
             }
             return true;
         });
@@ -73,35 +77,32 @@ void client_proc(
         });
     c->set_suback_handler(
         [&]
-        (packet_id_t packet_id, std::vector<mqtt::optional<std::uint8_t>> results){
+        (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results){
             std::cout << "[client] suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : results) {
-                if (e) {
-                    std::cout << "[client] subscribe success: " << mqtt::qos::to_str(*e) << std::endl;
-                }
-                else {
-                    std::cout << "[client] subscribe failed" << std::endl;
-                }
+                std::cout << "[client] subscribe result: " << e << std::endl;
             }
             if (packet_id == pid_sub1) {
-                c->publish_at_most_once("mqtt_client_cpp/topic1", "test1");
+                c->publish("mqtt_client_cpp/topic1", "test1", MQTT_NS::qos::at_most_once);
             }
             else if (packet_id == pid_sub2) {
-                c->publish_at_least_once("mqtt_client_cpp/topic2_1", "test2_1");
-                c->publish_exactly_once("mqtt_client_cpp/topic2_2", "test2_2");
+                c->publish("mqtt_client_cpp/topic2_1", "test2_1", MQTT_NS::qos::at_least_once);
+                c->publish("mqtt_client_cpp/topic2_2", "test2_2", MQTT_NS::qos::exactly_once);
             }
             return true;
         });
     c->set_publish_handler(
         [&]
-        (std::uint8_t header,
-         mqtt::optional<packet_id_t> packet_id,
-         std::string topic_name,
-         std::string contents){
+        (bool dup,
+         MQTT_NS::qos qos_value,
+         bool retain,
+         MQTT_NS::optional<packet_id_t> packet_id,
+         MQTT_NS::buffer topic_name,
+         MQTT_NS::buffer contents){
             std::cout << "[client] publish received. "
-                      << "dup: " << std::boolalpha << mqtt::publish::is_dup(header)
-                      << " pos: " << mqtt::qos::to_str(mqtt::publish::get_qos(header))
-                      << " retain: " << mqtt::publish::is_retain(header) << std::endl;
+                      << "dup: " << std::boolalpha << dup
+                      << " qos: " << qos_value
+                      << " retain: " << std::boolalpha << retain << std::endl;
             if (packet_id)
                 std::cout << "[client] packet_id: " << *packet_id << std::endl;
             std::cout << "[client] topic_name: " << topic_name << std::endl;
@@ -121,15 +122,15 @@ void client_proc(
 
 namespace mi = boost::multi_index;
 
-using con_t = mqtt::server<>::endpoint_t;
+using con_t = MQTT_NS::server<>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
 
 struct sub_con {
-    sub_con(std::string const& topic, con_sp_t const& con, std::uint8_t qos)
-        :topic(topic), con(con), qos(qos) {}
-    std::string topic;
+    sub_con(MQTT_NS::buffer topic, con_sp_t con, MQTT_NS::qos qos_value)
+        :topic(std::move(topic)), con(std::move(con)), qos_value(qos_value) {}
+    MQTT_NS::buffer topic;
     con_sp_t con;
-    std::uint8_t qos;
+    MQTT_NS::qos qos_value;
 };
 
 struct tag_topic {};
@@ -140,7 +141,7 @@ using mi_sub_con = mi::multi_index_container<
     mi::indexed_by<
         mi::ordered_non_unique<
             mi::tag<tag_topic>,
-            BOOST_MULTI_INDEX_MEMBER(sub_con, std::string, topic)
+            BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, topic)
         >,
         mi::ordered_non_unique<
             mi::tag<tag_con>,
@@ -166,136 +167,157 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
         }
     );
     s.set_accept_handler(
-        [&](con_t& ep) {
+        [&s, &connections, &subs](con_sp_t spep) {
+            auto& ep = *spep;
+            std::weak_ptr<con_t> wp(spep);
+
             using packet_id_t = typename std::remove_reference_t<decltype(ep)>::packet_id_t;
-            std::cout << "[server]accept" << std::endl;
-            auto sp = ep.shared_from_this();
-            ep.start_session(
-                [&, sp] // keeping ep's lifetime as sp until session finished
-                (boost::system::error_code const& ec) {
-                    std::cout << "[server]session end: " << ec.message() << std::endl;
+            std::cout << "[server] accept" << std::endl;
+            // For server close if ep is closed.
+            auto g = MQTT_NS::shared_scope_guard(
+                [&s] {
+                    std::cout << "[server] session end" << std::endl;
                     s.close();
                 }
             );
 
+            // Pass spep to keep lifetime.
+            // It makes sure wp.lock() never return nullptr in the handlers below
+            // including close_handler and error_handler.
+            ep.start_session(std::make_tuple(std::move(spep), std::move(g)));
+
             // set connection (lower than MQTT) level handlers
             ep.set_close_handler(
-                [&]
+                [&connections, &subs, wp]
                 (){
-                    std::cout << "[server]closed." << std::endl;
-                    close_proc(connections, subs, ep.shared_from_this());
+                    std::cout << "[server] closed." << std::endl;
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    close_proc(connections, subs, sp);
                 });
             ep.set_error_handler(
-                [&]
+                [&connections, &subs, wp]
                 (boost::system::error_code const& ec){
-                    std::cout << "[server]error: " << ec.message() << std::endl;
-                    close_proc(connections, subs, ep.shared_from_this());
+                    std::cout << "[server] error: " << ec.message() << std::endl;
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    close_proc(connections, subs, sp);
                 });
 
             // set MQTT level handlers
             ep.set_connect_handler(
-                [&]
-                (std::string const& client_id,
-                 mqtt::optional<std::string> const& username,
-                 mqtt::optional<std::string> const& password,
-                 mqtt::optional<mqtt::will>,
+                [&connections, wp]
+                (MQTT_NS::buffer client_id,
+                 MQTT_NS::optional<MQTT_NS::buffer> username,
+                 MQTT_NS::optional<MQTT_NS::buffer> password,
+                 MQTT_NS::optional<MQTT_NS::will>,
                  bool clean_session,
                  std::uint16_t keep_alive) {
-                    std::cout << "[server]client_id    : " << client_id << std::endl;
-                    std::cout << "[server]username     : " << (username ? username.value() : "none") << std::endl;
-                    std::cout << "[server]password     : " << (password ? password.value() : "none") << std::endl;
-                    std::cout << "[server]clean_session: " << std::boolalpha << clean_session << std::endl;
-                    std::cout << "[server]keep_alive   : " << keep_alive << std::endl;
-                    connections.insert(ep.shared_from_this());
-                    ep.connack(false, mqtt::connect_return_code::accepted);
+                    using namespace MQTT_NS::literals;
+                    std::cout << "[server] client_id    : " << client_id << std::endl;
+                    std::cout << "[server] username     : " << (username ? username.value() : "none"_mb) << std::endl;
+                    std::cout << "[server] password     : " << (password ? password.value() : "none"_mb) << std::endl;
+                    std::cout << "[server] clean_session: " << std::boolalpha << clean_session << std::endl;
+                    std::cout << "[server] keep_alive   : " << keep_alive << std::endl;
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    connections.insert(sp);
+                    sp->connack(false, MQTT_NS::connect_return_code::accepted);
                     return true;
                 }
             );
             ep.set_disconnect_handler(
-                [&]
+                [&connections, &subs, wp]
                 (){
-                    std::cout << "[server]disconnect received." << std::endl;
-                    close_proc(connections, subs, ep.shared_from_this());
+                    std::cout << "[server] disconnect received." << std::endl;
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    close_proc(connections, subs, sp);
                 });
             ep.set_puback_handler(
-                [&]
+                []
                 (packet_id_t packet_id){
-                    std::cout << "[server]puback received. packet_id: " << packet_id << std::endl;
+                    std::cout << "[server] puback received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_pubrec_handler(
-                [&]
+                []
                 (packet_id_t packet_id){
-                    std::cout << "[server]pubrec received. packet_id: " << packet_id << std::endl;
+                    std::cout << "[server] pubrec received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_pubrel_handler(
-                [&]
+                []
                 (packet_id_t packet_id){
-                    std::cout << "[server]pubrel received. packet_id: " << packet_id << std::endl;
+                    std::cout << "[server] pubrel received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_pubcomp_handler(
-                [&]
+                []
                 (packet_id_t packet_id){
-                    std::cout << "[server]pubcomp received. packet_id: " << packet_id << std::endl;
+                    std::cout << "[server] pubcomp received. packet_id: " << packet_id << std::endl;
                     return true;
                 });
             ep.set_publish_handler(
-                [&]
-                (std::uint8_t header,
-                 mqtt::optional<packet_id_t> packet_id,
-                 std::string topic_name,
-                 std::string contents){
-                    std::uint8_t qos = mqtt::publish::get_qos(header);
-                    bool retain = mqtt::publish::is_retain(header);
-                    std::cout << "[server]publish received."
-                              << " dup: " << std::boolalpha << mqtt::publish::is_dup(header)
-                              << " qos: " << mqtt::qos::to_str(qos)
-                              << " retain: " << retain << std::endl;
+                [&subs]
+                (bool is_dup,
+                 MQTT_NS::qos qos_value,
+                 bool is_retain,
+                 MQTT_NS::optional<packet_id_t> packet_id,
+                 MQTT_NS::buffer topic_name,
+                 MQTT_NS::buffer contents){
+                    std::cout << "[server] publish received."
+                              << " dup: " << std::boolalpha << is_dup
+                              << " qos: " << qos_value
+                              << " retain: " << std::boolalpha << is_retain << std::endl;
                     if (packet_id)
-                        std::cout << "[server]packet_id: " << *packet_id << std::endl;
-                    std::cout << "[server]topic_name: " << topic_name << std::endl;
-                    std::cout << "[server]contents: " << contents << std::endl;
+                        std::cout << "[server] packet_id: " << *packet_id << std::endl;
+                    std::cout << "[server] topic_name: " << topic_name << std::endl;
+                    std::cout << "[server] contents: " << contents << std::endl;
                     auto const& idx = subs.get<tag_topic>();
                     auto r = idx.equal_range(topic_name);
                     for (; r.first != r.second; ++r.first) {
                         r.first->con->publish(
-                            topic_name,
-                            contents,
-                            std::min(r.first->qos, qos),
-                            retain
+                            boost::asio::buffer(topic_name),
+                            boost::asio::buffer(contents),
+                            std::make_pair(topic_name, contents),
+                            std::min(r.first->qos_value, qos_value),
+                            is_retain
                         );
                     }
                     return true;
                 });
             ep.set_subscribe_handler(
-                [&]
+                [&subs, wp]
                 (packet_id_t packet_id,
-                 std::vector<std::tuple<std::string, std::uint8_t>> entries) {
+                 std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> entries) {
                     std::cout << "[server]subscribe received. packet_id: " << packet_id << std::endl;
-                    std::vector<std::uint8_t> res;
+                    std::vector<MQTT_NS::suback_reason_code> res;
                     res.reserve(entries.size());
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
                     for (auto const& e : entries) {
-                        std::string const& topic = std::get<0>(e);
-                        std::uint8_t qos = std::get<1>(e);
-                        std::cout << "[server]topic: " << topic  << " qos: " << static_cast<int>(qos) << std::endl;
-                        res.emplace_back(qos);
-                        subs.emplace(topic, ep.shared_from_this(), qos);
+                        MQTT_NS::buffer topic = std::get<0>(e);
+                        MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
+                        std::cout << "[server] topic: " << topic  << " qos: " << qos_value << std::endl;
+                        res.emplace_back(static_cast<MQTT_NS::suback_reason_code>(qos_value));
+                        subs.emplace(std::move(topic), sp, qos_value);
                     }
-                    ep.suback(packet_id, res);
+                    sp->suback(packet_id, res);
                     return true;
                 }
             );
             ep.set_unsubscribe_handler(
-                [&]
+                [&subs, wp]
                 (packet_id_t packet_id,
-                 std::vector<std::string> topics) {
+                 std::vector<MQTT_NS::buffer> topics) {
                     std::cout << "[server]unsubscribe received. packet_id: " << packet_id << std::endl;
                     for (auto const& topic : topics) {
                         subs.erase(topic);
                     }
-                    ep.unsuback(packet_id);
+                    auto sp = wp.lock();
+                    BOOST_ASSERT(sp);
+                    sp->unsuback(packet_id);
                     return true;
                 }
             );
@@ -311,16 +333,16 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    boost::asio::io_service ios;
+    boost::asio::io_context ioc;
     std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[1]);
 
     // server
-    auto s = mqtt::server<>(
+    auto s = MQTT_NS::server<>(
         boost::asio::ip::tcp::endpoint(
             boost::asio::ip::tcp::v4(),
             boost::lexical_cast<std::uint16_t>(argv[1])
         ),
-        ios
+        ioc
     );
     std::set<con_sp_t> connections;
     mi_sub_con subs;
@@ -331,7 +353,7 @@ int main(int argc, char** argv) {
     std::uint16_t pid_sub1;
     std::uint16_t pid_sub2;
 
-    auto c = mqtt::make_sync_client(ios, "localhost", port);
+    auto c = MQTT_NS::make_sync_client(ioc, "localhost", port);
 
     int count = 0;
     auto disconnect = [&] {
@@ -340,5 +362,5 @@ int main(int argc, char** argv) {
     client_proc(c, pid_sub1, pid_sub2, disconnect);
 
 
-    ios.run();
+    ioc.run();
 }

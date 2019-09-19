@@ -11,9 +11,10 @@
 
 #include <boost/assert.hpp>
 
-#include <mqtt/qos.hpp>
+#include <mqtt/namespace.hpp>
+#include <mqtt/subscribe_options.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace publish {
 
@@ -23,8 +24,8 @@ constexpr bool is_dup(std::uint8_t v) {
 }
 
 inline
-constexpr std::uint8_t get_qos(std::uint8_t v) {
-    return (v & 0b00000110) >> 1;
+constexpr qos get_qos(std::uint8_t v) {
+    return static_cast<qos>((v & 0b00000110) >> 1);
 }
 
 inline
@@ -39,9 +40,9 @@ constexpr void set_dup(std::uint8_t& fixed_header, bool dup) {
 }
 
 inline
-constexpr void set_qos(std::uint8_t& fixed_header, std::uint8_t qos) {
-    BOOST_ASSERT(qos == qos::at_most_once || qos == qos::at_least_once || qos == qos::exactly_once);
-    fixed_header |= static_cast<std::uint8_t>(qos << 1);
+constexpr void set_qos(std::uint8_t& fixed_header, qos qos_value) {
+    BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
+    fixed_header |= static_cast<std::uint8_t>(static_cast<std::uint8_t>(qos_value) << 1);
 }
 
 inline
@@ -52,6 +53,6 @@ constexpr void set_retain(std::uint8_t& fixed_header, bool retain) {
 
 } // namespace publish
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_PUBLISH_HPP

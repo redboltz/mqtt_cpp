@@ -1,8 +1,8 @@
 CMAKE_MINIMUM_REQUIRED (VERSION 3.8.2)
 PROJECT (mqtt_cpp)
 
-OPTION(BUILD_EXAMPLES "Enable building example applications" ON)
-OPTION(BUILD_TESTS "Enable building test applications" ON)
+OPTION(MQTT_BUILD_EXAMPLES "Enable building example applications" ON)
+OPTION(MQTT_BUILD_TESTS "Enable building test applications" ON)
 OPTION(MQTT_USE_STATIC_BOOST "Statically link with boost libraries" OFF)
 OPTION(MQTT_NO_TLS "Disable building TLS code" ON)
 OPTION(MQTT_USE_WS "Enable building WebSockets code" OFF)
@@ -11,6 +11,7 @@ OPTION(MQTT_STD_VARIANT "Use std::variant from C++17 instead of boost::variant" 
 OPTION(MQTT_STD_OPTIONAL "Use std::optional from C++17 instead of boost::optional" OFF)
 OPTION(MQTT_STD_STRING_VIEW "Use std::string_view from C++17 instead of boost::string_view" OFF)
 OPTION(MQTT_STD_ANY "Use std::any from C++17 instead of boost::any" OFF)
+OPTION(MQTT_STD_SHARED_PTR_ARRAY "Use std::shared_ptr<char[]> from C++17 instead of boost::shared_ptr<char[]>" OFF)
 
 IF ((CMAKE_VERSION VERSION_GREATER 3.1) OR
     (CMAKE_VERSION VERSION_EQUAL 3.1))
@@ -72,7 +73,7 @@ ELSE ()
     MESSAGE (STATUS "Using boost::string_view instead of std::string_view")
 ENDIF ()
 
-IF (MQTT_STD_ANY_VIEW)
+IF (MQTT_STD_ANY)
     SET(CMAKE_CXX_STANDARD 17)
     SET(CMAKE_CXX_STANDARD_REQUIRED ON)
     MESSAGE (STATUS "Using std::any instead of boost::any. Enables C++17!!!")
@@ -81,31 +82,29 @@ ELSE ()
     MESSAGE (STATUS "Using boost::any instead of std::any")
 ENDIF ()
 
+IF (MQTT_STD_SHARED_PTR_ARRAY)
+    SET(CMAKE_CXX_STANDARD 17)
+    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+    MESSAGE (STATUS "Using std::shared_ptr<char []> instead of boost::shared_ptr<char []>. Enables C++17!!!")
+    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_SHARED_PTR_ARRAY ${CMAKE_CXX_FLAGS}")
+ELSE ()
+    MESSAGE (STATUS "Using boost::shared_ptr<char []> instead of boost::shared_ptr<char []>")
+ENDIF ()
+
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     SET (CMAKE_CXX_FLAGS "/bigobj ${CMAKE_CXX_FLAGS}")
 ENDIF ()
 
 SET (Boost_USE_MULTITHREADED      ON)
-FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS system)
+FIND_PACKAGE (Boost 1.66.0 REQUIRED COMPONENTS system)
 FIND_PACKAGE (Threads)
 
-IF(BUILD_TESTS)
-    FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS chrono timer test_exec_monitor unit_test_framework)
+IF(MQTT_BUILD_TESTS)
+    FIND_PACKAGE (Boost 1.66.0 REQUIRED COMPONENTS chrono timer unit_test_framework)
 ENDIF()
-
-IF(!MQTT_NO_TLS)
-    FIND_PACKAGE (Boost 1.59.0 REQUIRED COMPONENTS ssl)
-ENDIF()
-
-IF (NOT MQTT_BEAST_INCLUDE_DIR)
-    IF (${Boost_VERSION} LESS 106600)
-        SET (MQTT_BEAST_INCLUDE_DIR "external/beast/include")
-    ENDIF ()
-ENDIF ()
 
 INCLUDE_DIRECTORIES (
     ${Boost_INCLUDE_DIR}
-    ${MQTT_BEAST_INCLUDE_DIR}
     include
 )
 
@@ -118,15 +117,17 @@ ENDIF ()
 
 ENABLE_TESTING ()
 
-IF (BUILD_TESTS)
+IF (MQTT_BUILD_TESTS)
     MESSAGE(STATUS "Tests enabled")
     ADD_SUBDIRECTORY (test)
 ENDIF ()
 
-IF (BUILD_EXAMPLES)
+IF (MQTT_BUILD_EXAMPLES)
     MESSAGE(STATUS "Examples enabled")
     ADD_SUBDIRECTORY (example)
 ENDIF ()
+
+ADD_CUSTOM_TARGET(check_deps)
 
 ADD_SUBDIRECTORY (include)
 
@@ -140,6 +141,7 @@ IF (DOXYGEN_FOUND)
         COMMAND ${CMAKE_COMMAND} -E echo "PROJECT_NAME       = \"mqtt_cpp\"" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         COMMAND ${CMAKE_COMMAND} -E echo "EXTRACT_ALL        = YES" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         COMMAND ${CMAKE_COMMAND} -E echo "RECURSIVE          = YES" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+        COMMAND ${CMAKE_COMMAND} -E echo "PREDEFINED         = _DOXYGEN_" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         COMMAND ${CMAKE_COMMAND} -E echo "INPUT              = ${CMAKE_CURRENT_SOURCE_DIR}/include" >> ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
     )
     IF (DOXYGEN_DOT_FOUND)

@@ -9,10 +9,12 @@
 
 #include <string>
 
-#include <mqtt/qos.hpp>
+#include <mqtt/namespace.hpp>
+#include <mqtt/subscribe_options.hpp>
 #include <mqtt/property_variant.hpp>
+#include <mqtt/move.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 class will {
 public:
@@ -27,18 +29,18 @@ public:
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
      * @param qos
-     *        mqtt::qos
+     *        qos
      */
-    will(std::string topic,
-         std::string message,
+    will(buffer topic,
+         buffer message,
          bool retain,
-         std::uint8_t qos,
+         qos qos_value,
          std::vector<v5::property_variant> props = {})
-        :topic_(std::move(topic)),
-         message_(std::move(message)),
+        :topic_(force_move(topic)),
+         message_(force_move(message)),
          retain_(retain),
-         qos_(qos),
-         props_(std::move(props))
+         qos_(qos_value),
+         props_(force_move(props))
     {}
 
     /**
@@ -52,11 +54,11 @@ public:
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
      *        3.3.1.3 RETAIN
      */
-    will(std::string topic,
-         std::string message,
+    will(buffer topic,
+         buffer message,
          bool retain = false,
          std::vector<v5::property_variant> props = {})
-        :will(std::move(topic), std::move(message), retain, qos::at_most_once, std::move(props))
+        :will(force_move(topic), force_move(message), retain, qos::at_most_once, force_move(props))
     {}
 
     /**
@@ -66,30 +68,31 @@ public:
      * @param message
      *        The contents to publish as a will
      * @param qos
-     *        mqtt::qos
+     *        qos
      */
-    will(std::string topic,
-         std::string message,
-         std::uint8_t qos,
+    will(buffer topic,
+         buffer message,
+         qos qos_value,
          std::vector<v5::property_variant> props = {})
-        :will(std::move(topic), std::move(message), false, qos, std::move(props))
+        :will(force_move(topic), force_move(message), false, qos_value, force_move(props))
     {}
-    std::string const& topic() const {
+
+    buffer const& topic() const {
         return topic_;
     }
-    std::string& topic() {
+    buffer& topic() {
         return topic_;
     }
-    std::string const& message() const {
+    buffer const& message() const {
         return message_;
     }
-    std::string& message() {
+    buffer& message() {
         return message_;
     }
     bool retain() const {
         return retain_;
     }
-    std::uint8_t qos() const {
+    qos get_qos() const {
         return qos_;
     }
     std::vector<v5::property_variant> const& props() const {
@@ -100,13 +103,13 @@ public:
     }
 
 private:
-    std::string topic_;
-    std::string message_;
+    buffer topic_;
+    buffer message_;
     bool retain_ = false;
-    std::uint8_t qos_ = 0;
+    qos qos_ = qos::at_most_once;
     std::vector<v5::property_variant> props_;
 };
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_WILL_HPP

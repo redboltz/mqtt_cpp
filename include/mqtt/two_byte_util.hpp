@@ -10,12 +10,17 @@
 #include <string>
 #include <cstdint>
 #include <boost/assert.hpp>
+#include <boost/container/static_vector.hpp>
+#include <mqtt/namespace.hpp>
 
-#define MQTT_16BITNUM_TO_BYTE_SEQ(val)                                  \
-    static_cast<char>(static_cast<std::uint16_t>(val) >> 8),            \
-    static_cast<char>((val) & 0xff)
+namespace MQTT_NS {
 
-namespace mqtt {
+inline boost::container::static_vector<char, 2> num_to_2bytes(std::uint16_t val) {
+    return {
+        static_cast<char>(val >> 8),
+        static_cast<char>(val & 0xff)
+    };
+}
 
 template <typename T>
 inline void add_uint16_t_to_buf(T& buf, std::uint16_t num) {
@@ -25,6 +30,7 @@ inline void add_uint16_t_to_buf(T& buf, std::uint16_t num) {
 
 template <typename It>
 std::uint16_t make_uint16_t(It b, It e) {
+    (void)e; // Avoid warning in release builds about unused variable
     BOOST_ASSERT(std::distance(b, e) == 2);
     auto b1 = b++;
     auto b2 = b++;
@@ -35,6 +41,6 @@ std::uint16_t make_uint16_t(It b, It e) {
         );
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_TWO_BYTE_UTIL_HPP

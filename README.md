@@ -1,10 +1,14 @@
 # MQTT client/server for C++14 based on Boost.Asio
 
-Version 4.0.0 [![Build Status](https://travis-ci.org/redboltz/mqtt_cpp.svg?branch=master)](https://travis-ci.org/redboltz/mqtt_cpp) [![Build status](https://ci.appveyor.com/api/projects/status/21a267hd34s0kqu5/branch/master?svg=true)](https://ci.appveyor.com/project/redboltz/mqtt-client-cpp/branch/master)
+Version 7.0.0 [![Build Status](https://travis-ci.org/redboltz/mqtt_cpp.svg?branch=master)](https://travis-ci.org/redboltz/mqtt_cpp)[![Build Status](https://dev.azure.com/redboltz/redboltz/_apis/build/status/redboltz.mqtt_cpp?branchName=master)](https://dev.azure.com/redboltz/redboltz/_build/latest?definitionId=6&branchName=master)[![codecov](https://codecov.io/gh/redboltz/mqtt_cpp/branch/master/graph/badge.svg)](https://codecov.io/gh/redboltz/mqtt_cpp)
+
+Important note https://github.com/redboltz/mqtt_cpp/wiki/News.
+
+[MQTT v5 is supported](https://github.com/redboltz/mqtt_cpp/wiki/MQTT-v5) since version 4.0.0.
 
 ## Overview
 
-mqtt_cpp is a header only library. It requires C++14 and the Boost Libraries 1.57.0 or later (See [#33](https://github.com/redboltz/mqtt_cpp/issues/33)).
+mqtt_cpp is a header only library. It requires C++14 and the Boost Libraries 1.66.0 or later.
 
 Add mqtt_cpp/include to your include path. Then, include `mqtt_cpp.hpp` and/or `mqtt_server_cpp.hpp` as follows:
 

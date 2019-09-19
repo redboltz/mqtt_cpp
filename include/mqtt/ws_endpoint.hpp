@@ -12,11 +12,12 @@
 #endif // !defined(MQTT_NO_TLS)
 
 #include <boost/beast/websocket.hpp>
+#include <boost/asio/bind_executor.hpp>
 
-#include <mqtt/utility.hpp>
+#include <mqtt/namespace.hpp>
 #include <mqtt/string_view.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 namespace as = boost::asio;
 
@@ -24,9 +25,9 @@ template <typename Socket, typename Strand>
 class ws_endpoint {
 public:
     template <typename... Args>
-    ws_endpoint(as::io_service& ios, Args&&... args)
-        :ws_(ios, std::forward<Args>(args)...),
-         strand_(ios) {
+    ws_endpoint(as::io_context& ioc, Args&&... args)
+        :ws_(ioc, std::forward<Args>(args)...),
+         strand_(ioc) {
         ws_.binary(true);
     }
 
@@ -41,13 +42,23 @@ public:
         ec = boost::system::errc::make_error_code(boost::system::errc::success);
     }
 
-    as::io_service& get_io_service() {
-        return ws_.get_io_service();
+    as::io_context& get_io_context() {
+        return ws_.get_io_context();
     }
+
+#if BOOST_VERSION >= 107000
+
+    auto& lowest_layer() {
+        return boost::beast::get_lowest_layer(ws_);
+    }
+
+#else  // BOOST_VERSION >= 107000
 
     typename boost::beast::websocket::stream<Socket>::lowest_layer_type& lowest_layer() {
         return ws_.lowest_layer();
     }
+
+#endif // BOOST_VERSION >= 107000
 
     typename boost::beast::websocket::stream<Socket>::next_layer_type& next_layer() {
         return ws_.next_layer();
@@ -119,7 +130,8 @@ public:
                         auto beast_read_handler = std::static_pointer_cast<beast_read_handler_t>(v);
                         ws_.async_read(
                             buffer_,
-                            strand_.wrap(
+                            as::bind_executor(
+                                strand_,
                                 [beast_read_handler]
                                 (boost::system::error_code const& ec, std::size_t) {
                                     (*beast_read_handler)(ec, beast_read_handler);
@@ -136,7 +148,8 @@ public:
         );
         ws_.async_read(
             buffer_,
-            strand_.wrap(
+            as::bind_executor(
+                strand_,
                 [beast_read_handler]
                 (boost::system::error_code const& ec, std::size_t) {
                     (*beast_read_handler)(ec, beast_read_handler);
@@ -166,13 +179,19 @@ public:
         WriteHandler&& handler) {
         ws_.async_write(
             buffers,
-            strand_.wrap(std::forward<WriteHandler>(handler))
+            as::bind_executor(
+                strand_,
+                std::forward<WriteHandler>(handler)
+            )
         );
     }
 
     template <typename PostHandler>
     void post(PostHandler&& handler) {
-        strand_.post(std::forward<PostHandler>(handler));
+        as::post(
+            strand_,
+            std::forward<PostHandler>(handler)
+        );
     }
 
 private:
@@ -212,6 +231,6 @@ inline void async_write(
     ep.async_write(buffers, std::forward<WriteHandler>(handler));
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_WS_ENDPOINT_HPP

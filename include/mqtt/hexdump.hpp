@@ -9,8 +9,9 @@
 
 #include <ostream>
 #include <iomanip>
+#include <mqtt/namespace.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 template <typename T>
 inline void hexdump(std::ostream& os, T const& v) {
@@ -20,6 +21,6 @@ inline void hexdump(std::ostream& os, T const& v) {
     }
 }
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_HEXDUMP_HPP

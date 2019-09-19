@@ -11,10 +11,12 @@
 #include <sstream>
 
 #include <boost/system/error_code.hpp>
+#include <boost/assert.hpp>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
 
-namespace mqtt {
+namespace MQTT_NS {
 
 struct protocol_error : std::exception {
     virtual char const* what() const noexcept {
@@ -110,6 +112,6 @@ struct property_length_error : std::exception {
     }
 };
 
-} // namespace mqtt
+} // namespace MQTT_NS
 
 #endif // MQTT_EXCEPTION_HPP
