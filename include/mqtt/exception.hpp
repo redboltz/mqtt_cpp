@@ -19,32 +19,32 @@
 namespace MQTT_NS {
 
 struct protocol_error : std::exception {
-    virtual char const* what() const noexcept {
+    char const* what() const noexcept override final {
         return "protocol error";
     }
 };
 
 struct remaining_length_error : std::exception {
-    virtual char const* what() const noexcept {
+    char const* what() const noexcept override final {
         return "remaining length error";
     }
 };
 
 struct variable_length_error : std::exception {
-    virtual char const* what() const noexcept {
+    char const* what() const noexcept override final {
         return "variable length error";
     }
 };
 
 struct utf8string_length_error : std::exception {
-    virtual char const* what() const noexcept {
+    char const* what() const noexcept override final {
         return "utf8string length error";
     }
 };
 
 struct utf8string_contents_error : std::exception {
     utf8string_contents_error(utf8string::validation r):r(r) {}
-    virtual char const* what() const noexcept {
+    char const* what() const noexcept override final {
         if (r == utf8string::validation::ill_formed) {
             return "utf8string ill_formed";
         }
@@ -57,13 +57,13 @@ struct utf8string_contents_error : std::exception {
 };
 
 struct will_message_length_error : std::exception {
-    virtual char const* what() const noexcept {
+    char const* what() const noexcept override final {
         return "will message length error";
     }
 };
 
 struct password_length_error : std::exception {
-    virtual char const* what() const noexcept {
+    char const* what() const noexcept override final {
         return "password length error";
     }
 };
@@ -74,7 +74,7 @@ struct bytes_transferred_error : std::exception {
         ss << "bytes transferred error. expected: " << expected << " actual: " << actual;
         msg = ss.str();
     }
-    virtual char const* what() const noexcept {
+    char const* what() const noexcept override final {
         return msg.data();
     }
     std::string msg;
@@ -95,19 +95,19 @@ struct write_bytes_transferred_error : bytes_transferred_error {
 };
 
 struct packet_id_exhausted_error : std::exception {
-    virtual char const* what() const noexcept {
+    char const* what() const noexcept override final {
         return "packet_id exhausted error";
     }
 };
 
 struct property_parse_error : std::exception {
-    virtual char const* what() const noexcept {
+    char const* what() const noexcept override final {
         return "property parse error";
     }
 };
 
 struct property_length_error : std::exception {
-    virtual char const* what() const noexcept {
+    char const* what() const noexcept override final {
         return "property length error";
     }
 };

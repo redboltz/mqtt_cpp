@@ -78,7 +78,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() {
         return 1;
     }
 
@@ -304,7 +304,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 
@@ -490,7 +490,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 
@@ -736,7 +736,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 
@@ -786,7 +786,7 @@ public:
      * @brief Get qos
      * @return qos
      */
-    qos get_qos() const {
+    constexpr qos get_qos() const {
         return publish::get_qos(fixed_header_);
     }
 
@@ -794,7 +794,7 @@ public:
      * @brief Check retain flag
      * @return true if retain, otherwise return false.
      */
-    bool is_retain() const {
+    constexpr bool is_retain() const {
         return publish::is_retain(fixed_header_);
     }
 
@@ -802,7 +802,7 @@ public:
      * @brief Check dup flag
      * @return true if dup, otherwise return false.
      */
-    bool is_dup() const {
+    constexpr bool is_dup() const {
         return publish::is_dup(fixed_header_);
     }
 
@@ -810,7 +810,7 @@ public:
      * @brief Get topic name
      * @return topic name
      */
-    buffer topic() const {
+    constexpr buffer const& topic() const {
         return topic_name_;
     }
 
@@ -818,7 +818,7 @@ public:
      * @brief Get payload
      * @return payload
      */
-    buffer payload() const {
+    constexpr buffer const& payload() const {
         return payload_;
     }
 
@@ -826,7 +826,7 @@ public:
      * @brief Set dup flag
      * @param dup flag value to set
      */
-    void set_dup(bool dup) {
+    constexpr void set_dup(bool dup) {
         publish::set_dup(fixed_header_, dup);
     }
 
@@ -951,7 +951,7 @@ struct basic_puback_message {
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 
@@ -1103,7 +1103,7 @@ struct basic_pubrec_message {
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 
@@ -1325,7 +1325,7 @@ struct basic_pubrel_message {
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 
@@ -1486,7 +1486,7 @@ struct basic_pubcomp_message {
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 
@@ -1657,7 +1657,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 
@@ -1806,7 +1806,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 
@@ -1968,7 +1968,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 
@@ -2110,7 +2110,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 
@@ -2262,7 +2262,7 @@ struct disconnect_message {
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 
@@ -2404,7 +2404,7 @@ struct auth_message {
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    constexpr std::size_t num_of_const_buffer_sequence() const {
         return num_of_const_buffer_sequence_;
     }
 

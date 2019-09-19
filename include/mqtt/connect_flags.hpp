@@ -21,31 +21,31 @@ constexpr char const will_retain    = 0b00100000;
 constexpr char const password_flag  = 0b01000000;
 constexpr char const user_name_flag = static_cast<char>(0b10000000u);
 
-inline constexpr bool has_clean_session(char v) {
+constexpr bool has_clean_session(char v) {
     return (v & clean_session) != 0;
 }
 
-inline constexpr bool has_will_flag(char v) {
+constexpr bool has_will_flag(char v) {
     return (v & will_flag) != 0;
 }
 
-inline constexpr bool has_will_retain(char v) {
+constexpr bool has_will_retain(char v) {
     return (v & will_retain) != 0;
 }
 
-inline constexpr bool has_password_flag(char v) {
+constexpr bool has_password_flag(char v) {
     return (v & password_flag) != 0;
 }
 
-inline constexpr bool has_user_name_flag(char v) {
+constexpr bool has_user_name_flag(char v) {
     return (v & user_name_flag) != 0;
 }
 
-inline void set_will_qos(char& v, qos qos_value) {
+constexpr void set_will_qos(char& v, qos qos_value) {
     v |= static_cast<char>(static_cast<std::uint8_t>(qos_value) << 3);
 }
 
-inline constexpr qos will_qos(char v) {
+constexpr qos will_qos(char v) {
     return static_cast<qos>((v & 0b00011000) >> 3);
 }
 

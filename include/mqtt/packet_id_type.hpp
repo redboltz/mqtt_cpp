@@ -35,7 +35,7 @@ struct make_packet_id;
 template <>
 struct make_packet_id<2> {
     template <typename It>
-    static std::uint16_t apply(It b, It e) {
+    static constexpr std::uint16_t apply(It b, It e) {
         return make_uint16_t(b, e);
     }
 };
@@ -43,7 +43,7 @@ struct make_packet_id<2> {
 template <>
 struct make_packet_id<4> {
     template <typename It>
-    static std::uint32_t apply(It b, It e) {
+    static constexpr std::uint32_t apply(It b, It e) {
         return make_uint32_t(b, e);
     }
 };

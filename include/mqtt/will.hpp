@@ -77,28 +77,28 @@ public:
         :will(force_move(topic), force_move(message), false, qos_value, force_move(props))
     {}
 
-    buffer const& topic() const {
+    constexpr buffer const& topic() const {
         return topic_;
     }
-    buffer& topic() {
+    constexpr buffer& topic() {
         return topic_;
     }
-    buffer const& message() const {
+    constexpr buffer const& message() const {
         return message_;
     }
-    buffer& message() {
+    constexpr buffer& message() {
         return message_;
     }
-    bool retain() const {
+    constexpr bool retain() const {
         return retain_;
     }
-    qos get_qos() const {
+    constexpr qos get_qos() const {
         return qos_;
     }
-    std::vector<v5::property_variant> const& props() const {
+    constexpr std::vector<v5::property_variant> const& props() const {
         return props_;
     }
-    std::vector<v5::property_variant>& props() {
+    constexpr std::vector<v5::property_variant>& props() {
         return props_;
     }
 

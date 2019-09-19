@@ -18,34 +18,28 @@ namespace MQTT_NS {
 
 namespace publish {
 
-inline
 constexpr bool is_dup(std::uint8_t v) {
     return (v & 0b00001000) != 0;
 }
 
-inline
 constexpr qos get_qos(std::uint8_t v) {
     return static_cast<qos>((v & 0b00000110) >> 1);
 }
 
-inline
 constexpr bool is_retain(std::uint8_t v) {
     return (v & 0b00000001) != 0;
 }
 
-inline
 constexpr void set_dup(std::uint8_t& fixed_header, bool dup) {
     if (dup) fixed_header |=  0b00001000;
     else     fixed_header &= static_cast<std::uint8_t>(~0b00001000);
 }
 
-inline
 constexpr void set_qos(std::uint8_t& fixed_header, qos qos_value) {
     BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
     fixed_header |= static_cast<std::uint8_t>(static_cast<std::uint8_t>(qos_value) << 1);
 }
 
-inline
 constexpr void set_retain(std::uint8_t& fixed_header, bool retain) {
     if (retain) fixed_header |=  0b00000001;
     else        fixed_header &= static_cast<std::uint8_t>(~0b00000001);

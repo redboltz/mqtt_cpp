@@ -38,12 +38,12 @@ enum struct validation
     well_formed_with_non_charactor,
 };
 
-inline bool
+constexpr bool
 is_valid_length(string_view str) {
     return str.size() <= 0xffff;
 }
 
-inline validation
+constexpr validation
 validate_contents(string_view str) {
     // This code is based on https://www.cl.cam.ac.uk/~mgk25/ucs/utf8_check.c
     auto result = validation::well_formed;

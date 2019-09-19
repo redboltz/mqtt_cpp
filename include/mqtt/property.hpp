@@ -156,7 +156,7 @@ struct binary_property {
         return 2;
     }
 
-    buffer const& val() const {
+    constexpr buffer const& val() const {
         return buf_;
     }
 
@@ -221,7 +221,7 @@ struct variable_property {
         return 2;
     }
 
-    std::size_t val() const {
+    constexpr std::size_t val() const {
         return std::get<0>(variable_length(value_));
     }
 
@@ -249,11 +249,9 @@ public:
         : detail::n_bytes_property<1>(id::payload_format_indicator, b, e) {}
 
     payload_format val() const {
-        return
-            [this] {
-                if (buf_.front() == 0) return binary;
-                else return string;
-            }();
+        return (  (buf_.front() == 0)
+                ? binary
+                : string);
     }
 
     static constexpr detail::ostream_format const of_ = detail::ostream_format::binary_string;
@@ -571,11 +569,11 @@ public:
             2;  // val (len, buf)
     }
 
-    buffer const& key() const {
+    constexpr buffer const& key() const {
         return key_.buf;
     }
 
-    buffer const& val() const {
+    constexpr buffer const& val() const {
         return val_.buf;
     }
 
