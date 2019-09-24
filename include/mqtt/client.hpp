@@ -937,7 +937,7 @@ private:
     bool async_pingreq_ = false;
 #if defined(MQTT_USE_TLS)
     as::ssl::context ctx_{as::ssl::context::tlsv12};
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_WS)
     std::string path_;
 #endif // defined(MQTT_USE_WS)
