@@ -13,8 +13,8 @@ target_include_directories(mqtt_cpp_iface
     $<INSTALL_INTERFACE:${ROOT_MQTT_TARGET}>
 )
 
-IF (MQTT_NO_TLS)
-    target_compile_definitions(mqtt_cpp_iface INTERFACE MQTT_NO_TLS)
+IF (MQTT_USE_TLS)
+    target_compile_definitions(mqtt_cpp_iface INTERFACE MQTT_USE_TLS)
 ENDIF ()
 
 IF (MQTT_USE_WS)
@@ -44,7 +44,7 @@ ENDIF ()
 target_link_libraries(mqtt_cpp_iface INTERFACE Boost::system Threads::Threads)
 
 list(APPEND CHK_INCLUDE_DIRS -I${Boost_INCLUDE_DIR} -I${CMAKE_CURRENT_SOURCE_DIR})
-IF (NOT MQTT_NO_TLS)
+IF (MQTT_USE_TLS)
     list(APPEND CHK_INCLUDE_DIRS -I${OPENSSL_INCLUDE_DIR})
     IF (MQTT_OPENSSL_INCLUDE_DIR)
         list(APPEND CHK_INCLUDE_DIRS -I${MQTT_OPENSSL_INCLUDE_DIR})

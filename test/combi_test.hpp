@@ -10,15 +10,15 @@
 #include "test_settings.hpp"
 #include "test_broker.hpp"
 #include "test_server_no_tls.hpp"
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 #include "test_server_tls.hpp"
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 #if defined(MQTT_USE_WS)
 #include "test_server_no_tls_ws.hpp"
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 #include "test_server_tls_ws.hpp"
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 #endif // defined(MQTT_USE_WS)
 
 #include <mqtt/sync_client.hpp>
@@ -43,7 +43,7 @@ inline void do_combi_test(Test const& test) {
         auto c = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
         test(ioc, c, s, b);
     }
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     {
         boost::asio::io_context ioc;
         test_broker b(ioc);
@@ -66,7 +66,7 @@ inline void do_combi_test(Test const& test) {
         c->set_ca_cert_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_WS)
     {
         boost::asio::io_context ioc;
@@ -82,7 +82,7 @@ inline void do_combi_test(Test const& test) {
         auto c = MQTT_NS::make_client_ws(ioc, broker_url, broker_notls_ws_port, "/", MQTT_NS::protocol_version::v5);
         test(ioc, c, s, b);
     }
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     {
         boost::asio::io_context ioc;
         test_broker b(ioc);
@@ -105,7 +105,7 @@ inline void do_combi_test(Test const& test) {
         c->set_ca_cert_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 #endif // defined(MQTT_USE_WS)
 }
 
@@ -125,7 +125,7 @@ inline void do_combi_test_sync(Test const& test) {
         auto c = MQTT_NS::make_sync_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
         test(ioc, c, s, b);
     }
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     {
         boost::asio::io_context ioc;
         test_broker b(ioc);
@@ -148,7 +148,7 @@ inline void do_combi_test_sync(Test const& test) {
         c->set_ca_cert_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_WS)
     {
         boost::asio::io_context ioc;
@@ -164,7 +164,7 @@ inline void do_combi_test_sync(Test const& test) {
         auto c = MQTT_NS::make_sync_client_ws(ioc, broker_url, broker_notls_ws_port, "/", MQTT_NS::protocol_version::v5);
         test(ioc, c, s, b);
     }
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     {
         boost::asio::io_context ioc;
         test_broker b(ioc);
@@ -187,7 +187,7 @@ inline void do_combi_test_sync(Test const& test) {
         c->set_ca_cert_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 #endif // defined(MQTT_USE_WS)
 }
 
@@ -207,7 +207,7 @@ inline void do_combi_test_async(Test const& test) {
         auto c = MQTT_NS::make_async_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
         test(ioc, c, s, b);
     }
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     {
         boost::asio::io_context ioc;
         test_broker b(ioc);
@@ -230,7 +230,7 @@ inline void do_combi_test_async(Test const& test) {
         c->set_ca_cert_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_WS)
     {
         boost::asio::io_context ioc;
@@ -246,7 +246,7 @@ inline void do_combi_test_async(Test const& test) {
         auto c = MQTT_NS::make_async_client_ws(ioc, broker_url, broker_notls_ws_port, "/", MQTT_NS::protocol_version::v5);
         test(ioc, c, s, b);
     }
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
     {
         boost::asio::io_context ioc;
         test_broker b(ioc);
@@ -269,7 +269,7 @@ inline void do_combi_test_async(Test const& test) {
         c->set_ca_cert_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 #endif // defined(MQTT_USE_WS)
 }
 

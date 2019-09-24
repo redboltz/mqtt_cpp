@@ -7,7 +7,7 @@
 #if !defined(MQTT_TEST_CTX_INIT_HPP)
 #define MQTT_TEST_CTX_INIT_HPP
 
-#if !defined(MQTT_NO_TLS)
+#if defined(MQTT_USE_TLS)
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -28,6 +28,6 @@ struct ctx_init {
     boost::asio::ssl::context ctx;
 };
 
-#endif // !defined(MQTT_NO_TLS)
+#endif // defined(MQTT_USE_TLS)
 
 #endif // MQTT_TEST_CTX_INIT_HPP

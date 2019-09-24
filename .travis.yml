@@ -21,28 +21,28 @@ matrix:
   include:
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=ON  -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_NO_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=ON  -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_NO_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED" MAKEFLAGS="-j2"
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=ON  -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_NO_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=ON  -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_TEST_1=ON  -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_NO_TLS=OFF -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_TEST_1=ON  -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED" MAKEFLAGS="-j2"
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=ON  -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_NO_TLS=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=ON  -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=ON  -DMQTT_TEST_5=ON  -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_NO_TLS=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=ON  -DMQTT_TEST_5=ON  -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
     - os: osx
       compiler: clang
-      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=ON  -DMQTT_TEST_7=ON  -DMQTT_NO_TLS=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=ON  -DMQTT_TEST_7=ON  -DMQTT_USE_TLS=ON -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
     - os: linux
       compiler: clang
-      env: FLAGS="-DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_NO_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
+      env: FLAGS="-DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j2"
       addons: &addonsconfig
         apt:
           sources:
@@ -64,25 +64,25 @@ matrix:
     - os: linux
       sudo: required
       compiler: clang
-      env: FLAGS="-DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_NO_TLS=OFF  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF" CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fsanitize=address -fno-omit-frame-pointer" LDFLAGS="-Wno-ignored-qualifiers -fsanitize=address" MAKEFLAGS="-j1"
+      env: FLAGS="-DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF" CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fsanitize=address -fno-omit-frame-pointer" LDFLAGS="-Wno-ignored-qualifiers -fsanitize=address" MAKEFLAGS="-j1"
       addons: *addonsconfig
     - os: linux
       sudo: required
       compiler: clang
-      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=ON  -DMQTT_TEST_5=ON  -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_NO_TLS=OFF  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON -DMQTT_STD_OPTIONAL=ON -DMQTT_STD_VARIANT=ON -DMQTT_STD_STRING_VIEW=ON" CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fsanitize=address -fno-omit-frame-pointer" LDFLAGS="-Wno-ignored-qualifiers -fsanitize=address" MAKEFLAGS="-j1"
+      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=ON  -DMQTT_TEST_5=ON  -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON -DMQTT_STD_OPTIONAL=ON -DMQTT_STD_VARIANT=ON -DMQTT_STD_STRING_VIEW=ON" CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fsanitize=address -fno-omit-frame-pointer" LDFLAGS="-Wno-ignored-qualifiers -fsanitize=address" MAKEFLAGS="-j1"
       addons: *addonsconfig
     - os: linux
       sudo: required
       compiler: clang
-      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_NO_TLS=OFF  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON -DMQTT_STD_OPTIONAL=ON -DMQTT_STD_VARIANT=ON -DMQTT_STD_STRING_VIEW=ON" CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fsanitize=address -fno-omit-frame-pointer" LDFLAGS="-Wno-ignored-qualifiers -fsanitize=address" MAKEFLAGS="-j1"
+      env: FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON -DMQTT_STD_OPTIONAL=ON -DMQTT_STD_VARIANT=ON -DMQTT_STD_STRING_VIEW=ON" CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fsanitize=address -fno-omit-frame-pointer" LDFLAGS="-Wno-ignored-qualifiers -fsanitize=address" MAKEFLAGS="-j1"
       addons: *addonsconfig
     - os: linux
       compiler: gcc
-      env: FLAGS="-DMQTT_CODECOV=ON -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_NO_TLS=ON -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON -DMQTT_STD_OPTIONAL=ON -DMQTT_STD_VARIANT=ON -DMQTT_STD_STRING_VIEW=ON -DMQTT_STD_SHARED_PTR_ARRAY=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j1" COV="ON"
+      env: FLAGS="-DMQTT_CODECOV=ON -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON -DMQTT_STD_OPTIONAL=ON -DMQTT_STD_VARIANT=ON -DMQTT_STD_STRING_VIEW=ON -DMQTT_STD_SHARED_PTR_ARRAY=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion" MAKEFLAGS="-j1" COV="ON"
       addons: *addonsconfig
     - os: linux
       compiler: gcc
-      env: FLAGS="-DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=ON  -DMQTT_TEST_4=ON  -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_NO_TLS=ON -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON -DMQTT_STD_OPTIONAL=ON -DMQTT_STD_VARIANT=ON -DMQTT_STD_STRING_VIEW=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED" MAKEFLAGS="-j1" COV="ON"
+      env: FLAGS="-DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=ON  -DMQTT_TEST_4=ON  -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON -DMQTT_STD_OPTIONAL=ON -DMQTT_STD_VARIANT=ON -DMQTT_STD_STRING_VIEW=ON" CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED" MAKEFLAGS="-j1" COV="ON"
       addons: *addonsconfig
     - os: linux
       compiler: gcc
@@ -91,7 +91,7 @@ matrix:
     - os: linux
       sudo: required
       compiler: gcc
-      env: FLAGS="-DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_NO_TLS=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=OFF" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED" MAKEFLAGS="-j2" COV="ON"
+      env: FLAGS="-DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_TLS=ON -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=OFF" CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED" MAKEFLAGS="-j2" COV="ON"
       addons: *addonsconfig
 
 script:

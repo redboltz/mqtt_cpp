@@ -24,7 +24,7 @@ For servers:
 You can compile your program as follows:
 
 ```
-g++ -std=c++14 -Ipath_to_mqtt_cpp/include -DMQTT_NO_TLS no_tls.cpp -lboost_system -lpthread
+g++ -std=c++14 -Ipath_to_mqtt_cpp/include no_tls.cpp -lboost_system -lpthread
 ```
 
 ```
