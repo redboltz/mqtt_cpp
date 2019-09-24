@@ -75,7 +75,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() {
         return 1;
     }
 
@@ -139,7 +139,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() {
         return 1;
     }
 
@@ -276,7 +276,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() {
         return 1;
     }
 
@@ -419,7 +419,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() {
         return
             1 +                   // fixed header
             1 +                   // remaining length
@@ -672,7 +672,7 @@ public:
      * @brief Get qos
      * @return qos
      */
-    qos get_qos() const {
+    constexpr qos get_qos() const {
         return publish::get_qos(fixed_header_);
     }
 
@@ -680,7 +680,7 @@ public:
      * @brief Check retain flag
      * @return true if retain, otherwise return false.
      */
-    bool is_retain() const {
+    constexpr bool is_retain() const {
         return publish::is_retain(fixed_header_);
     }
 
@@ -688,7 +688,7 @@ public:
      * @brief Check dup flag
      * @return true if dup, otherwise return false.
      */
-    bool is_dup() const {
+    constexpr bool is_dup() const {
         return publish::is_dup(fixed_header_);
     }
 
@@ -696,7 +696,7 @@ public:
      * @brief Get topic name
      * @return topic name
      */
-    buffer const& topic() const {
+    constexpr buffer const& topic() const {
         return topic_name_;
     }
 
@@ -704,7 +704,7 @@ public:
      * @brief Get payload
      * @return payload
      */
-    buffer const& payload() const {
+    constexpr buffer const& payload() const {
         return payload_;
     }
 
@@ -712,7 +712,7 @@ public:
      * @brief Set dup flag
      * @param dup flag value to set
      */
-    void set_dup(bool dup) {
+    constexpr void set_dup(bool dup) {
         publish::set_dup(fixed_header_, dup);
     }
 
@@ -906,7 +906,7 @@ public:
      * @brief Get number of element of const_buffer_sequence
      * @return number of element of const_buffer_sequence
      */
-    std::size_t num_of_const_buffer_sequence() const {
+    static constexpr std::size_t num_of_const_buffer_sequence() {
         return 4; // fixed header, remaining length, packet_id, entries
     }
 

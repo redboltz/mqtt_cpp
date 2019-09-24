@@ -37,12 +37,12 @@ enum class qos : std::uint8_t
 
 struct subscribe_options
 {
-    subscribe_options(void) = delete;
+    constexpr subscribe_options(void) = delete;
     ~subscribe_options(void) = default;
-    subscribe_options(subscribe_options &&) = default;
-    subscribe_options(subscribe_options const&) = default;
-    subscribe_options& operator=(subscribe_options &&) = default;
-    subscribe_options& operator=(subscribe_options const&) = default;
+    constexpr subscribe_options(subscribe_options &&) = default;
+    constexpr subscribe_options(subscribe_options const&) = default;
+    constexpr subscribe_options& operator=(subscribe_options &&) = default;
+    constexpr subscribe_options& operator=(subscribe_options const&) = default;
 
     explicit constexpr subscribe_options(std::uint8_t value) : data_(value) { }
 

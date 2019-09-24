@@ -37,7 +37,7 @@ variable_push(Container& c, std::size_t size) {
 }
 
 template <typename T>
-inline std::tuple<std::size_t, std::size_t>
+constexpr std::tuple<std::size_t, std::size_t>
 variable_length(T const& bytes) {
     std::size_t len = 0;
     std::size_t mul = 1;
@@ -46,14 +46,14 @@ variable_length(T const& bytes) {
         len += (b & 0b01111111) * mul;
         mul *= 128;
         ++consumed;
-        if (mul > 128 * 128 * 128 * 128) return std::make_tuple(0, 0);
+        if (mul > 128 * 128 * 128 * 128) return {0, 0};
         if (!(b & 0b10000000)) break;
     }
-    return std::make_tuple(len, consumed);
+    return {len, consumed};
 }
 
 template <typename Iterator>
-inline std::tuple<std::size_t, std::size_t>
+constexpr std::tuple<std::size_t, std::size_t>
 variable_length(Iterator b, Iterator e) {
     std::size_t len = 0;
     std::size_t mul = 1;
@@ -62,10 +62,10 @@ variable_length(Iterator b, Iterator e) {
         len += (*b & 0b01111111) * mul;
         mul *= 128;
         ++consumed;
-        if (mul > 128 * 128 * 128 * 128) return std::make_tuple(0, 0);
+        if (mul > 128 * 128 * 128 * 128) return {0, 0};
         if (!(*b & 0b10000000)) break;
     }
-    return std::make_tuple(len, consumed);
+    return {len, consumed};
 }
 
 } // namespace MQTT_NS

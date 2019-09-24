@@ -46,7 +46,6 @@
 #include <mqtt/connect_return_code.hpp>
 #include <mqtt/exception.hpp>
 #include <mqtt/tcp_endpoint.hpp>
-#include <mqtt/unique_scope_guard.hpp>
 #include <mqtt/shared_scope_guard.hpp>
 #include <mqtt/message_variant.hpp>
 #include <mqtt/two_byte_util.hpp>

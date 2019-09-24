@@ -15,18 +15,18 @@ namespace MQTT_NS {
 
 inline std::string
 remaining_bytes(std::size_t size) {
-    auto bytes = variable_bytes(size);
+    std::string bytes = variable_bytes(size);
     if (bytes.empty()) throw remaining_length_error();
     return bytes;
 }
 
-inline std::tuple<std::size_t, std::size_t>
+constexpr std::tuple<std::size_t, std::size_t>
 remaining_length(MQTT_NS::string_view bytes) {
     return variable_length(bytes);
 }
 
 template <typename Iterator>
-inline std::tuple<std::size_t, std::size_t>
+constexpr std::tuple<std::size_t, std::size_t>
 remaining_length(Iterator b, Iterator e) {
     return variable_length(b, e);
 }

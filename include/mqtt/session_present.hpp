@@ -11,7 +11,6 @@
 
 namespace MQTT_NS {
 
-inline
 constexpr bool is_session_present(char v) {
     return v & 0b00000001;
 }

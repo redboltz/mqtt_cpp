@@ -53,11 +53,6 @@ using message_variant = basic_message_variant<2>;
 
 namespace detail {
 
-template <typename T>
-struct is_shared_ptr {
-    static constexpr bool value = false;
-};
-
 struct const_buffer_sequence_visitor
 
 #if !defined(MQTT_STD_VARIANT)
@@ -106,7 +101,7 @@ struct continuous_buffer_visitor
 {
     template <typename T>
     std::string operator()(T&& t) const {
-        return t.continuous_buffer();
+        return std::forward<T>(t).continuous_buffer();
     }
 };
 
