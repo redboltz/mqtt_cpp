@@ -27,6 +27,7 @@
 #include <mqtt/endpoint.hpp>
 #include <mqtt/null_strand.hpp>
 #include <mqtt/move.hpp>
+#include <mqtt/callable_overlay.hpp>
 
 namespace MQTT_NS {
 
@@ -41,7 +42,7 @@ template <
 class server {
 public:
     using socket_t = tcp_endpoint<as::ip::tcp::socket, Strand>;
-    using endpoint_t = endpoint<Mutex, LockGuard, PacketIdBytes>;
+    using endpoint_t = callable_overlay<endpoint<Mutex, LockGuard, PacketIdBytes>>;
 
     /**
      * @brief Accept handler
@@ -183,7 +184,7 @@ template <
 class server_tls {
 public:
     using socket_t = tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
-    using endpoint_t = endpoint<Mutex, LockGuard, PacketIdBytes>;
+    using endpoint_t = callable_overlay<endpoint<Mutex, LockGuard, PacketIdBytes>>;
 
     /**
      * @brief Accept handler
@@ -386,7 +387,7 @@ template <
 class server_ws {
 public:
     using socket_t = ws_endpoint<as::ip::tcp::socket, Strand>;
-    using endpoint_t = endpoint<Mutex, LockGuard, PacketIdBytes>;
+    using endpoint_t = callable_overlay<endpoint<Mutex, LockGuard, PacketIdBytes>>;
 
     /**
      * @brief Accept handler
@@ -596,7 +597,7 @@ template <
 class server_tls_ws {
 public:
     using socket_t = ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
-    using endpoint_t = endpoint<Mutex, LockGuard, PacketIdBytes>;
+    using endpoint_t = callable_overlay<endpoint<Mutex, LockGuard, PacketIdBytes>>;
 
     /**
      * @brief Accept handler
