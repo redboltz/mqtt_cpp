@@ -27,11 +27,10 @@
 namespace mi = boost::multi_index;
 namespace as = boost::asio;
 
-/**
- * Allow the broker to support incoming connections of
- * any supported type of MQTT_NS::server.
- */
-using con_sp_t = std::shared_ptr<MQTT_NS::server<>::endpoint_t>;
+using endpoint_t = MQTT_NS::server<>::endpoint_t;
+using con_sp_t = std::shared_ptr<endpoint_t>;
+using con_wp_t = std::weak_ptr<endpoint_t>;
+using packet_id_t = endpoint_t::packet_id_t;
 
 class test_broker {
 public:
@@ -71,10 +70,10 @@ public:
      *
      * @param ep - The MQTT_NS::server (of whichever kind) to accept a connection on.
      */
-    template <typename Endpoint>
-    void handle_accept(std::shared_ptr<Endpoint> spep) {
-        std::weak_ptr<Endpoint> wp(spep);
-        auto& ep = *spep;
+    void handle_accept(con_sp_t spep) {
+        con_wp_t wp(spep);
+        endpoint_t& ep = *spep;
+
         ep.socket().lowest_layer().set_option(as::ip::tcp::no_delay(true));
         ep.set_auto_pub_response(false);
         // Pass spep to keep lifetime.
@@ -86,14 +85,14 @@ public:
         ep.set_close_handler(
             [this, wp]
             (){
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 close_proc(MQTT_NS::force_move(sp), true);
             });
         ep.set_error_handler(
             [this, wp]
             (boost::system::error_code const& /*ec*/){
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 close_proc(MQTT_NS::force_move(sp), true);
             });
@@ -107,7 +106,7 @@ public:
              MQTT_NS::optional<MQTT_NS::will> will,
              bool clean_session,
              std::uint16_t keep_alive) {
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return
                     connect_handler(
@@ -131,7 +130,7 @@ public:
              bool clean_session,
              std::uint16_t keep_alive,
              std::vector<MQTT_NS::v5::property_variant> props) {
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return
                     connect_handler(
@@ -149,7 +148,7 @@ public:
         ep.set_disconnect_handler(
             [this, wp]
             (){
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return
                     disconnect_handler(MQTT_NS::force_move(sp));
@@ -159,7 +158,7 @@ public:
             [this, wp]
             (MQTT_NS::v5::disconnect_reason_code /*reason_code*/, std::vector<MQTT_NS::v5::property_variant> props) {
                 if (h_disconnect_props_) h_disconnect_props_(std::move(props));
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return
                     disconnect_handler(MQTT_NS::force_move(sp));
@@ -167,60 +166,60 @@ public:
         );
         ep.set_puback_handler(
             []
-            (typename Endpoint::packet_id_t /*packet_id*/){
+            (packet_id_t /*packet_id*/){
                 return true;
             });
         ep.set_v5_puback_handler(
             []
-            (typename Endpoint::packet_id_t /*packet_id*/,
+            (packet_id_t /*packet_id*/,
              MQTT_NS::v5::puback_reason_code /*reason_code*/,
              std::vector<MQTT_NS::v5::property_variant> /*props*/){
                 return true;
             });
         ep.set_pubrec_handler(
             [wp]
-            (typename Endpoint::packet_id_t packet_id){
-                auto sp = wp.lock();
+            (packet_id_t packet_id){
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 sp->pubrel(packet_id);
                 return true;
             });
         ep.set_v5_pubrec_handler(
             [this, wp]
-            (typename Endpoint::packet_id_t packet_id,
+            (packet_id_t packet_id,
              MQTT_NS::v5::pubrec_reason_code /*reason_code*/,
              std::vector<MQTT_NS::v5::property_variant> /*props*/){
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 sp->pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, pubrel_props_);
                 return true;
             });
         ep.set_pubrel_handler(
             [wp]
-            (typename Endpoint::packet_id_t packet_id){
-                auto sp = wp.lock();
+            (packet_id_t packet_id){
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 sp->pubcomp(packet_id);
                 return true;
             });
         ep.set_v5_pubrel_handler(
             [this, wp]
-            (typename Endpoint::packet_id_t packet_id,
+            (packet_id_t packet_id,
              MQTT_NS::v5::pubrel_reason_code /*reason_code*/,
              std::vector<MQTT_NS::v5::property_variant> /*props*/){
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 sp->pubcomp(packet_id, MQTT_NS::v5::pubcomp_reason_code::success, pubcomp_props_);
                 return true;
             });
         ep.set_pubcomp_handler(
             []
-            (typename Endpoint::packet_id_t /*packet_id*/){
+            (packet_id_t /*packet_id*/){
                 return true;
             });
         ep.set_v5_pubcomp_handler(
             []
-            (typename Endpoint::packet_id_t /*packet_id*/,
+            (packet_id_t /*packet_id*/,
              MQTT_NS::v5::pubcomp_reason_code /*reason_code*/,
              std::vector<MQTT_NS::v5::property_variant> /*props*/){
                 return true;
@@ -230,10 +229,10 @@ public:
             (bool is_dup,
              MQTT_NS::qos qos_value,
              bool is_retain,
-             MQTT_NS::optional<typename Endpoint::packet_id_t> packet_id,
+             MQTT_NS::optional<packet_id_t> packet_id,
              MQTT_NS::buffer topic_name,
              MQTT_NS::buffer contents){
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return publish_handler(
                     MQTT_NS::force_move(sp),
@@ -251,13 +250,13 @@ public:
             (bool is_dup,
              MQTT_NS::qos qos_value,
              bool is_retain,
-             MQTT_NS::optional<typename Endpoint::packet_id_t> packet_id,
+             MQTT_NS::optional<packet_id_t> packet_id,
              MQTT_NS::buffer topic_name,
              MQTT_NS::buffer contents,
              std::vector<MQTT_NS::v5::property_variant> props
             ) {
                 if (h_publish_props_) h_publish_props_(props);
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return publish_handler(
                     MQTT_NS::force_move(sp),
@@ -272,9 +271,9 @@ public:
             });
         ep.set_subscribe_handler(
             [this, wp]
-            (typename Endpoint::packet_id_t packet_id,
+            (packet_id_t packet_id,
              std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> entries) {
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return subscribe_handler(
                     MQTT_NS::force_move(sp),
@@ -286,11 +285,11 @@ public:
         );
         ep.set_v5_subscribe_handler(
             [this, wp]
-            (typename Endpoint::packet_id_t packet_id,
+            (packet_id_t packet_id,
              std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> entries,
              std::vector<MQTT_NS::v5::property_variant> props
             ) {
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return subscribe_handler(
                     MQTT_NS::force_move(sp),
@@ -302,9 +301,9 @@ public:
         );
         ep.set_unsubscribe_handler(
             [this, wp]
-            (typename Endpoint::packet_id_t packet_id,
+            (packet_id_t packet_id,
              std::vector<MQTT_NS::buffer> topics) {
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return unsubscribe_handler(
                     MQTT_NS::force_move(sp),
@@ -316,11 +315,11 @@ public:
         );
         ep.set_v5_unsubscribe_handler(
             [this, wp]
-            (typename Endpoint::packet_id_t packet_id,
+            (packet_id_t packet_id,
              std::vector<MQTT_NS::buffer> topics,
              std::vector<MQTT_NS::v5::property_variant> props
             ) {
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return unsubscribe_handler(
                     MQTT_NS::force_move(sp),
@@ -332,7 +331,7 @@ public:
         );
         ep.set_pingreq_handler(
             [wp] {
-                auto sp = wp.lock();
+                con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 sp->pingresp();
                 return true;
@@ -435,9 +434,8 @@ private:
      * @param client_id - the id that the client wants to use
      * @param will - the last-will-and-testiment of the connection, if any.
      */
-    template <typename Endpoint>
     bool connect_handler(
-        std::shared_ptr<Endpoint> spep,
+        con_sp_t spep,
         MQTT_NS::buffer client_id,
         MQTT_NS::optional<MQTT_NS::buffer> /*username*/,
         MQTT_NS::optional<MQTT_NS::buffer> /*password*/,
@@ -624,17 +622,16 @@ private:
         return true;
     }
 
-    template <typename Endpoint>
     void disconnect_handler(
-        std::shared_ptr<Endpoint> spep
+        con_sp_t spep
     ) {
         if (delay_disconnect_) {
-            std::weak_ptr<Endpoint> wp(spep);
+            con_wp_t wp(spep);
             tim_disconnect_.expires_from_now(delay_disconnect_.value());
             tim_disconnect_.async_wait(
                 [&, wp](boost::system::error_code const& ec) {
                     if (!ec) {
-                        if (auto sp = wp.lock()) {
+                        if (con_sp_t sp = wp.lock()) {
                             close_proc(MQTT_NS::force_move(sp), false);
                         }
                     }
@@ -646,13 +643,12 @@ private:
         }
     }
 
-    template <typename Endpoint>
     bool publish_handler(
-        std::shared_ptr<Endpoint> spep,
+        con_sp_t spep,
         bool is_dup,
         MQTT_NS::qos qos_value,
         bool is_retain,
-        MQTT_NS::optional<typename Endpoint::packet_id_t> packet_id,
+        MQTT_NS::optional<packet_id_t> packet_id,
         MQTT_NS::buffer topic_name,
         MQTT_NS::buffer contents,
         std::vector<MQTT_NS::v5::property_variant> props) {
@@ -699,10 +695,9 @@ private:
         return true;
     }
 
-    template <typename Endpoint>
     bool subscribe_handler(
-        std::shared_ptr<Endpoint> spep,
-        typename Endpoint::packet_id_t packet_id,
+        con_sp_t spep,
+        packet_id_t packet_id,
         std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> entries,
         std::vector<MQTT_NS::v5::property_variant> props) {
 
@@ -724,7 +719,7 @@ private:
                 res.emplace_back(static_cast<MQTT_NS::suback_reason_code>(qos_value)); // converts to granted_qos_x
                 // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
                 // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
-                subs_.emplace(std::move(topic), ep.shared_from_this(), qos_value);
+                subs_.emplace(std::move(topic), spep, qos_value);
             }
             // Acknowledge the subscriptions, and the registered QOS settings
             ep.suback(packet_id, MQTT_NS::force_move(res));
@@ -740,7 +735,7 @@ private:
                 res.emplace_back(static_cast<MQTT_NS::v5::suback_reason_code>(qos_value)); // converts to granted_qos_x
                 // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
                 // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
-                subs_.emplace(std::move(topic), ep.shared_from_this(), qos_value);
+                subs_.emplace(std::move(topic), spep, qos_value);
             }
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
@@ -769,10 +764,9 @@ private:
         return true;
     }
 
-    template <typename Endpoint>
     bool unsubscribe_handler(
-        std::shared_ptr<Endpoint> spep,
-        typename Endpoint::packet_id_t packet_id,
+        con_sp_t spep,
+        packet_id_t packet_id,
         std::vector<MQTT_NS::buffer> topics,
         std::vector<MQTT_NS::v5::property_variant> props) {
 
@@ -947,10 +941,8 @@ private:
      * @param send_will - Whether to publish this connections last will
      */
     // TODO: Maybe change the name of this function.
-    template <typename Endpoint>
-    void close_proc(std::shared_ptr<Endpoint> spep, bool send_will) {
-        // Hold the lifetime of this endpoint until the function exits.
-        auto& ep = *spep;
+    void close_proc(con_sp_t spep, bool send_will) {
+        endpoint_t& ep = *spep;
 
         auto & act_sess_idx = active_sessions_.get<tag_con>();
         auto act_sess_it = act_sess_idx.find(spep);

@@ -33,6 +33,7 @@
 #include <boost/assert.hpp>
 
 #include <mqtt/namespace.hpp>
+#include <mqtt/attributes.hpp>
 #include <mqtt/any.hpp>
 #include <mqtt/fixed_header.hpp>
 #include <mqtt/remaining_length.hpp>
@@ -86,12 +87,6 @@ public:
      */
     endpoint(protocol_version version = protocol_version::undetermined, bool async_send_store = false)
         :async_send_store_{async_send_store},
-         h_mqtt_message_processed_(
-             [this]
-             (any session_life_keeper) {
-                 async_read_control_packet_type(force_move(session_life_keeper));
-             }
-         ),
          version_(version)
     {}
 
@@ -104,12 +99,6 @@ public:
         :socket_(force_move(socket)),
          connected_(true),
          async_send_store_{async_send_store},
-         h_mqtt_message_processed_(
-             [this]
-             (any session_life_keeper) {
-                 async_read_control_packet_type(force_move(session_life_keeper));
-             }
-         ),
          version_(version)
     {}
 
@@ -121,7 +110,7 @@ public:
      *        3.13 PINGREQ – PING request
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using pingreq_handler = std::function<bool()>;
+    virtual bool on_pingreq() = 0;
 
     /**
      * @brief Pingresp handler
@@ -129,7 +118,7 @@ public:
      *        3.13 PINGRESP – PING response
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using pingresp_handler = std::function<bool()>;
+    virtual bool on_pingresp() = 0;
 
 
     // MQTT v3_1_1 handlers
@@ -171,13 +160,12 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      *
      */
-    using connect_handler = std::function<
-        bool(MQTT_NS::buffer client_id,
-             MQTT_NS::optional<MQTT_NS::buffer> user_name,
-             MQTT_NS::optional<MQTT_NS::buffer> password,
-             MQTT_NS::optional<will> will,
-             bool clean_session,
-             std::uint16_t keep_alive)>;
+    virtual bool on_connect(MQTT_NS::buffer client_id,
+                            MQTT_NS::optional<MQTT_NS::buffer> user_name,
+                            MQTT_NS::optional<MQTT_NS::buffer> password,
+                            MQTT_NS::optional<will> will,
+                            bool clean_session,
+                            std::uint16_t keep_alive) = 0;
 
     /**
      * @brief Connack handler
@@ -191,7 +179,7 @@ public:
      *        3.2.2.3 Connect Return code
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using connack_handler = std::function<bool(bool session_present, connect_return_code return_code)>;
+    virtual bool on_connack(bool session_present, connect_return_code return_code) = 0;
 
     /**
      * @brief Publish handler
@@ -210,12 +198,12 @@ public:
      *        Published contents
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using publish_handler = std::function<bool(bool dup,
-                                               qos qos_value,
-                                               bool retain,
-                                               MQTT_NS::optional<packet_id_t> packet_id,
-                                               MQTT_NS::buffer topic_name,
-                                               MQTT_NS::buffer contents)>;
+    virtual bool on_publish(bool dup,
+                            qos qos_value,
+                            bool retain,
+                            MQTT_NS::optional<packet_id_t> packet_id,
+                            MQTT_NS::buffer topic_name,
+                            MQTT_NS::buffer contents) = 0;
 
     /**
      * @brief Puback handler
@@ -225,7 +213,7 @@ public:
      *        3.4.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using puback_handler = std::function<bool(packet_id_t packet_id)>;
+    virtual bool on_puback(packet_id_t packet_id) = 0;
 
     /**
      * @brief Pubrec handler
@@ -235,7 +223,7 @@ public:
      *        3.5.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using pubrec_handler = std::function<bool(packet_id_t packet_id)>;
+    virtual bool on_pubrec(packet_id_t packet_id) = 0;
 
     /**
      * @brief Pubrel handler
@@ -245,7 +233,7 @@ public:
      *        3.6.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using pubrel_handler = std::function<bool(packet_id_t packet_id)>;
+    virtual bool on_pubrel(packet_id_t packet_id) = 0;
 
     /**
      * @brief Pubcomp handler
@@ -255,7 +243,7 @@ public:
      *        3.7.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using pubcomp_handler = std::function<bool(packet_id_t packet_id)>;
+    virtual bool on_pubcomp(packet_id_t packet_id) = 0;
 
     /**
      * @brief Subscribe handler
@@ -267,8 +255,8 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349802<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using subscribe_handler = std::function<bool(packet_id_t packet_id,
-                                                 std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries)>;
+    virtual bool on_subscribe(packet_id_t packet_id,
+                              std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries) = 0;
 
     /**
      * @brief Suback handler
@@ -281,8 +269,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718071<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using suback_handler = std::function<bool(packet_id_t packet_id,
-                                              std::vector<MQTT_NS::suback_reason_code> qoss)>;
+    virtual bool on_suback(packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> reasons) = 0;
 
     /**
      * @brief Unsubscribe handler
@@ -294,8 +281,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800448<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using unsubscribe_handler = std::function<bool(packet_id_t packet_id,
-                                                   std::vector<MQTT_NS::buffer> topics)>;
+    virtual bool on_unsubscribe(packet_id_t packet_id, std::vector<MQTT_NS::buffer> topics) = 0;
 
     /**
      * @brief Unsuback handler
@@ -304,14 +290,14 @@ public:
      *        3.11.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using unsuback_handler = std::function<bool(packet_id_t)>;
+    virtual bool on_unsuback(packet_id_t) = 0;
 
     /**
      * @brief Disconnect handler
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800463<BR>
      *        3.14 DISCONNECT – Disconnect notification
      */
-    using disconnect_handler = std::function<void()>;
+    virtual void on_disconnect() = 0;
 
     // MQTT v5 handlers
 
@@ -358,15 +344,13 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      *
      */
-    using v5_connect_handler = std::function<
-        bool(MQTT_NS::buffer client_id,
-             MQTT_NS::optional<MQTT_NS::buffer> user_name,
-             MQTT_NS::optional<MQTT_NS::buffer> password,
-             MQTT_NS::optional<will> will,
-             bool clean_start,
-             std::uint16_t keep_alive,
-             std::vector<v5::property_variant> props)
-    >;
+    virtual bool on_v5_connect(MQTT_NS::buffer client_id,
+                               MQTT_NS::optional<MQTT_NS::buffer> user_name,
+                               MQTT_NS::optional<MQTT_NS::buffer> password,
+                               MQTT_NS::optional<will> will,
+                               bool clean_start,
+                               std::uint16_t keep_alive,
+                               std::vector<v5::property_variant> props) = 0;
 
     /**
      * @brief Connack handler
@@ -384,11 +368,9 @@ public:
      *        3.2.2.3 CONNACK Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_connack_handler = std::function<
-        bool(bool session_present,
-             v5::connect_reason_code reason_code,
-             std::vector<v5::property_variant> props)
-    >;
+    virtual bool on_v5_connack(bool session_present,
+                               v5::connect_reason_code reason_code,
+                               std::vector<v5::property_variant> props) = 0;
 
     /**
      * @brief Publish handler
@@ -415,15 +397,13 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_publish_handler = std::function<
-        bool(bool dup,
-             qos qos_value,
-             bool retain,
-             MQTT_NS::optional<packet_id_t> packet_id,
-             MQTT_NS::buffer topic_name,
-             MQTT_NS::buffer contents,
-             std::vector<v5::property_variant> props)
-    >;
+    virtual bool on_v5_publish(bool dup,
+                               qos qos_value,
+                               bool retain,
+                               MQTT_NS::optional<packet_id_t> packet_id,
+                               MQTT_NS::buffer topic_name,
+                               MQTT_NS::buffer contents,
+                               std::vector<v5::property_variant> props) = 0;
 
     /**
      * @brief Puback handler
@@ -441,11 +421,9 @@ public:
      *        3.4.2.2 PUBACK Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_puback_handler = std::function<
-        bool(packet_id_t packet_id,
-             v5::puback_reason_code reason_code,
-             std::vector<v5::property_variant> props)
-    >;
+    virtual bool on_v5_puback(packet_id_t packet_id,
+                              v5::puback_reason_code reason_code,
+                              std::vector<v5::property_variant> props) = 0;
 
     /**
      * @brief Pubrec handler
@@ -463,11 +441,9 @@ public:
      *        3.5.2.2 PUBREC Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_pubrec_handler = std::function<
-        bool(packet_id_t packet_id,
-             v5::pubrec_reason_code reason_code,
-             std::vector<v5::property_variant> props)
-    >;
+    virtual bool on_v5_pubrec(packet_id_t packet_id,
+                              v5::pubrec_reason_code reason_code,
+                              std::vector<v5::property_variant> props) = 0;
 
     /**
      * @brief Pubrel handler
@@ -485,11 +461,9 @@ public:
      *        3.6.2.2 PUBREL Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_pubrel_handler = std::function<
-        bool(packet_id_t packet_id,
-             v5::pubrel_reason_code reason_code,
-             std::vector<v5::property_variant> props)
-    >;
+    virtual bool on_v5_pubrel(packet_id_t packet_id,
+                              v5::pubrel_reason_code reason_code,
+                              std::vector<v5::property_variant> props) = 0;
 
     /**
      * @brief Pubcomp handler
@@ -507,11 +481,9 @@ public:
      *        3.7.2.2 PUBCOMP Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_pubcomp_handler = std::function<
-        bool(packet_id_t packet_id,
-             v5::pubcomp_reason_code reason_code,
-             std::vector<v5::property_variant> props)
-    >;
+    virtual bool on_v5_pubcomp(packet_id_t packet_id,
+                               v5::pubcomp_reason_code reason_code,
+                               std::vector<v5::property_variant> props) = 0;
 
     /**
      * @brief Subscribe handler
@@ -527,11 +499,9 @@ public:
      *        3.8.2.1 SUBSCRIBE Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_subscribe_handler = std::function<
-        bool(packet_id_t packet_id,
-             std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries,
-             std::vector<v5::property_variant> props)
-    >;
+    virtual bool on_v5_subscribe(packet_id_t packet_id,
+                                 std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries,
+                                 std::vector<v5::property_variant> props) = 0;
 
     /**
      * @brief Suback handler
@@ -548,11 +518,9 @@ public:
      *        3.9.2.1 SUBACK Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_suback_handler = std::function<
-        bool(packet_id_t packet_id,
-             std::vector<MQTT_NS::v5::suback_reason_code> reasons,
-             std::vector<v5::property_variant> props)
-    >;
+    virtual bool on_v5_suback(packet_id_t packet_id,
+                              std::vector<MQTT_NS::v5::suback_reason_code> reasons,
+                              std::vector<v5::property_variant> props) = 0;
 
     /**
      * @brief Unsubscribe handler
@@ -569,11 +537,9 @@ public:
      *        3.10.2.1 UNSUBSCRIBE Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_unsubscribe_handler = std::function<
-        bool(packet_id_t packet_id,
-             std::vector<MQTT_NS::buffer> topics,
-             std::vector<v5::property_variant> props)
-    >;
+    virtual bool on_v5_unsubscribe(packet_id_t packet_id,
+                                   std::vector<MQTT_NS::buffer> topics,
+                                   std::vector<v5::property_variant> props) = 0;
 
     /**
      * @brief Unsuback handler
@@ -590,11 +556,9 @@ public:
      *        3.11.2.1 UNSUBACK Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_unsuback_handler = std::function<
-        bool(packet_id_t,
-             std::vector<v5::unsuback_reason_code> reasons,
-             std::vector<v5::property_variant> props)
-    >;
+    virtual bool on_v5_unsuback(packet_id_t,
+                                std::vector<v5::unsuback_reason_code> reasons,
+                                std::vector<v5::property_variant> props) = 0;
 
     /**
      * @brief Disconnect handler
@@ -609,10 +573,8 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
      *        3.14.2.2 DISCONNECT Properties
      */
-    using v5_disconnect_handler = std::function<
-        void(v5::disconnect_reason_code reason_code,
-             std::vector<v5::property_variant> props)
-    >;
+    virtual void on_v5_disconnect(v5::disconnect_reason_code reason_code,
+                                  std::vector<v5::property_variant> props) = 0;
 
     /**
      * @brief Auth handler
@@ -628,11 +590,8 @@ public:
      *        3.15.2.2 AUTH Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_auth_handler = std::function<
-        bool(v5::auth_reason_code reason_code,
-             std::vector<v5::property_variant> props)
-    >;
-
+    virtual bool on_v5_auth(v5::auth_reason_code reason_code,
+                            std::vector<v5::property_variant> props) = 0;
 
     // Original handlers
 
@@ -642,7 +601,7 @@ public:
      * This handler is called if the client called `disconnect()` and the server closed the socket cleanly.
      * If the socket is closed by other reasons, error_handler is called.
      */
-    using close_handler = std::function<void()>;
+    virtual void on_close() = 0;
 
     /**
      * @brief Error handler
@@ -651,7 +610,7 @@ public:
      *
      * @param ec error code
      */
-    using error_handler = std::function<void(boost::system::error_code const& ec)>;
+    virtual void on_error(boost::system::error_code const& ec) = 0;
 
     /**
      * @brief Publish response sent handler
@@ -661,7 +620,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901026<BR>
      *        2.2.1 Packet Identifier
      */
-    using pub_res_sent_handler = std::function<void(packet_id_t packet_id)>;
+    virtual void on_pub_res_sent(packet_id_t packet_id) = 0;
 
     /**
      * @brief Serialize publish handler
@@ -669,7 +628,7 @@ public:
      *        To restore the message, use restore_serialized_message().
      * @param msg publish message
      */
-    using serialize_publish_message_handler = std::function<void(basic_publish_message<PacketIdBytes> msg)>;
+    virtual void on_serialize_publish_message(basic_publish_message<sizeof(packet_id_t)> msg) = 0;
 
     /**
      * @brief Serialize publish handler
@@ -677,17 +636,7 @@ public:
      *        To restore the message, use restore_serialized_message().
      * @param msg v5::publish message
      */
-    using serialize_v5_publish_message_handler = std::function<void(v5::basic_publish_message<PacketIdBytes> msg)>;
-
-    /**
-     * @brief Serialize publish handler
-     *        You can serialize the publish message.
-     *        To restore the message, use restore_serialized_message().
-     * @param packet_id packet identifier of the serializing message
-     * @param data      pointer to the serializing message
-     * @param size      size of the serializing message
-     */
-    using serialize_publish_handler = std::function<void(packet_id_t packet_id, char const* data, std::size_t size)>;
+    virtual void on_serialize_v5_publish_message(v5::basic_publish_message<sizeof(packet_id_t)> msg) = 0;
 
     /**
      * @brief Serialize pubrel handler
@@ -697,7 +646,7 @@ public:
      *        To restore the message, use restore_serialized_message().
      * @param msg pubrel message
      */
-    using serialize_pubrel_message_handler = std::function<void(basic_pubrel_message<PacketIdBytes> msg)>;
+    virtual void on_serialize_pubrel_message(basic_pubrel_message<sizeof(packet_id_t)> msg) = 0;
 
     /**
      * @brief Serialize pubrel handler
@@ -707,31 +656,19 @@ public:
      *        To restore the message, use restore_serialized_message().
      * @param msg pubrel message
      */
-    using serialize_v5_pubrel_message_handler = std::function<void(v5::basic_pubrel_message<PacketIdBytes> msg)>;
-
-    /**
-     * @brief Serialize pubrel handler
-     *        You can serialize the pubrel message.
-     *        If your storage has already had the publish message that has the same packet_id,
-     *        then you need to replace the publish message to pubrel message.
-     *        To restore the message, use restore_serialized_message().
-     * @param packet_id packet identifier of the serializing message
-     * @param data      pointer to the serializing message
-     * @param size      size of the serializing message
-     */
-    using serialize_pubrel_handler = std::function<void(packet_id_t packet_id, char const* data, std::size_t size)>;
+    virtual void on_serialize_v5_pubrel_message(v5::basic_pubrel_message<sizeof(packet_id_t)> msg) = 0;
 
     /**
      * @brief Remove serialized message
      * @param packet_id packet identifier of the removing message
      */
-    using serialize_remove_handler = std::function<void(packet_id_t packet_id)>;
+    virtual void on_serialize_remove(packet_id_t packet_id) = 0;
 
     /**
      * @brief Pre-send handler
      *        This handler is called when any mqtt control packet is decided to send.
      */
-    using pre_send_handler = std::function<void()>;
+    virtual void on_pre_send() = 0;
 
     /**
      * @brief is valid length handler
@@ -740,16 +677,20 @@ public:
      * @param remaining length
      * @return true if check is success, otherwise false
      */
-    using is_valid_length_handler =
-        std::function<bool(control_packet_type packet_type, std::size_t remaining_length)>;
+    virtual bool check_is_valid_length(control_packet_type packet_type, std::size_t remaining_length) = 0;
 
     /**
      * @brief next read handler
      *        This handler is called when the current mqtt message has been processed.
      * @param func A callback function that is called when async operation will finish.
      */
-    using mqtt_message_processed_handler =
-        std::function<void(any session_life_keeper)>;
+    MQTT_ALWAYS_INLINE virtual void on_mqtt_message_processed(MQTT_NS::any session_life_keeper)
+    {
+        if(async_read_on_message_processed_)
+        {
+            async_read_control_packet_type(force_move(session_life_keeper));
+        }
+    }
 
     endpoint(this_type const&) = delete;
     endpoint(this_type&&) = delete;
@@ -792,589 +733,6 @@ public:
         auto_pub_response_async_ = async;
     }
 
-
-    // MQTT Common handlers
-
-    /**
-     * @brief Set pingreq handler
-     * @param h handler
-     */
-    void set_pingreq_handler(pingreq_handler h = pingreq_handler()) {
-        h_pingreq_ = force_move(h);
-    }
-
-    /**
-     * @brief Set pingresp handler
-     * @param h handler
-     */
-    void set_pingresp_handler(pingresp_handler h = pingresp_handler()) {
-        h_pingresp_ = force_move(h);
-    }
-
-
-    /**
-     * @brief Get pingreq handler
-     * @return handler
-     */
-    pingreq_handler const& get_pingreq_handler() const {
-        return h_pingreq_;
-    }
-
-    /**
-     * @brief Get pingresp handler
-     * @return handler
-     */
-    pingresp_handler const& get_pingresp_handler() const {
-        return h_pingresp_;
-    }
-
-
-    // MQTT v3_1_1 handlers
-
-    /**
-     * @brief Set connect handler
-     * @param h handler
-     */
-    void set_connect_handler(connect_handler h = connect_handler()) {
-        h_connect_ = force_move(h);
-    }
-
-    /**
-     * @brief Set connack handler
-     * @param h handler
-     */
-    void set_connack_handler(connack_handler h = connack_handler()) {
-        h_connack_ = force_move(h);
-    }
-
-    /**
-     * @brief Set publish handler
-     * @param h handler
-     */
-    void set_publish_handler(publish_handler h = publish_handler()) {
-        h_publish_ = force_move(h);
-    }
-
-    /**
-     * @brief Set puback handler
-     * @param h handler
-     */
-    void set_puback_handler(puback_handler h = puback_handler()) {
-        h_puback_ = force_move(h);
-    }
-
-    /**
-     * @brief Set pubrec handler
-     * @param h handler
-     */
-    void set_pubrec_handler(pubrec_handler h = pubrec_handler()) {
-        h_pubrec_ = force_move(h);
-    }
-
-    /**
-     * @brief Set pubrel handler
-     * @param h handler
-     */
-    void set_pubrel_handler(pubrel_handler h = pubrel_handler()) {
-        h_pubrel_ = force_move(h);
-    }
-
-    /**
-     * @brief Set pubcomp handler
-     * @param h handler
-     */
-    void set_pubcomp_handler(pubcomp_handler h = pubcomp_handler()) {
-        h_pubcomp_ = force_move(h);
-    }
-
-    /**
-     * @brief Set subscribe handler
-     * @param h handler
-     */
-    void set_subscribe_handler(subscribe_handler h = subscribe_handler()) {
-        h_subscribe_ = force_move(h);
-    }
-
-    /**
-     * @brief Set suback handler
-     * @param h handler
-     */
-    void set_suback_handler(suback_handler h = suback_handler()) {
-        h_suback_ = force_move(h);
-    }
-
-    /**
-     * @brief Set unsubscribe handler
-     * @param h handler
-     */
-    void set_unsubscribe_handler(unsubscribe_handler h = unsubscribe_handler()) {
-        h_unsubscribe_ = force_move(h);
-    }
-
-    /**
-     * @brief Set unsuback handler
-     * @param h handler
-     */
-    void set_unsuback_handler(unsuback_handler h = unsuback_handler()) {
-        h_unsuback_ = force_move(h);
-    }
-
-    /**
-     * @brief Set disconnect handler
-     * @param h handler
-     */
-    void set_disconnect_handler(disconnect_handler h = disconnect_handler()) {
-        h_disconnect_ = force_move(h);
-    }
-
-    /**
-     * @brief Get connect handler
-     * @return handler
-     */
-    connect_handler const& get_connect_handler() const {
-        return h_connect_;
-    }
-
-    /**
-     * @brief Get connack handler
-     * @return handler
-     */
-    connack_handler const& get_connack_handler() const {
-        return h_connack_;
-    }
-
-    /**
-     * @brief Set publish handler
-     * @return handler
-     */
-    publish_handler const& get_publish_handler() const {
-        return h_publish_;
-    }
-
-    /**
-     * @brief Get puback handler
-     * @return handler
-     */
-    puback_handler const& get_puback_handler() const {
-        return h_puback_;
-    }
-
-    /**
-     * @brief Get pubrec handler
-     * @return handler
-     */
-    pubrec_handler const& get_pubrec_handler() const {
-        return h_pubrec_;
-    }
-
-    /**
-     * @brief Get pubrel handler
-     * @return handler
-     */
-    pubrel_handler const& get_pubrel_handler() const {
-        return h_pubrel_;
-    }
-
-    /**
-     * @brief Get pubcomp handler
-     * @return handler
-     */
-    pubcomp_handler const& get_pubcomp_handler() const {
-        return h_pubcomp_;
-    }
-
-    /**
-     * @brief Get subscribe handler
-     * @return handler
-     */
-    subscribe_handler const& get_subscribe_handler() const {
-        return h_subscribe_;
-    }
-
-    /**
-     * @brief Get suback handler
-     * @return handler
-     */
-    suback_handler const& get_suback_handler() const {
-        return h_suback_;
-    }
-
-    /**
-     * @brief Get unsubscribe handler
-     * @return handler
-     */
-    unsubscribe_handler const& get_unsubscribe_handler() const {
-        return h_unsubscribe_;
-    }
-
-    /**
-     * @brief Get unsuback handler
-     * @return handler
-     */
-    unsuback_handler const& get_unsuback_handler() const {
-        return h_unsuback_;
-    }
-
-    /**
-     * @brief Get disconnect handler
-     * @return handler
-     */
-    disconnect_handler const& get_disconnect_handler() const {
-        return h_disconnect_;
-    }
-
-    // MQTT v5 handlers
-
-    /**
-     * @brief Set connect handler
-     * @param h handler
-     */
-    void set_v5_connect_handler(v5_connect_handler h = v5_connect_handler()) {
-        h_v5_connect_ = force_move(h);
-    }
-
-    /**
-     * @brief Set connack handler
-     * @param h handler
-     */
-    void set_v5_connack_handler(v5_connack_handler h = v5_connack_handler()) {
-        h_v5_connack_ = force_move(h);
-    }
-
-    /**
-     * @brief Set publish handler
-     * @param h handler
-     */
-    void set_v5_publish_handler(v5_publish_handler h = v5_publish_handler()) {
-        h_v5_publish_ = force_move(h);
-    }
-
-    /**
-     * @brief Set puback handler
-     * @param h handler
-     */
-    void set_v5_puback_handler(v5_puback_handler h = v5_puback_handler()) {
-        h_v5_puback_ = force_move(h);
-    }
-
-    /**
-     * @brief Set pubrec handler
-     * @param h handler
-     */
-    void set_v5_pubrec_handler(v5_pubrec_handler h = v5_pubrec_handler()) {
-        h_v5_pubrec_ = force_move(h);
-    }
-
-    /**
-     * @brief Set pubrel handler
-     * @param h handler
-     */
-    void set_v5_pubrel_handler(v5_pubrel_handler h = v5_pubrel_handler()) {
-        h_v5_pubrel_ = force_move(h);
-    }
-
-    /**
-     * @brief Set pubcomp handler
-     * @param h handler
-     */
-    void set_v5_pubcomp_handler(v5_pubcomp_handler h = v5_pubcomp_handler()) {
-        h_v5_pubcomp_ = force_move(h);
-    }
-
-    /**
-     * @brief Set subscribe handler
-     * @param h handler
-     */
-    void set_v5_subscribe_handler(v5_subscribe_handler h = v5_subscribe_handler()) {
-        h_v5_subscribe_ = force_move(h);
-    }
-
-    /**
-     * @brief Set suback handler
-     * @param h handler
-     */
-    void set_v5_suback_handler(v5_suback_handler h = v5_suback_handler()) {
-        h_v5_suback_ = force_move(h);
-    }
-
-    /**
-     * @brief Set unsubscribe handler
-     * @param h handler
-     */
-    void set_v5_unsubscribe_handler(v5_unsubscribe_handler h = v5_unsubscribe_handler()) {
-        h_v5_unsubscribe_ = force_move(h);
-    }
-
-    /**
-     * @brief Set unsuback handler
-     * @param h handler
-     */
-    void set_v5_unsuback_handler(v5_unsuback_handler h = v5_unsuback_handler()) {
-        h_v5_unsuback_ = force_move(h);
-    }
-
-    /**
-     * @brief Set disconnect handler
-     * @param h handler
-     */
-    void set_v5_disconnect_handler(v5_disconnect_handler h = v5_disconnect_handler()) {
-        h_v5_disconnect_ = force_move(h);
-    }
-
-    /**
-     * @brief Set auth handler
-     * @param h handler
-     */
-    void set_v5_auth_handler(v5_auth_handler h = v5_auth_handler()) {
-        h_v5_auth_ = force_move(h);
-    }
-
-    /**
-     * @brief Get connect handler
-     * @return handler
-     */
-    v5_connect_handler const& get_v5_connect_handler() const {
-        return h_v5_connect_;
-    }
-
-    /**
-     * @brief Get connack handler
-     * @return handler
-     */
-    v5_connack_handler const& get_v5_connack_handler() const {
-        return h_v5_connack_;
-    }
-
-    /**
-     * @brief Set publish handler
-     * @return handler
-     */
-    v5_publish_handler const& get_v5_publish_handler() const {
-        return h_v5_publish_;
-    }
-
-    /**
-     * @brief Get puback handler
-     * @return handler
-     */
-    v5_puback_handler const& get_v5_puback_handler() const {
-        return h_v5_puback_;
-    }
-
-    /**
-     * @brief Get pubrec handler
-     * @return handler
-     */
-    v5_pubrec_handler const& get_v5__handler() const {
-        return h_v5_pubrec_;
-    }
-
-    /**
-     * @brief Get pubrel handler
-     * @return handler
-     */
-    v5_pubrel_handler const& get_v5_pubrel_handler() const {
-        return h_v5_pubrel_;
-    }
-
-    /**
-     * @brief Get pubcomp handler
-     * @return handler
-     */
-    v5_pubcomp_handler const& get_v5_pubcomp_handler() const {
-        return h_v5_pubcomp_;
-    }
-
-    /**
-     * @brief Get subscribe handler
-     * @return handler
-     */
-    v5_subscribe_handler const& get_v5_subscribe_handler() const {
-        return h_v5_subscribe_;
-    }
-
-    /**
-     * @brief Get suback handler
-     * @return handler
-     */
-    v5_suback_handler const& get_v5_suback_handler() const {
-        return h_v5_suback_;
-    }
-
-    /**
-     * @brief Get unsubscribe handler
-     * @return handler
-     */
-    v5_unsubscribe_handler const& get_v5_unsubscribe_handler() const {
-        return h_v5_unsubscribe_;
-    }
-
-    /**
-     * @brief Get unsuback handler
-     * @return handler
-     */
-    v5_unsuback_handler const& get_v5_unsuback_handler() const {
-        return h_v5_unsuback_;
-    }
-
-    /**
-     * @brief Get disconnect handler
-     * @return handler
-     */
-    v5_disconnect_handler const& get_v5_disconnect_handler() const {
-        return h_v5_disconnect_;
-    }
-
-    /**
-     * @brief Get auth handler
-     * @return handler
-     */
-    v5_auth_handler const& get_v5_auth_handler() const {
-        return h_v5_auth_;
-    }
-
-
-    // Original handlers
-
-    /**
-     * @brief Set close handler
-     * @param h handler
-     */
-    void set_close_handler(close_handler h = close_handler()) {
-        h_close_ = force_move(h);
-    }
-
-    /**
-     * @brief Set error handler
-     * @param h handler
-     */
-    void set_error_handler(error_handler h = error_handler()) {
-        h_error_ = force_move(h);
-    }
-
-    /**
-     * @brief Set pubcomp handler
-     * @param h handler
-     */
-    void set_pub_res_sent_handler(pub_res_sent_handler h = pub_res_sent_handler()) {
-        h_pub_res_sent_ = force_move(h);
-    }
-
-    /**
-     * @brief Set serialize handlers
-     * @param h_publish serialize handler for publish message
-     * @param h_pubrel serialize handler for pubrel message
-     * @param h_remove remove handler for serialized message
-     */
-    void set_serialize_handlers(
-        serialize_publish_message_handler h_publish,
-        serialize_pubrel_message_handler h_pubrel,
-        serialize_remove_handler h_remove) {
-        h_serialize_publish_ = force_move(h_publish);
-        h_serialize_pubrel_ = force_move(h_pubrel);
-        h_serialize_remove_ = force_move(h_remove);
-    }
-
-    /**
-     * @brief Set serialize handlers
-     * @param h_publish serialize handler for publish message
-     * @param h_pubrel serialize handler for pubrel message
-     * @param h_remove remove handler for serialized message
-     */
-    void set_v5_serialize_handlers(
-        serialize_v5_publish_message_handler h_publish,
-        serialize_v5_pubrel_message_handler h_pubrel,
-        serialize_remove_handler h_remove) {
-        h_serialize_v5_publish_ = force_move(h_publish);
-        h_serialize_v5_pubrel_ = force_move(h_pubrel);
-        h_serialize_remove_ = force_move(h_remove);
-    }
-
-    /**
-     * @brief Set serialize handlers
-     * @param h_publish serialize handler for publish message
-     * @param h_pubrel serialize handler for pubrel message
-     * @param h_remove remove handler for serialized message
-     */
-    void set_serialize_handlers(
-        serialize_publish_handler h_publish,
-        serialize_pubrel_handler h_pubrel,
-        serialize_remove_handler h_remove) {
-        h_serialize_publish_ =
-            [h_publish = force_move(h_publish)]
-            (basic_publish_message<PacketIdBytes> msg) {
-                if (h_publish) {
-                    auto buf = continuous_buffer<PacketIdBytes>(msg);
-                    h_publish(msg.packet_id(), buf.data(), buf.size());
-                }
-            };
-        h_serialize_pubrel_ =
-            [h_pubrel = force_move(h_pubrel)]
-            (basic_pubrel_message<PacketIdBytes> msg) {
-                if (h_pubrel) {
-                    auto buf = continuous_buffer<PacketIdBytes>(msg);
-                    h_pubrel(msg.packet_id(), buf.data(), buf.size());
-                }
-            };
-        h_serialize_remove_ = force_move(h_remove);
-    }
-
-    /**
-     * @brief Set serialize handlers
-     * @param h_publish serialize handler for publish message
-     * @param h_pubrel serialize handler for pubrel message
-     * @param h_remove remove handler for serialized message
-     */
-    void set_v5_serialize_handlers(
-        serialize_publish_handler h_publish,
-        serialize_pubrel_handler h_pubrel,
-        serialize_remove_handler h_remove) {
-        h_serialize_v5_publish_ =
-            [h_publish = force_move(h_publish)]
-            (v5::basic_publish_message<PacketIdBytes> msg) {
-                if (h_publish) {
-                    auto buf = continuous_buffer<PacketIdBytes>(msg);
-                    h_publish(msg.packet_id(), buf.data(), buf.size());
-                }
-            };
-        h_serialize_v5_pubrel_ =
-            [h_pubrel = force_move(h_pubrel)]
-            (v5::basic_pubrel_message<PacketIdBytes> msg) {
-                if (h_pubrel) {
-                    auto buf = continuous_buffer<PacketIdBytes>(msg);
-                    h_pubrel(msg.packet_id(), buf.data(), buf.size());
-                }
-            };
-        h_serialize_remove_ = force_move(h_remove);
-    }
-
-    /**
-     * @brief Clear serialize handlers
-     */
-    void set_serialize_handlers() {
-        h_serialize_publish_ = serialize_publish_message_handler();
-        h_serialize_pubrel_ = serialize_pubrel_message_handler();
-        h_serialize_v5_publish_ = serialize_v5_publish_message_handler();
-        h_serialize_v5_pubrel_ = serialize_v5_pubrel_message_handler();
-        h_serialize_remove_ = serialize_remove_handler();
-    }
-
-    /**
-     * @brief Set pre-send handler
-     * @param h handler
-     */
-    void set_pre_send_handler(pre_send_handler h = pre_send_handler()) {
-        h_pre_send_ = force_move(h);
-    }
-
-    /**
-     * @brief Set check length handler
-     * @param h handler
-     */
-    void set_is_valid_length_handler(is_valid_length_handler h = is_valid_length_handler()) {
-        h_is_valid_length_ = force_move(h);
-    }
-
     void set_packet_bulk_read_limit(std::size_t size) {
         packet_bulk_read_limit_ = size;
     }
@@ -1382,88 +740,6 @@ public:
     void set_props_bulk_read_limit(std::size_t size) {
         props_bulk_read_limit_ = size;
     }
-
-    /**
-     * @brief Get close handler
-     * @return handler
-     */
-    close_handler const& get_close_handler() const {
-        return h_close_;
-    }
-
-    /**
-     * @brief Get error handler
-     * @return handler
-     */
-    error_handler const& get_error_handler() const {
-        return h_error_;
-    }
-
-
-    /**
-     * @brief Get publish response sent handler
-     * @return handler
-     */
-    pub_res_sent_handler const& get_pub_res_sent_handler() const {
-        return h_pub_res_sent_;
-    }
-
-    /**
-     * @brief Get serialize publish handler
-     * @return handler
-     */
-    serialize_publish_message_handler const& get_serialize_publish_message_handler() const {
-        return h_serialize_publish_;
-    }
-
-    /**
-     * @brief Get serialize pubrel handler
-     * @return handler
-     */
-    serialize_pubrel_message_handler const& get_serialize_pubrel_message_handler() const {
-        return h_serialize_pubrel_;
-    }
-
-    /**
-     * @brief Get serialize publish handler
-     * @return handler
-     */
-    serialize_v5_publish_message_handler const& get_serialize_v5_publish_message_handler() const {
-        return h_serialize_v5_publish_;
-    }
-
-    /**
-     * @brief Get serialize pubrel handler
-     * @return handler
-     */
-    serialize_v5_pubrel_message_handler const& get_serialize_v5_pubrel_message_handler() const {
-        return h_serialize_v5_pubrel_;
-    }
-
-    /**
-     * @brief Get serialize remove handler
-     * @return handler
-     */
-    serialize_remove_handler const& get_serialize_remove_handler() const {
-        return h_serialize_remove_;
-    }
-
-    /**
-     * @brief Get pre-send handler
-     * @return handler
-     */
-    pre_send_handler const& get_pre_send_handler() const {
-        return h_pre_send_;
-    }
-
-    /**
-     * @brief Get check length handler
-     * @return handler
-     */
-    is_valid_length_handler const& get_is_valid_length_handler() const {
-        return h_is_valid_length_;
-    }
-
 
     /**
      * @brief start session with a connected endpoint.
@@ -7486,40 +6762,6 @@ public:
     }
 
     /**
-     * @brief Set custom mqtt_message_processed_handler.
-     *        The default setting is calling async_read_control_packet_type().
-     *        (See endpoint() constructor).
-     *        The typical usecase of this function is delaying the next
-     *        message reading timing.
-     *        In order to do that
-     *        1) store func parameter of the mqtt_message_processed_handler.
-     *        2) call async_read_next_message with the stored func if
-     *           you are ready to read the next mqtt message.
-     * @param h mqtt_message_processed_handler.
-     */
-    void set_mqtt_message_processed_handler(
-        mqtt_message_processed_handler h = mqtt_message_processed_handler()) {
-        if (h) {
-            h_mqtt_message_processed_ = force_move(h);
-        }
-        else {
-            h_mqtt_message_processed_ =
-                [this]
-                (any session_life_keeper) {
-                    async_read_control_packet_type(force_move(session_life_keeper));
-            };
-        }
-    }
-
-    /**
-     * @brief Get  mqtt_message_processed_handler.
-     * @return mqtt_message_processed_handler.
-     */
-    mqtt_message_processed_handler get_mqtt_message_processed_handler() const {
-        return h_mqtt_message_processed_;
-    }
-
-    /**
      * @brief Trigger next mqtt message manually.
      *        If you call this function, you need to set manual receive mode
      *        using set_auto_next_read(false);
@@ -7623,13 +6865,13 @@ protected:
             if (disconnect_requested_) {
                 disconnect_requested_ = false;
                 connect_requested_ = false;
-                handle_close();
+                on_close();
                 return true;
             }
         }
         disconnect_requested_ = false;
         connect_requested_ = false;
-        handle_error(ec);
+        on_error(ec);
         return true;
     }
 
@@ -7639,14 +6881,6 @@ protected:
 
     void set_protocol_version(std::size_t version) {
         version_ = version;
-    }
-
-    void handle_close() {
-        if (h_close_) h_close_();
-    }
-
-    void handle_error(boost::system::error_code const& ec) {
-        if (h_error_) h_error_(ec);
     }
 
 private:
@@ -7671,11 +6905,11 @@ private:
     }
 
     void call_message_size_error_handlers() {
-        handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+        on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
     }
 
     void call_protocol_error_handlers() {
-        handle_error(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
+        on_error(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
     }
 
     template <typename T>
@@ -8046,7 +7280,7 @@ private:
 
     void handle_remaining_length(any session_life_keeper, this_type_sp self) {
         if (!calc_variable_length(remaining_length_, remaining_length_multiplier_, buf_.front())) {
-            handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+            on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return;
         }
         if (buf_.front() & variable_length_continue_flag) {
@@ -8059,7 +7293,7 @@ private:
                         return;
                     }
                     if (bytes_transferred != 1) {
-                        handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                        on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
                     handle_remaining_length(force_move(session_life_keeper), force_move(self));
@@ -8078,12 +7312,7 @@ private:
                         case control_packet_type::subscribe:
                         case control_packet_type::suback:
                         case control_packet_type::unsubscribe:
-                            if (h_is_valid_length_) {
-                                return h_is_valid_length_(cpt, remaining_length_);
-                            }
-                            else {
-                                return true;
-                            }
+                            return check_is_valid_length(cpt, remaining_length_);
                         case control_packet_type::connack:
                             return remaining_length_ == 2;
                         case control_packet_type::puback:
@@ -8115,12 +7344,7 @@ private:
                         case control_packet_type::pubcomp:
                         case control_packet_type::unsuback:
                         case control_packet_type::disconnect:
-                            if (h_is_valid_length_) {
-                                return h_is_valid_length_(cpt, remaining_length_);
-                            }
-                            else {
-                                return true;
-                            }
+                            return check_is_valid_length(cpt, remaining_length_);
                         case control_packet_type::pingreq:
                         case control_packet_type::pingresp:
                             return remaining_length_ == 0;
@@ -8131,7 +7355,7 @@ private:
                     }
                 };
             if (!check()) {
-                handle_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return;
             }
 
@@ -9937,60 +9161,56 @@ private:
             mqtt_connected_ = true;
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (h_connect_) {
-                    if (!h_connect_(
-                            force_move(info.client_id),
-                            force_move(info.user_name),
-                            force_move(info.password),
-                            [&] () -> optional<will> {
-                                if (connect_flags::has_will_flag(info.connect_flag)) {
-                                    return
-                                        will(
-                                            force_move(info.will_topic),
-                                            force_move(info.will_payload),
-                                            connect_flags::has_will_retain(info.connect_flag),
-                                            connect_flags::will_qos(info.connect_flag)
-                                        );
-                                }
-                                return nullopt;
-                            } (),
-                            clean_session_,
-                            info.keep_alive
-                        )
-                    ) {
-                        return;
-                    }
+                if (!on_connect(
+                        force_move(info.client_id),
+                        force_move(info.user_name),
+                        force_move(info.password),
+                        [&] () -> optional<will> {
+                            if (connect_flags::has_will_flag(info.connect_flag)) {
+                                return
+                                    will(
+                                        force_move(info.will_topic),
+                                        force_move(info.will_payload),
+                                        connect_flags::has_will_retain(info.connect_flag),
+                                        connect_flags::will_qos(info.connect_flag)
+                                    );
+                            }
+                            return nullopt;
+                        } (),
+                        clean_session_,
+                        info.keep_alive
+                    )
+                ) {
+                    return;
                 }
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (h_v5_connect_) {
-                    if (!h_v5_connect_(
-                            force_move(info.client_id),
-                            force_move(info.user_name),
-                            force_move(info.password),
-                            [&] () -> optional<will> {
-                                if (connect_flags::has_will_flag(info.connect_flag)) {
-                                    return
-                                        will(
-                                            force_move(info.will_topic),
-                                            force_move(info.will_payload),
-                                            connect_flags::has_will_retain(info.connect_flag),
-                                            connect_flags::will_qos(info.connect_flag),
-                                            force_move(info.will_props)
-                                        );
-                                }
-                                return nullopt;
-                            } (),
-                            clean_session_,
-                            info.keep_alive,
-                            force_move(info.props)
-                        )
-                    ) {
-                        return;
-                    }
+                if (!on_v5_connect(
+                        force_move(info.client_id),
+                        force_move(info.user_name),
+                        force_move(info.password),
+                        [&] () -> optional<will> {
+                            if (connect_flags::has_will_flag(info.connect_flag)) {
+                                return
+                                    will(
+                                        force_move(info.will_topic),
+                                        force_move(info.will_payload),
+                                        connect_flags::has_will_retain(info.connect_flag),
+                                        connect_flags::will_qos(info.connect_flag),
+                                        force_move(info.will_props)
+                                    );
+                            }
+                            return nullopt;
+                        } (),
+                        clean_session_,
+                        info.keep_alive,
+                        force_move(info.props)
+                    )
+                ) {
+                    return;
                 }
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -10111,20 +9331,16 @@ private:
 
                     switch (version_) {
                     case protocol_version::v3_1_1:
-                        if (h_connack_) {
-                            if (!h_connack_(info.session_present, variant_get<connect_return_code>(info.reason_code))) {
-                                return;
-                            }
+                        if (!on_connack(info.session_present, variant_get<connect_return_code>(info.reason_code))) {
+                            return;
                         }
-                        h_mqtt_message_processed_(force_move(session_life_keeper));
+                        on_mqtt_message_processed(force_move(session_life_keeper));
                         break;
                     case protocol_version::v5:
-                        if (h_v5_connack_) {
-                            if (!h_v5_connack_(info.session_present, variant_get<v5::connect_reason_code>(info.reason_code), force_move(info.props))) {
-                                return;
-                            }
+                        if (!on_v5_connack(info.session_present, variant_get<v5::connect_reason_code>(info.reason_code), force_move(info.props))) {
+                            return;
                         }
-                        h_mqtt_message_processed_(force_move(session_life_keeper));
+                        on_mqtt_message_processed(force_move(session_life_keeper));
                         break;
                     default:
                         BOOST_ASSERT(false);
@@ -10148,26 +9364,19 @@ private:
                         // Store and replace mqtt_message_processed handler
                         // Until all stored messages are written to internal send buffer,
                         // stop the next async read.
-                        auto org = get_mqtt_message_processed_handler();
-                        set_mqtt_message_processed_handler(
-                            []
-                            (any) {
-                            }
-                        );
-
+                        async_read_on_message_processed_ = false;
                         auto async_connack_proc =
                             [
                                 this,
                                 self = force_move(self),
                                 session_life_keeper = force_move(session_life_keeper),
                                 connack_proc = force_move(connack_proc),
-                                org = force_move(org),
                                 info = force_move(info)
                             ]
                             () mutable {
                                 // All stored messages are sent, then restore the original handler
                                 // and do the connack process. If it returns true, read the next mqtt message.
-                                set_mqtt_message_processed_handler(force_move(org));
+                                async_read_on_message_processed_ = true;
                                 connack_proc(force_move(session_life_keeper), force_move(info));
                             };
                         async_send_store(force_move(async_connack_proc));
@@ -10326,35 +9535,31 @@ private:
                         [&] {
                             switch (version_) {
                             case protocol_version::v3_1_1:
-                                if (h_publish_) {
-                                    if (!h_publish_(
-                                                publish::is_dup(fixed_header_),
-                                                publish::get_qos(fixed_header_),
-                                                publish::is_retain(fixed_header_),
-                                                info.packet_id,
-                                                force_move(info.topic_name),
-                                                force_move(payload))) {
-                                        return false;
-                                    }
+                                if (!on_publish(
+                                            publish::is_dup(fixed_header_),
+                                            publish::get_qos(fixed_header_),
+                                            publish::is_retain(fixed_header_),
+                                            info.packet_id,
+                                            force_move(info.topic_name),
+                                            force_move(payload))) {
+                                    return false;
                                 }
-                                h_mqtt_message_processed_(force_move(session_life_keeper));
+                                on_mqtt_message_processed(force_move(session_life_keeper));
                                 break;
                             case protocol_version::v5:
-                                if (h_v5_publish_) {
-                                    if (!h_v5_publish_(
-                                                publish::is_dup(fixed_header_),
-                                                publish::get_qos(fixed_header_),
-                                                publish::is_retain(fixed_header_),
-                                                info.packet_id,
-                                                force_move(info.topic_name),
-                                                force_move(payload),
-                                                force_move(info.props)
-                                        )
-                                    ) {
-                                        return false;
-                                    }
+                                if (!on_v5_publish(
+                                            publish::is_dup(fixed_header_),
+                                            publish::get_qos(fixed_header_),
+                                            publish::is_retain(fixed_header_),
+                                            info.packet_id,
+                                            force_move(info.topic_name),
+                                            force_move(payload),
+                                            force_move(info.props)
+                                    )
+                                ) {
+                                    return false;
                                 }
-                                h_mqtt_message_processed_(force_move(session_life_keeper));
+                                on_mqtt_message_processed(force_move(session_life_keeper));
                                 break;
                             default:
                                 BOOST_ASSERT(false);
@@ -10542,23 +9747,19 @@ private:
                 idx.erase(std::get<0>(r), std::get<1>(r));
                 packet_id_.erase(info.packet_id);
             }
-            if (h_serialize_remove_) h_serialize_remove_(info.packet_id);
+            on_serialize_remove(info.packet_id);
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (h_puback_) {
-                    if (!h_puback_(info.packet_id)) {
-                        return;
-                    }
+                if (!on_puback(info.packet_id)) {
+                    return;
                 }
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (h_v5_puback_) {
-                    if (!h_v5_puback_(info.packet_id, info.reason_code, force_move(info.props))) {
-                        return;
-                    }
+                if (!on_v5_puback(info.packet_id, info.reason_code, force_move(info.props))) {
+                    return;
                 }
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -10722,22 +9923,18 @@ private:
                 };
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (h_pubrec_) {
-                    if (!h_pubrec_(info.packet_id)) {
-                        return;
-                    }
+                if (!on_pubrec(info.packet_id)) {
+                    return;
                 }
                 res();
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (h_v5_pubrec_) {
-                    if (!h_v5_pubrec_(info.packet_id, info.reason_code, force_move(info.props))) {
-                        return;
-                    }
+                if (!on_v5_pubrec(info.packet_id, info.reason_code, force_move(info.props))) {
+                    return;
                 }
                 res();
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -10888,22 +10085,18 @@ private:
             qos2_publish_handled_.erase(info.packet_id);
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (h_pubrel_) {
-                    if (!h_pubrel_(info.packet_id)) {
-                        return;
-                    }
+                if (!on_pubrel(info.packet_id)) {
+                    return;
                 }
                 res();
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (h_v5_pubrel_) {
-                    if (!h_v5_pubrel_(info.packet_id, info.reason_code, force_move(info.props))) {
-                        return;
-                    }
+                if (!on_v5_pubrel(info.packet_id, info.reason_code, force_move(info.props))) {
+                    return;
                 }
                 res();
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -11039,23 +10232,19 @@ private:
                 // packet_id shouldn't be erased here.
                 // It is reused for pubrel/pubcomp.
             }
-            if (h_serialize_remove_) h_serialize_remove_(info.packet_id);
+            on_serialize_remove(info.packet_id);
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (h_pubcomp_) {
-                    if (!h_pubcomp_(info.packet_id)) {
-                        return;
-                    }
+                if (!on_pubcomp(info.packet_id)) {
+                    return;
                 }
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (h_v5_pubcomp_) {
-                    if (!h_v5_pubcomp_(info.packet_id, info.reason_code, force_move(info.props))) {
-                        return;
-                    }
+                if (!on_v5_pubcomp(info.packet_id, info.reason_code, force_move(info.props))) {
+                    return;
                 }
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -11209,20 +10398,16 @@ private:
         case subscribe_phase::finish:
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (h_subscribe_) {
-                    if (!h_subscribe_(info.packet_id, force_move(info.entries))) {
-                        return;
-                    }
+                if (!on_subscribe(info.packet_id, force_move(info.entries))) {
+                    return;
                 }
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (h_v5_subscribe_) {
-                    if (!h_v5_subscribe_(info.packet_id, force_move(info.entries), force_move(info.props))) {
-                        return;
-                    }
+                if (!on_v5_subscribe(info.packet_id, force_move(info.entries), force_move(info.props))) {
+                    return;
                 }
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -11340,60 +10525,60 @@ private:
                     }
                     switch (version_) {
                     case protocol_version::v3_1_1:
-                        if (h_suback_) {
-                            // TODO: We can avoid an allocation by casting the raw bytes of the
-                            // mqtt::buffer that is being parsed, and instead call the suback
-                            // handler with an std::span and the mqtt::buffer (as lifekeeper)
-                            std::vector<suback_reason_code> results;
-                            results.resize(body.size());
-                            std::transform(
-                                body.begin(),
-                                body.end(),
-                                results.begin(),
-                                // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180880
-                                // The SUBACK Packet sent by the Server to the Client MUST
-                                // contain a return code for each Topic Filter/QoS pair.
-                                // This return code MUST either show the maximum QoS that
-                                // was granted for that Subscription or indicate that the
-                                // subscription failed [MQTT-3.8.4-5].
-                                [&](auto const& e) -> suback_reason_code {
-                                    return static_cast<suback_reason_code>(e);
-                                }
-                            );
-                            if (!h_suback_(info.packet_id, force_move(results))) {
-                                return;
+                    {
+                        // TODO: We can avoid an allocation by casting the raw bytes of the
+                        // mqtt::buffer that is being parsed, and instead call the suback
+                        // handler with an std::span and the mqtt::buffer (as lifekeeper)
+                        std::vector<suback_reason_code> results;
+                        results.resize(body.size());
+                        std::transform(
+                            body.begin(),
+                            body.end(),
+                            results.begin(),
+                            // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180880
+                            // The SUBACK Packet sent by the Server to the Client MUST
+                            // contain a return code for each Topic Filter/QoS pair.
+                            // This return code MUST either show the maximum QoS that
+                            // was granted for that Subscription or indicate that the
+                            // subscription failed [MQTT-3.8.4-5].
+                            [&](auto const& e) -> suback_reason_code {
+                                return static_cast<suback_reason_code>(e);
                             }
+                        );
+                        if (!on_suback(info.packet_id, force_move(results))) {
+                            return;
                         }
-                        h_mqtt_message_processed_(force_move(session_life_keeper));
+                        on_mqtt_message_processed(force_move(session_life_keeper));
                         break;
+                    }
                     case protocol_version::v5:
-                        if (h_v5_suback_) {
-                            // TODO: We can avoid an allocation by casting the raw bytes of the
-                            // mqtt::buffer that is being parsed, and instead call the suback
-                            // handler with an std::span and the mqtt::buffer (as lifekeeper)
-                            std::vector<v5::suback_reason_code> reasons;
-                            reasons.resize(body.size());
-                            std::transform(
-                                body.begin(),
-                                body.end(),
-                                reasons.begin(),
-                                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901170
-                                // The SUBACK packet sent by the Server to the Client MUST
-                                // contain a Reason Code for each Topic Filter/Subscription
-                                // Option pair [MQTT-3.8.4-6].
-                                // This Reason Code MUST either show the maximum QoS that
-                                // was granted for that Subscription or indicate that the
-                                // subscription failed [MQTT-3.8.4-7].
-                                [&](auto const& e) {
-                                    return static_cast<v5::suback_reason_code>(e);
-                                }
-                            );
-                            if (!h_v5_suback_(info.packet_id, force_move(reasons), force_move(info.props))) {
-                                return;
+                    {
+                        // TODO: We can avoid an allocation by casting the raw bytes of the
+                        // mqtt::buffer that is being parsed, and instead call the suback
+                        // handler with an std::span and the mqtt::buffer (as lifekeeper)
+                        std::vector<v5::suback_reason_code> reasons;
+                        reasons.resize(body.size());
+                        std::transform(
+                            body.begin(),
+                            body.end(),
+                            reasons.begin(),
+                            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901170
+                            // The SUBACK packet sent by the Server to the Client MUST
+                            // contain a Reason Code for each Topic Filter/Subscription
+                            // Option pair [MQTT-3.8.4-6].
+                            // This Reason Code MUST either show the maximum QoS that
+                            // was granted for that Subscription or indicate that the
+                            // subscription failed [MQTT-3.8.4-7].
+                            [&](auto const& e) {
+                                return static_cast<v5::suback_reason_code>(e);
                             }
+                        );
+                        if (!on_v5_suback(info.packet_id, force_move(reasons), force_move(info.props))) {
+                            return;
                         }
-                        h_mqtt_message_processed_(force_move(session_life_keeper));
+                        on_mqtt_message_processed(force_move(session_life_keeper));
                         break;
+                    }
                     default:
                         BOOST_ASSERT(false);
                     }
@@ -11528,20 +10713,16 @@ private:
         case unsubscribe_phase::finish:
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (h_unsubscribe_) {
-                    if (!h_unsubscribe_(info.packet_id, force_move(info.entries))) {
-                        return;
-                    }
+                if (!on_unsubscribe(info.packet_id, force_move(info.entries))) {
+                    return;
                 }
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (h_v5_unsubscribe_) {
-                    if (!h_v5_unsubscribe_(info.packet_id, force_move(info.entries), force_move(info.props))) {
-                        return;
-                    }
+                if (!on_v5_unsubscribe(info.packet_id, force_move(info.entries), force_move(info.props))) {
+                    return;
                 }
-                h_mqtt_message_processed_(force_move(session_life_keeper));
+                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -11612,12 +10793,10 @@ private:
                     }
                     switch (version_) {
                     case protocol_version::v3_1_1:
-                        if (h_unsuback_) {
-                            if (!h_unsuback_(info.packet_id)) {
-                                return;
-                            }
+                        if (!on_unsuback(info.packet_id)) {
+                            return;
                         }
-                        h_mqtt_message_processed_(force_move(session_life_keeper));
+                        on_mqtt_message_processed(force_move(session_life_keeper));
                         break;
                     case protocol_version::v5:
                         process_unsuback_impl(
@@ -11671,22 +10850,21 @@ private:
                         LockGuard<Mutex> lck (store_mtx_);
                         packet_id_.erase(info.packet_id);
                     }
-                    if (h_v5_unsuback_) {
-                        std::vector<v5::unsuback_reason_code> reasons;
-                        reasons.resize(body.size());
-                        std::transform(
-                            body.begin(),
-                            body.end(),
-                            reasons.begin(),
-                            [&](auto const& e) {
-                                return static_cast<v5::unsuback_reason_code>(e);
-                            }
-                        );
-                        if (!h_v5_unsuback_(info.packet_id, force_move(reasons), force_move(info.props))) {
-                            return;
+
+                    std::vector<v5::unsuback_reason_code> reasons;
+                    reasons.resize(body.size());
+                    std::transform(
+                        body.begin(),
+                        body.end(),
+                        reasons.begin(),
+                        [&](auto const& e) {
+                            return static_cast<v5::unsuback_reason_code>(e);
                         }
+                    );
+                    if (!on_v5_unsuback(info.packet_id, force_move(reasons), force_move(info.props))) {
+                        return;
                     }
-                    h_mqtt_message_processed_(force_move(session_life_keeper));
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 },
                 force_move(self)
             );
@@ -11705,10 +10883,8 @@ private:
             call_protocol_error_handlers();
             return;
         }
-        if (h_pingreq_) {
-            if (!h_pingreq_()) return;
-        }
-        h_mqtt_message_processed_(force_move(session_life_keeper));
+        if (!on_pingreq()) return;
+        on_mqtt_message_processed(force_move(session_life_keeper));
     }
 
     // process pingresp
@@ -11722,10 +10898,8 @@ private:
             call_protocol_error_handlers();
             return;
         }
-        if (h_pingresp_) {
-            if (!h_pingresp_()) return;
-        }
-        h_mqtt_message_processed_(force_move(session_life_keeper));
+        if (!on_pingresp()) return;
+        on_mqtt_message_processed(force_move(session_life_keeper));
     }
 
     // process disconnect
@@ -11837,14 +11011,10 @@ private:
         case disconnect_phase::finish:
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (h_disconnect_) {
-                    h_disconnect_();
-                }
+                on_disconnect();
                 break;
             case protocol_version::v5:
-                if (h_v5_disconnect_) {
-                    h_v5_disconnect_(info.reason_code, force_move(info.props));
-                }
+                on_v5_disconnect(info.reason_code, force_move(info.props));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -11961,12 +11131,10 @@ private:
             break;
         case auth_phase::finish:
             BOOST_ASSERT(version_ == protocol_version::v5);
-            if (h_v5_auth_) {
-                if (!h_v5_auth_(info.reason_code, force_move(info.props))) {
-                    return;
-                }
+            if (!on_v5_auth(info.reason_code, force_move(info.props))) {
+                return;
             }
-            h_mqtt_message_processed_(force_move(session_life_keeper));
+            on_mqtt_message_processed(force_move(session_life_keeper));
             break;
         }
     }
@@ -12074,9 +11242,7 @@ private:
                         store_msg,
                         force_move(life_keeper)
                     );
-                    if (serialize_publish) {
-                        serialize_publish(store_msg);
-                    }
+                    (this->*serialize_publish)(store_msg);
                 }
                 do_sync_write(force_move(msg));
             };
@@ -12092,7 +11258,7 @@ private:
                     packet_id,
                     force_move(payload)
                 ),
-                h_serialize_publish_
+                &endpoint::on_serialize_publish_message
             );
             break;
         case protocol_version::v5:
@@ -12106,7 +11272,7 @@ private:
                     force_move(props),
                     force_move(payload)
                 ),
-                h_serialize_v5_publish_
+                &endpoint::on_serialize_v5_publish_message
             );
             break;
         default:
@@ -12132,7 +11298,7 @@ private:
             break;
         }
 
-        if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
+        on_pub_res_sent(packet_id);
     }
 
     void send_pubrec(
@@ -12178,9 +11344,7 @@ private:
                     BOOST_ASSERT(ret.second);
                 }
 
-                if (serialize) {
-                    serialize(msg);
-                }
+                (this->*serialize)(msg);
                 do_sync_write(force_move(msg));
             };
 
@@ -12188,13 +11352,13 @@ private:
         case protocol_version::v3_1_1:
             impl(
                 v3_1_1::basic_pubrel_message<PacketIdBytes>(packet_id),
-                h_serialize_pubrel_
+                &endpoint::on_serialize_pubrel_message
             );
             break;
         case protocol_version::v5:
             impl(
                 v5::basic_pubrel_message<PacketIdBytes>(packet_id, reason, force_move(props)),
-                h_serialize_v5_pubrel_
+                &endpoint::on_serialize_v5_pubrel_message
             );
             break;
         default:
@@ -12226,22 +11390,20 @@ private:
                     BOOST_ASSERT(ret.second);
                 }
 
-                if (serialize) {
-                    serialize(force_move(msg));
-                }
+                (this->*serialize)(msg);
             };
 
         switch (version_) {
         case protocol_version::v3_1_1:
             impl(
                 v3_1_1::basic_pubrel_message<PacketIdBytes>(packet_id),
-                h_serialize_pubrel_
+                &endpoint::on_serialize_pubrel_message
             );
             break;
         case protocol_version::v5:
             impl(
                 v5::basic_pubrel_message<PacketIdBytes>(packet_id, reason, force_move(props)),
-                h_serialize_v5_pubrel_
+                &endpoint::on_serialize_v5_pubrel_message
             );
             break;
         default:
@@ -12267,7 +11429,7 @@ private:
             break;
         }
 
-        if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
+        on_pub_res_sent(packet_id);
     }
 
     template <typename... Args>
@@ -12524,7 +11686,7 @@ private:
     void do_sync_write(MessageVariant&& mv) {
         boost::system::error_code ec;
         if (!connected_) return;
-        if (h_pre_send_) h_pre_send_();
+        on_pre_send();
         socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
         // If ec is set as error, the error will be handled by async_read.
         // If `handle_error(ec);` is called here, error_handler would be called twice.
@@ -12638,9 +11800,7 @@ private:
                         BOOST_ASSERT(ret.second);
                     }
 
-                    if (serialize_publish) {
-                        serialize_publish(store_msg);
-                    }
+                    (this->*serialize_publish)(store_msg);
                 }
                 do_async_write(
                     force_move(msg),
@@ -12661,7 +11821,7 @@ private:
                     packet_id,
                     force_move(payload)
                 ),
-                h_serialize_publish_
+                &endpoint::on_serialize_publish_message
             );
             break;
         case protocol_version::v5:
@@ -12675,7 +11835,7 @@ private:
                     force_move(props),
                     force_move(payload)
                 ),
-                h_serialize_v5_publish_
+                &endpoint::on_serialize_v5_publish_message
             );
             break;
         default:
@@ -12699,7 +11859,7 @@ private:
                     [this, self, packet_id, func = force_move(func)]
                     (boost::system::error_code const& ec){
                         if (func) func(ec);
-                        if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
+                        on_pub_res_sent(packet_id);
                     }
                 );
             };
@@ -12790,9 +11950,8 @@ private:
                     }
                 }
 
-                if (serialize) {
-                    serialize(msg);
-                }
+                (this->*serialize)(msg);
+
                 do_async_write(
                     force_move(msg),
                     [life_keeper = force_move(life_keeper), func = force_move(func)](boost::system::error_code const& ec) {
@@ -12805,13 +11964,13 @@ private:
         case protocol_version::v3_1_1:
             impl(
                 v3_1_1::basic_pubrel_message<PacketIdBytes>(packet_id),
-                h_serialize_pubrel_
+                &endpoint::on_serialize_pubrel_message
             );
             break;
         case protocol_version::v5:
             impl(
                 v5::basic_pubrel_message<PacketIdBytes>(packet_id, reason, force_move(props)),
-                h_serialize_v5_pubrel_
+                &endpoint::on_serialize_v5_pubrel_message
             );
             break;
         default:
@@ -12834,7 +11993,7 @@ private:
                     [this, self = force_move(self), packet_id, func = force_move(func)]
                     (boost::system::error_code const& ec){
                         if (func) func(ec);
-                        if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
+                        on_pub_res_sent(packet_id);
                     }
                 );
             };
@@ -13367,7 +12526,7 @@ private:
             handlers.emplace_back(elem.handler());
         }
 
-        if (h_pre_send_) h_pre_send_();
+        on_pre_send();
 
         socket_->async_write(
             force_move(buf),
@@ -13413,6 +12572,14 @@ private:
     }
 
 protected:
+    // Ensure that only code that knows the *exact* type of an object
+    // inheriting from this abstract base class can destruct it.
+    // This avoids issues of the destructor not triggering destruction
+    // of derived classes, and any member variables contained in them.
+    // Note: Not virtual to avoid need for a vtable when possible.
+    ~endpoint() = default;
+
+protected:
     bool clean_session_{false};
 
 private:
@@ -13426,50 +12593,6 @@ private:
     std::size_t remaining_length_;
     std::vector<char> payload_;
 
-    // MQTT common handlers
-    pingreq_handler h_pingreq_;
-    pingresp_handler h_pingresp_;
-
-    // MQTT v3_1_1 handlers
-    connect_handler h_connect_;
-    connack_handler h_connack_;
-    publish_handler h_publish_;
-    puback_handler h_puback_;
-    pubrec_handler h_pubrec_;
-    pubrel_handler h_pubrel_;
-    pubcomp_handler h_pubcomp_;
-    subscribe_handler h_subscribe_;
-    suback_handler h_suback_;
-    unsubscribe_handler h_unsubscribe_;
-    unsuback_handler h_unsuback_;
-    disconnect_handler h_disconnect_;
-
-    // MQTT v5 handlers
-    v5_connect_handler h_v5_connect_;
-    v5_connack_handler h_v5_connack_;
-    v5_publish_handler h_v5_publish_;
-    v5_puback_handler h_v5_puback_;
-    v5_pubrec_handler h_v5_pubrec_;
-    v5_pubrel_handler h_v5_pubrel_;
-    v5_pubcomp_handler h_v5_pubcomp_;
-    v5_subscribe_handler h_v5_subscribe_;
-    v5_suback_handler h_v5_suback_;
-    v5_unsubscribe_handler h_v5_unsubscribe_;
-    v5_unsuback_handler h_v5_unsuback_;
-    v5_disconnect_handler h_v5_disconnect_;
-    v5_auth_handler h_v5_auth_;
-
-    // original handlers
-    close_handler h_close_;
-    error_handler h_error_;
-    pub_res_sent_handler h_pub_res_sent_;
-    serialize_publish_message_handler h_serialize_publish_;
-    serialize_v5_publish_message_handler h_serialize_v5_publish_;
-    serialize_pubrel_message_handler h_serialize_pubrel_;
-    serialize_v5_pubrel_message_handler h_serialize_v5_pubrel_;
-    serialize_remove_handler h_serialize_remove_;
-    pre_send_handler h_pre_send_;
-    is_valid_length_handler h_is_valid_length_;
     Mutex store_mtx_;
     mi_store store_;
     std::set<packet_id_t> qos2_publish_handled_;
@@ -13479,11 +12602,11 @@ private:
     bool auto_pub_response_{true};
     bool auto_pub_response_async_{false};
     bool async_send_store_ { false };
+    bool async_read_on_message_processed_ { true };
     bool disconnect_requested_{false};
     bool connect_requested_{false};
     std::size_t max_queue_send_count_{1};
     std::size_t max_queue_send_size_{0};
-    mqtt_message_processed_handler h_mqtt_message_processed_;
     protocol_version version_{protocol_version::undetermined};
     std::size_t packet_bulk_read_limit_ = 256;
     std::size_t props_bulk_read_limit_ = packet_bulk_read_limit_;
