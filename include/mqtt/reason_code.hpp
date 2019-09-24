@@ -398,4 +398,4 @@ Stream & operator<<(Stream & os, auth_reason_code val)
 } // v5
 } // namespace MQTT_NS
 
-#endif // MQTT_CONNECT_RETURN_CODE_HPP
+#endif // MQTT_REASON_CODE_HPP
