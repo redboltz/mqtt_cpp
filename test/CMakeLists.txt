@@ -29,6 +29,7 @@ IF (MQTT_TEST_2)
         remaining_length.cpp
         message.cpp
         property.cpp
+        basic_types.cpp
     )
 ENDIF ()
 

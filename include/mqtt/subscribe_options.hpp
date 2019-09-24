@@ -35,6 +35,22 @@ enum class qos : std::uint8_t
     exactly_once = 0b00000010,
 };
 
+constexpr bool operator<(qos lhs, qos rhs) {
+    return static_cast<std::uint8_t>(lhs) < static_cast<std::uint8_t>(rhs);
+}
+
+constexpr bool operator>(qos lhs, qos rhs) {
+    return rhs < lhs;
+}
+
+constexpr bool operator<=(qos lhs, qos rhs) {
+    return !(rhs < lhs);
+}
+
+constexpr bool operator>=(qos lhs, qos rhs) {
+    return !(lhs < rhs);
+}
+
 struct subscribe_options
 {
     subscribe_options(void) = delete;
