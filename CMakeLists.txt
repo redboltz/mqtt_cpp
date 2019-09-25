@@ -88,7 +88,7 @@ IF (MQTT_STD_SHARED_PTR_ARRAY)
     MESSAGE (STATUS "Using std::shared_ptr<char []> instead of boost::shared_ptr<char []>. Enables C++17!!!")
     SET (CMAKE_CXX_FLAGS "-DMQTT_STD_SHARED_PTR_ARRAY ${CMAKE_CXX_FLAGS}")
 ELSE ()
-    MESSAGE (STATUS "Using boost::shared_ptr<char []> instead of boost::shared_ptr<char []>")
+    MESSAGE (STATUS "Using boost::shared_ptr<char []> instead of std::shared_ptr<char []>")
 ENDIF ()
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
