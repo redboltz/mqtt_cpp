@@ -12431,9 +12431,15 @@ private:
              func_(force_move(func)),
              num_of_messages_(num_of_messages),
              bytes_to_transfer_(expected)
-        {}
+        {
+            // write_completion_handler is only constructed in one place
+            // and a handler is provided in that location.
+            // Since we don't check that the handler is valid before calling it
+            // it's a bug if the handler is invalid when constructed.
+            BOOST_ASSERT(func_);
+        }
         void operator()(boost::system::error_code const& ec) const {
-            if (func_) func_(ec);
+            func_(ec);
             for (std::size_t i = 0; i != num_of_messages_; ++i) {
                 self_->queue_.pop_front();
             }
@@ -12441,7 +12447,8 @@ private:
                 !self_->connected_) {
                 self_->connected_ = false;
                 while (!self_->queue_.empty()) {
-                    self_->queue_.front().handler()(ec);
+                    // Handlers for outgoing packets need not be valid.
+                    if(auto&& h = self_->queue_.front().handler()) h(ec);
                     self_->queue_.pop_front();
                 }
                 return;
@@ -12453,7 +12460,7 @@ private:
         void operator()(
             boost::system::error_code const& ec,
             std::size_t bytes_transferred) const {
-            if (func_) func_(ec);
+            func_(ec);
             for (std::size_t i = 0; i != num_of_messages_; ++i) {
                 self_->queue_.pop_front();
             }
@@ -12461,7 +12468,8 @@ private:
                 !self_->connected_) {
                 self_->connected_ = false;
                 while (!self_->queue_.empty()) {
-                    self_->queue_.front().handler()(ec);
+                    // Handlers for outgoing packets need not be valid.
+                    if(auto&& h = self_->queue_.front().handler()) h(ec);
                     self_->queue_.pop_front();
                 }
                 return;
@@ -12469,7 +12477,8 @@ private:
             if (bytes_to_transfer_ != bytes_transferred) {
                 self_->connected_ = false;
                 while (!self_->queue_.empty()) {
-                    self_->queue_.front().handler()(ec);
+                    // Handlers for outgoing packets need not be valid.
+                    if(auto&& h = self_->queue_.front().handler()) h(ec);
                     self_->queue_.pop_front();
                 }
                 throw write_bytes_transferred_error(bytes_to_transfer_, bytes_transferred);
