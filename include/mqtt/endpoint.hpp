@@ -8788,14 +8788,15 @@ private:
 
     // process common
 
-    template <typename NextFunc, typename NextPhase, typename Info>
+    template <typename  InfoType,
+              typename  PhaseType,
+              PhaseType NextPhase,
+              void (this_type::*NextFunc)(any, buffer, PhaseType, InfoType&&, this_type_sp)>
     void process_header(
         any session_life_keeper,
         bool all_read,
         std::size_t header_len,
-        NextFunc&& next_func,
-        NextPhase next_phase,
-        Info&& info,
+        InfoType&& info,
         this_type_sp self
     ) {
 
@@ -8808,17 +8809,15 @@ private:
                     this,
                     session_life_keeper = force_move(session_life_keeper),
                     buf = buffer(string_view(ptr, remaining_length_), force_move(spa)),
-                    next_func = std::forward<NextFunc>(next_func),
-                    next_phase,
-                    info = std::forward<Info>(info),
+                    info = std::forward<InfoType>(info),
                     self = force_move(self)
                 ]
                 (boost::system::error_code const& ec, std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, bytes_transferred, remaining_length_)) return;
-                    (this->*next_func)(
+                    (this->*NextFunc)(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        next_phase,
+                        NextPhase,
                         force_move(info),
                         force_move(self)
                     );
@@ -8828,10 +8827,10 @@ private:
         }
 
         if (header_len == 0) {
-            (this->*next_func)(
+            (this->*NextFunc)(
                 force_move(session_life_keeper),
                 buffer(),
-                next_phase,
+                NextPhase,
                 force_move(info),
                 force_move(self)
             );
@@ -8844,18 +8843,16 @@ private:
                 this,
                 session_life_keeper = force_move(session_life_keeper),
                 header_len,
-                next_func = std::forward<NextFunc>(next_func),
-                next_phase,
-                info = std::forward<Info>(info),
+                info = std::forward<InfoType>(info),
                 self = force_move(self)
             ]
             (boost::system::error_code const& ec,
              std::size_t bytes_transferred) mutable {
                 if (!check_error_and_transferred_length(ec, bytes_transferred, header_len)) return;
-                (this->*next_func)(
+                (this->*NextFunc)(
                     force_move(session_life_keeper),
                     buffer(string_view(buf_.data(), header_len)),
-                    next_phase,
+                    NextPhase,
                     force_move(info),
                     force_move(self)
                 );
@@ -8908,12 +8905,13 @@ private:
         connect_info info;
         info.header_len = header_len;
 
-        process_header(
+        process_header<connect_info,
+                       connect_phase,
+                       connect_phase::header,
+                       &this_type::process_connect_impl>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_connect_impl,
-            connect_phase::header,
             force_move(info),
             force_move(self)
         );
@@ -9243,12 +9241,14 @@ private:
 
         connack_info info;
         info.header_len = header_len;
-        process_header(
+
+        process_header<connack_info,
+                       connack_phase,
+                       connack_phase::header,
+                       &this_type::process_connack_impl>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_connack_impl,
-            connack_phase::header,
             force_move(info),
             force_move(self)
         );
@@ -9410,12 +9410,13 @@ private:
             return;
         }
 
-        process_header(
+        process_header<publish_info,
+                       publish_phase,
+                       publish_phase::topic_name,
+                       &this_type::process_publish_impl>(
             force_move(session_life_keeper),
             all_read,
             0,
-            &this_type::process_publish_impl,
-            publish_phase::topic_name,
             publish_info(),
             force_move(self)
         );
@@ -9641,12 +9642,13 @@ private:
             return;
         }
 
-        process_header(
+        process_header<puback_info,
+                       puback_phase,
+                       puback_phase::packet_id,
+                       &this_type::process_puback_impl>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_puback_impl,
-            puback_phase::packet_id,
             puback_info(),
             force_move(self)
         );
@@ -9785,12 +9787,13 @@ private:
             return;
         }
 
-        process_header(
+        process_header<pubrec_info,
+                       pubrec_phase,
+                       pubrec_phase::packet_id,
+                       &this_type::process_pubrec_impl>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_pubrec_impl,
-            pubrec_phase::packet_id,
             pubrec_info(),
             force_move(self)
         );
@@ -9957,12 +9960,13 @@ private:
             return;
         }
 
-        process_header(
+        process_header<pubrel_info,
+                       pubrel_phase,
+                       pubrel_phase::packet_id,
+                       &this_type::process_pubrel_impl>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_pubrel_impl,
-            pubrel_phase::packet_id,
             pubrel_info(),
             force_move(self)
         );
@@ -10116,12 +10120,13 @@ private:
             return;
         }
 
-        process_header(
+        process_header<pubcomp_info,
+                       pubcomp_phase,
+                       pubcomp_phase::packet_id,
+                       &this_type::process_pubcomp_impl>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_pubcomp_impl,
-            pubcomp_phase::packet_id,
             pubcomp_info(),
             force_move(self)
         );
@@ -10261,12 +10266,13 @@ private:
             return;
         }
 
-        process_header(
+        process_header<subscribe_info,
+                       subscribe_phase,
+                       subscribe_phase::packet_id,
+                       &this_type::process_subscribe_impl>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_subscribe_impl,
-            subscribe_phase::packet_id,
             subscribe_info(),
             force_move(self)
         );
@@ -10419,12 +10425,13 @@ private:
             return;
         }
 
-        process_header(
+        process_header<suback_info,
+                       suback_phase,
+                       suback_phase::packet_id,
+                       &this_type::process_suback_impl>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_suback_impl,
-            suback_phase::packet_id,
             suback_info(),
             force_move(self)
         );
@@ -10591,12 +10598,13 @@ private:
             return;
         }
 
-        process_header(
+        process_header<unsubscribe_info,
+                       unsubscribe_phase,
+                       unsubscribe_phase::packet_id,
+                       &this_type::process_unsubscribe_impl>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_unsubscribe_impl,
-            unsubscribe_phase::packet_id,
             unsubscribe_info(),
             force_move(self)
         );
@@ -10728,12 +10736,13 @@ private:
             return;
         }
 
-        process_header(
+        process_header<unsuback_info,
+                       unsuback_phase,
+                       unsuback_phase::packet_id,
+                       &this_type::process_unsuback_impl>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_unsuback_impl,
-            unsuback_phase::packet_id,
             unsuback_info(),
             force_move(self)
         );
@@ -10915,12 +10924,13 @@ private:
             return;
         }
 
-        process_header(
+        process_header<disconnect_info,
+                       disconnect_phase,
+                       disconnect_phase::reason_code,
+                       &this_type::process_disconnect_impl>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_disconnect_impl,
-            disconnect_phase::reason_code,
             disconnect_info(),
             force_move(self)
         );
@@ -11034,12 +11044,13 @@ private:
             return;
         }
 
-        process_header(
+        process_header<auth_info,
+                       auth_phase,
+                       auth_phase::reason_code,
+                       &this_type::process_auth_impl>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_auth_impl,
-            auth_phase::reason_code,
             auth_info(),
             force_move(self)
         );
