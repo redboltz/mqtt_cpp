@@ -7197,7 +7197,7 @@ private:
                 buf_->size() - start_position);
         }
     private:
-        static constexpr std::size_t const payload_position_ = 5;
+        static constexpr std::size_t payload_position_ = 5;
         std::shared_ptr<std::string> buf_;
     };
 
@@ -7823,8 +7823,7 @@ private:
                             property_length,
                             result
                         ]
-                        (boost::system::error_code const& ec,
-                         std::size_t bytes_transferred) mutable {
+                        (boost::system::error_code const& ec, std::size_t bytes_transferred) mutable {
                             if (!check_error_and_transferred_length(ec, bytes_transferred, result.len)) return;
                             process_property_id(
                                 force_move(session_life_keeper),
@@ -7943,7 +7942,7 @@ private:
         this_type_sp self
     ) {
 
-        static constexpr std::size_t const length_bytes = 2;
+        static constexpr std::size_t length_bytes = 2;
 
         if (property_length_rest == 0) {
             call_message_size_error_handlers();
@@ -7952,7 +7951,7 @@ private:
 
         switch (id) {
         case v5::property::id::payload_format_indicator: {
-            std::size_t const len = 1;
+            static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -7984,7 +7983,7 @@ private:
             );
         } break;
         case v5::property::id::message_expiry_interval: {
-            std::size_t const len = 4;
+            static constexpr std::size_t len = 4;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8126,7 +8125,7 @@ private:
             );
         } break;
         case v5::property::id::session_expiry_interval: {
-            std::size_t const len = 4;
+            static constexpr std::size_t len = 4;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8186,7 +8185,7 @@ private:
 
         } break;
         case v5::property::id::server_keep_alive: {
-            std::size_t const len = 2;
+            static constexpr std::size_t len = 2;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8272,7 +8271,7 @@ private:
             );
         } break;
         case v5::property::id::request_problem_information: {
-            std::size_t const len = 1;
+            static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8304,7 +8303,7 @@ private:
             );
         } break;
         case v5::property::id::will_delay_interval: {
-            std::size_t const len = 4;
+            static constexpr std::size_t len = 4;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8336,7 +8335,7 @@ private:
             );
         } break;
         case v5::property::id::request_response_information: {
-            std::size_t const len = 1;
+            static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8449,7 +8448,7 @@ private:
             );
         } break;
         case v5::property::id::receive_maximum: {
-            std::size_t const len = 2;
+            static constexpr std::size_t len = 2;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8481,7 +8480,7 @@ private:
             );
         } break;
         case v5::property::id::topic_alias_maximum: {
-            std::size_t const len = 2;
+            static constexpr std::size_t len = 2;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8513,7 +8512,7 @@ private:
             );
         } break;
         case v5::property::id::topic_alias: {
-            std::size_t const len = 2;
+            static constexpr std::size_t len = 2;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8545,7 +8544,7 @@ private:
             );
         } break;
         case v5::property::id::maximum_qos: {
-            std::size_t const len = 1;
+            static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8577,7 +8576,7 @@ private:
             );
         } break;
         case v5::property::id::retain_available: {
-            std::size_t const len = 1;
+            static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8656,7 +8655,7 @@ private:
             );
         } break;
         case v5::property::id::maximum_packet_size: {
-            std::size_t const len = 4;
+            static constexpr std::size_t len = 4;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8688,7 +8687,7 @@ private:
             );
         } break;
         case v5::property::id::wildcard_subscription_available: {
-            std::size_t const len = 1;
+            static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8720,7 +8719,7 @@ private:
             );
         } break;
         case v5::property::id::subscription_identifier_available: {
-            std::size_t const len = 1;
+            static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8752,7 +8751,7 @@ private:
             );
         } break;
         case v5::property::id::shared_subscription_available: {
-            std::size_t const len = 1;
+            static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
                 call_message_size_error_handlers();
                 return;
@@ -8893,7 +8892,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        static constexpr std::size_t const header_len =
+        static constexpr std::size_t header_len =
             2 +  // string length
             4 +  // "MQTT" string
             1 +  // ProtocolVersion
@@ -9238,7 +9237,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        static constexpr std::size_t const header_len =
+        static constexpr std::size_t header_len =
             1 +  // Connect Acknowledge Flags
             1;   // Reason Code
 
@@ -9409,7 +9408,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        std::size_t const min_len =
+        static constexpr std::size_t min_len =
             2; // topic name length
 
         if (remaining_length_ < min_len) {
@@ -9640,7 +9639,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        std::size_t const header_len =
+        static constexpr std::size_t header_len =
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
@@ -9648,14 +9647,13 @@ private:
             return;
         }
 
-        puback_info info;
         process_header(
             force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_puback_impl,
             puback_phase::packet_id,
-            force_move(info),
+            puback_info(),
             force_move(self)
         );
     }
@@ -9787,7 +9785,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        std::size_t const header_len =
+        static constexpr std::size_t header_len =
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
@@ -9795,14 +9793,13 @@ private:
             return;
         }
 
-        pubrec_info info;
         process_header(
             force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_pubrec_impl,
             pubrec_phase::packet_id,
-            force_move(info),
+            pubrec_info(),
             force_move(self)
         );
     }
@@ -9962,7 +9959,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        std::size_t const header_len =
+        static constexpr std::size_t header_len =
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
@@ -9970,14 +9967,13 @@ private:
             return;
         }
 
-        pubrel_info info;
         process_header(
             force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_pubrel_impl,
             pubrel_phase::packet_id,
-            force_move(info),
+            pubrel_info(),
             force_move(self)
         );
     }
@@ -10124,7 +10120,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        std::size_t const header_len =
+        static constexpr std::size_t header_len =
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
@@ -10132,14 +10128,13 @@ private:
             return;
         }
 
-        pubcomp_info info;
         process_header(
             force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_pubcomp_impl,
             pubcomp_phase::packet_id,
-            force_move(info),
+            pubcomp_info(),
             force_move(self)
         );
     }
@@ -10272,7 +10267,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        std::size_t const header_len =
+        static constexpr std::size_t header_len =
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
@@ -10280,14 +10275,13 @@ private:
             return;
         }
 
-        subscribe_info info;
         process_header(
             force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_subscribe_impl,
             subscribe_phase::packet_id,
-            force_move(info),
+            subscribe_info(),
             force_move(self)
         );
     }
@@ -10433,7 +10427,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        std::size_t const header_len =
+        static constexpr std::size_t header_len =
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
@@ -10441,14 +10435,13 @@ private:
             return;
         }
 
-        suback_info info;
         process_header(
             force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_suback_impl,
             suback_phase::packet_id,
-            force_move(info),
+            suback_info(),
             force_move(self)
         );
     }
@@ -10608,7 +10601,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        std::size_t const header_len =
+        static constexpr std::size_t header_len =
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
@@ -10616,14 +10609,13 @@ private:
             return;
         }
 
-        unsubscribe_info info;
         process_header(
             force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_unsubscribe_impl,
             unsubscribe_phase::packet_id,
-            force_move(info),
+            unsubscribe_info(),
             force_move(self)
         );
     }
@@ -10748,7 +10740,7 @@ private:
         bool all_read,
         this_type_sp self
     ) {
-        std::size_t const header_len =
+        static constexpr std::size_t header_len =
             sizeof(packet_id_t);    // Packet Id
 
         if (remaining_length_ < header_len) {
@@ -10756,14 +10748,13 @@ private:
             return;
         }
 
-        unsuback_info info;
         process_header(
             force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_unsuback_impl,
             unsuback_phase::packet_id,
-            force_move(info),
+            unsuback_info(),
             force_move(self)
         );
     }
@@ -10876,7 +10867,7 @@ private:
     void process_pingreq(
         any session_life_keeper
     ) {
-        std::size_t const header_len = 0;
+        static constexpr std::size_t header_len = 0;
 
         if (remaining_length_ != header_len) {
             call_protocol_error_handlers();
@@ -10891,7 +10882,7 @@ private:
     void process_pingresp(
         any session_life_keeper
     ) {
-        std::size_t const header_len = 0;
+        static constexpr std::size_t header_len = 0;
 
         if (remaining_length_ != header_len) {
             call_protocol_error_handlers();
@@ -10936,7 +10927,7 @@ private:
             return;
         }
 
-        std::size_t const header_len =
+        static constexpr std::size_t header_len =
             1; // Reason Code
 
         if (remaining_length_ < header_len) {
@@ -10944,14 +10935,13 @@ private:
             return;
         }
 
-        disconnect_info info;
         process_header(
             force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_disconnect_impl,
             disconnect_phase::reason_code,
-            force_move(info),
+            disconnect_info(),
             force_move(self)
         );
     }
@@ -11046,18 +11036,17 @@ private:
         }
 
         if (remaining_length_ == 0) {
-            auth_info info { v5::auth_reason_code::success, std::vector<v5::property_variant>() };
             process_auth_impl(
                 force_move(session_life_keeper),
                 buffer(),
                 auth_phase::finish,
-                force_move(info),
+                auth_info{ v5::auth_reason_code::success, std::vector<v5::property_variant>() },
                 force_move(self)
             );
             return;
         }
 
-        std::size_t const header_len =
+        static constexpr std::size_t header_len =
             1; // Reason Code
 
         if (remaining_length_ < header_len) {
@@ -11065,14 +11054,13 @@ private:
             return;
         }
 
-        auth_info info;
         process_header(
             force_move(session_life_keeper),
             all_read,
             header_len,
             &this_type::process_auth_impl,
             auth_phase::reason_code,
-            force_move(info),
+            auth_info(),
             force_move(self)
         );
     }
