@@ -21,12 +21,12 @@
 // The new style requires compiler extension.
 // If -pedantic compile option is set, then get
 // "must specify at least one argument for '...' parameter of variadic macro"
-BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_async_read), async_read, 3)
-BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_async_write), async_write, 3)
-BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_write), write, 2)
-BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_post), post, 1)
-BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_lowest_layer), lowest_layer, 0)
-BOOST_TYPE_ERASURE_MEMBER((mqtt)(has_close), close, 1)
+BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_async_read), async_read, 3)
+BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_async_write), async_write, 3)
+BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_write), write, 2)
+BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_post), post, 1)
+BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_lowest_layer), lowest_layer, 0)
+BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_close), close, 1)
 
 namespace MQTT_NS {
 
