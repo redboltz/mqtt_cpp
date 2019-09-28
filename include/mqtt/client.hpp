@@ -463,17 +463,9 @@ public:
      */
     void connect(std::vector<v5::property_variant> props, any session_life_keeper = any()) {
         as::ip::tcp::resolver r(ioc_);
-#if BOOST_VERSION < 106600
-        as::ip::tcp::resolver::query q(host_, port_);
-        auto it = r.resolve(q);
-        as::ip::tcp::resolver::iterator end;
-#else  // BOOST_VERSION < 106600
         auto eps = r.resolve(host_, port_);
-        auto it = eps.begin();
-        auto end = eps.end();
-#endif // BOOST_VERSION < 106600
         setup_socket(socket_);
-        connect_impl(*socket_, it, end, force_move(props), force_move(session_life_keeper));
+        connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper));
     }
 
     /**
@@ -499,18 +491,10 @@ public:
      */
     void connect(std::shared_ptr<Socket>&& socket, std::vector<v5::property_variant> props, any session_life_keeper = any()) {
         as::ip::tcp::resolver r(ioc_);
-#if BOOST_VERSION < 106600
-        as::ip::tcp::resolver::query q(host_, port_);
-        auto it = r.resolve(q);
-        as::ip::tcp::resolver::iterator end;
-#else  // BOOST_VERSION < 106600
         auto eps = r.resolve(host_, port_);
-        auto it = eps.begin();
-        auto end = eps.end();
-#endif // BOOST_VERSION < 106600
         socket_ = force_move(socket);
         base::socket_optional().emplace(socket_);
-        connect_impl(*socket_, it, end, force_move(props), force_move(session_life_keeper));
+        connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper));
     }
 
     /**
