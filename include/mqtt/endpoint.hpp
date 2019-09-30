@@ -9160,56 +9160,50 @@ private:
             mqtt_connected_ = true;
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (!on_connect(
+                if (on_connect(
                         force_move(info.client_id),
                         force_move(info.user_name),
                         force_move(info.password),
-                        [&] () -> optional<will> {
-                            if (connect_flags::has_will_flag(info.connect_flag)) {
-                                return
-                                    will(
-                                        force_move(info.will_topic),
-                                        force_move(info.will_payload),
-                                        connect_flags::has_will_retain(info.connect_flag),
-                                        connect_flags::will_qos(info.connect_flag)
-                                    );
-                            }
-                            return nullopt;
-                        } (),
+                          connect_flags::has_will_flag(info.connect_flag)
+                        ? optional<will>(
+                              will(
+                                   force_move(info.will_topic),
+                                   force_move(info.will_payload),
+                                   connect_flags::has_will_retain(info.connect_flag),
+                                   connect_flags::will_qos(info.connect_flag)
+                                  )
+                            )
+                        : optional<will>(nullopt),
                         clean_session_,
                         info.keep_alive
                     )
                 ) {
-                    return;
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (!on_v5_connect(
+                if (on_v5_connect(
                         force_move(info.client_id),
                         force_move(info.user_name),
                         force_move(info.password),
-                        [&] () -> optional<will> {
-                            if (connect_flags::has_will_flag(info.connect_flag)) {
-                                return
-                                    will(
-                                        force_move(info.will_topic),
-                                        force_move(info.will_payload),
-                                        connect_flags::has_will_retain(info.connect_flag),
-                                        connect_flags::will_qos(info.connect_flag),
-                                        force_move(info.will_props)
-                                    );
-                            }
-                            return nullopt;
-                        } (),
+                          connect_flags::has_will_flag(info.connect_flag)
+                        ? optional<will>(
+                              will(
+                                   force_move(info.will_topic),
+                                   force_move(info.will_payload),
+                                   connect_flags::has_will_retain(info.connect_flag),
+                                   connect_flags::will_qos(info.connect_flag),
+                                   force_move(info.will_props)
+                                  )
+                            )
+                        : optional<will>(nullopt),
                         clean_session_,
                         info.keep_alive,
                         force_move(info.props)
                     )
                 ) {
-                    return;
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -9327,19 +9321,19 @@ private:
                     any&& session_life_keeper,
                     connack_info&& info
                 ) mutable {
-
                     switch (version_) {
                     case protocol_version::v3_1_1:
-                        if (!on_connack(info.session_present, variant_get<connect_return_code>(info.reason_code))) {
-                            return;
+                        if(on_connack(info.session_present,
+                                      variant_get<connect_return_code>(info.reason_code))) {
+                            on_mqtt_message_processed(force_move(session_life_keeper));
                         }
-                        on_mqtt_message_processed(force_move(session_life_keeper));
                         break;
                     case protocol_version::v5:
-                        if (!on_v5_connack(info.session_present, variant_get<v5::connect_reason_code>(info.reason_code), force_move(info.props))) {
-                            return;
+                        if (on_v5_connack(info.session_present,
+                                          variant_get<v5::connect_reason_code>(info.reason_code),
+                                          force_move(info.props))) {
+                            on_mqtt_message_processed(force_move(session_life_keeper));
                         }
-                        on_mqtt_message_processed(force_move(session_life_keeper));
                         break;
                     default:
                         BOOST_ASSERT(false);
@@ -9360,9 +9354,8 @@ private:
                 }
                 else {
                     if (async_send_store_) {
-                        // Store and replace mqtt_message_processed handler
                         // Until all stored messages are written to internal send buffer,
-                        // stop the next async read.
+                        // disable further async reading of incoming packets..
                         async_read_on_message_processed_ = false;
                         auto async_connack_proc =
                             [
@@ -9373,8 +9366,8 @@ private:
                                 info = force_move(info)
                             ]
                             () mutable {
-                                // All stored messages are sent, then restore the original handler
-                                // and do the connack process. If it returns true, read the next mqtt message.
+                                // All stored messages are sent, so re-enable reading of incoming packets.
+                                // and notify the end user code that the connack packet was received.
                                 async_read_on_message_processed_ = true;
                                 connack_proc(force_move(session_life_keeper), force_move(info));
                             };
@@ -9534,19 +9527,19 @@ private:
                         [&] {
                             switch (version_) {
                             case protocol_version::v3_1_1:
-                                if (!on_publish(
+                                if (on_publish(
                                             publish::is_dup(fixed_header_),
                                             publish::get_qos(fixed_header_),
                                             publish::is_retain(fixed_header_),
                                             info.packet_id,
                                             force_move(info.topic_name),
                                             force_move(payload))) {
-                                    return false;
+                                    on_mqtt_message_processed(force_move(session_life_keeper));
+                                    return true;
                                 }
-                                on_mqtt_message_processed(force_move(session_life_keeper));
                                 break;
                             case protocol_version::v5:
-                                if (!on_v5_publish(
+                                if (on_v5_publish(
                                             publish::is_dup(fixed_header_),
                                             publish::get_qos(fixed_header_),
                                             publish::is_retain(fixed_header_),
@@ -9556,14 +9549,14 @@ private:
                                             force_move(info.props)
                                     )
                                 ) {
-                                    return false;
+                                    on_mqtt_message_processed(force_move(session_life_keeper));
+                                    return true;
                                 }
-                                on_mqtt_message_processed(force_move(session_life_keeper));
                                 break;
                             default:
                                 BOOST_ASSERT(false);
                             }
-                            return true;
+                            return false;
                         };
                     switch (publish::get_qos(fixed_header_)) {
                     case qos::at_most_once:
@@ -9748,16 +9741,14 @@ private:
             on_serialize_remove(info.packet_id);
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (!on_puback(info.packet_id)) {
-                    return;
+                if (on_puback(info.packet_id)) {
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (!on_v5_puback(info.packet_id, info.reason_code, force_move(info.props))) {
-                    return;
+                if (on_v5_puback(info.packet_id, info.reason_code, force_move(info.props))) {
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -9920,18 +9911,16 @@ private:
                 };
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (!on_pubrec(info.packet_id)) {
-                    return;
+                if (on_pubrec(info.packet_id)) {
+                    res();
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                res();
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (!on_v5_pubrec(info.packet_id, info.reason_code, force_move(info.props))) {
-                    return;
+                if (on_v5_pubrec(info.packet_id, info.reason_code, force_move(info.props))) {
+                    res();
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                res();
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -10081,18 +10070,16 @@ private:
             qos2_publish_handled_.erase(info.packet_id);
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (!on_pubrel(info.packet_id)) {
-                    return;
+                if (on_pubrel(info.packet_id)) {
+                    res();
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                res();
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (!on_v5_pubrel(info.packet_id, info.reason_code, force_move(info.props))) {
-                    return;
+                if (on_v5_pubrel(info.packet_id, info.reason_code, force_move(info.props))) {
+                    res();
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                res();
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -10230,16 +10217,14 @@ private:
             on_serialize_remove(info.packet_id);
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (!on_pubcomp(info.packet_id)) {
-                    return;
+                if (on_pubcomp(info.packet_id)) {
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (!on_v5_pubcomp(info.packet_id, info.reason_code, force_move(info.props))) {
-                    return;
+                if (on_v5_pubcomp(info.packet_id, info.reason_code, force_move(info.props))) {
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -10392,16 +10377,14 @@ private:
         case subscribe_phase::finish:
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (!on_subscribe(info.packet_id, force_move(info.entries))) {
-                    return;
+                if (on_subscribe(info.packet_id, force_move(info.entries))) {
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (!on_v5_subscribe(info.packet_id, force_move(info.entries), force_move(info.props))) {
-                    return;
+                if (on_v5_subscribe(info.packet_id, force_move(info.entries), force_move(info.props))) {
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -10538,10 +10521,9 @@ private:
                                 return static_cast<suback_reason_code>(e);
                             }
                         );
-                        if (!on_suback(info.packet_id, force_move(results))) {
-                            return;
+                        if (on_suback(info.packet_id, force_move(results))) {
+                            on_mqtt_message_processed(force_move(session_life_keeper));
                         }
-                        on_mqtt_message_processed(force_move(session_life_keeper));
                         break;
                     }
                     case protocol_version::v5:
@@ -10566,10 +10548,9 @@ private:
                                 return static_cast<v5::suback_reason_code>(e);
                             }
                         );
-                        if (!on_v5_suback(info.packet_id, force_move(reasons), force_move(info.props))) {
-                            return;
+                        if (on_v5_suback(info.packet_id, force_move(reasons), force_move(info.props))) {
+                            on_mqtt_message_processed(force_move(session_life_keeper));
                         }
-                        on_mqtt_message_processed(force_move(session_life_keeper));
                         break;
                     }
                     default:
@@ -10705,16 +10686,14 @@ private:
         case unsubscribe_phase::finish:
             switch (version_) {
             case protocol_version::v3_1_1:
-                if (!on_unsubscribe(info.packet_id, force_move(info.entries))) {
-                    return;
+                if (on_unsubscribe(info.packet_id, force_move(info.entries))) {
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             case protocol_version::v5:
-                if (!on_v5_unsubscribe(info.packet_id, force_move(info.entries), force_move(info.props))) {
-                    return;
+                if (on_v5_unsubscribe(info.packet_id, force_move(info.entries), force_move(info.props))) {
+                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                on_mqtt_message_processed(force_move(session_life_keeper));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -10784,10 +10763,9 @@ private:
                     }
                     switch (version_) {
                     case protocol_version::v3_1_1:
-                        if (!on_unsuback(info.packet_id)) {
-                            return;
+                        if (on_unsuback(info.packet_id)) {
+                            on_mqtt_message_processed(force_move(session_life_keeper));
                         }
-                        on_mqtt_message_processed(force_move(session_life_keeper));
                         break;
                     case protocol_version::v5:
                         process_unsuback_impl(
@@ -10852,10 +10830,9 @@ private:
                             return static_cast<v5::unsuback_reason_code>(e);
                         }
                     );
-                    if (!on_v5_unsuback(info.packet_id, force_move(reasons), force_move(info.props))) {
-                        return;
+                    if (on_v5_unsuback(info.packet_id, force_move(reasons), force_move(info.props))) {
+                        on_mqtt_message_processed(force_move(session_life_keeper));
                     }
-                    on_mqtt_message_processed(force_move(session_life_keeper));
                 },
                 force_move(self)
             );
@@ -10874,8 +10851,9 @@ private:
             call_protocol_error_handlers();
             return;
         }
-        if (!on_pingreq()) return;
-        on_mqtt_message_processed(force_move(session_life_keeper));
+        if (on_pingreq()) {
+            on_mqtt_message_processed(force_move(session_life_keeper));
+        }
     }
 
     // process pingresp
@@ -10889,8 +10867,9 @@ private:
             call_protocol_error_handlers();
             return;
         }
-        if (!on_pingresp()) return;
-        on_mqtt_message_processed(force_move(session_life_keeper));
+        if (on_pingresp()) {
+            on_mqtt_message_processed(force_move(session_life_keeper));
+        }
     }
 
     // process disconnect
@@ -11119,10 +11098,9 @@ private:
             break;
         case auth_phase::finish:
             BOOST_ASSERT(version_ == protocol_version::v5);
-            if (!on_v5_auth(info.reason_code, force_move(info.props))) {
-                return;
+            if (on_v5_auth(info.reason_code, force_move(info.props))) {
+                on_mqtt_message_processed(force_move(session_life_keeper));
             }
-            on_mqtt_message_processed(force_move(session_life_keeper));
             break;
         }
     }
