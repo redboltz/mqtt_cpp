@@ -40,15 +40,7 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
 
     // client
     as::ip::tcp::resolver r(ioc);
-#if BOOST_VERSION < 106600
-    as::ip::tcp::resolver::query q(broker_url, std::to_string(broker_notls_ws_port));
-    auto it = r.resolve(q);
-    as::ip::tcp::resolver::iterator end;
-#else  // BOOST_VERSION < 106600
     auto eps = r.resolve(broker_url, std::to_string(broker_notls_ws_port));
-    auto it = eps.begin();
-    auto end = eps.end();
-#endif // BOOST_VERSION < 106600
 
     std::string path = boost::unit_test::framework::master_test_suite().argv[0];
     std::size_t pos = path.find_last_of("/\\");
@@ -64,7 +56,7 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
 #else  // BOOST_VERSION >= 107000
         socket.lowest_layer(),
 #endif // BOOST_VERSION >= 107000
-        it, end,
+        eps.begin(), eps.end(),
         [&]
         (boost::system::error_code const& ec, auto) {
             if (ec) {
@@ -113,15 +105,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
 
     // client
     as::ip::tcp::resolver r(ioc);
-#if BOOST_VERSION < 106600
-    as::ip::tcp::resolver::query q(broker_url, std::to_string(broker_tls_ws_port));
-    auto it = r.resolve(q);
-    as::ip::tcp::resolver::iterator end;
-#else  // BOOST_VERSION < 106600
     auto eps = r.resolve(broker_url, std::to_string(broker_tls_ws_port));
-    auto it = eps.begin();
-    auto end = eps.end();
-#endif // BOOST_VERSION < 106600
 
     std::string path = boost::unit_test::framework::master_test_suite().argv[0];
     std::size_t pos = path.find_last_of("/\\");
@@ -140,7 +124,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
 #else  // BOOST_VERSION >= 107000
         socket.lowest_layer(),
 #endif // BOOST_VERSION >= 107000
-        it, end,
+        eps.begin(), eps.end(),
         [&]
         (boost::system::error_code const& ec, auto) {
             if (ec) {
@@ -187,15 +171,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
 
     // client
     as::ip::tcp::resolver r(ioc);
-#if BOOST_VERSION < 106600
-    as::ip::tcp::resolver::query q(broker_url, std::to_string(broker_tls_ws_port));
-    auto it = r.resolve(q);
-    as::ip::tcp::resolver::iterator end;
-#else  // BOOST_VERSION < 106600
     auto eps = r.resolve(broker_url, std::to_string(broker_tls_ws_port));
-    auto it = eps.begin();
-    auto end = eps.end();
-#endif // BOOST_VERSION < 106600
 
     std::string path = boost::unit_test::framework::master_test_suite().argv[0];
     std::size_t pos = path.find_last_of("/\\");
@@ -214,7 +190,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
 #else  // BOOST_VERSION >= 107000
         socket.lowest_layer(),
 #endif // BOOST_VERSION >= 107000
-        it, end,
+        eps.begin(), eps.end(),
         [&]
         (boost::system::error_code const& ec, auto) {
             if (ec) {
@@ -278,15 +254,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
 
     // client
     as::ip::tcp::resolver r(ioc);
-#if BOOST_VERSION < 106600
-    as::ip::tcp::resolver::query q(broker_url, std::to_string(broker_tls_port));
-    auto it = r.resolve(q);
-    as::ip::tcp::resolver::iterator end;
-#else  // BOOST_VERSION < 106600
     auto eps = r.resolve(broker_url, std::to_string(broker_tls_port));
-    auto it = eps.begin();
-    auto end = eps.end();
-#endif // BOOST_VERSION < 106600
 
     std::string path = boost::unit_test::framework::master_test_suite().argv[0];
     std::size_t pos = path.find_last_of("/\\");
@@ -301,7 +269,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
 
     as::async_connect(
         socket.lowest_layer(),
-        it, end,
+        eps.begin(), eps.end(),
         [&]
         (boost::system::error_code const& ec, auto) {
             if (ec) {
