@@ -41,6 +41,8 @@ IF (MQTT_STD_ANY)
     target_compile_definitions(mqtt_cpp_iface INTERFACE MQTT_STD_ANY)
 ENDIF ()
 
+target_compile_definitions(mqtt_cpp_iface INTERFACE MQTT_ALWAYS_SEND_REASON_CODE=$<BOOL:MQTT_ALWAYS_SEND_REASON_CODE>)
+
 target_link_libraries(mqtt_cpp_iface INTERFACE Boost::system Threads::Threads)
 
 list(APPEND CHK_INCLUDE_DIRS -I${Boost_INCLUDE_DIR} -I${CMAKE_CURRENT_SOURCE_DIR})
