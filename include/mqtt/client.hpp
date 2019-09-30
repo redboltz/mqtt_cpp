@@ -531,7 +531,7 @@ public:
      */
     void disconnect(
         boost::posix_time::time_duration const& timeout,
-        optional<v5::disconnect_reason_code> reason_code = nullopt,
+        v5::disconnect_reason_code reason_code = v5::disconnect_reason_code::normal_disconnection,
         std::vector<v5::property_variant> props = {}
     ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -539,7 +539,7 @@ public:
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
             tim_close_.expires_from_now(timeout);
             tim_close_.async_wait(
-                [wp](boost::system::error_code const& ec) {
+                [wp = force_move(wp)](boost::system::error_code const& ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
                             sp->force_disconnect();
@@ -567,7 +567,7 @@ public:
      *        3.14.2.2 DISCONNECT Properties
      */
     void disconnect(
-        optional<v5::disconnect_reason_code> reason_code = nullopt,
+        v5::disconnect_reason_code reason_code = v5::disconnect_reason_code::normal_disconnection,
         std::vector<v5::property_variant> props = {}
     ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -593,7 +593,7 @@ public:
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
             tim_close_.expires_from_now(timeout);
             tim_close_.async_wait(
-                [wp](boost::system::error_code const& ec) {
+                [wp = force_move(wp)](boost::system::error_code const& ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
                             sp->force_disconnect();
@@ -624,7 +624,7 @@ public:
      */
     void async_disconnect(
         boost::posix_time::time_duration const& timeout,
-        optional<v5::disconnect_reason_code> reason_code,
+        v5::disconnect_reason_code reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -632,7 +632,7 @@ public:
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
             tim_close_.expires_from_now(timeout);
             tim_close_.async_wait(
-                [wp](boost::system::error_code const& ec) {
+                [wp = force_move(wp)](boost::system::error_code const& ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
                             sp->force_disconnect();
@@ -677,7 +677,7 @@ public:
      * @param func A callback function that is called when async operation will finish.
      */
     void async_disconnect(
-        optional<v5::disconnect_reason_code> reason_code,
+        v5::disconnect_reason_code reason_code,
         std::vector<v5::property_variant> props,
         async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
@@ -804,11 +804,10 @@ private:
         ws_endpoint<as::ip::tcp::socket, Strand>& socket,
         std::vector<v5::property_variant> props,
         any session_life_keeper) {
-        auto self = this->shared_from_this();
         socket.async_handshake(
             host_,
             path_,
-            [this, self, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
+            [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 start_session(force_move(props), force_move(session_life_keeper));
@@ -823,10 +822,9 @@ private:
         tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         std::vector<v5::property_variant> props,
         any session_life_keeper) {
-        auto self = this->shared_from_this();
         socket.async_handshake(
             as::ssl::stream_base::client,
-            [this, self, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
+            [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 start_session(force_move(props), force_move(session_life_keeper));
@@ -839,10 +837,9 @@ private:
         ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         std::vector<v5::property_variant> props,
         any session_life_keeper) {
-        auto self = this->shared_from_this();
         socket.next_layer().async_handshake(
             as::ssl::stream_base::client,
-            [this, self, session_life_keeper = force_move(session_life_keeper), &socket, props = force_move(props)]
+            [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper), &socket, props = force_move(props)]
             (boost::system::error_code const& ec) mutable {
                 if (base::handle_close_or_error(ec)) return;
                 socket.async_handshake(
@@ -861,10 +858,9 @@ private:
 
     template <typename Iterator>
     void connect_impl(Socket& socket, Iterator it, Iterator end, std::vector<v5::property_variant> props, any session_life_keeper) {
-        auto self = this->shared_from_this();
         as::async_connect(
             socket.lowest_layer(), it, end,
-            [this, self, &socket, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
+            [this, self = this->shared_from_this(), &socket, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
             (boost::system::error_code const& ec, Iterator) mutable {
                 if (!ec) {
                     base::set_connect();
@@ -899,7 +895,7 @@ private:
         tim_ping_.expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
         std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
         tim_ping_.async_wait(
-            [wp](boost::system::error_code const& ec) {
+            [wp = force_move(wp)](boost::system::error_code const& ec) {
                 if (auto sp = wp.lock()) {
                     sp->handle_timer(ec);
                 }

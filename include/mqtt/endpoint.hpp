@@ -77,7 +77,6 @@ class endpoint : public std::enable_shared_from_this<endpoint<Mutex, LockGuard, 
     using this_type_sp = std::shared_ptr<this_type>;
 
 public:
-    using std::enable_shared_from_this<this_type>::shared_from_this;
     using async_handler_t = std::function<void(boost::system::error_code const& ec)>;
     using packet_id_t = typename packet_id_type<PacketIdBytes>::type;
 
@@ -1184,7 +1183,7 @@ public:
      *        3.14.2.2 DISCONNECT Properties
      */
     void disconnect(
-        optional<v5::disconnect_reason_code> reason = nullopt,
+        v5::disconnect_reason_code reason = v5::disconnect_reason_code::normal_disconnection,
         std::vector<v5::property_variant> props = {}
     ) {
         if (connected_ && mqtt_connected_) {
@@ -2280,7 +2279,7 @@ public:
      *        3.15.2.2 AUTH Properties
      */
     void auth(
-        optional<v5::auth_reason_code> reason_code = nullopt,
+        v5::auth_reason_code reason_code = v5::auth_reason_code::success,
         std::vector<v5::property_variant> props = {}
     ) {
         send_auth(reason_code, force_move(props));
@@ -2430,7 +2429,7 @@ public:
      */
     void puback(
         packet_id_t packet_id,
-        optional<v5::puback_reason_code> reason_code = nullopt,
+        v5::puback_reason_code reason_code = v5::puback_reason_code::success,
         std::vector<v5::property_variant> props = {}
     ) {
         send_puback(packet_id, reason_code, force_move(props));
@@ -2450,7 +2449,7 @@ public:
      */
     void pubrec(
         packet_id_t packet_id,
-        optional<v5::pubrec_reason_code> reason_code = nullopt,
+        v5::pubrec_reason_code reason_code = v5::pubrec_reason_code::success,
         std::vector<v5::property_variant> props = {}
     ) {
         send_pubrec(packet_id, reason_code, force_move(props));
@@ -2473,7 +2472,7 @@ public:
      */
     void pubrel(
         packet_id_t packet_id,
-        optional<v5::pubrel_reason_code> reason_code = nullopt,
+        v5::pubrel_reason_code reason_code = v5::pubrel_reason_code::success,
         std::vector<v5::property_variant> props = {},
         any life_keeper = any()
     ) {
@@ -2494,7 +2493,7 @@ public:
      */
     void pubcomp(
         packet_id_t packet_id,
-        optional<v5::pubcomp_reason_code> reason_code = nullopt,
+        v5::pubcomp_reason_code reason_code = v5::pubcomp_reason_code::success,
         std::vector<v5::property_variant> props = {}
     ) {
         send_pubcomp(packet_id, reason_code, force_move(props));
@@ -3433,7 +3432,10 @@ public:
     ) {
         if (connected_ && mqtt_connected_) {
             disconnect_requested_ = true;
-            async_send_disconnect(force_move(func));
+            // The reason code and property vector are only used if we're using mqttv5.
+            async_send_disconnect(v5::disconnect_reason_code::normal_disconnection,
+                                  std::vector<v5::property_variant>{},
+                                  force_move(func));
         }
     }
 
@@ -5892,7 +5894,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718086
      */
     void async_auth(
-        optional<v5::auth_reason_code> reason_code = nullopt,
+        v5::auth_reason_code reason_code = v5::auth_reason_code::success,
         std::vector<v5::property_variant> props = {},
         async_handler_t func = async_handler_t()) {
         async_send_auth(reason_code, force_move(props), force_move(func));
@@ -6824,10 +6826,9 @@ protected:
     }
 
     void async_read_control_packet_type(any session_life_keeper) {
-        auto self = shared_from_this();
         socket_->async_read(
             as::buffer(buf_.data(), 1),
-            [this, self = force_move(self), session_life_keeper = force_move(session_life_keeper)](
+            [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper)](
                 boost::system::error_code const& ec,
                 std::size_t bytes_transferred) mutable {
                 if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
@@ -9581,7 +9582,7 @@ private:
                                     if (connected_) {
                                         async_send_puback(
                                             *info.packet_id,
-                                            nullopt,
+                                            v5::puback_reason_code::success,
                                             std::vector<v5::property_variant>{},
                                             [session_life_keeper](auto){}
                                         );
@@ -9603,7 +9604,7 @@ private:
                                     if (connected_) {
                                         async_send_pubrec(
                                             *info.packet_id,
-                                            nullopt,
+                                            v5::pubrec_reason_code::success,
                                             std::vector<v5::property_variant>{},
                                             [session_life_keeper](auto){}
                                         );
@@ -9909,7 +9910,7 @@ private:
                             if (connected_) {
                                 async_send_pubrel(
                                     info.packet_id,
-                                    nullopt,
+                                    v5::pubrel_reason_code::success,
                                     std::vector<v5::property_variant>{},
                                     [session_life_keeper](auto){}
                                 );
@@ -10073,7 +10074,7 @@ private:
                             if (connected_) {
                                 async_send_pubcomp(
                                     info.packet_id,
-                                    nullopt,
+                                    v5::pubcomp_reason_code::success,
                                     std::vector<v5::property_variant>{},
                                     [session_life_keeper](auto){}
                                 );
@@ -11282,7 +11283,7 @@ private:
 
     void send_puback(
         packet_id_t packet_id,
-        optional<v5::puback_reason_code> reason = nullopt,
+        v5::puback_reason_code reason = v5::puback_reason_code::success,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -11302,7 +11303,7 @@ private:
 
     void send_pubrec(
         packet_id_t packet_id,
-        optional<v5::pubrec_reason_code> reason = nullopt,
+        v5::pubrec_reason_code reason = v5::pubrec_reason_code::success,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -11320,7 +11321,7 @@ private:
 
     void send_pubrel(
         packet_id_t packet_id,
-        optional<v5::pubrel_reason_code> reason = nullopt,
+        v5::pubrel_reason_code reason = v5::pubrel_reason_code::success,
         std::vector<v5::property_variant> props = {},
         any life_keeper = any()
     ) {
@@ -11368,7 +11369,7 @@ private:
 
     void store_pubrel(
         packet_id_t packet_id,
-        optional<v5::pubrel_reason_code> reason = nullopt,
+        v5::pubrel_reason_code reason = v5::pubrel_reason_code::success,
         std::vector<v5::property_variant> props = {}
     ) {
 
@@ -11413,7 +11414,7 @@ private:
 
     void send_pubcomp(
         packet_id_t packet_id,
-        optional<v5::pubcomp_reason_code> reason = nullopt,
+        v5::pubcomp_reason_code reason = v5::pubcomp_reason_code::success,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -11639,7 +11640,7 @@ private:
     }
 
     void send_auth(
-        optional<v5::auth_reason_code> reason = nullopt,
+        v5::auth_reason_code reason = v5::auth_reason_code::success,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -11656,7 +11657,7 @@ private:
     }
 
     void send_disconnect(
-        optional<v5::disconnect_reason_code> reason = nullopt,
+        v5::disconnect_reason_code reason = v5::disconnect_reason_code::normal_disconnection,
         std::vector<v5::property_variant> props = {}
     ) {
         switch (version_) {
@@ -11845,33 +11846,29 @@ private:
 
     void async_send_puback(
         packet_id_t packet_id,
-        optional<v5::puback_reason_code> reason,
+        v5::puback_reason_code reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {
-
-        auto impl =
-            [&] (auto msg) {
-                auto self = shared_from_this();
-                do_async_write(
-                    force_move(msg),
-                    [this, self, packet_id, func = force_move(func)]
-                    (boost::system::error_code const& ec){
-                        if (func) func(ec);
-                        on_pub_res_sent(packet_id);
-                    }
-                );
-            };
-
         switch (version_) {
         case protocol_version::v3_1_1:
-            impl(
-                v3_1_1::basic_puback_message<PacketIdBytes>(packet_id)
+            do_async_write(
+                v3_1_1::basic_puback_message<PacketIdBytes>(packet_id),
+                [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
+                (boost::system::error_code const& ec){
+                    if (func) func(ec);
+                    on_pub_res_sent(packet_id);
+                }
             );
             break;
         case protocol_version::v5:
-            impl(
-                v5::basic_puback_message<PacketIdBytes>(packet_id, reason, force_move(props))
+            do_async_write(
+                v5::basic_puback_message<PacketIdBytes>(packet_id, reason, force_move(props)),
+                [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
+                (boost::system::error_code const& ec){
+                    if (func) func(ec);
+                    on_pub_res_sent(packet_id);
+                }
             );
             break;
         default:
@@ -11882,7 +11879,7 @@ private:
 
     void async_send_pubrec(
         packet_id_t packet_id,
-        optional<v5::pubrec_reason_code> reason,
+        v5::pubrec_reason_code reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {
@@ -11907,7 +11904,7 @@ private:
 
     void async_send_pubrel(
         packet_id_t packet_id,
-        optional<v5::pubrel_reason_code> reason,
+        v5::pubrel_reason_code reason,
         std::vector<v5::property_variant> props,
         async_handler_t func,
         any life_keeper = any()
@@ -11980,31 +11977,29 @@ private:
 
     void async_send_pubcomp(
         packet_id_t packet_id,
-        optional<v5::pubcomp_reason_code> reason,
+        v5::pubcomp_reason_code reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
     ) {
-        auto impl =
-            [&] (auto msg) {
-                auto self = shared_from_this();
-                do_async_write(
-                    force_move(msg),
-                    [this, self = force_move(self), packet_id, func = force_move(func)]
-                    (boost::system::error_code const& ec){
-                        if (func) func(ec);
-                        on_pub_res_sent(packet_id);
-                    }
-                );
-            };
         switch (version_) {
         case protocol_version::v3_1_1:
-            impl(
-                v3_1_1::basic_pubcomp_message<PacketIdBytes>(packet_id)
+            do_async_write(
+                v3_1_1::basic_pubcomp_message<PacketIdBytes>(packet_id),
+                [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
+                (boost::system::error_code const& ec){
+                    if (func) func(ec);
+                    on_pub_res_sent(packet_id);
+                }
             );
             break;
         case protocol_version::v5:
-            impl(
-                v5::basic_pubcomp_message<PacketIdBytes>(packet_id, reason, force_move(props))
+            do_async_write(
+                v5::basic_pubcomp_message<PacketIdBytes>(packet_id, reason, force_move(props)),
+                [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
+                (boost::system::error_code const& ec){
+                    if (func) func(ec);
+                    on_pub_res_sent(packet_id);
+                }
             );
             break;
         default:
@@ -12348,22 +12343,6 @@ private:
     }
 
     void async_send_disconnect(
-        async_handler_t func
-    ) {
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            do_async_write(v3_1_1::disconnect_message(), force_move(func));
-            break;
-        case protocol_version::v5:
-            do_async_write(v5::disconnect_message(nullopt, {}), force_move(func));
-            break;
-        default:
-            BOOST_ASSERT(false);
-            break;
-        }
-    }
-
-    void async_send_disconnect(
         v5::disconnect_reason_code reason,
         std::vector<v5::property_variant> props,
         async_handler_t func
@@ -12539,7 +12518,7 @@ private:
         socket_->async_write(
             force_move(buf),
             write_completion_handler(
-                shared_from_this(),
+                this->shared_from_this(),
                 [handlers = force_move(handlers)]
                 (boost::system::error_code const& ec) {
                     for (auto const& h : handlers) {
@@ -12553,10 +12532,9 @@ private:
     }
 
     void do_async_write(basic_message_variant<PacketIdBytes> mv, async_handler_t func) {
-        auto self = shared_from_this();
         // Move this job to the socket's strand so that it can be queued without mutexes.
         socket_->post(
-            [this, self = force_move(self), mv = force_move(mv), func = force_move(func)]
+            [this, self = this->shared_from_this(), mv = force_move(mv), func = force_move(func)]
             () mutable {
                 if (!connected_) {
                     // offline async publish is successfully finished, because there's nothing to do.
