@@ -6034,7 +6034,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_puback(packet_id, nullopt, std::vector<v5::property_variant>{}, force_move(func));
+        async_send_puback(packet_id, v5::puback_reason_code::success, std::vector<v5::property_variant>{}, force_move(func));
     }
 
     /**
@@ -6072,7 +6072,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrec(packet_id, nullopt, std::vector<v5::property_variant>{}, force_move(func));
+        async_send_pubrec(packet_id, v5::pubrec_reason_code::success, std::vector<v5::property_variant>{}, force_move(func));
     }
 
     /**
@@ -6110,7 +6110,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrel(packet_id, nullopt, std::vector<v5::property_variant>{}, force_move(func));
+        async_send_pubrel(packet_id, v5::pubrel_reason_code::success, std::vector<v5::property_variant>{}, force_move(func));
     }
 
     /**
@@ -6151,7 +6151,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubcomp(packet_id, nullopt, std::vector<v5::property_variant>{}, force_move(func));
+        async_send_pubcomp(packet_id, v5::pubcomp_reason_code::success, std::vector<v5::property_variant>{}, force_move(func));
     }
 
     /**
