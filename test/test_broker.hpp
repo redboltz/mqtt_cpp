@@ -716,7 +716,7 @@ private:
             for (auto const& e : entries) {
                 MQTT_NS::buffer topic = std::get<0>(e);
                 MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
-                res.emplace_back(static_cast<MQTT_NS::suback_return_code>(qos_value)); // converts to granted_qos_x
+                res.emplace_back(MQTT_NS::qos_to_suback_return_code(qos_value)); // converts to granted_qos_x
                 // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
                 // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
                 subs_.emplace(std::move(topic), spep, qos_value);
@@ -732,7 +732,7 @@ private:
             for (auto const& e : entries) {
                 MQTT_NS::buffer topic = std::get<0>(e);
                 MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
-                res.emplace_back(static_cast<MQTT_NS::v5::suback_reason_code>(qos_value)); // converts to granted_qos_x
+                res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(qos_value)); // converts to granted_qos_x
                 // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
                 // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
                 subs_.emplace(std::move(topic), spep, qos_value);
