@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
         });
     c->set_suback_handler(
         [&]
-        (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results){
+        (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results){
             std::cout << "suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : results) {
                 std::cout << "[client] subscribe result: " << e << std::endl;

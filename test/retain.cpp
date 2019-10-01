@@ -69,11 +69,11 @@ BOOST_AUTO_TEST_CASE( simple ) {
                 });
             c->set_suback_handler(
                 [&chk, &pid_sub]
-                (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_0);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
                     return true;
                 });
             c->set_unsuback_handler(
@@ -255,11 +255,11 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                 });
             c->set_suback_handler(
                 [&chk, &pid_sub]
-                (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_0);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
                     return true;
                 });
             c->set_unsuback_handler(
@@ -442,10 +442,10 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                 });
             c->set_suback_handler(
                 [&chk, &c, &pid_sub]
-                (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_0);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
                     auto ret = chk.match(
                         "h_connack",
                         [&] {
