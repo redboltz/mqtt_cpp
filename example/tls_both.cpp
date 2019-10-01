@@ -366,7 +366,7 @@ int main(int argc, char** argv) {
     std::uint16_t pid_sub2;
 
     auto c = MQTT_NS::make_tls_sync_client(ioc, "localhost", port);
-    c->set_ca_cert_file(base + "cacert.pem");
+    c->get_ssl_context().load_verify_file(base + "cacert.pem");
 
     int count = 0;
     auto disconnect = [&] {

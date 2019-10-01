@@ -52,7 +52,7 @@ inline void do_combi_test(Test const& test) {
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        c->set_ca_cert_file(base + "cacert.pem");
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
     {
@@ -63,7 +63,7 @@ inline void do_combi_test(Test const& test) {
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        c->set_ca_cert_file(base + "cacert.pem");
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
 #endif // defined(MQTT_USE_TLS)
@@ -91,7 +91,7 @@ inline void do_combi_test(Test const& test) {
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        c->set_ca_cert_file(base + "cacert.pem");
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
     {
@@ -102,7 +102,7 @@ inline void do_combi_test(Test const& test) {
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        c->set_ca_cert_file(base + "cacert.pem");
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
 #endif // defined(MQTT_USE_TLS)
@@ -134,7 +134,7 @@ inline void do_combi_test_sync(Test const& test) {
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        c->set_ca_cert_file(base + "cacert.pem");
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
     {
@@ -145,7 +145,7 @@ inline void do_combi_test_sync(Test const& test) {
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        c->set_ca_cert_file(base + "cacert.pem");
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
 #endif // defined(MQTT_USE_TLS)
@@ -173,7 +173,7 @@ inline void do_combi_test_sync(Test const& test) {
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        c->set_ca_cert_file(base + "cacert.pem");
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
     {
@@ -184,7 +184,7 @@ inline void do_combi_test_sync(Test const& test) {
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        c->set_ca_cert_file(base + "cacert.pem");
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
 #endif // defined(MQTT_USE_TLS)
@@ -216,7 +216,7 @@ inline void do_combi_test_async(Test const& test) {
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        c->set_ca_cert_file(base + "cacert.pem");
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
     {
@@ -227,7 +227,7 @@ inline void do_combi_test_async(Test const& test) {
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        c->set_ca_cert_file(base + "cacert.pem");
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
 #endif // defined(MQTT_USE_TLS)
@@ -255,7 +255,7 @@ inline void do_combi_test_async(Test const& test) {
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        c->set_ca_cert_file(base + "cacert.pem");
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
     {
@@ -266,7 +266,7 @@ inline void do_combi_test_async(Test const& test) {
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        c->set_ca_cert_file(base + "cacert.pem");
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
         test(ioc, c, s, b);
     }
 #endif // defined(MQTT_USE_TLS)
