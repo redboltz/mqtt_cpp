@@ -300,6 +300,22 @@ public:
         underlying_connect_timeout_ = force_move(timeout);
     }
 
+    /**
+     * @brief Get boost asio ssl context.
+     * @return ssl context
+     */
+    as::ssl::context& get_context() {
+        return ctx_;
+    }
+
+    /**
+     * @brief Get boost asio ssl context.
+     * @return ssl context
+     */
+    as::ssl::context const& get_context() const {
+        return ctx_;
+    }
+
 private:
     void do_accept() {
         if (close_request_) return;
@@ -711,6 +727,22 @@ public:
      */
     void set_underlying_connect_timeout(boost::posix_time::time_duration timeout) {
         underlying_connect_timeout_ = force_move(timeout);
+    }
+
+    /**
+     * @brief Get boost asio ssl context.
+     * @return ssl context
+     */
+    as::ssl::context& get_context() {
+        return ctx_;
+    }
+
+    /**
+     * @brief Get boost asio ssl context.
+     * @return ssl context
+     */
+    as::ssl::context const& get_context() const {
+        return ctx_;
     }
 
 private:

@@ -315,10 +315,28 @@ public:
     }
 
 #if defined(MQTT_USE_TLS)
+
+    /**
+     * @brief Get boost asio ssl context.
+     * @return ssl context
+     */
+    as::ssl::context& get_context() {
+        return ctx_;
+    }
+
+    /**
+     * @brief Get boost asio ssl context.
+     * @return ssl context
+     */
+    as::ssl::context const& get_context() const {
+        return ctx_;
+    }
+
     /**
      * @brief Call boost::asio::context::set_default_verify_paths
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_default_verify_paths.html
      */
+    MQTT_DEPRECATED("Use get_context().set_default_verify_paths()")
     void set_default_verify_paths() {
         ctx_.set_default_verify_paths();
     }
@@ -329,6 +347,7 @@ public:
      * @param file ca cert file path
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/load_verify_file.html
      */
+    MQTT_DEPRECATED("Use get_context().load_verify_file()")
     void set_ca_cert_file(std::string file) {
         ctx_.load_verify_file(force_move(file));
     }
@@ -343,6 +362,7 @@ public:
      * See https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_keylog_callback.html
      * See https://wiki.wireshark.org/SSL
      */
+    MQTT_DEPRECATED("Use SSL_CTX_set_keylog_callback(client->get_context().native_handle(), callback")
     void set_ssl_keylog_callback(void (*cb)(SSL const* ssl, char const* line)) {
         SSL_CTX* ssl_ctx = ctx_.native_handle();
         SSL_CTX_set_keylog_callback(ssl_ctx, cb);
@@ -355,6 +375,7 @@ public:
      * @param path the path contains ca cert files
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/add_verify_path.html
      */
+    MQTT_DEPRECATED("Use get_context().add_verify_path()")
     void add_verify_path(std::string path) {
         ctx_.add_verify_path(path);
     }
@@ -364,6 +385,7 @@ public:
      * @param depth maximum depth for the certificate chain verificatrion that shall be allowed
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_verify_depth.html
      */
+    MQTT_DEPRECATED("Use get_context().set_verify_depth()")
     void set_verify_depth(int depth) {
         ctx_.set_verify_depth(depth);
     }
@@ -374,6 +396,7 @@ public:
      * @param file client certificate file path
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/load_verify_file.html
      */
+    MQTT_DEPRECATED("Use get_context().use_certificate_file()")
     void set_client_cert_file(std::string file) {
         ctx_.use_certificate_file(force_move(file), as::ssl::context::pem);
     }
@@ -384,6 +407,7 @@ public:
      * @param file client certificate key file path
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/use_private_key_file.html
      */
+    MQTT_DEPRECATED("Use get_context().use_private_key_file()")
     void set_client_key_file(std::string file) {
         ctx_.use_private_key_file(force_move(file), as::ssl::context::pem);
     }
@@ -393,6 +417,7 @@ public:
      * @param mode See http://www.boost.org/doc/html/boost_asio/reference/ssl__verify_mode.html
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_verify_mode.html
      */
+    MQTT_DEPRECATED("Use get_context().set_verify_mode()")
     void set_verify_mode(as::ssl::verify_mode mode) {
         ctx_.set_verify_mode(mode);
     }
@@ -403,6 +428,7 @@ public:
      * See http://www.boost.org/doc/html/boost_asio/reference/ssl__context/set_verify_callback.html
      */
     template <typename VerifyCallback>
+    MQTT_DEPRECATED("Use get_context().set_verify_callback()")
     void set_verify_callback(VerifyCallback&& callback) {
         ctx_.set_verify_callback(std::forward<VerifyCallback>(callback));
     }

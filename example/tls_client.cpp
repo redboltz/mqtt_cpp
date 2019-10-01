@@ -37,11 +37,12 @@ int main(int argc, char** argv) {
     // Setup client
     c->set_client_id("cid1");
     c->set_clean_session(true);
-    c->set_ca_cert_file(cacert);
+    c->get_context().load_verify_file(cacert);
 
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L
 
-    c->set_ssl_keylog_callback(
+    SSL_CTX_set_keylog_callback(
+        c->get_context().native_handle(),
         [](SSL const*, char const* line) {
             std::cout << line << std::endl;
         }

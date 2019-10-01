@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
     // Setup client
     c->set_client_id("cid1");
     c->set_clean_session(true);
-    c->set_ca_cert_file(cacert);
+    c->get_context().load_verify_file(cacert);
 
     // Setup handlers
     c->set_connack_handler(

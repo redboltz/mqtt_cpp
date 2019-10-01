@@ -82,4 +82,5 @@
 ")\n"
 
 
+
 #endif // MQTT_DEPRECATED_MSG_HPP
