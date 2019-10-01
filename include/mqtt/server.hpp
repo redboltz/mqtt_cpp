@@ -304,7 +304,7 @@ public:
      * @brief Get boost asio ssl context.
      * @return ssl context
      */
-    as::ssl::context& get_context() {
+    as::ssl::context& get_ssl_context() {
         return ctx_;
     }
 
@@ -312,7 +312,7 @@ public:
      * @brief Get boost asio ssl context.
      * @return ssl context
      */
-    as::ssl::context const& get_context() const {
+    as::ssl::context const& get_ssl_context() const {
         return ctx_;
     }
 
@@ -733,7 +733,7 @@ public:
      * @brief Get boost asio ssl context.
      * @return ssl context
      */
-    as::ssl::context& get_context() {
+    as::ssl::context& get_ssl_context() {
         return ctx_;
     }
 
@@ -741,7 +741,7 @@ public:
      * @brief Get boost asio ssl context.
      * @return ssl context
      */
-    as::ssl::context const& get_context() const {
+    as::ssl::context const& get_ssl_context() const {
         return ctx_;
     }
 
