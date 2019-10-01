@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_return_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     c->unsubscribe("topic1");
                     return true;
@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_return_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     c->unsubscribe({"topic1"s, "topic2"s});
                     return true;
@@ -241,7 +241,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_return_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     c->unsubscribe(std::vector<MQTT_NS::string_view>{"topic1", "topic2"});
                     return true;
@@ -340,7 +340,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_return_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     auto topic = std::make_shared<std::string>("topic1");
                     c->async_unsubscribe(
@@ -449,7 +449,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_return_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto topic2 = std::make_shared<std::string>("topic2");
@@ -574,7 +574,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_reason_code> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_return_code> /*results*/) {
                     MQTT_CHK("h_suback");
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto topic2 = std::make_shared<std::string>("topic2");

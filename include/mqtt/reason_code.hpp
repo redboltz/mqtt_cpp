@@ -12,29 +12,29 @@
 
 namespace MQTT_NS {
 
-enum class suback_reason_code : std::uint8_t {
-    granted_qos_0                          = 0x00,
-    granted_qos_1                          = 0x01,
-    granted_qos_2                          = 0x02,
-    unspecified_error                      = 0x80,
+enum class suback_return_code : std::uint8_t {
+    success_maximum_qos_0                  = 0x00,
+    success_maximum_qos_1                  = 0x01,
+    success_maximum_qos_2                  = 0x02,
+    failure                                = 0x80,
 };
 
 constexpr
-char const* suback_reason_code_to_str(suback_reason_code v) {
+char const* suback_return_code_to_str(suback_return_code v) {
     switch(v)
     {
-    case suback_reason_code::granted_qos_0:                          return "granted_qos_0";
-    case suback_reason_code::granted_qos_1:                          return "granted_qos_1";
-    case suback_reason_code::granted_qos_2:                          return "granted_qos_2";
-    case suback_reason_code::unspecified_error:                      return "unspecified_error";
-    default:                                                         return "unknown_suback_reason_code";
+    case suback_return_code::success_maximum_qos_0: return "success_maximum_qos_0";
+    case suback_return_code::success_maximum_qos_1: return "success_maximum_qos_1";
+    case suback_return_code::success_maximum_qos_2: return "success_maximum_qos_2";
+    case suback_return_code::failure:               return "failure";
+    default:                                        return "unknown_suback_return_code";
     }
 }
 
 template<typename Stream>
-Stream & operator<<(Stream & os, suback_reason_code val)
+Stream & operator<<(Stream & os, suback_return_code val)
 {
-    os << suback_reason_code_to_str(val);
+    os << suback_return_code_to_str(val);
     return os;
 }
 

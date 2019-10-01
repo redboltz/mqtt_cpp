@@ -85,12 +85,12 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
             });
         c->set_suback_handler(
             [&chk, &c, &pid_sub]
-            (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+            (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
                 MQTT_CHK("h_suback");
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(results.size() == 2U);
-                BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_0);
-                BOOST_TEST(results[1] == MQTT_NS::suback_reason_code::granted_qos_0);
+                BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
+                BOOST_TEST(results[1] == MQTT_NS::suback_return_code::success_maximum_qos_0);
                 c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
                 return true;
             });
@@ -227,11 +227,11 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
         });
     c1->set_suback_handler(
         [&chk, &c1, &sub_count, &pid_sub1]
-        (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+        (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
             MQTT_CHK("h_suback_1");
             BOOST_TEST(packet_id == pid_sub1);
             BOOST_TEST(results.size() == 1U);
-            BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_0);
+            BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
             if (++sub_count == 2)
                 c1->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
             return true;
@@ -310,11 +310,11 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
         });
     c2->set_suback_handler(
         [&chk, &c2, &sub_count, &pid_sub2]
-        (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+        (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
             MQTT_CHK("h_suback_2");
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
-            BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_0);
+            BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
             if (++sub_count == 2)
                 c2->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
             return true;
@@ -433,11 +433,11 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
         });
     c1->set_suback_handler(
         [&chk, &c1ready, &c2ready, &c3ready, &c3, &pid_sub1, &pid_pub3]
-        (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+        (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
             MQTT_CHK("h_suback_1");
             BOOST_TEST(packet_id == pid_sub1);
             BOOST_TEST(results.size() == 1U);
-            BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_1);
+            BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_1);
 
             c1ready = true;
             if (c1ready && c2ready && c3ready) {
@@ -497,11 +497,11 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
         });
     c2->set_suback_handler(
         [&chk, &c1ready, &c2ready, &c3ready, &c3, &pid_sub2, &pid_pub3]
-        (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+        (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
             MQTT_CHK("h_suback_2");
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
-            BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_1);
+            BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_1);
 
             c2ready = true;
             if (c1ready && c2ready && c3ready) {

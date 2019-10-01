@@ -69,11 +69,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                 });
             c->set_suback_handler(
                 [&chk, &c, &pid_sub]
-                (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_2);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
                     c->async_publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
                     return true;
                 });
@@ -265,11 +265,11 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                 });
             c->set_suback_handler(
                 [&chk, &c, &pid_sub, &pid_pub]
-                (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_2);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
                     pid_pub = c->async_publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
                     return true;
                 });
@@ -461,11 +461,11 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                 });
             c->set_suback_handler(
                 [&chk, &c, &pid_sub, &pid_pub]
-                (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_2);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
                     pid_pub = c->async_publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                     return true;
                 });
@@ -642,11 +642,11 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                 });
             c->set_suback_handler(
                 [&chk, &c, &pid_sub]
-                (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_0);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
                     c->async_publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
                     return true;
                 });
@@ -823,11 +823,11 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                 });
             c->set_suback_handler(
                 [&chk, &c, &pid_sub]
-                (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_1);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_1);
                     auto ret =
                         c->async_publish_dup(1, "topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
                     BOOST_TEST(ret == true);
@@ -1008,11 +1008,11 @@ BOOST_AUTO_TEST_CASE( publish_dup_function_buffer ) {
                 });
             c->set_suback_handler(
                 [&chk, &c, &pid_sub]
-                (packet_id_t packet_id, std::vector<MQTT_NS::suback_reason_code> results) {
+                (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
-                    BOOST_TEST(results[0] == MQTT_NS::suback_reason_code::granted_qos_1);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_1);
                     auto ret =
                         c->async_publish_dup(1, "topic1"_mb, "topic1_contents"_mb, MQTT_NS::qos::at_least_once);
                     BOOST_TEST(ret == true);

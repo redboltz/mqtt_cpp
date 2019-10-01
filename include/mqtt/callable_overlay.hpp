@@ -237,7 +237,7 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_suback(packet_id_t packet_id,
-                                          std::vector<MQTT_NS::suback_reason_code> reasons) override final {
+                                          std::vector<MQTT_NS::suback_return_code> reasons) override final {
         return    ! h_suback_
                || h_suback_(packet_id, MQTT_NS::force_move(reasons));
     }
@@ -915,7 +915,7 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using suback_handler = std::function<bool(packet_id_t packet_id,
-                                              std::vector<MQTT_NS::suback_reason_code> qoss)>;
+                                              std::vector<MQTT_NS::suback_return_code> qoss)>;
 
     /**
      * @brief Unsubscribe handler
