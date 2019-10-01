@@ -8788,14 +8788,13 @@ private:
 
     // process common
 
-    template <typename NextFunc, typename NextPhase, typename Info>
+    template <typename InfoType,
+              void (this_type::*NextFunc)(any, buffer, InfoType&&, this_type_sp)>
     void process_header(
         any session_life_keeper,
         bool all_read,
         std::size_t header_len,
-        NextFunc&& next_func,
-        NextPhase next_phase,
-        Info&& info,
+        InfoType&& info,
         this_type_sp self
     ) {
 
@@ -8808,17 +8807,14 @@ private:
                     this,
                     session_life_keeper = force_move(session_life_keeper),
                     buf = buffer(string_view(ptr, remaining_length_), force_move(spa)),
-                    next_func = std::forward<NextFunc>(next_func),
-                    next_phase,
-                    info = std::forward<Info>(info),
+                    info = std::forward<InfoType>(info),
                     self = force_move(self)
                 ]
                 (boost::system::error_code const& ec, std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, bytes_transferred, remaining_length_)) return;
-                    (this->*next_func)(
+                    (this->*NextFunc)(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        next_phase,
                         force_move(info),
                         force_move(self)
                     );
@@ -8828,10 +8824,9 @@ private:
         }
 
         if (header_len == 0) {
-            (this->*next_func)(
+            (this->*NextFunc)(
                 force_move(session_life_keeper),
                 buffer(),
-                next_phase,
                 force_move(info),
                 force_move(self)
             );
@@ -8844,18 +8839,15 @@ private:
                 this,
                 session_life_keeper = force_move(session_life_keeper),
                 header_len,
-                next_func = std::forward<NextFunc>(next_func),
-                next_phase,
-                info = std::forward<Info>(info),
+                info = std::forward<InfoType>(info),
                 self = force_move(self)
             ]
             (boost::system::error_code const& ec,
              std::size_t bytes_transferred) mutable {
                 if (!check_error_and_transferred_length(ec, bytes_transferred, header_len)) return;
-                (this->*next_func)(
+                (this->*NextFunc)(
                     force_move(session_life_keeper),
                     buffer(string_view(buf_.data(), header_len)),
-                    next_phase,
                     force_move(info),
                     force_move(self)
                 );
@@ -8908,25 +8900,24 @@ private:
         connect_info info;
         info.header_len = header_len;
 
-        process_header(
+        process_header<connect_info,
+                       &this_type::process_connect_impl<connect_phase::header>>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_connect_impl,
-            connect_phase::header,
             force_move(info),
             force_move(self)
         );
     }
 
+    template<connect_phase Phase>
     void process_connect_impl(
         any session_life_keeper,
         buffer buf,
-        connect_phase phase,
         connect_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case connect_phase::header: {
             static constexpr char protocol_name[] = { 0x00, 0x04, 'M', 'Q', 'T', 'T' };
             if (std::memcmp(buf.data(), protocol_name, sizeof(protocol_name)) != 0) {
@@ -8954,18 +8945,22 @@ private:
             clean_session_ = connect_flags::has_clean_session(info.connect_flag);
 
             buf.remove_prefix(info.header_len); // consume buffer
-            process_connect_impl(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [&] {
-                    if (version_ == protocol_version::v5) {
-                        return connect_phase::properties;
-                    }
-                    return connect_phase::client_id;
-                } (),
-                force_move(info),
-                force_move(self)
-            );
+            if(version_ == protocol_version::v5) {
+                process_connect_impl<connect_phase::properties>(
+                    force_move(session_life_keeper),
+                    force_move(buf),
+                    force_move(info),
+                    force_move(self)
+                );
+            }
+            else {
+                process_connect_impl<connect_phase::client_id>(
+                    force_move(session_life_keeper),
+                    force_move(buf),
+                    force_move(info),
+                    force_move(self)
+                );
+            }
         } break;
         case connect_phase::properties:
             process_properties(
@@ -8982,10 +8977,9 @@ private:
                     this_type_sp self
                 ) mutable {
                     info.props = force_move(props);
-                    process_connect_impl(
+                    process_connect_impl<connect_phase::client_id>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        connect_phase::client_id,
                         force_move(info),
                         force_move(self)
                     );
@@ -9004,24 +8998,38 @@ private:
                 (buffer client_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.client_id = force_move(client_id);
                     auto connect_flag = info.connect_flag;
-                    process_connect_impl(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [&] {
-                            if (connect_flags::has_will_flag(connect_flag)) {
-                                return connect_phase::will;
-                            }
-                            if (connect_flags::has_user_name_flag(connect_flag)) {
-                                return connect_phase::user_name;
-                            }
-                            if (connect_flags::has_password_flag(connect_flag)) {
-                                return connect_phase::password;
-                            }
-                            return connect_phase::finish;
-                        } (),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if (connect_flags::has_will_flag(connect_flag)) {
+                        process_connect_impl<connect_phase::will>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else if (connect_flags::has_user_name_flag(connect_flag)) {
+                        process_connect_impl<connect_phase::user_name>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else if (connect_flags::has_password_flag(connect_flag)) {
+                        process_connect_impl<connect_phase::password>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_connect_impl<connect_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -9056,22 +9064,30 @@ private:
                                 ]
                                 (buffer will_payload, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                                     info.will_payload = force_move(will_payload);
-                                    auto connect_flag = info.connect_flag;
-                                    process_connect_impl(
-                                        force_move(session_life_keeper),
-                                        force_move(buf),
-                                        [&] {
-                                            if (connect_flags::has_user_name_flag(connect_flag)) {
-                                                return connect_phase::user_name;
-                                            }
-                                            if (connect_flags::has_password_flag(connect_flag)) {
-                                                return connect_phase::password;
-                                            }
-                                            return connect_phase::finish;
-                                        } (),
-                                        force_move(info),
-                                        force_move(self)
-                                    );
+                                    if (connect_flags::has_user_name_flag(info.connect_flag)) {
+                                        process_connect_impl<connect_phase::user_name>(
+                                            force_move(session_life_keeper),
+                                            force_move(buf),
+                                            force_move(info),
+                                            force_move(self)
+                                        );
+                                    }
+                                    else if (connect_flags::has_password_flag(info.connect_flag)) {
+                                        process_connect_impl<connect_phase::password>(
+                                            force_move(session_life_keeper),
+                                            force_move(buf),
+                                            force_move(info),
+                                            force_move(self)
+                                        );
+                                    }
+                                    else {
+                                        process_connect_impl<connect_phase::finish>(
+                                            force_move(session_life_keeper),
+                                            force_move(buf),
+                                            force_move(info),
+                                            force_move(self)
+                                        );
+                                    }
                                 },
                                 force_move(self)
                             );
@@ -9088,7 +9104,12 @@ private:
                         info = force_move(info),
                         topic_message_proc
                     ]
-                    (std::vector<v5::property_variant> will_props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                    (
+                         std::vector<v5::property_variant> will_props,
+                         buffer buf,
+                         any session_life_keeper,
+                         this_type_sp self
+                    ) mutable {
                         info.will_props = force_move(will_props);
                         topic_message_proc(
                             force_move(session_life_keeper),
@@ -9118,19 +9139,22 @@ private:
                 ]
                 (buffer user_name, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.user_name = force_move(user_name);
-                    auto connect_flag = info.connect_flag;
-                    process_connect_impl(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [&] {
-                            if (connect_flags::has_password_flag(connect_flag)) {
-                                return connect_phase::password;
-                            }
-                            return connect_phase::finish;
-                        } (),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if (connect_flags::has_password_flag(info.connect_flag)) {
+                        process_connect_impl<connect_phase::password>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_connect_impl<connect_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -9145,10 +9169,9 @@ private:
                 ]
                 (buffer password, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.password = force_move(password);
-                    process_connect_impl(
+                    process_connect_impl<connect_phase::finish>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        connect_phase::finish,
                         force_move(info),
                         force_move(self)
                     );
@@ -9243,25 +9266,25 @@ private:
 
         connack_info info;
         info.header_len = header_len;
-        process_header(
+
+        process_header<connack_info,
+                       &this_type::process_connack_impl<connack_phase::header>>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_connack_impl,
-            connack_phase::header,
             force_move(info),
             force_move(self)
         );
     }
 
+    template<connack_phase Phase>
     void process_connack_impl(
         any session_life_keeper,
         buffer buf,
-        connack_phase phase,
         connack_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case connack_phase::header:
             info.session_present = is_session_present(buf[0]);
             switch (version_) {
@@ -9276,18 +9299,22 @@ private:
             }
 
             buf.remove_prefix(info.header_len); // consume buffer
-            process_connack_impl(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [&] {
-                    if (version_ == protocol_version::v5) {
-                        return connack_phase::properties;
-                    }
-                    return connack_phase::finish;
-                } (),
-                force_move(info),
-                force_move(self)
-            );
+            if (version_ == protocol_version::v5) {
+                process_connack_impl<connack_phase::properties>(
+                    force_move(session_life_keeper),
+                    force_move(buf),
+                    force_move(info),
+                    force_move(self)
+                );
+            }
+            else {
+                process_connack_impl<connack_phase::finish>(
+                    force_move(session_life_keeper),
+                    force_move(buf),
+                    force_move(info),
+                    force_move(self)
+                );
+            }
             break;
         case connack_phase::properties:
             process_properties(
@@ -9297,12 +9324,16 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (
+                    std::vector<v5::property_variant> props,
+                    buffer buf,
+                    any session_life_keeper,
+                    this_type_sp self
+                ) mutable {
                     info.props = force_move(props);
-                    process_connack_impl(
+                    process_connack_impl<connack_phase::finish>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        connack_phase::finish,
                         force_move(info),
                         force_move(self)
                     );
@@ -9410,25 +9441,24 @@ private:
             return;
         }
 
-        process_header(
+        process_header<publish_info,
+                       &this_type::process_publish_impl<publish_phase::topic_name>>(
             force_move(session_life_keeper),
             all_read,
             0,
-            &this_type::process_publish_impl,
-            publish_phase::topic_name,
             publish_info(),
             force_move(self)
         );
     }
 
+    template<publish_phase Phase>
     void process_publish_impl(
         any session_life_keeper,
         buffer buf,
-        publish_phase phase,
         publish_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case publish_phase::topic_name:
             process_string(
                 force_move(session_life_keeper),
@@ -9446,21 +9476,32 @@ private:
                         call_protocol_error_handlers();
                         return;
                     }
-                    process_publish_impl(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [&] {
-                            if (qos_value == qos::at_most_once) {
-                                if (version_ == protocol_version::v5) {
-                                    return publish_phase::properties;
-                                }
-                                return publish_phase::payload;
-                            }
-                            return publish_phase::packet_id;
-                        } (),
-                        force_move(info),
-                        force_move(self)
-                    );
+                     if(qos_value == qos::at_most_once) {
+                         if(version_ == protocol_version::v5) {
+                             process_publish_impl<publish_phase::properties>(
+                                 force_move(session_life_keeper),
+                                 force_move(buf),
+                                 force_move(info),
+                                 force_move(self)
+                             );
+                         }
+                         else {
+                             process_publish_impl<publish_phase::payload>(
+                                 force_move(session_life_keeper),
+                                 force_move(buf),
+                                 force_move(info),
+                                 force_move(self)
+                             );
+                         }
+                     }
+                     else {
+                         process_publish_impl<publish_phase::packet_id>(
+                             force_move(session_life_keeper),
+                             force_move(buf),
+                             force_move(info),
+                             force_move(self)
+                         );
+                     }
                 },
                 force_move(self)
             );
@@ -9475,19 +9516,22 @@ private:
                 ]
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
-                    process_publish_impl(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [&] {
-                            if (version_ == protocol_version::v5) {
-                                return publish_phase::properties;
-                            }
-                            return publish_phase::payload;
-                        } (),
-                        force_move(info),
-                        force_move(self)
-                    );
-
+                    if (version_ == protocol_version::v5) {
+                        process_publish_impl<publish_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_publish_impl<publish_phase::payload>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -9502,10 +9546,9 @@ private:
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
-                    process_publish_impl(
+                    process_publish_impl<publish_phase::payload>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        publish_phase::payload,
                         force_move(info),
                         force_move(self)
                     );
@@ -9641,25 +9684,24 @@ private:
             return;
         }
 
-        process_header(
+        process_header<puback_info,
+                       &this_type::process_puback_impl<puback_phase::packet_id>>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_puback_impl,
-            puback_phase::packet_id,
             puback_info(),
             force_move(self)
         );
     }
 
+    template<puback_phase Phase>
     void process_puback_impl(
         any session_life_keeper,
         buffer buf,
-        puback_phase phase,
         puback_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case puback_phase::packet_id:
             process_packet_id(
                 force_move(session_life_keeper),
@@ -9670,19 +9712,23 @@ private:
                 ]
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
-                    process_puback_impl(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [&] {
-                            if (remaining_length_ == 0) {
-                                info.reason_code = v5::puback_reason_code::success;
-                                return puback_phase::finish;
-                            }
-                            return puback_phase::reason_code;
-                        } (),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if (remaining_length_ == 0) {
+                        info.reason_code = v5::puback_reason_code::success;
+                        process_puback_impl<puback_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_puback_impl<puback_phase::reason_code>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -9698,10 +9744,9 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::puback_reason_code>(body[0]);
-                    process_puback_impl(
+                    process_puback_impl<puback_phase::properties>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        puback_phase::properties,
                         force_move(info),
                         force_move(self)
                     );
@@ -9719,10 +9764,9 @@ private:
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
-                    process_puback_impl(
+                    process_puback_impl<puback_phase::finish>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        puback_phase::finish,
                         force_move(info),
                         force_move(self)
                     );
@@ -9785,25 +9829,24 @@ private:
             return;
         }
 
-        process_header(
+        process_header<pubrec_info,
+                       &this_type::process_pubrec_impl<pubrec_phase::packet_id>>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_pubrec_impl,
-            pubrec_phase::packet_id,
             pubrec_info(),
             force_move(self)
         );
     }
 
+    template<pubrec_phase Phase>
     void process_pubrec_impl(
         any session_life_keeper,
         buffer buf,
-        pubrec_phase phase,
         pubrec_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case pubrec_phase::packet_id:
             process_packet_id(
                 force_move(session_life_keeper),
@@ -9814,19 +9857,23 @@ private:
                 ]
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
-                    process_pubrec_impl(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [&] {
-                            if (remaining_length_ == 0) {
-                                info.reason_code = v5::pubrec_reason_code::success;
-                                return pubrec_phase::finish;
-                            }
-                            return pubrec_phase::reason_code;
-                        } (),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if(remaining_length_ == 0) {
+                        info.reason_code = v5::pubrec_reason_code::success;
+                        process_pubrec_impl<pubrec_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_pubrec_impl<pubrec_phase::reason_code>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -9842,10 +9889,9 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::pubrec_reason_code>(body[0]);
-                    process_pubrec_impl(
+                    process_pubrec_impl<pubrec_phase::properties>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        pubrec_phase::properties,
                         force_move(info),
                         force_move(self)
                     );
@@ -9863,10 +9909,9 @@ private:
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
-                    process_pubrec_impl(
+                    process_pubrec_impl<pubrec_phase::finish>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        pubrec_phase::finish,
                         force_move(info),
                         force_move(self)
                     );
@@ -9957,25 +10002,24 @@ private:
             return;
         }
 
-        process_header(
+        process_header<pubrel_info,
+                       &this_type::process_pubrel_impl<pubrel_phase::packet_id>>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_pubrel_impl,
-            pubrel_phase::packet_id,
             pubrel_info(),
             force_move(self)
         );
     }
 
+    template<pubrel_phase Phase>
     void process_pubrel_impl(
         any session_life_keeper,
         buffer buf,
-        pubrel_phase phase,
         pubrel_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case pubrel_phase::packet_id:
             process_packet_id(
                 force_move(session_life_keeper),
@@ -9986,19 +10030,23 @@ private:
                 ]
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
-                    process_pubrel_impl(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [&] {
-                            if (remaining_length_ == 0) {
-                                info.reason_code = v5::pubrel_reason_code::success;
-                                return pubrel_phase::finish;
-                            }
-                            return pubrel_phase::reason_code;
-                        } (),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if (remaining_length_ == 0) {
+                        info.reason_code = v5::pubrel_reason_code::success;
+                        process_pubrel_impl<pubrel_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_pubrel_impl<pubrel_phase::reason_code>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -10014,10 +10062,9 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::pubrel_reason_code>(body[0]);
-                    process_pubrel_impl(
+                    process_pubrel_impl<pubrel_phase::properties>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        pubrel_phase::properties,
                         force_move(info),
                         force_move(self)
                     );
@@ -10035,10 +10082,9 @@ private:
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
-                    process_pubrel_impl(
+                    process_pubrel_impl<pubrel_phase::finish>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        pubrel_phase::finish,
                         force_move(info),
                         force_move(self)
                     );
@@ -10116,25 +10162,24 @@ private:
             return;
         }
 
-        process_header(
+        process_header<pubcomp_info,
+                       &this_type::process_pubcomp_impl<pubcomp_phase::packet_id>>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_pubcomp_impl,
-            pubcomp_phase::packet_id,
             pubcomp_info(),
             force_move(self)
         );
     }
 
+    template<pubcomp_phase Phase>
     void process_pubcomp_impl(
         any session_life_keeper,
         buffer buf,
-        pubcomp_phase phase,
         pubcomp_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case pubcomp_phase::packet_id:
             process_packet_id(
                 force_move(session_life_keeper),
@@ -10145,19 +10190,23 @@ private:
                 ]
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
-                    process_pubcomp_impl(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [&] {
-                            if (remaining_length_ == 0) {
-                                info.reason_code = v5::pubcomp_reason_code::success;
-                                return pubcomp_phase::finish;
-                            }
-                            return pubcomp_phase::reason_code;
-                        } (),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if (remaining_length_ == 0) {
+                        info.reason_code = v5::pubcomp_reason_code::success;
+                        process_pubcomp_impl<pubcomp_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_pubcomp_impl<pubcomp_phase::reason_code>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -10173,10 +10222,9 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::pubcomp_reason_code>(body[0]);
-                    process_pubcomp_impl(
+                    process_pubcomp_impl<pubcomp_phase::properties>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        pubcomp_phase::properties,
                         force_move(info),
                         force_move(self)
                     );
@@ -10194,10 +10242,9 @@ private:
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
-                    process_pubcomp_impl(
+                    process_pubcomp_impl<pubcomp_phase::finish>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        pubcomp_phase::finish,
                         force_move(info),
                         force_move(self)
                     );
@@ -10261,25 +10308,24 @@ private:
             return;
         }
 
-        process_header(
+        process_header<subscribe_info,
+                       &this_type::process_subscribe_impl<subscribe_phase::packet_id>>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_subscribe_impl,
-            subscribe_phase::packet_id,
             subscribe_info(),
             force_move(self)
         );
     }
 
+    template<subscribe_phase Phase>
     void process_subscribe_impl(
         any session_life_keeper,
         buffer buf,
-        subscribe_phase phase,
         subscribe_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case subscribe_phase::packet_id:
             process_packet_id(
                 force_move(session_life_keeper),
@@ -10290,18 +10336,22 @@ private:
                 ]
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
-                    process_subscribe_impl(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [&] {
-                            if (version_ == protocol_version::v5) {
-                                return subscribe_phase::properties;
-                            }
-                            return subscribe_phase::topic;
-                        } (),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if (version_ == protocol_version::v5) {
+                        process_subscribe_impl<subscribe_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_subscribe_impl<subscribe_phase::topic>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -10316,10 +10366,9 @@ private:
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
-                    process_subscribe_impl(
+                    process_subscribe_impl<subscribe_phase::topic>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        subscribe_phase::topic,
                         force_move(info),
                         force_move(self)
                     );
@@ -10355,18 +10404,22 @@ private:
                                 return;
                             }
                             info.entries.emplace_back(force_move(topic_filter), option);
-                            process_subscribe_impl(
-                                force_move(session_life_keeper),
-                                force_move(buf),
-                                [&] {
-                                    if (remaining_length_ == 0) {
-                                        return subscribe_phase::finish;
-                                    }
-                                    return subscribe_phase::topic;
-                                } (),
-                                force_move(info),
-                                force_move(self)
-                            );
+                            if (remaining_length_ == 0) {
+                                process_subscribe_impl<subscribe_phase::finish>(
+                                    force_move(session_life_keeper),
+                                    force_move(buf),
+                                    force_move(info),
+                                    force_move(self)
+                                );
+                            }
+                            else {
+                                process_subscribe_impl<subscribe_phase::topic>(
+                                    force_move(session_life_keeper),
+                                    force_move(buf),
+                                    force_move(info),
+                                    force_move(self)
+                                );
+                            }
                         },
                         force_move(self)
                     );
@@ -10419,25 +10472,24 @@ private:
             return;
         }
 
-        process_header(
+        process_header<suback_info,
+                       &this_type::process_suback_impl<suback_phase::packet_id>>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_suback_impl,
-            suback_phase::packet_id,
             suback_info(),
             force_move(self)
         );
     }
 
+    template<suback_phase Phase>
     void process_suback_impl(
         any session_life_keeper,
         buffer buf,
-        suback_phase phase,
         suback_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case suback_phase::packet_id:
             process_packet_id(
                 force_move(session_life_keeper),
@@ -10448,18 +10500,22 @@ private:
                 ]
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
-                    process_suback_impl(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [&] {
-                            if (version_ == protocol_version::v5) {
-                                return suback_phase::properties;
-                            }
-                            return suback_phase::reasons;
-                        } (),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if (version_ == protocol_version::v5) {
+                        process_suback_impl<suback_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_suback_impl<suback_phase::reasons>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -10474,10 +10530,9 @@ private:
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
-                    process_suback_impl(
+                    process_suback_impl<suback_phase::reasons>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        suback_phase::reasons,
                         force_move(info),
                         force_move(self)
                     );
@@ -10591,25 +10646,24 @@ private:
             return;
         }
 
-        process_header(
+        process_header<unsubscribe_info,
+                       &this_type::process_unsubscribe_impl<unsubscribe_phase::packet_id>>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_unsubscribe_impl,
-            unsubscribe_phase::packet_id,
             unsubscribe_info(),
             force_move(self)
         );
     }
 
+    template<unsubscribe_phase Phase>
     void process_unsubscribe_impl(
         any session_life_keeper,
         buffer buf,
-        unsubscribe_phase phase,
         unsubscribe_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case unsubscribe_phase::packet_id:
             process_packet_id(
                 force_move(session_life_keeper),
@@ -10620,18 +10674,22 @@ private:
                 ]
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
-                    process_unsubscribe_impl(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [&] {
-                            if (version_ == protocol_version::v5) {
-                                return unsubscribe_phase::properties;
-                            }
-                            return unsubscribe_phase::topic;
-                        } (),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if (version_ == protocol_version::v5) {
+                        process_unsubscribe_impl<unsubscribe_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_unsubscribe_impl<unsubscribe_phase::topic>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -10646,10 +10704,9 @@ private:
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
-                    process_unsubscribe_impl(
+                    process_unsubscribe_impl<unsubscribe_phase::topic>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        unsubscribe_phase::topic,
                         force_move(info),
                         force_move(self)
                     );
@@ -10667,18 +10724,22 @@ private:
                 ]
                 (buffer topic_filter, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.entries.emplace_back(force_move(topic_filter));
-                    process_unsubscribe_impl(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [&] {
-                            if (remaining_length_ == 0) {
-                                return unsubscribe_phase::finish;
-                            }
-                            return unsubscribe_phase::topic;
-                        } (),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if (remaining_length_ == 0) {
+                        process_unsubscribe_impl<unsubscribe_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_unsubscribe_impl<unsubscribe_phase::topic>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -10728,25 +10789,24 @@ private:
             return;
         }
 
-        process_header(
+        process_header<unsuback_info,
+                       &this_type::process_unsuback_impl<unsuback_phase::packet_id>>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_unsuback_impl,
-            unsuback_phase::packet_id,
             unsuback_info(),
             force_move(self)
         );
     }
 
+    template<unsuback_phase Phase>
     void process_unsuback_impl(
         any session_life_keeper,
         buffer buf,
-        unsuback_phase phase,
         unsuback_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case unsuback_phase::packet_id:
             process_packet_id(
                 force_move(session_life_keeper),
@@ -10768,10 +10828,9 @@ private:
                         }
                         break;
                     case protocol_version::v5:
-                        process_unsuback_impl(
+                        process_unsuback_impl<unsuback_phase::properties>(
                             force_move(session_life_keeper),
                             force_move(buf),
-                            unsuback_phase::properties,
                             force_move(info),
                             force_move(self)
                         );
@@ -10793,10 +10852,9 @@ private:
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
-                    process_unsuback_impl(
+                    process_unsuback_impl<unsuback_phase::reasons>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        unsuback_phase::reasons,
                         force_move(info),
                         force_move(self)
                     );
@@ -10892,10 +10950,9 @@ private:
     ) {
         if (remaining_length_ == 0) {
             disconnect_info info { v5::disconnect_reason_code::normal_disconnection, std::vector<v5::property_variant>() };
-            process_disconnect_impl(
+            process_disconnect_impl<disconnect_phase::finish>(
                 force_move(session_life_keeper),
                 buffer(),
-                disconnect_phase::finish,
                 force_move(info),
                 force_move(self)
             );
@@ -10915,25 +10972,24 @@ private:
             return;
         }
 
-        process_header(
+        process_header<disconnect_info,
+                       &this_type::process_disconnect_impl<disconnect_phase::reason_code>>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_disconnect_impl,
-            disconnect_phase::reason_code,
             disconnect_info(),
             force_move(self)
         );
     }
 
+    template<disconnect_phase Phase>
     void process_disconnect_impl(
         any session_life_keeper,
         buffer buf,
-        disconnect_phase phase,
         disconnect_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case disconnect_phase::reason_code:
             process_nbytes(
                 force_move(session_life_keeper),
@@ -10945,10 +11001,9 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::disconnect_reason_code>(body[0]);
-                    process_disconnect_impl(
+                    process_disconnect_impl<disconnect_phase::properties>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        disconnect_phase::properties,
                         force_move(info),
                         force_move(self)
                     );
@@ -10966,10 +11021,9 @@ private:
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
-                    process_disconnect_impl(
+                    process_disconnect_impl<disconnect_phase::finish>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        disconnect_phase::finish,
                         force_move(info),
                         force_move(self)
                     );
@@ -11016,10 +11070,9 @@ private:
         }
 
         if (remaining_length_ == 0) {
-            process_auth_impl(
+            process_auth_impl<auth_phase::finish>(
                 force_move(session_life_keeper),
                 buffer(),
-                auth_phase::finish,
                 auth_info{ v5::auth_reason_code::success, std::vector<v5::property_variant>() },
                 force_move(self)
             );
@@ -11034,25 +11087,24 @@ private:
             return;
         }
 
-        process_header(
+        process_header<auth_info,
+                       &this_type::process_auth_impl<auth_phase::reason_code>>(
             force_move(session_life_keeper),
             all_read,
             header_len,
-            &this_type::process_auth_impl,
-            auth_phase::reason_code,
             auth_info(),
             force_move(self)
         );
     }
 
+    template<auth_phase Phase>
     void process_auth_impl(
         any session_life_keeper,
         buffer buf,
-        auth_phase phase,
         auth_info&& info,
         this_type_sp self
     ) {
-        switch (phase) {
+        switch (Phase) {
         case auth_phase::reason_code:
             process_nbytes(
                 force_move(session_life_keeper),
@@ -11064,10 +11116,9 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::auth_reason_code>(body[0]);
-                    process_auth_impl(
+                    process_auth_impl<auth_phase::properties>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        auth_phase::properties,
                         force_move(info),
                         force_move(self)
                     );
@@ -11085,10 +11136,9 @@ private:
                 ]
                 (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
-                    process_auth_impl(
+                    process_auth_impl<auth_phase::finish>(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        auth_phase::finish,
                         force_move(info),
                         force_move(self)
                     );
