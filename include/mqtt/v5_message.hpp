@@ -38,6 +38,10 @@
 #include <mqtt/packet_id_type.hpp>
 #include <mqtt/move.hpp>
 
+#if !defined(MQTT_ALWAYS_SEND_REASON_CODE)
+#define MQTT_ALWAYS_SEND_REASON_CODE false
+#endif // !defined(MQTT_ALWAYS_SEND_REASON_CODE)
+
 namespace MQTT_NS {
 
 namespace as = boost::asio;
