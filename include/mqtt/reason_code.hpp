@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <mqtt/namespace.hpp>
+#include <mqtt/subscribe_options.hpp>
 
 namespace MQTT_NS {
 
@@ -36,6 +37,10 @@ Stream & operator<<(Stream & os, suback_return_code val)
 {
     os << suback_return_code_to_str(val);
     return os;
+}
+
+constexpr suback_return_code qos_to_suback_return_code(qos q) {
+    return static_cast<suback_return_code>(q);
 }
 
 namespace v5 {
@@ -221,6 +226,10 @@ Stream & operator<<(Stream & os, suback_reason_code val)
 {
     os << suback_reason_code_to_str(val);
     return os;
+}
+
+constexpr suback_reason_code qos_to_suback_reason_code(qos q) {
+    return static_cast<suback_reason_code>(q);
 }
 
 enum class unsuback_reason_code : std::uint8_t {

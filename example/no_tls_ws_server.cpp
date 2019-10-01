@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
                         MQTT_NS::buffer topic = std::get<0>(e);
                         MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
                         std::cout << "[server] topic: " << topic  << " qos: " << qos_value << std::endl;
-                        res.emplace_back(static_cast<MQTT_NS::suback_return_code>(qos_value));
+                        res.emplace_back(MQTT_NS::qos_to_suback_return_code(qos_value));
                         subs.emplace(std::move(topic), sp, qos_value);
                     }
                     sp->suback(packet_id, res);
