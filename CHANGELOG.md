@@ -1,3 +1,48 @@
+## 7.0.0
+* Added explicit destructor to clients. (#481)
+* Fixed warnings. (#480)
+* Added conversion function from `mqtt::qos` to `suback_return_code` and `v5::suback_reason_code`. (#478)
+* Added boost::asio::ssl::context getter. Set `[[deprecated]]` attribute to wrapped function for boost::asio::ssl::context. They will be removed on verion 8.0.0. (#472)
+  * mqtt_cpp is now separated from boost::asio::ssl::context detail.
+* Fixed boost::type_erasure namespace. (#467)
+* Refactoring. (#465)
+* Improved receive packet processing. (#462)
+* Fixed comments. (#454, #455)
+* Added `constexpr`. (#451, #461)
+* Use virtual function based polymorphism on endpoint receive packet processing. Existing APIs are preserved as `callable_overlay`. (#444)
+  * Thanks to de-virtualization optimization, it is achieved zero-overhead.
+* <<<< breaking change >>>> Updated `set_accept_handler()`'s parameter to shared_ptr of the endpoint. (#443)
+* <<<< breaking change >>>> Updated `start_session()`'s parameter to `mqtt::any`. It only for life keeping purpose. (#442)
+* <<<< breaking change >>>> Remove optional from puback, pubrec, pubrel, and pubcomp. (#441, #470, #476, #477)
+* Fixed invalid next packet read on disconnect packet process. (#439)
+* <<<< breaking change >>>> Remove optional from the parameter `suback_return_code`(MQTT v3.1.1) of suback handler. (#434)
+* <<<< breaking change >>>> Replaced `MQTT_NO_TLS` with `MQTT_USE_TLS` and default value is false. Now, all configure macro has positive meaning. (#428)
+* Improved build system. (#425, #459)
+* Used old style boost::type_erasure. The new style causes compile error if `-pedantic` flag is set. (#423)
+* Introduced include dependency checking build option. (#422)
+* <<<< breaking change >>>> Improved parameters of the publish handler. parsing `fixed_header` is no longer required. (#421)
+* Replaced boost::asio deprecated API with new ones. (#419, 466)
+* Set `[[deprecated]]` attribute to derecated variadic parameter version of suback/unsuback family. They will be removed on verion 8.0.0. (#417)
+* Fixed BOOST_VERSION comparison typo. (#413)
+* Improved travis-ci. (#412)
+* Added boost::multi_index debug flag to travis-ci. (#406)
+* <<<< breaking change >>>> Minimum boost required version is 1.66.0. (#403)
+* Fixed lack of next read packet bug. (#402)
+* Added missing include. (#398)
+* <<<< breaking change >>>> Introduced enum class instead of std::uint8_t. (#395, #397, #401, #414, #415, #438)
+* Removed invalid WebSocket code from the test. (#394)
+* <<<< breaking change >>>> Added subscribe_options class. (#387, #388, #393)
+  * subscribe_options can be created from `std::uint8_t` so the impact of existing code is limited.
+* <<<< breaking change >>>> Removed deprecated APIs. (#384)
+
+## 6.0.6
+* Fixed server side endpoint lifetime management problem. (#439, #440)
+
+## 6.0.5
+* Fixed receive stop problem when unsuback handler is not set. (#408)
+* Updated minimum boost requirement to 1.66.0. (#410)
+   * NOTE: Boost minimum requirement should be updated at v6.0.0. So this release considered the update as a bug fix, not major version up.
+
 ## 6.0.4
 * Fixed invalid subscribe qos comparison on receive. (#385)
 
