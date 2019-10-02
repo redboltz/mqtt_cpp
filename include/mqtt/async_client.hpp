@@ -251,6 +251,12 @@ public:
     void unsuback() = delete;
 
 protected:
+    // Ensure that only code that knows the *exact* type of an object
+    // inheriting from this abstract base class can destruct it.
+    // This avoids issues of the destructor not triggering destruction
+    // of derived classes, and any member variables contained in them.
+    // Note: Not virtual to avoid need for a vtable when possible.
+    ~async_client() = default;
 
     async_client(
         as::io_context& ioc,
