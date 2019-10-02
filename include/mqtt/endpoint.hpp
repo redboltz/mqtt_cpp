@@ -11488,6 +11488,7 @@ private:
     ) {
         for(auto const& p : params)
         {
+            (void)p;
             BOOST_ASSERT(
                 std::get<1>(p).get_qos() == qos::at_most_once ||
                 std::get<1>(p).get_qos() == qos::at_least_once ||
