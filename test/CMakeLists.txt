@@ -6,6 +6,8 @@
 
 CMAKE_MINIMUM_REQUIRED (VERSION 3.8.2)
 
+FIND_PACKAGE (Boost 1.66.0 REQUIRED COMPONENTS unit_test_framework)
+
 OPTION(MQTT_TEST_1 "Build test part1" ON)
 OPTION(MQTT_TEST_2 "Build test part2" ON)
 OPTION(MQTT_TEST_3 "Build test part3" ON)
@@ -74,37 +76,14 @@ IF (MQTT_TEST_7)
     )
 ENDIF ()
 
-LIST (APPEND MQTT_LINK_LIBRARIES
-    ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-)
-IF (MQTT_USE_TLS)
-    LIST (APPEND MQTT_LINK_LIBRARIES
-        ${OPENSSL_LIBRARIES}
-        ${CMAKE_DL_LIBS}
-    )
-ENDIF ()
-
-IF (NOT MQTT_USE_STATIC_BOOST)
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_TEST_DYN_LINK")
-ENDIF ()
-
-LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 
 FOREACH (source_file ${check_PROGRAMS})
     GET_FILENAME_COMPONENT (source_file_we ${source_file} NAME_WE)
-    ADD_EXECUTABLE (
-        ${source_file_we}
-        ${source_file}
-    )
-    ADD_TEST (${source_file_we} ${source_file_we})
-    TARGET_LINK_LIBRARIES (${source_file_we}
-        ${MQTT_LINK_LIBRARIES}
-    )
+    ADD_EXECUTABLE (${source_file_we} ${source_file})
+    TARGET_COMPILE_DEFINITIONS (${source_file_we} PUBLIC $<IF:$<BOOL:${MQTT_USE_STATIC_BOOST}>,,BOOST_TEST_DYN_LINK>)
+    TARGET_LINK_LIBRARIES (${source_file_we} mqtt_cpp_iface Boost::unit_test_framework)
+
     IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-        SET_PROPERTY (TARGET ${source_file_we}
-                      APPEND_STRING PROPERTY COMPILE_FLAGS "-pthread")
         IF (MQTT_CODECOV)
             SET_PROPERTY (TARGET ${source_file_we}
                           APPEND_STRING PROPERTY COMPILE_FLAGS " -O0 -g --coverage -fno-inline")
@@ -119,6 +98,8 @@ FOREACH (source_file ${check_PROGRAMS})
             SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /WX")
         ENDIF ()
     ENDIF ()
+
+    ADD_TEST (${source_file_we} ${source_file_we})
 ENDFOREACH ()
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")

@@ -14,7 +14,6 @@ install:
  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export LD_LIBRARY_PATH="${BASE}/usr/lib:$LD_LIBRARY_PATH"; fi
  - if [ "$CXX" = "g++" ]; then export CXX="g++-7" CC="gcc-7"; fi
  - if [ "$CXX" = "clang++" ] && [ "$TRAVIS_OS_NAME" == "linux" ]; then export CXX="clang++-5.0" CC="clang-5.0"; fi
- - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export OPENSSL_ROOT_DIR="${BASE}/usr"; fi
  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then export OPENSSL_ROOT_DIR="/usr/local/opt/openssl"; fi
 
 matrix:
@@ -52,11 +51,8 @@ matrix:
             - sourceline: 'ppa:mhier/libboost-latest'
           packages:
             - lcov
-            - openssl
-            - g++-multilib
-            - gcc-multilib
-            - gcc-7-multilib
-            - g++-7-multilib
+            - libssl-dev
+            - g++-7
             - bzip2
             - clang-5.0
             - libc6-dbg
@@ -96,7 +92,7 @@ matrix:
 
 script:
   - CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
-  - mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_C_COMPILER="${CC}" -DCMAKE_LIBRARY_PATH="${BASE}/usr/lib" -DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}" $FLAGS .. && make check_deps VERBOSE=1 && travis_wait 50 make $MAKEFLAGS VERBOSE=1 && ctest -VV
+  - mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_C_COMPILER="${CC}" -DCMAKE_LIBRARY_PATH="${BASE}/usr/lib" $FLAGS .. && make check_deps VERBOSE=1 && travis_wait 50 make $MAKEFLAGS VERBOSE=1 && ctest -VV
 
 after_success:
   # Create lcov report
