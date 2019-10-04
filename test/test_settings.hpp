@@ -7,7 +7,7 @@
 #if !defined(MQTT_TEST_SETTINGS_HPP)
 #define MQTT_TEST_SETTINGS_HPP
 
-#define MQTT_DEPRECATED_TEST
+#define MQTT_USE_DEPRECATED
 
 #include <string>
 #include <boost/uuid/uuid.hpp>
