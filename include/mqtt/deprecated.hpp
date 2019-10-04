@@ -7,11 +7,11 @@
 #if !defined(MQTT_DEPRECATED_HPP)
 #define MQTT_DEPRECATED_HPP
 
-#if defined(MQTT_DEPRECATED_TEST)
+#if defined(MQTT_USE_DEPRECATED)
 
 #define MQTT_DEPRECATED(msg) // for test, ignore it
 
-#else  // defined(MQTT_DEPRECATED_TEST)
+#else  // defined(MQTT_USE_DEPRECATED)
 
 #if __cplusplus >= 201402L
 
@@ -31,6 +31,6 @@
 
 #endif // __cplusplus >= 201402L
 
-#endif // defined(MQTT_DEPRECATED_TEST)
+#endif // defined(MQTT_USE_DEPRECATED)
 
 #endif // MQTT_DEPRECATED_HPP
