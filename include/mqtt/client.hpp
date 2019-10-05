@@ -321,6 +321,7 @@ public:
      * @return ssl context
      */
     as::ssl::context& get_ssl_context() {
+        static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         return ctx_;
     }
 
@@ -329,6 +330,7 @@ public:
      * @return ssl context
      */
     as::ssl::context const& get_ssl_context() const {
+        static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         return ctx_;
     }
 
@@ -338,6 +340,7 @@ public:
      */
     MQTT_DEPRECATED("Use get_ssl_context().set_default_verify_paths()")
     void set_default_verify_paths() {
+        static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         ctx_.set_default_verify_paths();
     }
 
@@ -349,6 +352,7 @@ public:
      */
     MQTT_DEPRECATED("Use get_ssl_context().load_verify_file()")
     void set_ca_cert_file(std::string file) {
+        static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         ctx_.load_verify_file(force_move(file));
     }
 
@@ -364,6 +368,7 @@ public:
      */
     MQTT_DEPRECATED("Use SSL_CTX_set_keylog_callback(client->get_ssl_context().native_handle(), callback")
     void set_ssl_keylog_callback(void (*cb)(SSL const* ssl, char const* line)) {
+        static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         SSL_CTX* ssl_ctx = ctx_.native_handle();
         SSL_CTX_set_keylog_callback(ssl_ctx, cb);
     }
@@ -377,6 +382,7 @@ public:
      */
     MQTT_DEPRECATED("Use get_ssl_context().add_verify_path()")
     void add_verify_path(std::string path) {
+        static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         ctx_.add_verify_path(path);
     }
 
@@ -387,6 +393,7 @@ public:
      */
     MQTT_DEPRECATED("Use get_ssl_context().set_verify_depth()")
     void set_verify_depth(int depth) {
+        static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         ctx_.set_verify_depth(depth);
     }
 
@@ -398,6 +405,7 @@ public:
      */
     MQTT_DEPRECATED("Use get_ssl_context().use_certificate_file()")
     void set_client_cert_file(std::string file) {
+        static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         ctx_.use_certificate_file(force_move(file), as::ssl::context::pem);
     }
 
@@ -409,6 +417,7 @@ public:
      */
     MQTT_DEPRECATED("Use get_ssl_context().use_private_key_file()")
     void set_client_key_file(std::string file) {
+        static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         ctx_.use_private_key_file(force_move(file), as::ssl::context::pem);
     }
 
@@ -419,6 +428,7 @@ public:
      */
     MQTT_DEPRECATED("Use get_ssl_context().set_verify_mode()")
     void set_verify_mode(as::ssl::verify_mode mode) {
+        static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         ctx_.set_verify_mode(mode);
     }
 
@@ -430,6 +440,7 @@ public:
     template <typename VerifyCallback>
     MQTT_DEPRECATED("Use get_ssl_context().set_verify_callback()")
     void set_verify_callback(VerifyCallback&& callback) {
+        static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         ctx_.set_verify_callback(std::forward<VerifyCallback>(callback));
     }
 #endif // defined(MQTT_USE_TLS)
@@ -936,6 +947,25 @@ protected:
     ~client() = default;
 
 private:
+
+#if defined(MQTT_USE_TLS)
+
+    template <typename T>
+    struct has_tls : std::false_type {
+    };
+
+    template <typename U>
+    struct has_tls<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, U>>> : std::true_type {
+    };
+
+#if defined(MQTT_USE_WS)
+    template <typename U>
+    struct has_tls<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, U>>> : std::true_type {
+    };
+#endif // defined(MQTT_USE_WS)
+
+#endif // defined(MQTT_USE_TLS)
+
     std::shared_ptr<Socket> socket_;
     as::io_context& ioc_;
     as::deadline_timer tim_ping_;
