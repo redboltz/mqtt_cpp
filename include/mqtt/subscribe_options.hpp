@@ -35,8 +35,7 @@ enum class qos : std::uint8_t
     exactly_once = 0b00000010,
 };
 
-struct subscribe_options
-{
+struct subscribe_options final {
     constexpr subscribe_options(void) = delete;
     ~subscribe_options(void) = default;
     constexpr subscribe_options(subscribe_options &&) = default;
@@ -47,14 +46,21 @@ struct subscribe_options
     explicit constexpr subscribe_options(std::uint8_t value) : data_(value) { }
 
     constexpr subscribe_options(retain_handling value) : data_(static_cast<std::uint8_t>(value)) { }
-    constexpr subscribe_options(rap value) : data_(static_cast<std::uint8_t>(value)) { }
-    constexpr subscribe_options(nl value) : data_(static_cast<std::uint8_t>(value)) { }
-    constexpr subscribe_options(qos value) : data_(static_cast<std::uint8_t>(value)) { }
+    constexpr subscribe_options(rap value)             : data_(static_cast<std::uint8_t>(value)) { }
+    constexpr subscribe_options(nl value)              : data_(static_cast<std::uint8_t>(value)) { }
+    constexpr subscribe_options(qos value)             : data_(static_cast<std::uint8_t>(value)) { }
 
-    constexpr subscribe_options& operator|=(retain_handling value) { data_ |= static_cast<std::uint8_t>(value); return *this; }
-    constexpr subscribe_options& operator|=(rap value) { data_ |= static_cast<std::uint8_t>(value); return *this; }
-    constexpr subscribe_options& operator|=(nl value) { data_ |= static_cast<std::uint8_t>(value); return *this; }
-    constexpr subscribe_options& operator|=(qos value) { data_ |= static_cast<std::uint8_t>(value); return *this; }
+    constexpr subscribe_options operator|(subscribe_options rhs) const { return subscribe_options(data_ | rhs.data_); }
+    constexpr subscribe_options operator|(retain_handling rhs) const   { return *this | subscribe_options(rhs); }
+    constexpr subscribe_options operator|(rap rhs) const               { return *this | subscribe_options(rhs); }
+    constexpr subscribe_options operator|(nl rhs) const                { return *this | subscribe_options(rhs); }
+    constexpr subscribe_options operator|(qos rhs) const               { return *this | subscribe_options(rhs); }
+
+    constexpr subscribe_options& operator|=(subscribe_options rhs) { return (*this = (*this | rhs)); }
+    constexpr subscribe_options& operator|=(retain_handling rhs)   { return (*this = (*this | rhs)); }
+    constexpr subscribe_options& operator|=(rap rhs)               { return (*this = (*this | rhs)); }
+    constexpr subscribe_options& operator|=(nl rhs)                { return (*this = (*this | rhs)); }
+    constexpr subscribe_options& operator|=(qos rhs)               { return (*this = (*this | rhs)); }
 
     constexpr retain_handling get_retain_handling() const
     { return static_cast<retain_handling>(data_ & 0b00110000); }
@@ -70,35 +76,29 @@ private:
     std::uint8_t data_;
 };
 
-constexpr subscribe_options operator|(subscribe_options lhs, retain_handling rhs) { lhs |= rhs; return lhs; }
-constexpr subscribe_options operator|(subscribe_options lhs, rap rhs) { lhs |= rhs; return lhs; }
-constexpr subscribe_options operator|(subscribe_options lhs, nl rhs) { lhs |= rhs; return lhs; }
-constexpr subscribe_options operator|(subscribe_options lhs, qos rhs) { lhs |= rhs; return lhs; }
-
 constexpr subscribe_options operator|(retain_handling lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
-constexpr subscribe_options operator|(retain_handling lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(retain_handling lhs, nl rhs)  { return subscribe_options(lhs) | rhs; }
 constexpr subscribe_options operator|(retain_handling lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
 
 constexpr subscribe_options operator|(rap lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
-constexpr subscribe_options operator|(rap lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
-constexpr subscribe_options operator|(rap lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(rap lhs, nl rhs)              { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(rap lhs, qos rhs)             { return subscribe_options(lhs) | rhs; }
 
-constexpr subscribe_options operator|(nl lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
-constexpr subscribe_options operator|(nl lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
-constexpr subscribe_options operator|(nl lhs, qos rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(nl lhs, retain_handling rhs)  { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(nl lhs, rap rhs)              { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(nl lhs, qos rhs)              { return subscribe_options(lhs) | rhs; }
 
 constexpr subscribe_options operator|(qos lhs, retain_handling rhs) { return subscribe_options(lhs) | rhs; }
-constexpr subscribe_options operator|(qos lhs, rap rhs) { return subscribe_options(lhs) | rhs; }
-constexpr subscribe_options operator|(qos lhs, nl rhs) { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(qos lhs, rap rhs)             { return subscribe_options(lhs) | rhs; }
+constexpr subscribe_options operator|(qos lhs, nl rhs)              { return subscribe_options(lhs) | rhs; }
 
 constexpr char const* qos_to_str(qos v) {
-    char const * const str[] = {
-        "at_most_once",
-        "at_least_once",
-        "exactly_once"
-    };
-    if (static_cast<std::uint8_t>(v) < sizeof(str)) return str[static_cast<std::uint8_t>(v)];
-    return "invalid_qos";
+    switch(v) {
+        case qos::at_most_once:  return "at_most_once";
+        case qos::at_least_once: return "at_least_once";
+        case qos::exactly_once:  return "exactly_once";
+        default:                 return "invalid_qos";
+    }
 }
 
 template<typename Stream>
