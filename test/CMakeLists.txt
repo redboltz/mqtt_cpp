@@ -6,6 +6,10 @@
 
 CMAKE_MINIMUM_REQUIRED (VERSION 3.8.2)
 
+IF (POLICY CMP0074)
+  CMAKE_POLICY(SET CMP0074 NEW)
+ENDIF ()
+
 OPTION(MQTT_TEST_1 "Build test part1" ON)
 OPTION(MQTT_TEST_2 "Build test part2" ON)
 OPTION(MQTT_TEST_3 "Build test part3" ON)
@@ -74,37 +78,20 @@ IF (MQTT_TEST_7)
     )
 ENDIF ()
 
-LIST (APPEND MQTT_LINK_LIBRARIES
-    ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-)
-IF (MQTT_USE_TLS)
-    LIST (APPEND MQTT_LINK_LIBRARIES
-        ${OPENSSL_LIBRARIES}
-        ${CMAKE_DL_LIBS}
-    )
-ENDIF ()
+FIND_PACKAGE (Boost 1.66.0 REQUIRED COMPONENTS unit_test_framework)
 
-IF (NOT MQTT_USE_STATIC_BOOST)
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_TEST_DYN_LINK")
+# Without this setting added, azure pipelines completely fails to find the boost libraries. No idea why.
+IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 ENDIF ()
-
-LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 
 FOREACH (source_file ${check_PROGRAMS})
     GET_FILENAME_COMPONENT (source_file_we ${source_file} NAME_WE)
-    ADD_EXECUTABLE (
-        ${source_file_we}
-        ${source_file}
-    )
-    ADD_TEST (${source_file_we} ${source_file_we})
-    TARGET_LINK_LIBRARIES (${source_file_we}
-        ${MQTT_LINK_LIBRARIES}
-    )
+    ADD_EXECUTABLE (${source_file_we} ${source_file})
+    TARGET_COMPILE_DEFINITIONS (${source_file_we} PUBLIC $<IF:$<BOOL:${MQTT_USE_STATIC_LINKING}>,,BOOST_TEST_DYN_LINK>)
+    TARGET_LINK_LIBRARIES (${source_file_we} mqtt_cpp_iface Boost::unit_test_framework)
+
     IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-        SET_PROPERTY (TARGET ${source_file_we}
-                      APPEND_STRING PROPERTY COMPILE_FLAGS "-pthread")
         IF (MQTT_CODECOV)
             SET_PROPERTY (TARGET ${source_file_we}
                           APPEND_STRING PROPERTY COMPILE_FLAGS " -O0 -g --coverage -fno-inline")
@@ -114,11 +101,13 @@ FOREACH (source_file ${check_PROGRAMS})
     ENDIF ()
     IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
         IF (CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
-            STRING(REGEX REPLACE "/W[0-4]" "/W3 /WX" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+            STRING(REGEX REPLACE "/W[0-4]" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
         ELSE ()
-            SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /WX")
+            SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
         ENDIF ()
     ENDIF ()
+
+    ADD_TEST (${source_file_we} ${source_file_we})
 ENDFOREACH ()
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")

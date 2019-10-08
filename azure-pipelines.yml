@@ -8,7 +8,7 @@ pr:
   - '*'
 
 pool:
-  vmImage: 'vs2017-win2016'
+  vmImage: 'windows-2019'
 
 strategy:
   matrix:
@@ -114,9 +114,7 @@ strategy:
 
 steps:
 - script: |
-    git clone https://github.com/curl/curl.git -b curl-7_65_0
-    git clone https://github.com/openssl/openssl.git -b OpenSSL_1_1_1b
-    .\curl\projects\build-openssl.bat vc14.1 x86 debug .\openssl\ -perlpath C:\Strawberry
+    choco install --confirm --limitoutput --no-progress openssl
   displayName: 'install openssl'
 
 - script: |
@@ -124,9 +122,9 @@ steps:
     mkdir build
     cd build
     set CL=/D_WIN32_WINNT#0x0601
-    cmake -DMQTT_USE_TLS=%MQTT_USE_TLS% -DMQTT_USE_WS=%MQTT_USE_WS% -DMQTT_USE_STR_CHECK=%MQTT_USE_STR_CHECK% -DMQTT_TEST_1=%MQTT_TEST_1% -DMQTT_TEST_2=%MQTT_TEST_2% -DMQTT_TEST_3=%MQTT_TEST_3% -DMQTT_TEST_4=%MQTT_TEST_4% -DMQTT_TEST_5=%MQTT_TEST_5% -DMQTT_TEST_6=%MQTT_TEST_6% -DMQTT_BUILD_EXAMPLES=%MQTT_BUILD_EXAMPLES% -DOPENSSL_ROOT_DIR="./openssl/" ..
-    cmake --build . --config Release
+    cmake -A x64 -DMQTT_USE_TLS=%MQTT_USE_TLS% -DMQTT_USE_WS=%MQTT_USE_WS% -DMQTT_USE_STR_CHECK=%MQTT_USE_STR_CHECK% -DMQTT_TEST_1=%MQTT_TEST_1% -DMQTT_TEST_2=%MQTT_TEST_2% -DMQTT_TEST_3=%MQTT_TEST_3% -DMQTT_TEST_4=%MQTT_TEST_4% -DMQTT_TEST_5=%MQTT_TEST_5% -DMQTT_TEST_6=%MQTT_TEST_6% -DMQTT_BUILD_EXAMPLES=%MQTT_BUILD_EXAMPLES% ..
+    cmake --build . --config Release -- -verbosity:minimal
     cd test
-    set PATH=%BOOST_ROOT%\lib;D:/a/1/s/openssl/;%PATH%
+    set PATH=%BOOST_ROOT%\lib;%PATH%
     ctest -VV
   displayName: 'cmake test'

@@ -1,10 +1,16 @@
 CMAKE_MINIMUM_REQUIRED (VERSION 3.8.2)
 PROJECT (mqtt_cpp)
 
+SET(CMAKE_CXX_STANDARD 14)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Don't use GNU extensions
+SET(CMAKE_CXX_EXTENSIONS OFF)
+MESSAGE (STATUS "Setting minimum C++ standard to C++14")
+
 OPTION(MQTT_BUILD_EXAMPLES "Enable building example applications" ON)
 OPTION(MQTT_BUILD_TESTS "Enable building test applications" ON)
 OPTION(MQTT_ALWAYS_SEND_REASON_CODE "Always send a reason code, even if the standard says it may be optionally omitted." ON)
-OPTION(MQTT_USE_STATIC_BOOST "Statically link with boost libraries" OFF)
+OPTION(MQTT_USE_STATIC_LINKING "Statically link with third party libraries" OFF)
 OPTION(MQTT_USE_TLS "Enable building TLS code" OFF)
 OPTION(MQTT_USE_WS "Enable building WebSockets code" OFF)
 OPTION(MQTT_USE_STR_CHECK "Enable UTF8 String check" ON)
@@ -14,120 +20,105 @@ OPTION(MQTT_STD_STRING_VIEW "Use std::string_view from C++17 instead of boost::s
 OPTION(MQTT_STD_ANY "Use std::any from C++17 instead of boost::any" OFF)
 OPTION(MQTT_STD_SHARED_PTR_ARRAY "Use std::shared_ptr<char[]> from C++17 instead of boost::shared_ptr<char[]>" OFF)
 
-IF ((CMAKE_VERSION VERSION_GREATER 3.1) OR
-    (CMAKE_VERSION VERSION_EQUAL 3.1))
-    CMAKE_POLICY(SET CMP0054 NEW)
+IF (POLICY CMP0074)
+  CMAKE_POLICY(SET CMP0074 NEW)
 ENDIF ()
 
-IF (NOT MQTT_ALWAYS_SEND_REASON_CODE)
-    MESSAGE (STATUS "Always send reason code disabled")
-    SET (CMAKE_CXX_FLAGS "-DMQTT_ALWAYS_SEND_REASON_CODE=false ${CMAKE_CXX_FLAGS}")
-ELSE ()
-    MESSAGE (STATUS "Always send reason code enabled")
-    SET (CMAKE_CXX_FLAGS "-DMQTT_ALWAYS_SEND_REASON_CODE=true ${CMAKE_CXX_FLAGS}")
-ENDIF ()
-
-IF (MQTT_USE_STATIC_BOOST)
-    SET (Boost_USE_STATIC_LIBS ON) # only find static libs
-ELSE ()
-    SET (Boost_USE_STATIC_LIBS OFF) # only find shared libs
-ENDIF ()
-
-IF (NOT MQTT_USE_TLS)
-    MESSAGE (STATUS "TLS disabled")
-ELSE ()
+IF (MQTT_USE_TLS)
     MESSAGE (STATUS "TLS enabled")
-    SET (CMAKE_CXX_FLAGS "-DMQTT_USE_TLS ${CMAKE_CXX_FLAGS}")
-    FIND_PACKAGE (OpenSSL)
+ELSE ()
+    MESSAGE (STATUS "TLS disabled")
 ENDIF ()
 
 IF (MQTT_USE_WS)
     MESSAGE (STATUS "WebSocket enabled")
-    SET (CMAKE_CXX_FLAGS "-DMQTT_USE_WS ${CMAKE_CXX_FLAGS}")
 ELSE ()
     MESSAGE (STATUS "WebSocket disabled")
 ENDIF ()
 
+IF (MQTT_ALWAYS_SEND_REASON_CODE)
+    MESSAGE (STATUS "Always send reason code enabled")
+ELSE ()
+    MESSAGE (STATUS "Always send reason code enabled")
+ENDIF ()
+
 IF (MQTT_USE_STR_CHECK)
     MESSAGE (STATUS "UTF8String check enabled")
-    SET (CMAKE_CXX_FLAGS "-DMQTT_USE_STR_CHECK ${CMAKE_CXX_FLAGS}")
 ELSE ()
     MESSAGE (STATUS "UTF8String check disabled")
 ENDIF ()
 
 IF (MQTT_STD_VARIANT)
-    SET(CMAKE_CXX_STANDARD 17)
-    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
     MESSAGE (STATUS "Using std::variant instead of boost::variant. Enables C++17!!!")
-    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_VARIANT ${CMAKE_CXX_FLAGS}")
 ELSE ()
     MESSAGE (STATUS "Using boost::variant instead of std::variant")
 ENDIF ()
 
 IF (MQTT_STD_OPTIONAL)
-    SET(CMAKE_CXX_STANDARD 17)
-    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
     MESSAGE (STATUS "Using std::optional instead of boost::optional. Enables C++17!!!")
-    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_OPTIONAL ${CMAKE_CXX_FLAGS}")
 ELSE ()
     MESSAGE (STATUS "Using boost::optional instead of std::optional")
 ENDIF ()
 
 IF (MQTT_STD_STRING_VIEW)
-    SET(CMAKE_CXX_STANDARD 17)
-    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
     MESSAGE (STATUS "Using std::string_view instead of boost::string_view. Enables C++17!!!")
-    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_STRING_VIEW ${CMAKE_CXX_FLAGS}")
 ELSE ()
     MESSAGE (STATUS "Using boost::string_view instead of std::string_view")
 ENDIF ()
 
 IF (MQTT_STD_ANY)
-    SET(CMAKE_CXX_STANDARD 17)
-    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
     MESSAGE (STATUS "Using std::any instead of boost::any. Enables C++17!!!")
-    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_ANY ${CMAKE_CXX_FLAGS}")
 ELSE ()
     MESSAGE (STATUS "Using boost::any instead of std::any")
 ENDIF ()
 
 IF (MQTT_STD_SHARED_PTR_ARRAY)
-    SET(CMAKE_CXX_STANDARD 17)
-    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
     MESSAGE (STATUS "Using std::shared_ptr<char []> instead of boost::shared_ptr<char []>. Enables C++17!!!")
-    SET (CMAKE_CXX_FLAGS "-DMQTT_STD_SHARED_PTR_ARRAY ${CMAKE_CXX_FLAGS}")
 ELSE ()
     MESSAGE (STATUS "Using boost::shared_ptr<char []> instead of std::shared_ptr<char []>")
+ENDIF ()
+
+IF (   MQTT_STD_VARIANT
+    OR MQTT_STD_OPTIONAL
+    OR MQTT_STD_ANY
+    OR MQTT_STD_STRING_VIEW
+    OR MQTT_STD_SHARED_PTR_ARRAY)
+    SET(CMAKE_CXX_STANDARD 17)
+    SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+    MESSAGE (STATUS "Setting minimum C++ standard to C++17!!!")
 ENDIF ()
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     SET (CMAKE_CXX_FLAGS "/bigobj ${CMAKE_CXX_FLAGS}")
 ENDIF ()
 
-SET (Boost_USE_MULTITHREADED      ON)
-FIND_PACKAGE (Boost 1.66.0 REQUIRED COMPONENTS system)
-FIND_PACKAGE (Threads)
-
-IF(MQTT_BUILD_TESTS)
-    FIND_PACKAGE (Boost 1.66.0 REQUIRED COMPONENTS chrono timer unit_test_framework)
-ENDIF()
-
-INCLUDE_DIRECTORIES (
-    ${Boost_INCLUDE_DIR}
-    include
-)
-
-IF (MQTT_USE_TLS)
-    INCLUDE_DIRECTORIES (
-        ${OPENSSL_INCLUDE_DIR}
-        ${MQTT_OPENSSL_INCLUDE_DIR}
-    )
+IF (MQTT_USE_STATIC_LINKING)
+    MESSAGE (STATUS "Staticly linking with Boost and Openssl")
+    SET (Boost_USE_STATIC_LIBS TRUE)
+    SET (OPENSSL_USE_STATIC_LIBS TRUE)
+ELSE ()
+    MESSAGE (STATUS "Dynamically linking with Boost and Openssl")
+    SET (Boost_USE_STATIC_LIBS FALSE)
+    SET (OPENSSL_USE_STATIC_LIBS FALSE)
 ENDIF ()
 
-ENABLE_TESTING ()
+SET (Boost_USE_MULTITHREADED ON)
+FIND_PACKAGE (Threads REQUIRED)
+
+FIND_PACKAGE (Boost 1.66.0 REQUIRED COMPONENTS system date_time)
+
+IF (MQTT_USE_TLS)
+    FIND_PACKAGE (OpenSSL REQUIRED)
+    IF (MQTT_USE_STATIC_LINKING)
+        FIND_PACKAGE (ZLIB REQUIRED)
+    ENDIF ()
+ENDIF ()
+
+ADD_SUBDIRECTORY (include)
 
 IF (MQTT_BUILD_TESTS)
     MESSAGE(STATUS "Tests enabled")
+    ENABLE_TESTING ()
     ADD_SUBDIRECTORY (test)
 ENDIF ()
 
@@ -135,10 +126,6 @@ IF (MQTT_BUILD_EXAMPLES)
     MESSAGE(STATUS "Examples enabled")
     ADD_SUBDIRECTORY (example)
 ENDIF ()
-
-ADD_CUSTOM_TARGET(check_deps)
-
-ADD_SUBDIRECTORY (include)
 
 # Doxygen
 FIND_PACKAGE (Doxygen)
