@@ -261,18 +261,17 @@ protected:
     async_client(
         as::io_context& ioc,
         std::string host,
-        std::string port
+        std::string port,
 #if defined(MQTT_USE_WS)
-        ,
-        std::string path = "/"
+        std::string path = "/",
 #endif // defined(MQTT_USE_WS)
-        ,
         protocol_version version = protocol_version::v3_1_1
-    ):base(ioc, force_move(host), force_move(port)
+    ):base(ioc,
+           force_move(host),
+           force_move(port),
 #if defined(MQTT_USE_WS)
-           , force_move(path)
+           force_move(path),
 #endif // defined(MQTT_USE_WS)
-           ,
            version,
            true
     ) {
