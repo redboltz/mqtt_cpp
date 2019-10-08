@@ -1,8 +1,8 @@
 sudo: false
 language: cpp
-dist: xenial
 
-if: type != push OR branch =~ /^v\d+\.\d+(\.\d+)?(-\S*)?$/
+dist: xenial
+osx_image: xcode10.3
 
 install:
  - export BASE=`pwd`
