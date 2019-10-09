@@ -8,7 +8,7 @@ ADD_LIBRARY(mqtt_cpp_iface INTERFACE)
 
 TARGET_LINK_LIBRARIES(mqtt_cpp_iface INTERFACE Threads::Threads Boost::system Boost::date_time)
 
-IF(MQTT_USE_STATIC_LINKING)
+IF(MQTT_USE_STATIC_OPENSSL)
     # Unfortunately, cmake doesn't automatically detect that statically linked openssl
     # requires at least two more libs to be linked. "dl" is for dynamic library linking
     # and zlib is for basic compression functionality.
