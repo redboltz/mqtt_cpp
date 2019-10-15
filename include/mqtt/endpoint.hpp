@@ -2506,29 +2506,6 @@ public:
      *        reason_code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
      *        3.9.3 SUBACK Payload
-     * @param args additional reason_code
-     *        You can set props as the last argument optionally.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
-     *        3.9.2.1 SUBACK Properties
-     */
-    template <typename... Args>
-    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_SUBACK)
-    void suback(
-        packet_id_t packet_id,
-        variant<suback_return_code, v5::suback_reason_code> arg0,
-        Args&&... args) {
-        variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> params;
-        visit([](auto & vect){ vect.reserve(1 + sizeof...(args)); }, params);
-        send_suback(force_move(params), packet_id, std::move(arg0), std::forward<Args>(args)...);
-    }
-
-    /**
-     * @brief Send suback packet. This function is for broker.
-     * @param packet_id packet id corresponding to subscribe
-     * @param reason
-     *        reason_code<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
-     *        3.9.3 SUBACK Payload
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
@@ -2580,27 +2557,6 @@ public:
      *        reason_code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
      *        3.11.3 UNSUBACK Payload
-     * @param args additional reason_code
-     *        You can set props as the last argument optionally.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
-     *        3.11.2.1 UNSUBACK Properties
-     */
-    template <typename... Args>
-    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_UNSUBACK)
-    void unsuback(
-        packet_id_t packet_id,
-        v5::unsuback_reason_code reason,
-        Args&&... args) {
-        send_unsuback(std::vector<v5::unsuback_reason_code>{}, packet_id, reason, std::forward<Args>(args)...);
-    }
-
-    /**
-     * @brief Send unsuback packet. This function is for broker.
-     * @param packet_id packet id corresponding to subscribe
-     * @param reason
-     *        reason_code<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
-     *        3.11.3 UNSUBACK Payload
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
@@ -2633,7 +2589,6 @@ public:
     ) {
         send_unsuback(force_move(reasons), packet_id, force_move(props));
     }
-
 
     /**
      * @brief Publish
@@ -6185,31 +6140,6 @@ public:
      *        reason_code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
      *        3.9.3 SUBACK Payload
-     * @param args additional reason_code
-     *        The format of args is `[option, option, ...,][props,][func]`<BR>
-     *        You can set props as the last argument optionally.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
-     *        3.9.2.1 SUBACK Properties
-     *        You can set a callback function that is called when async operation will finish.
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
-     */
-    template <typename Arg0, typename... Args>
-    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_SUBACK)
-    void async_suback(
-        packet_id_t packet_id,
-        std::uint8_t reason,
-        Arg0&& arg0,
-        Args&&... args) {
-        async_suback_imp(packet_id, reason, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
-    }
-
-    /**
-     * @brief Send suback packet. This function is for broker.
-     * @param packet_id packet id corresponding to subscribe
-     * @param reason
-     *        reason_code<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
-     *        3.9.3 SUBACK Payload
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
@@ -6287,31 +6217,6 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         async_send_suback(force_move(reasons), packet_id, force_move(props), force_move(func));
-    }
-
-    /**
-     * @brief Send unsuback packet. This function is for broker.
-     * @param packet_id packet id corresponding to subscribe
-     * @param reason
-     *        reason_code<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
-     *        3.11.3 UNSUBACK Payload
-     * @param args
-     *        The format of args is `[option, option, ...,][props,][func]`<BR>
-     *        You can set props as the last argument optionally.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
-     *        3.11.2.1 UNSUBACK Properties
-     *        You can set a callback function that is called when async operation will finish.
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
-     */
-    template <typename Arg0, typename... Args>
-    MQTT_DEPRECATED(MQTT_DEPRECATED_MSG_ASYNC_UNSUBACK)
-    void async_unsuback(
-        packet_id_t packet_id,
-        v5::unsuback_reason_code reason,
-        Arg0&& arg0,
-        Args&&... args) {
-        async_unsuback_imp(packet_id, reason, std::forward<Arg0>(arg0), std::forward<Args>(args)...);
     }
 
     /**
