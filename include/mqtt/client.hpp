@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <type_traits>
 
 #include <mqtt/namespace.hpp>
 #include <mqtt/optional.hpp>
@@ -376,13 +377,26 @@ public:
         set_keep_alive_sec_ping_ms(keep_alive_sec, keep_alive_sec * 1000 / 2);
     }
 
+
     /**
      * @brief Connect to a broker
      * Before calling connect(), call set_xxx member functions to configure the connection.
-     * @param func finish handler that is called when the session is finished
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
     void connect(any session_life_keeper = any()) {
-        connect(v5::properties{}, force_move(session_life_keeper));
+        boost::system::error_code ec;
+        connect(ec, force_move(session_life_keeper));
+        if (ec) throw ec;
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param ec error code
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
+     */
+    void connect(boost::system::error_code& ec, any session_life_keeper = any()) {
+        connect(v5::properties{}, ec, force_move(session_life_keeper));
     }
 
     /**
@@ -391,13 +405,32 @@ public:
      * @param props properties
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
-     * @param func finish handler that is called when the session is finished
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
     void connect(v5::properties props, any session_life_keeper = any()) {
+        boost::system::error_code ec;
+        connect(force_move(props), ec, force_move(session_life_keeper));
+        if (ec) throw ec;
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
+     * @param ec error code
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
+     */
+    void connect(
+        v5::properties props,
+        boost::system::error_code& ec,
+        any session_life_keeper = any()) {
         as::ip::tcp::resolver r(ioc_);
-        auto eps = r.resolve(host_, port_);
+        auto eps = r.resolve(host_, port_, ec);
+        if (ec) return;
         setup_socket(socket_);
-        connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper));
+        connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper), ec);
     }
 
     /**
@@ -405,10 +438,27 @@ public:
      * Before calling connect(), call set_xxx member functions to configure the connection.
      * @param socket The library uses the socket instead of internal generation.
      *               You can configure the socket prior to connect.
-     * @param func finish handler that is called when the session is finished
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
     void connect(std::shared_ptr<Socket>&& socket, any session_life_keeper = any()) {
-        connect(force_move(socket), v5::properties{}, force_move(session_life_keeper));
+        boost::system::error_code ec;
+        connect(force_move(socket), ec, force_move(session_life_keeper));
+        if (ec) throw ec;
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param socket The library uses the socket instead of internal generation.
+     *               You can configure the socket prior to connect.
+     * @param ec error code
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
+     */
+    void connect(
+        std::shared_ptr<Socket>&& socket,
+        boost::system::error_code& ec,
+        any session_life_keeper = any()) {
+        connect(force_move(socket), v5::properties{}, ec, force_move(session_life_keeper));
     }
 
     /**
@@ -419,14 +469,281 @@ public:
      * @param props properties
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
-     * @param func finish handler that is called when the session is finished
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
-    void connect(std::shared_ptr<Socket>&& socket, v5::properties props, any session_life_keeper = any()) {
+    void connect(
+        std::shared_ptr<Socket>&& socket,
+        v5::properties props,
+        any session_life_keeper = any()) {
+        boost::system::error_code ec;
+        connect(force_move(socket), force_move(props), ec, force_move(session_life_keeper));
+        if (ec) throw ec;
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param socket The library uses the socket instead of internal generation.
+     *               You can configure the socket prior to connect.
+     * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
+     * @param ec error code
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
+     */
+    void connect(
+        std::shared_ptr<Socket>&& socket,
+        v5::properties props,
+        boost::system::error_code& ec,
+        any session_life_keeper = any()) {
         as::ip::tcp::resolver r(ioc_);
-        auto eps = r.resolve(host_, port_);
+        auto eps = r.resolve(host_, port_, ec);
+        if (ec) return;
         socket_ = force_move(socket);
         base::socket_optional().emplace(socket_);
-        connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper));
+        connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper), ec);
+    }
+
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     */
+    void async_connect() {
+        async_connect(any(), async_handler_t());
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
+     */
+    template <typename T>
+    // to avoid ambiguousness between any and async_handler_t
+    std::enable_if_t<
+        !std::is_convertible<T, async_handler_t>::value
+    >
+    async_connect(T session_life_keeper) {
+        async_connect(force_move(session_life_keeper), async_handler_t());
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param func finish handler that is called when the underlying connection process is finished
+     */
+    void async_connect(async_handler_t func) {
+        async_connect(any(), force_move(func));
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
+     * @param func finish handler that is called when the underlying connection process is finished
+     */
+    void async_connect(any session_life_keeper, async_handler_t func) {
+        async_connect(v5::properties{}, force_move(session_life_keeper), force_move(func));
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
+     */
+    template <typename T>
+    // to avoid ambiguousness between any and async_handler_t
+    std::enable_if_t<
+        !std::is_convertible<T, async_handler_t>::value
+    >
+    async_connect(v5::properties props, T session_life_keeper) {
+        async_connect(force_move(props), force_move(session_life_keeper), async_handler_t());
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
+     * @param func finish handler that is called when the underlying connection process is finished
+     */
+    void async_connect(v5::properties props, async_handler_t func) {
+        async_connect(force_move(props), any(), force_move(func));
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
+     * @param func finish handler that is called when the underlying connection process is finished
+     */
+    void async_connect(v5::properties props, any session_life_keeper, async_handler_t func) {
+        auto r = std::make_shared<as::ip::tcp::resolver>(ioc_);
+        auto p = r.get();
+        p->async_resolve(
+            host_,
+            port_,
+            [
+                this,
+                props = force_move(props),
+                session_life_keeper = force_move(session_life_keeper),
+                func = force_move(func),
+                r = force_move(r)
+            ]
+            (
+                boost::system::error_code const& ec,
+                as::ip::tcp::resolver::results_type eps
+            ) mutable {
+                if (ec) {
+                    if (func) func(ec);
+                    return;
+                }
+                setup_socket(socket_);
+                async_connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper), force_move(func));
+            }
+        );
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param socket The library uses the socket instead of internal generation.
+     *               You can configure the socket prior to connect.
+     */
+    void async_connect(std::shared_ptr<Socket>&& socket) {
+        async_connect(force_move(socket), v5::properties{}, any(), async_handler_t());
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param socket The library uses the socket instead of internal generation.
+     *               You can configure the socket prior to connect.
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
+     */
+    template <typename T>
+    // to avoid ambiguousness between any and async_handler_t
+    std::enable_if_t<
+        !std::is_convertible<T, async_handler_t>::value
+    >
+    async_connect(std::shared_ptr<Socket>&& socket, T session_life_keeper) {
+        async_connect(force_move(socket), v5::properties{}, force_move(session_life_keeper), async_handler_t());
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param socket The library uses the socket instead of internal generation.
+     *               You can configure the socket prior to connect.
+     * @param func finish handler that is called when the underlying connection process is finished
+     */
+    void async_connect(std::shared_ptr<Socket>&& socket, async_handler_t func) {
+        async_connect(force_move(socket), v5::properties{}, any(), force_move(func));
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param socket The library uses the socket instead of internal generation.
+     *               You can configure the socket prior to connect.
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
+     * @param func finish handler that is called when the underlying connection process is finished
+     */
+    void async_connect(std::shared_ptr<Socket>&& socket, any session_life_keeper, async_handler_t func) {
+        async_connect(force_move(socket), v5::properties{}, force_move(session_life_keeper), force_move(func));
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param socket The library uses the socket instead of internal generation.
+     *               You can configure the socket prior to connect.
+     * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
+     */
+    void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props) {
+        async_connect(force_move(socket), force_move(props), any(), async_handler_t());
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param socket The library uses the socket instead of internal generation.
+     *               You can configure the socket prior to connect.
+     * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
+     */
+    template <typename T>
+    // to avoid ambiguousness between any and async_handler_t
+    std::enable_if_t<
+        !std::is_convertible<T, async_handler_t>::value
+    >
+    async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, T session_life_keeper) {
+        async_connect(force_move(socket), force_move(props), force_move(session_life_keeper), async_handler_t());
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param socket The library uses the socket instead of internal generation.
+     *               You can configure the socket prior to connect.
+     * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
+     * @param func finish handler that is called when the underlying connection process is finished
+     */
+    void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, async_handler_t func) {
+        async_connect(force_move(socket), force_move(props), any(), force_move(func));
+    }
+
+    /**
+     * @brief Connect to a broker
+     * Before calling connect(), call set_xxx member functions to configure the connection.
+     * @param socket The library uses the socket instead of internal generation.
+     *               You can configure the socket prior to connect.
+     * @param props properties
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
+     *        3.1.2.11 CONNECT Properties
+     * @param session_life_keeper the passed object lifetime will be kept during the session.
+     * @param func finish handler that is called when the underlying connection process is finished
+     */
+    void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, any session_life_keeper, async_handler_t func) {
+        auto r = std::make_shared<as::ip::tcp::resolver>(ioc_);
+        auto p = r.get();
+        p->async_resolve(
+            host_,
+            port_,
+            [
+                this,
+                socket = force_move(socket),
+                props = force_move(props),
+                session_life_keeper = force_move(session_life_keeper),
+                func = force_move(func),
+                r = force_move(r)
+            ]
+            (
+                boost::system::error_code const& ec,
+                as::ip::tcp::resolver::results_type eps
+            ) mutable {
+                if (ec) {
+                    if (func) func(ec);
+                    return;
+                }
+                socket_ = force_move(socket);
+                base::socket_optional().emplace(socket_);
+                async_connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper), force_move(func));
+            }
+        );
     }
 
     /**
@@ -710,8 +1027,10 @@ private:
     void handshake_socket(
         tcp_endpoint<as::ip::tcp::socket, Strand>&,
         v5::properties props,
-        any session_life_keeper) {
+        any session_life_keeper,
+        boost::system::error_code& ec) {
         start_session(force_move(props), force_move(session_life_keeper));
+        ec = boost::system::errc::make_error_code(boost::system::errc::success);
     }
 
 #if defined(MQTT_USE_WS)
@@ -719,15 +1038,11 @@ private:
     void handshake_socket(
         ws_endpoint<as::ip::tcp::socket, Strand>& socket,
         v5::properties props,
-        any session_life_keeper) {
-        socket.async_handshake(
-            host_,
-            path_,
-            [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
-            (boost::system::error_code const& ec) mutable {
-                if (base::handle_close_or_error(ec)) return;
-                start_session(force_move(props), force_move(session_life_keeper));
-            });
+        any session_life_keeper,
+        boost::system::error_code& ec) {
+        socket.handshake(host_, path_, ec);
+        if (ec) return;
+        start_session(force_move(props), force_move(session_life_keeper));
     }
 #endif // defined(MQTT_USE_WS)
 
@@ -737,14 +1052,11 @@ private:
     void handshake_socket(
         tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
-        any session_life_keeper) {
-        socket.async_handshake(
-            as::ssl::stream_base::client,
-            [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
-            (boost::system::error_code const& ec) mutable {
-                if (base::handle_close_or_error(ec)) return;
-                start_session(force_move(props), force_move(session_life_keeper));
-            });
+        any session_life_keeper,
+        boost::system::error_code& ec) {
+        socket.handshake(as::ssl::stream_base::client, ec);
+        if (ec) return;
+        start_session(force_move(props), force_move(session_life_keeper));
     }
 
 #if defined(MQTT_USE_WS)
@@ -752,18 +1064,112 @@ private:
     void handshake_socket(
         ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
-        any session_life_keeper) {
+        any session_life_keeper,
+        boost::system::error_code& ec) {
+        socket.next_layer().handshake(as::ssl::stream_base::client, ec);
+        if (ec) return;
+        socket.handshake(host_, path_, ec);
+        if (ec) return;
+        start_session(force_move(props), force_move(session_life_keeper));
+    }
+#endif // defined(MQTT_USE_WS)
+
+#endif // defined(MQTT_USE_TLS)
+
+    template <typename Strand>
+    void async_handshake_socket(
+        tcp_endpoint<as::ip::tcp::socket, Strand>&,
+        v5::properties props,
+        any session_life_keeper,
+        async_handler_t func) {
+        start_session(force_move(props), force_move(session_life_keeper));
+        if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+    }
+
+#if defined(MQTT_USE_WS)
+    template <typename Strand>
+    void async_handshake_socket(
+        ws_endpoint<as::ip::tcp::socket, Strand>& socket,
+        v5::properties props,
+        any session_life_keeper,
+        async_handler_t func) {
+        socket.async_handshake(
+            host_,
+            path_,
+            [
+                this,
+                self = this->shared_from_this(),
+                session_life_keeper = force_move(session_life_keeper),
+                props = force_move(props),
+                func = force_move(func)
+            ]
+            (boost::system::error_code const& ec) mutable {
+                if (func) func(ec);
+                if (ec) return;
+                start_session(force_move(props), force_move(session_life_keeper));
+            });
+    }
+#endif // defined(MQTT_USE_WS)
+
+#if defined(MQTT_USE_TLS)
+
+    template <typename Strand>
+    void async_handshake_socket(
+        tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
+        v5::properties props,
+        any session_life_keeper,
+        async_handler_t func) {
+        socket.async_handshake(
+            as::ssl::stream_base::client,
+            [
+                this,
+                self = this->shared_from_this(),
+                session_life_keeper = force_move(session_life_keeper),
+                props = force_move(props),
+                func = force_move(func)
+            ]
+            (boost::system::error_code const& ec) mutable {
+                if (func) func(ec);
+                if (ec) return;
+                start_session(force_move(props), force_move(session_life_keeper));
+            });
+    }
+
+#if defined(MQTT_USE_WS)
+    template <typename Strand>
+    void async_handshake_socket(
+        ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
+        v5::properties props,
+        any session_life_keeper,
+        async_handler_t func) {
         socket.next_layer().async_handshake(
             as::ssl::stream_base::client,
-            [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper), &socket, props = force_move(props)]
+            [
+                this,
+                self = this->shared_from_this(),
+                session_life_keeper = force_move(session_life_keeper),
+                &socket,
+                props = force_move(props),
+                func = force_move(func)
+            ]
             (boost::system::error_code const& ec) mutable {
-                if (base::handle_close_or_error(ec)) return;
+                if (ec) {
+                    if (func) func(ec);
+                    return;
+                }
                 socket.async_handshake(
                     host_,
                     path_,
-                    [this, self, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
+                    [
+                        this,
+                        self,
+                        session_life_keeper = force_move(session_life_keeper),
+                        props = force_move(props),
+                        func = force_move(func)
+                    ]
                     (boost::system::error_code const& ec) mutable {
-                        if (base::handle_close_or_error(ec)) return;
+                        if (func) func(ec);
+                        if (ec) return;
                         start_session(force_move(props), force_move(session_life_keeper));
                     });
             });
@@ -773,19 +1179,50 @@ private:
 #endif // defined(MQTT_USE_TLS)
 
     template <typename Iterator>
-    void connect_impl(Socket& socket, Iterator it, Iterator end, v5::properties props, any session_life_keeper) {
+    void connect_impl(
+        Socket& socket,
+        Iterator it,
+        Iterator end,
+        v5::properties props,
+        any session_life_keeper,
+        boost::system::error_code& ec) {
+        as::connect(socket.lowest_layer(), it, end, ec);
+        if (ec) return;
+        base::set_connect();
+        if (ping_duration_ms_ != 0) {
+            set_timer();
+        }
+        handshake_socket(socket, force_move(props), force_move(session_life_keeper), ec);
+    }
+
+    template <typename Iterator>
+    void async_connect_impl(
+        Socket& socket,
+        Iterator it,
+        Iterator end,
+        v5::properties props,
+        any session_life_keeper,
+        async_handler_t func) {
         as::async_connect(
             socket.lowest_layer(), it, end,
-            [this, self = this->shared_from_this(), &socket, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]
+            [
+                this,
+                self = this->shared_from_this(),
+                &socket,
+                session_life_keeper = force_move(session_life_keeper),
+                props = force_move(props),
+                func = force_move(func)
+            ]
             (boost::system::error_code const& ec, Iterator) mutable {
-                if (!ec) {
-                    base::set_connect();
-                    if (ping_duration_ms_ != 0) {
-                        set_timer();
-                    }
+                if (ec) {
+                    if (func) func(ec);
+                    return;
                 }
-                if (base::handle_close_or_error(ec)) return;
-                handshake_socket(socket, force_move(props), force_move(session_life_keeper));
+                base::set_connect();
+                if (ping_duration_ms_ != 0) {
+                    set_timer();
+                }
+                async_handshake_socket(socket, force_move(props), force_move(session_life_keeper), force_move(func));
             });
     }
 

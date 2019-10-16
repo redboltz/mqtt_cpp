@@ -22,8 +22,20 @@ inline void connect_no_clean(Client& c) {
     }
 }
 
+template <typename Client>
+inline void async_connect_no_clean(Client& c) {
+    c->set_clean_session(false);
+    if (c->get_protocol_version() == MQTT_NS::protocol_version::v5) {
+        // set session_expiry_interval as infinity.
+        c->async_connect(std::vector<MQTT_NS::v5::property_variant>{MQTT_NS::v5::property::session_expiry_interval(0xFFFFFFFFUL)});
+    }
+    else {
+        c->async_connect();
+    }
+}
+
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -114,7 +126,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
         }
 
         c->set_close_handler(
-            [&chk, &c, &pid_pub, &s]
+            [&chk, &c, &pid_pub, &finish]
             () {
                 auto ret = chk.match(
                     "h_connack1",
@@ -127,7 +139,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                     "h_puback",
                     [&] {
                         MQTT_CHK("h_close2");
-                        s.close();
+                        finish();
                     }
                 );
                 BOOST_TEST(ret);
@@ -146,7 +158,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -252,7 +264,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         }
 
         c->set_close_handler(
-            [&chk, &c, &pid_pub, &s]
+            [&chk, &c, &pid_pub, &finish]
             () {
                 auto ret = chk.match(
                     "h_connack1",
@@ -265,7 +277,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                     "h_pubcomp",
                     [&] {
                         MQTT_CHK("h_close2");
-                        s.close();
+                        finish();
                     }
                 );
                 BOOST_TEST(ret);
@@ -284,7 +296,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -400,7 +412,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
         }
 
         c->set_close_handler(
-            [&chk, &c, &pid_pub1, &pid_pub2, &s]
+            [&chk, &c, &pid_pub1, &pid_pub2, &finish]
             () {
                 auto ret = chk.match(
                     "h_connack1",
@@ -414,7 +426,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                     "h_puback2",
                     [&] {
                         MQTT_CHK("h_close2");
-                        s.close();
+                        finish();
                     }
                 );
                 BOOST_TEST(ret);
@@ -433,7 +445,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
 }
 
 BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -525,7 +537,7 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
         }
 
         c->set_close_handler(
-            [&chk, &c, &pid_pub, &s]
+            [&chk, &c, &pid_pub, &finish]
             () {
                 auto ret = chk.match(
                     "h_connack1",
@@ -542,12 +554,12 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                                 MQTT_CHK("h_pub_finish");
                             }
                         );
-                        connect_no_clean(c);
+                        async_connect_no_clean(c);
                     },
                     "h_puback",
                     [&] {
                         MQTT_CHK("h_close2");
-                        s.close();
+                        finish();
                     }
                 );
                 BOOST_TEST(ret);
@@ -558,7 +570,7 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                 BOOST_CHECK(false);
             });
         MQTT_CHK("start");
-        c->connect();
+        c->async_connect();
         ioc.run();
         BOOST_TEST(chk.all());
     };

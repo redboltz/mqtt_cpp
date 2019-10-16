@@ -224,6 +224,7 @@ public:
         base::set_auto_pub_response(b, false);
     }
 
+    void async_connect() = delete;
     void async_disconnect() = delete;
     void async_publish_at_most_once() = delete;
     void async_publish_at_least_once() = delete;

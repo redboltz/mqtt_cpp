@@ -17,9 +17,30 @@ BOOST_AUTO_TEST_SUITE(test_will)
 using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( will_qos0 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
@@ -94,10 +115,10 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close_2");
-            s.close();
+            finish();
         });
     c2->set_error_handler(
         []
@@ -146,12 +167,34 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
 
     ioc.run();
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_CASE( will_qos1 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
@@ -221,10 +264,10 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close_2");
-            s.close();
+            finish();
         });
     c2->set_error_handler(
         []
@@ -273,13 +316,34 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
 
     ioc.run();
     BOOST_TEST(chk.all());
-    BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_CASE( will_qos2 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
@@ -350,10 +414,10 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close_2");
-            s.close();
+            finish();
         });
     c2->set_error_handler(
         []
@@ -407,12 +471,34 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
 
     ioc.run();
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_CASE( will_retain ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
@@ -487,10 +573,10 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close_2");
-            s.close();
+            finish();
         });
     c2->set_error_handler(
         []
@@ -571,12 +657,34 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
 
     ioc.run();
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_CASE( overlength_message ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
@@ -584,20 +692,45 @@ BOOST_AUTO_TEST_CASE( overlength_message ) {
     std::string wm(0x10000, 'a');
     c1->set_will(MQTT_NS::will("topic1"_mb, MQTT_NS::buffer(MQTT_NS::string_view(wm))));
     c1->set_clean_session(true);
-    c1->connect();
     try {
+        c1->connect();
         ioc.run();
         BOOST_CHECK(false);
     }
     catch (MQTT_NS::will_message_length_error const&) {
         BOOST_CHECK(true);
+        c1->force_disconnect();
+        finish();
     }
+
+    th.join();
 }
 
 BOOST_AUTO_TEST_CASE( will_prop ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
@@ -694,10 +827,10 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close_2");
-            s.close();
+            finish();
         });
     c2->set_error_handler(
         []
@@ -799,6 +932,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
 
     ioc.run();
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -13,8 +13,11 @@
 BOOST_AUTO_TEST_SUITE(test_remaining_length)
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
-        if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) return;
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
+            finish();
+            return;
+        }
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         std::string test_contents;
@@ -50,10 +53,10 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
                 return true;
             });
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -122,8 +125,11 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
-        if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) return;
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
+            finish();
+            return;
+        }
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         std::string test_contents;
@@ -159,10 +165,10 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
                 return true;
             });
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -233,8 +239,11 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
 # if 0 // It would make network load too much.
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
-        if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) return;
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
+            finish();
+            return;
+        }
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         std::string test_contents;
@@ -270,10 +279,10 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
                 return true;
             });
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []

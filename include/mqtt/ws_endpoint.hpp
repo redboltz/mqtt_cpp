@@ -84,15 +84,14 @@ public:
         ws_.async_accept_ex(buffers, decorator, std::forward<AcceptHandler>(handler));
     }
 
-    template<typename HandshakeHandler>
-    void async_handshake(
-        string_view const& host,
-        string_view const& resource,
-        HandshakeHandler&& h) {
-        ws_.async_handshake(
-            boost::beast::string_view(host.data(), host.size()),
-            boost::beast::string_view(resource.data(), resource.size()),
-            std::forward<HandshakeHandler>(h));
+    template <typename... Args>
+    void async_handshake(Args&& ... args) {
+        ws_.async_handshake(std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    void handshake(Args&& ... args) {
+        ws_.handshake(std::forward<Args>(args)...);
     }
 
     template <typename MutableBufferSequence, typename ReadHandler>

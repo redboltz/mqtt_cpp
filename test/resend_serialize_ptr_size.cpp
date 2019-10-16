@@ -39,9 +39,30 @@ void set_serialize_handlers(Client const& c, Serialized& serialized) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
@@ -139,10 +160,10 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close2");
-            s.close();
+            finish();
         });
     c2->set_puback_handler(
         [&chk, &c2, &pid_pub]
@@ -158,12 +179,34 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
@@ -262,10 +305,10 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close2");
-            s.close();
+            finish();
         });
     c2->set_pubrec_handler(
         [&chk, &pid_pub]
@@ -287,12 +330,34 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
     ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
@@ -398,10 +463,10 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close2");
-            s.close();
+            finish();
         });
     c2->set_pubcomp_handler(
         [&chk, &c2]
@@ -416,12 +481,34 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
     ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
     c1->set_client_id("cid1");
@@ -522,10 +609,10 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close2");
-            s.close();
+            finish();
         });
     c2->set_puback_handler(
         [&chk, &c2, &pid_pub1, &pid_pub2]
@@ -551,6 +638,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 template <typename Client, typename Elem>
@@ -579,9 +667,30 @@ void set_v5_serialize_handlers(Client const& c, Serialized& serialized) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
@@ -751,10 +860,10 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close2");
-            s.close();
+            finish();
         });
     c2->set_v5_puback_handler(
         [&chk, &c2, &pid_pub]
@@ -770,12 +879,34 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
     ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
@@ -876,10 +1007,10 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close2");
-            s.close();
+            finish();
         });
     c2->set_v5_pubrec_handler(
         [&chk, &pid_pub]
@@ -901,12 +1032,34 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
     ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
@@ -1065,10 +1218,10 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close2");
-            s.close();
+            finish();
         });
     c2->set_v5_pubcomp_handler(
         [&chk, &c2]
@@ -1083,12 +1236,34 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
     ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
 
     auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
     c1->set_client_id("cid1");
@@ -1191,10 +1366,10 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
             return true;
         });
     c2->set_close_handler(
-        [&chk, &s]
+        [&chk, &finish]
         () {
             MQTT_CHK("h_close2");
-            s.close();
+            finish();
         });
     c2->set_v5_puback_handler(
         [&chk, &c2, &pid_pub1, &pid_pub2]
@@ -1220,6 +1395,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
     ioc.run();
     BOOST_TEST(serialized.empty() == true);
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
