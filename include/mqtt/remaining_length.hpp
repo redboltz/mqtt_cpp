@@ -21,7 +21,7 @@ remaining_bytes(std::size_t size) {
 }
 
 constexpr std::tuple<std::size_t, std::size_t>
-remaining_length(MQTT_NS::string_view bytes) {
+remaining_length(string_view bytes) {
     return variable_length(bytes);
 }
 

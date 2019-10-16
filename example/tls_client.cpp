@@ -121,8 +121,8 @@ int main(int argc, char** argv) {
          MQTT_NS::qos qos_value,
          bool is_retain,
          MQTT_NS::optional<packet_id_t> packet_id,
-         MQTT_NS::string_view topic_name,
-         MQTT_NS::string_view contents){
+         MQTT_NS::buffer topic_name,
+         MQTT_NS::buffer contents){
             std::cout << "publish received. "
                       << "dup: " << std::boolalpha << is_dup
                       << " qos: " << qos_value

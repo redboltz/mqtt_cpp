@@ -86,8 +86,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents) {
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
                     BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);
@@ -153,8 +153,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                  MQTT_NS::qos qos_value,
                   bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
@@ -276,8 +276,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents) {
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
                     BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);
@@ -346,8 +346,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
@@ -470,8 +470,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents) {
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
                     BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);
@@ -540,8 +540,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
@@ -654,8 +654,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents) {
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
                     BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);
@@ -721,8 +721,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
@@ -853,8 +853,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents) {
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
                     BOOST_TEST(qos_value == MQTT_NS::qos::at_least_once);
@@ -923,8 +923,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
@@ -1052,8 +1052,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents) {
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
                     BOOST_TEST(qos_value == MQTT_NS::qos::at_least_once);
@@ -1123,8 +1123,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
@@ -1234,8 +1234,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents) {
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
                     BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);
@@ -1301,8 +1301,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
@@ -1433,8 +1433,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents) {
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
                     BOOST_TEST(qos_value == MQTT_NS::qos::at_least_once);
@@ -1503,8 +1503,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
@@ -1632,8 +1632,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents) {
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
                     BOOST_TEST(qos_value == MQTT_NS::qos::exactly_once);
@@ -1703,8 +1703,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
@@ -1814,8 +1814,8 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                  MQTT_NS::qos qos_value,
                   bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents) {
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
                     BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);
@@ -1881,8 +1881,8 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false);
@@ -1996,8 +1996,8 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents) {
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false); // not propagated
                     BOOST_TEST(qos_value == MQTT_NS::qos::at_least_once);
@@ -2065,8 +2065,8 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                  MQTT_NS::qos qos_value,
                  bool is_retain,
                  MQTT_NS::optional<packet_id_t> packet_id,
-                 MQTT_NS::string_view topic,
-                 MQTT_NS::string_view contents,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_publish");
                     BOOST_TEST(is_dup == false); // not propagated
