@@ -503,17 +503,17 @@ template <std::size_t PacketIdBytes>
 class basic_publish_message {
 public:
     basic_publish_message(
-        buffer topic_name,
+        as::const_buffer topic_name,
         qos qos_value,
         bool retain,
         bool dup,
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        buffer payload
+        as::const_buffer payload
     )
         : fixed_header_(static_cast<char>(make_fixed_header(control_packet_type::publish, 0b0000))),
-          topic_name_(force_move(topic_name)),
+          topic_name_(topic_name),
           topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_name.size())) },
-          payload_(force_move(payload)),
+          payload_(payload),
           remaining_length_(
               2                      // topic name length
               + topic_name_.size()   // topic name
@@ -539,6 +539,7 @@ public:
         }
     }
 
+    // Used in test code, and to deserialize stored messages.
     basic_publish_message(buffer buf) {
         if (buf.empty())  throw remaining_length_error();
         fixed_header_ = static_cast<std::uint8_t>(buf.front());
@@ -563,7 +564,7 @@ public:
 
         if (buf.size() < topic_name_length) throw remaining_length_error();
 
-        topic_name_ = buf.substr(0, topic_name_length);
+        topic_name_ = as::buffer(buf.substr(0, topic_name_length));
         utf8string_check(topic_name_);
         buf.remove_prefix(topic_name_length);
 
@@ -581,7 +582,7 @@ public:
             break;
         };
 
-        payload_ = force_move(buf);
+        payload_ = as::buffer(buf);
     }
 
     /**
@@ -638,7 +639,7 @@ public:
     }
 
     /**
-     * @brief Create one continuours buffer.
+     * @brief Create one continuous buffer.
      *        All sequence of buffers are concatinated.
      *        It is useful to store to file/database.
      * @return continuous buffer
@@ -652,10 +653,10 @@ public:
         ret.append(remaining_length_buf_.data(), remaining_length_buf_.size());
 
         ret.append(topic_name_length_buf_.data(), topic_name_length_buf_.size());
-        ret.append(topic_name_.data(), topic_name_.size());
+        ret.append(get_pointer(topic_name_), get_size(topic_name_));
 
         ret.append(packet_id_.data(), packet_id_.size());
-        ret.append(payload_.data(), payload_.size());
+        ret.append(get_pointer(payload_), get_size(payload_));
 
         return ret;
     }
@@ -696,16 +697,16 @@ public:
      * @brief Get topic name
      * @return topic name
      */
-    constexpr buffer const& topic() const {
-        return topic_name_;
+    constexpr string_view topic() const {
+        return string_view(get_pointer(topic_name_), get_size(topic_name_));
     }
 
     /**
      * @brief Get payload
      * @return payload
      */
-    constexpr buffer const& payload() const {
-        return payload_;
+    constexpr string_view payload() const {
+        return string_view(get_pointer(payload_), get_size(payload_));
     }
 
     /**
@@ -718,10 +719,10 @@ public:
 
 private:
     std::uint8_t fixed_header_;
-    buffer topic_name_;
+    as::const_buffer topic_name_;
     boost::container::static_vector<char, 2> topic_name_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    buffer payload_;
+    as::const_buffer payload_;
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 };
@@ -733,32 +734,39 @@ template <std::size_t PacketIdBytes>
 class basic_subscribe_message {
 private:
     struct entry {
-        entry(buffer topic_name, subscribe_options qos_value)
-            : topic_name_(force_move(topic_name)),
+        entry(as::const_buffer topic_name, subscribe_options qos_value)
+            : topic_name_(topic_name),
               topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_name_.size())) },
               qos_(qos_value.get_qos())
         {}
 
-        buffer topic_name_;
+        as::const_buffer topic_name_;
         boost::container::static_vector<char, 2> topic_name_length_buf_;
         qos qos_;
     };
 
 public:
     basic_subscribe_message(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         typename packet_id_type<PacketIdBytes>::type packet_id
     )
         : fixed_header_(make_fixed_header(control_packet_type::subscribe, 0b0010)),
           remaining_length_(PacketIdBytes)
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
-        for (auto&& e : params) {
-            auto topic_name = force_move(std::get<0>(e));
-            auto size = topic_name.size();
-            utf8string_check(topic_name);
 
-            entries_.emplace_back(force_move(topic_name), std::get<1>(e));
+        // Check for errors before allocating.
+        for (auto&& e : params) {
+            as::const_buffer topic_name = std::get<0>(e);
+            utf8string_check(topic_name);
+        }
+
+        entries_.reserve(params.size());
+        for (auto&& e : params) {
+            as::const_buffer topic_name = std::get<0>(e);
+            size_t size = topic_name.size();
+
+            entries_.emplace_back(topic_name, std::get<1>(e));
             remaining_length_ +=
                 2 +                     // topic name length
                 size +                  // topic name
@@ -835,10 +843,9 @@ public:
 
         for (auto const& e : entries_) {
             ret.append(e.topic_name_length_buf_.data(), e.topic_name_length_buf_.size());
-            ret.append(e.topic_name_.data(), e.topic_name_.size());
+            ret.append(get_pointer(e.topic_name_), get_size(e.topic_name_));
             ret.push_back(static_cast<char>(e.qos_));
         }
-
 
         return ret;
     }
@@ -868,6 +875,7 @@ public:
         for (auto e : rb) {
             remaining_length_buf_.push_back(e);
         }
+        // TODO: We should be able to simply static-cast params.data() into a char*.
         entries_.reserve(params.size());
         for (auto e : params) {
             entries_.push_back(static_cast<char>(e));
@@ -944,31 +952,36 @@ template <std::size_t PacketIdBytes>
 class basic_unsubscribe_message {
 private:
     struct entry {
-        entry(buffer topic_name)
+        entry(as::const_buffer topic_name)
             : topic_name_(force_move(topic_name)),
               topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_name_.size())) }
         {}
 
-        buffer topic_name_;
+        as::const_buffer topic_name_;
         boost::container::static_vector<char, 2> topic_name_length_buf_;
     };
 
 public:
     basic_unsubscribe_message(
-        std::vector<buffer> params,
+        std::vector<as::const_buffer> params,
         typename packet_id_type<PacketIdBytes>::type packet_id
     )
         : fixed_header_(make_fixed_header(control_packet_type::unsubscribe, 0b0010)),
           remaining_length_(PacketIdBytes)
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
+
+        // Check for errors before allocating.
         for (auto&& e : params) {
-            auto size = e.size();
             utf8string_check(e);
-            entries_.emplace_back(force_move(e));
+        }
+
+        entries_.reserve(params.size());
+        for (auto&& e : params) {
+            entries_.emplace_back(e);
             remaining_length_ +=
                 2 +          // topic name length
-                size;        // topic name
+                e.size();    // topic name
         }
         auto rb = remaining_bytes(remaining_length_);
         for (auto e : rb) {
@@ -1039,7 +1052,7 @@ public:
 
         for (auto const& e : entries_) {
             ret.append(e.topic_name_length_buf_.data(), e.topic_name_length_buf_.size());
-            ret.append(e.topic_name_.data(), e.topic_name_.size());
+            ret.append(get_pointer(e.topic_name_), get_size(e.topic_name_));
         }
 
         return ret;

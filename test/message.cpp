@@ -194,7 +194,7 @@ BOOST_AUTO_TEST_CASE( publish_bad_qos ) {
 BOOST_AUTO_TEST_CASE( publish_packet_id_ok ) {
     std::string buf {
         0b00110100, // fixed header
-        8,         // remaining length
+        8,          // remaining length
 
         0x00,       // topic_name length
         4,          //
@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE( publish_packet_id_ok ) {
 BOOST_AUTO_TEST_CASE( publish_packet_id_ok_qos0 ) {
     std::string buf {
         0b00110000, // fixed header
-        6,         // remaining length
+        6,          // remaining length
 
         0x00,       // topic_name length
         4,          //
@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE( publish_packet_id_ok_qos0 ) {
 BOOST_AUTO_TEST_CASE( publish_get_attributes1 ) {
     std::string buf {
         0b00110101, // fixed header
-        8,         // remaining length
+        8,          // remaining length
 
         0x00,       // topic_name length
         4,          //
@@ -291,10 +291,8 @@ BOOST_AUTO_TEST_CASE( publish_get_attributes2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( subscribe_cbuf ) {
-    std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> v;
-    auto topic = "tp"_mb;
-    v.emplace_back(std::move(topic), 1);
-    auto m = MQTT_NS::subscribe_message(std::move(v), 2);
+    static const MQTT_NS::string_view str("tp");
+    auto m = MQTT_NS::subscribe_message({ { as::buffer(str.data(), str.size()), MQTT_NS::qos::at_least_once} }, 2);
     std::string expected {
         static_cast<char>(0b1000'0010u),
         7,
@@ -310,7 +308,7 @@ BOOST_AUTO_TEST_CASE( subscribe_cbuf ) {
 }
 
 BOOST_AUTO_TEST_CASE( suback_cbuf ) {
-    auto m = MQTT_NS::suback_message(std::vector<MQTT_NS::suback_return_code>{MQTT_NS::suback_return_code::success_maximum_qos_1}, 2);
+    auto m = MQTT_NS::suback_message({ MQTT_NS::suback_return_code::success_maximum_qos_1 }, 2);
     std::string expected {
         static_cast<char>(0b1001'0000u),
         3,
@@ -322,10 +320,8 @@ BOOST_AUTO_TEST_CASE( suback_cbuf ) {
 }
 
 BOOST_AUTO_TEST_CASE( unsubscribe_cbuf ) {
-    std::vector<MQTT_NS::buffer> v;
-    auto topic = "tp"_mb;
-    v.emplace_back(std::move(topic));
-    auto m = MQTT_NS::unsubscribe_message(std::move(v), 2);
+    static const MQTT_NS::string_view str("tp");
+    auto m = MQTT_NS::unsubscribe_message({ as::buffer(str.data(), str.size()) }, 2);
     std::string expected {
         static_cast<char>(0b1010'0010u),
         6,

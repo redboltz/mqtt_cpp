@@ -130,12 +130,12 @@ public:
               std::accumulate(
                   w.value().props().begin(),
                   w.value().props().end(),
-                  0U,
-                  [](std::size_t total, property_variant const& pv) {
+                  std::size_t(0U),
+                  [](std::size_t total, property_variant const& pv) -> size_t {
                       return total + v5::size(pv);
                   }
               )
-              : 0
+              : 0U
           ),
           will_props_(
               w ?
@@ -544,16 +544,16 @@ template <std::size_t PacketIdBytes>
 class basic_publish_message {
 public:
     basic_publish_message(
-        buffer topic_name,
+        as::const_buffer topic_name,
         qos qos_value,
         bool retain,
         bool dup,
         typename packet_id_type<PacketIdBytes>::type packet_id,
         properties props,
-        buffer payload
+        as::const_buffer payload
     )
         : fixed_header_(make_fixed_header(control_packet_type::publish, 0b0000)),
-          topic_name_(force_move(topic_name)),
+          topic_name_(topic_name),
           topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_name_.size())) },
           property_length_(
               std::accumulate(
@@ -566,7 +566,7 @@ public:
               )
           ),
           props_(force_move(props)),
-          payload_(force_move(payload)),
+          payload_(payload),
           remaining_length_(
               2                      // topic name length
               + topic_name_.size()   // topic name
@@ -592,7 +592,6 @@ public:
               ) +
               1                     // payload
           )
-
     {
         utf8string_check(topic_name_);
         publish::set_qos(fixed_header_, qos_value);
@@ -641,7 +640,7 @@ public:
 
         if (buf.size() < topic_name_length) throw remaining_length_error();
 
-        topic_name_ = buf.substr(0, topic_name_length);
+        topic_name_ = as::buffer(buf.substr(0, topic_name_length));
         utf8string_check(topic_name_);
         buf.remove_prefix(topic_name_length);
 
@@ -676,7 +675,7 @@ public:
 
         props_ = property::parse(buf.substr(0, property_length_));
         buf.remove_prefix(property_length_);
-        payload_ = force_move(buf);
+        payload_ = as::buffer(buf);
         num_of_const_buffer_sequence_ =
             1 +                   // fixed header
             1 +                   // remaining length
@@ -757,7 +756,7 @@ public:
         ret.append(remaining_length_buf_.data(), remaining_length_buf_.size());
 
         ret.append(topic_name_length_buf_.data(), topic_name_length_buf_.size());
-        ret.append(topic_name_.data(), topic_name_.size());
+        ret.append(get_pointer(topic_name_), get_size(topic_name_));
 
         ret.append(packet_id_.data(), packet_id_.size());
 
@@ -771,7 +770,7 @@ public:
             it += static_cast<std::string::difference_type>(v5::size(p));
         }
 
-        ret.append(payload_.data(), payload_.size());
+        ret.append(get_pointer(payload_), get_size(payload_));
 
         return ret;
     }
@@ -812,16 +811,16 @@ public:
      * @brief Get topic name
      * @return topic name
      */
-    constexpr buffer const& topic() const {
-        return topic_name_;
+    string_view topic() const {
+        return string_view(get_pointer(topic_name_), get_size(topic_name_));
     }
 
     /**
      * @brief Get payload
      * @return payload
      */
-    constexpr buffer const& payload() const {
-        return payload_;
+    string_view payload() const {
+        return string_view(get_pointer(payload_), get_size(payload_));
     }
 
     /**
@@ -834,13 +833,13 @@ public:
 
 private:
     std::uint8_t fixed_header_;
-    buffer topic_name_;
+    as::const_buffer topic_name_;
     boost::container::static_vector<char, 2> topic_name_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
-    buffer payload_;
+    as::const_buffer payload_;
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     std::size_t num_of_const_buffer_sequence_;
@@ -1658,20 +1657,20 @@ template <std::size_t PacketIdBytes>
 class basic_subscribe_message {
 private:
     struct entry {
-        entry(buffer topic_filter, subscribe_options options)
-            : topic_filter_(force_move(topic_filter)),
+        entry(as::const_buffer topic_filter, subscribe_options options)
+            : topic_filter_(topic_filter),
               topic_filter_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_filter_.size())) },
               options_(options)
         {}
 
-        buffer topic_filter_;
+        as::const_buffer topic_filter_;
         boost::container::static_vector<char, 2> topic_filter_length_buf_;
         subscribe_options options_;
     };
 
 public:
     basic_subscribe_message(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         typename packet_id_type<PacketIdBytes>::type packet_id,
         properties props
     )
@@ -1715,12 +1714,18 @@ public:
             property_length_buf_.size() +
             property_length_;
 
+        // Check for errors before allocating.
         for (auto&& e : params) {
-            auto topic_filter = force_move(std::get<0>(e));
-            auto size = topic_filter.size();
+            as::const_buffer topic_filter = std::get<0>(e);
             utf8string_check(topic_filter);
+        }
 
-            entries_.emplace_back(force_move(topic_filter), std::get<1>(e));
+        entries_.reserve(params.size());
+        for (auto&& e : params) {
+            as::const_buffer topic_filter = std::get<0>(e);
+            size_t size = topic_filter.size();
+
+            entries_.emplace_back(topic_filter, std::get<1>(e));
             remaining_length_ +=
                 2 +               // topic filter length
                 size +            // topic filter
@@ -1809,7 +1814,7 @@ public:
 
         for (auto const& e : entries_) {
             ret.append(e.topic_filter_length_buf_.data(), e.topic_filter_length_buf_.size());
-            ret.append(e.topic_filter_.data(), e.topic_filter_.size());
+            ret.append(get_pointer(e.topic_filter_), get_size(e.topic_filter_));
             ret.push_back(static_cast<char>(e.options_.operator std::uint8_t()));
         }
 
@@ -1977,18 +1982,18 @@ template <std::size_t PacketIdBytes>
 class basic_unsubscribe_message {
 private:
     struct entry {
-        entry(buffer topic_filter)
-            : topic_filter_(force_move(topic_filter)),
+        entry(as::const_buffer topic_filter)
+            : topic_filter_(topic_filter),
               topic_filter_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_filter.size())) }
         {}
 
-        buffer topic_filter_;
+        as::const_buffer topic_filter_;
         boost::container::static_vector<char, 2> topic_filter_length_buf_;
     };
 
 public:
     basic_unsubscribe_message(
-        std::vector<buffer> params,
+        std::vector<as::const_buffer> params,
         typename packet_id_type<PacketIdBytes>::type packet_id,
         properties props
     )
@@ -2032,10 +2037,15 @@ public:
             property_length_buf_.size() +
             property_length_;
 
+        // Check for errors before allocating.
+        for (auto&& e : params) {
+            utf8string_check(e);
+        }
+
+        entries_.reserve(params.size());
         for (auto&& e : params) {
             auto size = e.size();
-            utf8string_check(e);
-            entries_.emplace_back(force_move(e));
+            entries_.emplace_back(e);
             remaining_length_ +=
                 2 +          // topic filter length
                 size;        // topic filter
@@ -2118,7 +2128,7 @@ public:
 
         for (auto const& e : entries_) {
             ret.append(e.topic_filter_length_buf_.data(), e.topic_filter_length_buf_.size());
-            ret.append(e.topic_filter_.data(), e.topic_filter_.size());
+            ret.append(get_pointer(e.topic_filter_), get_size(e.topic_filter_));
         }
 
         return ret;

@@ -10,6 +10,10 @@
 #include <mqtt/namespace.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
 #include <mqtt/exception.hpp>
+#include <mqtt/string_view.hpp>
+#include <mqtt/const_buffer_util.hpp>
+
+namespace as = boost::asio;
 
 namespace MQTT_NS {
 
@@ -19,6 +23,10 @@ inline void utf8string_check(string_view str) {
     if (r != utf8string::validation::well_formed) {
         throw utf8string_contents_error(r);
     }
+}
+
+inline void utf8string_check(as::const_buffer str) {
+    utf8string_check(string_view(get_pointer(str), get_size(str)));
 }
 
 } // namespace MQTT_NS
