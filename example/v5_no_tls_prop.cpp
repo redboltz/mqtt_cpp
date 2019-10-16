@@ -26,7 +26,7 @@ void client_proc(Client& c) {
     // Setup handlers
     c->set_v5_connack_handler( // use v5 handler
         [&c]
-        (bool sp, v5::connect_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> props){
+        (bool sp, v5::connect_reason_code reason_code, MQTT_NS::v5::properties props){
             std::cout << "[client] Connack handler called" << std::endl;
             std::cout << "[client] Clean Session: " << std::boolalpha << sp << std::endl;
             std::cout << "[client] Connect Reason Code: " << reason_code << std::endl;
@@ -109,7 +109,7 @@ void client_proc(Client& c) {
         });
 
     // prepare connect properties
-    std::vector<MQTT_NS::v5::property_variant> con_ps {
+    MQTT_NS::v5::properties con_ps {
         MQTT_NS::v5::property::session_expiry_interval(0x12345678UL),
         MQTT_NS::v5::property::receive_maximum(0x1234U),
         MQTT_NS::v5::property::maximum_packet_size(0x12345678UL),
@@ -192,7 +192,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                  MQTT_NS::optional<MQTT_NS::will>,
                  bool clean_session,
                  std::uint16_t keep_alive,
-                 std::vector<MQTT_NS::v5::property_variant> props){
+                 MQTT_NS::v5::properties props){
                     std::cout << "[server] client_id    : " << client_id << std::endl;
                     std::cout << "[server] username     : " << (username ? username.value() : "none"_mb) << std::endl;
                     std::cout << "[server] password     : " << (password ? password.value() : "none"_mb) << std::endl;
@@ -242,7 +242,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                     BOOST_ASSERT(sp);
                     connections.insert(sp);
 
-                    std::vector<MQTT_NS::v5::property_variant> connack_ps {
+                    MQTT_NS::v5::properties connack_ps {
                         MQTT_NS::v5::property::session_expiry_interval(0),
                         MQTT_NS::v5::property::receive_maximum(0),
                         MQTT_NS::v5::property::maximum_qos(MQTT_NS::qos::exactly_once),
@@ -268,7 +268,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
             );
             ep.set_v5_disconnect_handler( // use v5 handler
                 [&connections, wp]
-                (MQTT_NS::v5::disconnect_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (MQTT_NS::v5::disconnect_reason_code reason_code, MQTT_NS::v5::properties /*props*/) {
                     std::cout <<
                         "[server] disconnect received." <<
                         " reason_code: " << reason_code << std::endl;

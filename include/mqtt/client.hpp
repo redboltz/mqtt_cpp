@@ -377,7 +377,7 @@ public:
      * @param func finish handler that is called when the session is finished
      */
     void connect(any session_life_keeper = any()) {
-        connect(std::vector<v5::property_variant>{}, force_move(session_life_keeper));
+        connect(v5::properties{}, force_move(session_life_keeper));
     }
 
     /**
@@ -388,7 +388,7 @@ public:
      *        3.1.2.11 CONNECT Properties
      * @param func finish handler that is called when the session is finished
      */
-    void connect(std::vector<v5::property_variant> props, any session_life_keeper = any()) {
+    void connect(v5::properties props, any session_life_keeper = any()) {
         as::ip::tcp::resolver r(ioc_);
         auto eps = r.resolve(host_, port_);
         setup_socket(socket_);
@@ -403,7 +403,7 @@ public:
      * @param func finish handler that is called when the session is finished
      */
     void connect(std::shared_ptr<Socket>&& socket, any session_life_keeper = any()) {
-        connect(force_move(socket), std::vector<v5::property_variant>{}, force_move(session_life_keeper));
+        connect(force_move(socket), v5::properties{}, force_move(session_life_keeper));
     }
 
     /**
@@ -416,7 +416,7 @@ public:
      *        3.1.2.11 CONNECT Properties
      * @param func finish handler that is called when the session is finished
      */
-    void connect(std::shared_ptr<Socket>&& socket, std::vector<v5::property_variant> props, any session_life_keeper = any()) {
+    void connect(std::shared_ptr<Socket>&& socket, v5::properties props, any session_life_keeper = any()) {
         as::ip::tcp::resolver r(ioc_);
         auto eps = r.resolve(host_, port_);
         socket_ = force_move(socket);
@@ -443,7 +443,7 @@ public:
     void disconnect(
         boost::posix_time::time_duration const& timeout,
         v5::disconnect_reason_code reason_code = v5::disconnect_reason_code::normal_disconnection,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
@@ -479,7 +479,7 @@ public:
      */
     void disconnect(
         v5::disconnect_reason_code reason_code = v5::disconnect_reason_code::normal_disconnection,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
@@ -536,7 +536,7 @@ public:
     void async_disconnect(
         boost::posix_time::time_duration const& timeout,
         v5::disconnect_reason_code reason_code,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
@@ -589,7 +589,7 @@ public:
      */
     void async_disconnect(
         v5::disconnect_reason_code reason_code,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()) {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
         if (base::connected()) {
@@ -685,7 +685,7 @@ private:
 
 #endif // defined(MQTT_USE_TLS)
 
-    void start_session(std::vector<v5::property_variant> props, any session_life_keeper) {
+    void start_session(v5::properties props, any session_life_keeper) {
         base::async_read_control_packet_type(force_move(session_life_keeper));
         // sync base::connect() refer to parameters only in the function.
         // So they can be passed as view.
@@ -704,7 +704,7 @@ private:
     template <typename Strand>
     void handshake_socket(
         tcp_endpoint<as::ip::tcp::socket, Strand>&,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         any session_life_keeper) {
         start_session(force_move(props), force_move(session_life_keeper));
     }
@@ -713,7 +713,7 @@ private:
     template <typename Strand>
     void handshake_socket(
         ws_endpoint<as::ip::tcp::socket, Strand>& socket,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         any session_life_keeper) {
         socket.async_handshake(
             host_,
@@ -731,7 +731,7 @@ private:
     template <typename Strand>
     void handshake_socket(
         tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         any session_life_keeper) {
         socket.async_handshake(
             as::ssl::stream_base::client,
@@ -746,7 +746,7 @@ private:
     template <typename Strand>
     void handshake_socket(
         ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         any session_life_keeper) {
         socket.next_layer().async_handshake(
             as::ssl::stream_base::client,
@@ -768,7 +768,7 @@ private:
 #endif // defined(MQTT_USE_TLS)
 
     template <typename Iterator>
-    void connect_impl(Socket& socket, Iterator it, Iterator end, std::vector<v5::property_variant> props, any session_life_keeper) {
+    void connect_impl(Socket& socket, Iterator it, Iterator end, v5::properties props, any session_life_keeper) {
         as::async_connect(
             socket.lowest_layer(), it, end,
             [this, self = this->shared_from_this(), &socket, session_life_keeper = force_move(session_life_keeper), props = force_move(props)]

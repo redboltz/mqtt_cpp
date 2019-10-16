@@ -20,7 +20,7 @@ inline void connect_no_clean(Client& c) {
     case MQTT_NS::protocol_version::v5:
         // set session_expiry_interval as infinity.
         c->connect(
-            std::vector<MQTT_NS::v5::property_variant>{
+            MQTT_NS::v5::properties{
                 MQTT_NS::v5::property::session_expiry_interval(0xFFFFFFFFUL)
                     }
         );

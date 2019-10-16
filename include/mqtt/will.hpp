@@ -35,7 +35,7 @@ public:
          buffer message,
          bool retain,
          qos qos_value,
-         std::vector<v5::property_variant> props = {})
+         v5::properties props = {})
         :topic_(force_move(topic)),
          message_(force_move(message)),
          retain_(retain),
@@ -57,7 +57,7 @@ public:
     will(buffer topic,
          buffer message,
          bool retain = false,
-         std::vector<v5::property_variant> props = {})
+         v5::properties props = {})
         :will(force_move(topic), force_move(message), retain, qos::at_most_once, force_move(props))
     {}
 
@@ -73,7 +73,7 @@ public:
     will(buffer topic,
          buffer message,
          qos qos_value,
-         std::vector<v5::property_variant> props = {})
+         v5::properties props = {})
         :will(force_move(topic), force_move(message), false, qos_value, force_move(props))
     {}
 
@@ -95,10 +95,10 @@ public:
     constexpr qos get_qos() const {
         return qos_;
     }
-    constexpr std::vector<v5::property_variant> const& props() const {
+    constexpr v5::properties const& props() const {
         return props_;
     }
-    constexpr std::vector<v5::property_variant>& props() {
+    constexpr v5::properties& props() {
         return props_;
     }
 
@@ -107,7 +107,7 @@ private:
     buffer message_;
     bool retain_ = false;
     qos qos_ = qos::at_most_once;
-    std::vector<v5::property_variant> props_;
+    v5::properties props_;
 };
 
 } // namespace MQTT_NS

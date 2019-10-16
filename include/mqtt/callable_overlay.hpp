@@ -330,7 +330,7 @@ struct callable_overlay final : public Impl
                                               MQTT_NS::optional<will> will,
                                               bool clean_start,
                                               std::uint16_t keep_alive,
-                                              std::vector<v5::property_variant> props) override final {
+                                              v5::properties props) override final {
         return    ! h_v5_connect_
                || h_v5_connect_(MQTT_NS::force_move(client_id),
                                 MQTT_NS::force_move(user_name),
@@ -359,7 +359,7 @@ struct callable_overlay final : public Impl
      */
     MQTT_ALWAYS_INLINE bool on_v5_connack(bool session_present,
                                               v5::connect_reason_code reason_code,
-                                              std::vector<v5::property_variant> props) override final {
+                                              v5::properties props) override final {
         return    ! h_v5_connack_
                || h_v5_connack_(session_present, reason_code, MQTT_NS::force_move(props));
     }
@@ -395,7 +395,7 @@ struct callable_overlay final : public Impl
                                               MQTT_NS::optional<packet_id_t> packet_id,
                                               MQTT_NS::buffer topic_name,
                                               MQTT_NS::buffer contents,
-                                              std::vector<v5::property_variant> props) override final {
+                                              v5::properties props) override final {
         return    ! h_v5_publish_
                || h_v5_publish_(dup,
                                 qos_value,
@@ -424,7 +424,7 @@ struct callable_overlay final : public Impl
      */
     MQTT_ALWAYS_INLINE bool on_v5_puback(packet_id_t packet_id,
                                              v5::puback_reason_code reason_code,
-                                             std::vector<v5::property_variant> props) override final {
+                                             v5::properties props) override final {
         return    ! h_v5_puback_
                || h_v5_puback_(packet_id, reason_code, MQTT_NS::force_move(props));
     }
@@ -447,7 +447,7 @@ struct callable_overlay final : public Impl
      */
     MQTT_ALWAYS_INLINE bool on_v5_pubrec(packet_id_t packet_id,
                                              v5::pubrec_reason_code reason_code,
-                                             std::vector<v5::property_variant> props) override final {
+                                             v5::properties props) override final {
         return    ! h_v5_pubrec_
                || h_v5_pubrec_(packet_id, reason_code, MQTT_NS::force_move(props));
     }
@@ -470,7 +470,7 @@ struct callable_overlay final : public Impl
      */
     MQTT_ALWAYS_INLINE bool on_v5_pubrel(packet_id_t packet_id,
                                              v5::pubrel_reason_code reason_code,
-                                             std::vector<v5::property_variant> props) override final {
+                                             v5::properties props) override final {
         return    ! h_v5_pubrel_
                || h_v5_pubrel_(packet_id, reason_code, MQTT_NS::force_move(props));
     }
@@ -493,7 +493,7 @@ struct callable_overlay final : public Impl
      */
     MQTT_ALWAYS_INLINE bool on_v5_pubcomp(packet_id_t packet_id,
                                               v5::pubcomp_reason_code reason_code,
-                                              std::vector<v5::property_variant> props) override final {
+                                              v5::properties props) override final {
         return    ! h_v5_pubcomp_
                || h_v5_pubcomp_(packet_id, reason_code, MQTT_NS::force_move(props));
     }
@@ -514,7 +514,7 @@ struct callable_overlay final : public Impl
      */
     MQTT_ALWAYS_INLINE bool on_v5_subscribe(packet_id_t packet_id,
                                                 std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries,
-                                                std::vector<v5::property_variant> props) override final {
+                                                v5::properties props) override final {
         return    ! h_v5_subscribe_
                || h_v5_subscribe_(packet_id, MQTT_NS::force_move(entries), MQTT_NS::force_move(props));
     }
@@ -536,7 +536,7 @@ struct callable_overlay final : public Impl
      */
     MQTT_ALWAYS_INLINE bool on_v5_suback(packet_id_t packet_id,
                                              std::vector<MQTT_NS::v5::suback_reason_code> reasons,
-                                             std::vector<v5::property_variant> props) override final {
+                                             v5::properties props) override final {
         return    ! h_v5_suback_
                || h_v5_suback_(packet_id, MQTT_NS::force_move(reasons), MQTT_NS::force_move(props));
     }
@@ -558,7 +558,7 @@ struct callable_overlay final : public Impl
      */
     MQTT_ALWAYS_INLINE bool on_v5_unsubscribe(packet_id_t packet_id,
                                                   std::vector<MQTT_NS::buffer> topics,
-                                                  std::vector<v5::property_variant> props) override final {
+                                                  v5::properties props) override final {
         return    ! h_v5_unsubscribe_
                || h_v5_unsubscribe_(packet_id, MQTT_NS::force_move(topics), MQTT_NS::force_move(props));
     }
@@ -580,7 +580,7 @@ struct callable_overlay final : public Impl
      */
     MQTT_ALWAYS_INLINE bool on_v5_unsuback(packet_id_t packet_id,
                                                std::vector<v5::unsuback_reason_code> reasons,
-                                               std::vector<v5::property_variant> props) override final {
+                                               v5::properties props) override final {
         return    ! h_v5_unsuback_
                || h_v5_unsuback_(packet_id, MQTT_NS::force_move(reasons), MQTT_NS::force_move(props));
     }
@@ -599,7 +599,7 @@ struct callable_overlay final : public Impl
      *        3.14.2.2 DISCONNECT Properties
      */
     MQTT_ALWAYS_INLINE void on_v5_disconnect(v5::disconnect_reason_code reason_code,
-                                                 std::vector<v5::property_variant> props) override final {
+                                                 v5::properties props) override final {
         if(h_v5_disconnect_) h_v5_disconnect_(reason_code, MQTT_NS::force_move(props));
     }
 
@@ -618,7 +618,7 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_auth(v5::auth_reason_code reason_code,
-                                           std::vector<v5::property_variant> props) override final {
+                                           v5::properties props) override final {
         return    ! h_v5_auth_
                || h_v5_auth_(reason_code, MQTT_NS::force_move(props));
 
@@ -998,7 +998,7 @@ struct callable_overlay final : public Impl
              MQTT_NS::optional<will> will,
              bool clean_start,
              std::uint16_t keep_alive,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
     /**
@@ -1020,7 +1020,7 @@ struct callable_overlay final : public Impl
     using v5_connack_handler = std::function<
         bool(bool session_present,
              v5::connect_reason_code reason_code,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
     /**
@@ -1055,7 +1055,7 @@ struct callable_overlay final : public Impl
              MQTT_NS::optional<packet_id_t> packet_id,
              MQTT_NS::buffer topic_name,
              MQTT_NS::buffer contents,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
     /**
@@ -1077,7 +1077,7 @@ struct callable_overlay final : public Impl
     using v5_puback_handler = std::function<
         bool(packet_id_t packet_id,
              v5::puback_reason_code reason_code,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
     /**
@@ -1099,7 +1099,7 @@ struct callable_overlay final : public Impl
     using v5_pubrec_handler = std::function<
         bool(packet_id_t packet_id,
              v5::pubrec_reason_code reason_code,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
     /**
@@ -1121,7 +1121,7 @@ struct callable_overlay final : public Impl
     using v5_pubrel_handler = std::function<
         bool(packet_id_t packet_id,
              v5::pubrel_reason_code reason_code,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
     /**
@@ -1143,7 +1143,7 @@ struct callable_overlay final : public Impl
     using v5_pubcomp_handler = std::function<
         bool(packet_id_t packet_id,
              v5::pubcomp_reason_code reason_code,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
     /**
@@ -1163,7 +1163,7 @@ struct callable_overlay final : public Impl
     using v5_subscribe_handler = std::function<
         bool(packet_id_t packet_id,
              std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
     /**
@@ -1184,7 +1184,7 @@ struct callable_overlay final : public Impl
     using v5_suback_handler = std::function<
         bool(packet_id_t packet_id,
              std::vector<MQTT_NS::v5::suback_reason_code> reasons,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
     /**
@@ -1205,7 +1205,7 @@ struct callable_overlay final : public Impl
     using v5_unsubscribe_handler = std::function<
         bool(packet_id_t packet_id,
              std::vector<MQTT_NS::buffer> topics,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
     /**
@@ -1226,7 +1226,7 @@ struct callable_overlay final : public Impl
     using v5_unsuback_handler = std::function<
         bool(packet_id_t,
              std::vector<v5::unsuback_reason_code> reasons,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
     /**
@@ -1244,7 +1244,7 @@ struct callable_overlay final : public Impl
      */
     using v5_disconnect_handler = std::function<
         void(v5::disconnect_reason_code reason_code,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
     /**
@@ -1263,7 +1263,7 @@ struct callable_overlay final : public Impl
      */
     using v5_auth_handler = std::function<
         bool(v5::auth_reason_code reason_code,
-             std::vector<v5::property_variant> props)
+             v5::properties props)
     >;
 
 
