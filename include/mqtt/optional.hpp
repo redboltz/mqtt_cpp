@@ -25,12 +25,15 @@ namespace MQTT_NS {
 
 using std::optional;
 using std::nullopt_t;
+using in_place_t = std::in_place_t;
+static constexpr auto in_place_init = in_place_t{};
 static constexpr auto nullopt = std::nullopt;
 
 #else  // defined(MQTT_STD_OPTIONAL)
 
 using boost::optional;
 using nullopt_t = boost::none_t;
+using boost::in_place_init;
 static const auto nullopt = boost::none;
 
 #endif // defined(MQTT_STD_OPTIONAL)

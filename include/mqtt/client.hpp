@@ -314,6 +314,11 @@ public:
         will_ = force_move(w);
     }
 
+    template<typename ... Args>
+    void set_will(Args && ... args) {
+        will_.emplace(std::forward<Args>(args)...);
+    }
+
 #if defined(MQTT_USE_TLS)
 
     /**

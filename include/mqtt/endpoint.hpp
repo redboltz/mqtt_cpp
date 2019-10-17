@@ -8850,14 +8850,11 @@ private:
                         force_move(info.user_name),
                         force_move(info.password),
                           connect_flags::has_will_flag(info.connect_flag)
-                        ? optional<will>(
-                              will(
-                                   force_move(info.will_topic),
-                                   force_move(info.will_payload),
-                                   connect_flags::has_will_retain(info.connect_flag),
-                                   connect_flags::will_qos(info.connect_flag)
-                                  )
-                            )
+                        ? optional<will>(in_place_init,
+                                         force_move(info.will_topic),
+                                         force_move(info.will_payload),
+                                         connect_flags::has_will_retain(info.connect_flag),
+                                         connect_flags::will_qos(info.connect_flag))
                         : optional<will>(nullopt),
                         clean_session_,
                         info.keep_alive
@@ -8872,15 +8869,12 @@ private:
                         force_move(info.user_name),
                         force_move(info.password),
                           connect_flags::has_will_flag(info.connect_flag)
-                        ? optional<will>(
-                              will(
-                                   force_move(info.will_topic),
-                                   force_move(info.will_payload),
-                                   connect_flags::has_will_retain(info.connect_flag),
-                                   connect_flags::will_qos(info.connect_flag),
-                                   force_move(info.will_props)
-                                  )
-                            )
+                        ? optional<will>(in_place_init,
+                                         force_move(info.will_topic),
+                                         force_move(info.will_payload),
+                                         connect_flags::has_will_retain(info.connect_flag),
+                                         connect_flags::will_qos(info.connect_flag),
+                                         force_move(info.will_props))
                         : optional<will>(nullopt),
                         clean_session_,
                         info.keep_alive,
