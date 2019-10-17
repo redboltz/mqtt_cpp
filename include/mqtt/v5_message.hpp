@@ -48,8 +48,6 @@ namespace as = boost::asio;
 
 namespace v5 {
 
-using properties = std::vector<property_variant>;
-
 namespace detail {
 
 class header_only_message {

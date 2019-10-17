@@ -603,7 +603,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
 
-    std::vector<MQTT_NS::v5::property_variant> ps {
+    MQTT_NS::v5::properties ps {
         MQTT_NS::v5::property::payload_format_indicator(MQTT_NS::v5::property::payload_format_indicator::string),
         MQTT_NS::v5::property::message_expiry_interval(0x12345678UL),
         MQTT_NS::v5::property::will_delay_interval(0x12345678UL),
@@ -658,7 +658,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
 
     c1->set_v5_connack_handler(
         [&chk, &c1_force_disconnect]
-        (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+        (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_connack_1");
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
@@ -686,7 +686,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
 
     c2->set_v5_connack_handler(
         [&chk, &c2, &pid_sub2]
-        (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+        (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_connack_2");
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
@@ -706,7 +706,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
         });
     c2->set_v5_suback_handler(
         [&chk, &c1_force_disconnect, &pid_sub2]
-        (packet_id_t packet_id, std::vector<MQTT_NS::v5::suback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_suback_2");
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(reasons.size() == 1U);
@@ -716,7 +716,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
         });
     c2->set_v5_unsuback_handler(
         [&chk, &c2, &pid_unsub2]
-        (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+        (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_unsuback_2");
             BOOST_TEST(packet_id == pid_unsub2);
             BOOST_TEST(reasons.size() == 1U);
@@ -732,7 +732,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
          MQTT_NS::optional<packet_id_t> packet_id,
          MQTT_NS::string_view topic,
          MQTT_NS::string_view contents,
-         std::vector<MQTT_NS::v5::property_variant> props) {
+         MQTT_NS::v5::properties props) {
             MQTT_CHK("h_publish_2");
             BOOST_TEST(is_dup == false);
             BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);

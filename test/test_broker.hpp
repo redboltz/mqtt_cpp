@@ -129,7 +129,7 @@ public:
              MQTT_NS::optional<MQTT_NS::will> will,
              bool clean_session,
              std::uint16_t keep_alive,
-             std::vector<MQTT_NS::v5::property_variant> props) {
+             MQTT_NS::v5::properties props) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return
@@ -156,7 +156,7 @@ public:
         );
         ep.set_v5_disconnect_handler(
             [this, wp]
-            (MQTT_NS::v5::disconnect_reason_code /*reason_code*/, std::vector<MQTT_NS::v5::property_variant> props) {
+            (MQTT_NS::v5::disconnect_reason_code /*reason_code*/, MQTT_NS::v5::properties props) {
                 if (h_disconnect_props_) h_disconnect_props_(std::move(props));
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
@@ -173,7 +173,7 @@ public:
             []
             (packet_id_t /*packet_id*/,
              MQTT_NS::v5::puback_reason_code /*reason_code*/,
-             std::vector<MQTT_NS::v5::property_variant> /*props*/){
+             MQTT_NS::v5::properties /*props*/){
                 return true;
             });
         ep.set_pubrec_handler(
@@ -188,7 +188,7 @@ public:
             [this, wp]
             (packet_id_t packet_id,
              MQTT_NS::v5::pubrec_reason_code /*reason_code*/,
-             std::vector<MQTT_NS::v5::property_variant> /*props*/){
+             MQTT_NS::v5::properties /*props*/){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 sp->pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, pubrel_props_);
@@ -206,7 +206,7 @@ public:
             [this, wp]
             (packet_id_t packet_id,
              MQTT_NS::v5::pubrel_reason_code /*reason_code*/,
-             std::vector<MQTT_NS::v5::property_variant> /*props*/){
+             MQTT_NS::v5::properties /*props*/){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 sp->pubcomp(packet_id, MQTT_NS::v5::pubcomp_reason_code::success, pubcomp_props_);
@@ -221,7 +221,7 @@ public:
             []
             (packet_id_t /*packet_id*/,
              MQTT_NS::v5::pubcomp_reason_code /*reason_code*/,
-             std::vector<MQTT_NS::v5::property_variant> /*props*/){
+             MQTT_NS::v5::properties /*props*/){
                 return true;
             });
         ep.set_publish_handler(
@@ -253,7 +253,7 @@ public:
              MQTT_NS::optional<packet_id_t> packet_id,
              MQTT_NS::buffer topic_name,
              MQTT_NS::buffer contents,
-             std::vector<MQTT_NS::v5::property_variant> props
+             MQTT_NS::v5::properties props
             ) {
                 if (h_publish_props_) h_publish_props_(props);
                 con_sp_t sp = wp.lock();
@@ -287,7 +287,7 @@ public:
             [this, wp]
             (packet_id_t packet_id,
              std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> entries,
-             std::vector<MQTT_NS::v5::property_variant> props
+             MQTT_NS::v5::properties props
             ) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
@@ -317,7 +317,7 @@ public:
             [this, wp]
             (packet_id_t packet_id,
              std::vector<MQTT_NS::buffer> topics,
-             std::vector<MQTT_NS::v5::property_variant> props
+             MQTT_NS::v5::properties props
             ) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
@@ -340,7 +340,7 @@ public:
         ep.set_v5_auth_handler(
             [this]
             (MQTT_NS::v5::auth_reason_code /*reason_code*/,
-             std::vector<MQTT_NS::v5::property_variant> props
+             MQTT_NS::v5::properties props
             ) {
                 if (h_auth_props_) h_auth_props_(std::move(props));
                 return true;
@@ -348,71 +348,71 @@ public:
         );
     }
 
-    void set_connack_props(std::vector<MQTT_NS::v5::property_variant> props) {
+    void set_connack_props(MQTT_NS::v5::properties props) {
         connack_props_ = std::move(props);
     }
 
-    void set_suback_props(std::vector<MQTT_NS::v5::property_variant> props) {
+    void set_suback_props(MQTT_NS::v5::properties props) {
         suback_props_ = std::move(props);
     }
 
-    void set_unsuback_props(std::vector<MQTT_NS::v5::property_variant> props) {
+    void set_unsuback_props(MQTT_NS::v5::properties props) {
         unsuback_props_ = std::move(props);
     }
 
-    void set_puback_props(std::vector<MQTT_NS::v5::property_variant> props) {
+    void set_puback_props(MQTT_NS::v5::properties props) {
         puback_props_ = std::move(props);
     }
 
-    void set_pubrec_props(std::vector<MQTT_NS::v5::property_variant> props) {
+    void set_pubrec_props(MQTT_NS::v5::properties props) {
         pubrec_props_ = std::move(props);
     }
 
-    void set_pubrel_props(std::vector<MQTT_NS::v5::property_variant> props) {
+    void set_pubrel_props(MQTT_NS::v5::properties props) {
         pubrel_props_ = std::move(props);
     }
 
-    void set_pubcomp_props(std::vector<MQTT_NS::v5::property_variant> props) {
+    void set_pubcomp_props(MQTT_NS::v5::properties props) {
         pubcomp_props_ = std::move(props);
     }
 
-    void set_connect_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
+    void set_connect_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
         h_connect_props_ = std::move(h);
     }
 
-    void set_disconnect_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
+    void set_disconnect_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
         h_disconnect_props_ = std::move(h);
     }
 
-    void set_publish_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
+    void set_publish_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
         h_publish_props_ = std::move(h);
     }
 
-    void set_puback_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
+    void set_puback_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
         h_puback_props_ = std::move(h);
     }
 
-    void set_pubrec_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
+    void set_pubrec_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
         h_pubrec_props_ = std::move(h);
     }
 
-    void set_pubrel_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
+    void set_pubrel_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
         h_pubrel_props_ = std::move(h);
     }
 
-    void set_pubcomp_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
+    void set_pubcomp_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
         h_pubcomp_props_ = std::move(h);
     }
 
-    void set_subscribe_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
+    void set_subscribe_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
         h_subscribe_props_ = std::move(h);
     }
 
-    void set_unsubscribe_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
+    void set_unsubscribe_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
         h_unsubscribe_props_ = std::move(h);
     }
 
-    void set_auth_props_handler(std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h) {
+    void set_auth_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
         h_auth_props_ = std::move(h);
     }
 
@@ -442,7 +442,7 @@ private:
         MQTT_NS::optional<MQTT_NS::will> will,
         bool clean_session,
         std::uint16_t /*keep_alive*/,
-        std::vector<MQTT_NS::v5::property_variant> props
+        MQTT_NS::v5::properties props
     ) {
 
         MQTT_NS::optional<boost::posix_time::time_duration> session_expiry_interval;
@@ -651,7 +651,7 @@ private:
         MQTT_NS::optional<packet_id_t> packet_id,
         MQTT_NS::buffer topic_name,
         MQTT_NS::buffer contents,
-        std::vector<MQTT_NS::v5::property_variant> props) {
+        MQTT_NS::v5::properties props) {
         (void)is_dup;
 
         auto& ep = *spep;
@@ -699,7 +699,7 @@ private:
         con_sp_t spep,
         packet_id_t packet_id,
         std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> entries,
-        std::vector<MQTT_NS::v5::property_variant> props) {
+        MQTT_NS::v5::properties props) {
 
         auto& ep = *spep;
 
@@ -768,7 +768,7 @@ private:
         con_sp_t spep,
         packet_id_t packet_id,
         std::vector<MQTT_NS::buffer> topics,
-        std::vector<MQTT_NS::v5::property_variant> props) {
+        MQTT_NS::v5::properties props) {
 
         auto& ep = *spep;
 
@@ -838,7 +838,7 @@ private:
         MQTT_NS::buffer contents,
         MQTT_NS::qos qos_value,
         bool is_retain,
-        std::vector<MQTT_NS::v5::property_variant> props) {
+        MQTT_NS::v5::properties props) {
         // For each active subscription registered for this topic
         for(auto const& sub : boost::make_iterator_range(subs_.get<tag_topic>().equal_range(topic))) {
             // publish the message to subscribers.
@@ -865,7 +865,7 @@ private:
             auto & idx = saved_subs_.get<tag_topic>();
             auto range = boost::make_iterator_range(idx.equal_range(topic));
             if( ! range.empty()) {
-                auto sp_props = std::make_shared<std::vector<MQTT_NS::v5::property_variant>>(props);
+                auto sp_props = std::make_shared<MQTT_NS::v5::properties>(props);
                 for(auto it = range.begin(); it != range.end(); std::advance(it, 1)) {
                     idx.modify(it,
                                [&](session_subscription & val)
@@ -1152,12 +1152,12 @@ private:
         retain(
             MQTT_NS::buffer topic,
             MQTT_NS::buffer contents,
-            std::vector<MQTT_NS::v5::property_variant> props,
+            MQTT_NS::v5::properties props,
             MQTT_NS::qos qos_value)
             :topic(std::move(topic)), contents(std::move(contents)), props(std::move(props)), qos_value(qos_value) {}
         MQTT_NS::buffer topic;
         MQTT_NS::buffer contents;
-        std::vector<MQTT_NS::v5::property_variant> props;
+        MQTT_NS::v5::properties props;
         MQTT_NS::qos qos_value;
     };
     using mi_retain = mi::multi_index_container<
@@ -1177,11 +1177,11 @@ private:
     struct saved_message {
         saved_message(
             MQTT_NS::buffer contents,
-            std::shared_ptr<std::vector<MQTT_NS::v5::property_variant>> props,
+            std::shared_ptr<MQTT_NS::v5::properties> props,
             MQTT_NS::qos qos_value)
             : contents(std::move(contents)), props(std::move(props)), qos_value(qos_value) {}
         MQTT_NS::buffer contents;
-        std::shared_ptr<std::vector<MQTT_NS::v5::property_variant>> props;
+        std::shared_ptr<MQTT_NS::v5::properties> props;
         MQTT_NS::qos qos_value;
     };
 
@@ -1237,23 +1237,23 @@ private:
     mi_retain retains_; ///< A list of messages retained so they can be sent to newly subscribed clients.
 
     // MQTTv5 members
-    std::vector<MQTT_NS::v5::property_variant> connack_props_;
-    std::vector<MQTT_NS::v5::property_variant> suback_props_;
-    std::vector<MQTT_NS::v5::property_variant> unsuback_props_;
-    std::vector<MQTT_NS::v5::property_variant> puback_props_;
-    std::vector<MQTT_NS::v5::property_variant> pubrec_props_;
-    std::vector<MQTT_NS::v5::property_variant> pubrel_props_;
-    std::vector<MQTT_NS::v5::property_variant> pubcomp_props_;
-    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_connect_props_;
-    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_disconnect_props_;
-    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_publish_props_;
-    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_puback_props_;
-    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_pubrec_props_;
-    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_pubrel_props_;
-    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_pubcomp_props_;
-    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_subscribe_props_;
-    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_unsubscribe_props_;
-    std::function<void(std::vector<MQTT_NS::v5::property_variant> const&)> h_auth_props_;
+    MQTT_NS::v5::properties connack_props_;
+    MQTT_NS::v5::properties suback_props_;
+    MQTT_NS::v5::properties unsuback_props_;
+    MQTT_NS::v5::properties puback_props_;
+    MQTT_NS::v5::properties pubrec_props_;
+    MQTT_NS::v5::properties pubrel_props_;
+    MQTT_NS::v5::properties pubcomp_props_;
+    std::function<void(MQTT_NS::v5::properties const&)> h_connect_props_;
+    std::function<void(MQTT_NS::v5::properties const&)> h_disconnect_props_;
+    std::function<void(MQTT_NS::v5::properties const&)> h_publish_props_;
+    std::function<void(MQTT_NS::v5::properties const&)> h_puback_props_;
+    std::function<void(MQTT_NS::v5::properties const&)> h_pubrec_props_;
+    std::function<void(MQTT_NS::v5::properties const&)> h_pubrel_props_;
+    std::function<void(MQTT_NS::v5::properties const&)> h_pubcomp_props_;
+    std::function<void(MQTT_NS::v5::properties const&)> h_subscribe_props_;
+    std::function<void(MQTT_NS::v5::properties const&)> h_unsubscribe_props_;
+    std::function<void(MQTT_NS::v5::properties const&)> h_auth_props_;
 };
 
 #endif // MQTT_TEST_BROKER_HPP

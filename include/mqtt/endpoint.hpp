@@ -348,7 +348,7 @@ public:
                                MQTT_NS::optional<will> will,
                                bool clean_start,
                                std::uint16_t keep_alive,
-                               std::vector<v5::property_variant> props) = 0;
+                               v5::properties props) = 0;
 
     /**
      * @brief Connack handler
@@ -368,7 +368,7 @@ public:
      */
     virtual bool on_v5_connack(bool session_present,
                                v5::connect_reason_code reason_code,
-                               std::vector<v5::property_variant> props) = 0;
+                               v5::properties props) = 0;
 
     /**
      * @brief Publish handler
@@ -401,7 +401,7 @@ public:
                                MQTT_NS::optional<packet_id_t> packet_id,
                                MQTT_NS::buffer topic_name,
                                MQTT_NS::buffer contents,
-                               std::vector<v5::property_variant> props) = 0;
+                               v5::properties props) = 0;
 
     /**
      * @brief Puback handler
@@ -421,7 +421,7 @@ public:
      */
     virtual bool on_v5_puback(packet_id_t packet_id,
                               v5::puback_reason_code reason_code,
-                              std::vector<v5::property_variant> props) = 0;
+                              v5::properties props) = 0;
 
     /**
      * @brief Pubrec handler
@@ -441,7 +441,7 @@ public:
      */
     virtual bool on_v5_pubrec(packet_id_t packet_id,
                               v5::pubrec_reason_code reason_code,
-                              std::vector<v5::property_variant> props) = 0;
+                              v5::properties props) = 0;
 
     /**
      * @brief Pubrel handler
@@ -461,7 +461,7 @@ public:
      */
     virtual bool on_v5_pubrel(packet_id_t packet_id,
                               v5::pubrel_reason_code reason_code,
-                              std::vector<v5::property_variant> props) = 0;
+                              v5::properties props) = 0;
 
     /**
      * @brief Pubcomp handler
@@ -481,7 +481,7 @@ public:
      */
     virtual bool on_v5_pubcomp(packet_id_t packet_id,
                                v5::pubcomp_reason_code reason_code,
-                               std::vector<v5::property_variant> props) = 0;
+                               v5::properties props) = 0;
 
     /**
      * @brief Subscribe handler
@@ -499,7 +499,7 @@ public:
      */
     virtual bool on_v5_subscribe(packet_id_t packet_id,
                                  std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries,
-                                 std::vector<v5::property_variant> props) = 0;
+                                 v5::properties props) = 0;
 
     /**
      * @brief Suback handler
@@ -518,7 +518,7 @@ public:
      */
     virtual bool on_v5_suback(packet_id_t packet_id,
                               std::vector<MQTT_NS::v5::suback_reason_code> reasons,
-                              std::vector<v5::property_variant> props) = 0;
+                              v5::properties props) = 0;
 
     /**
      * @brief Unsubscribe handler
@@ -537,7 +537,7 @@ public:
      */
     virtual bool on_v5_unsubscribe(packet_id_t packet_id,
                                    std::vector<MQTT_NS::buffer> topics,
-                                   std::vector<v5::property_variant> props) = 0;
+                                   v5::properties props) = 0;
 
     /**
      * @brief Unsuback handler
@@ -556,7 +556,7 @@ public:
      */
     virtual bool on_v5_unsuback(packet_id_t,
                                 std::vector<v5::unsuback_reason_code> reasons,
-                                std::vector<v5::property_variant> props) = 0;
+                                v5::properties props) = 0;
 
     /**
      * @brief Disconnect handler
@@ -572,7 +572,7 @@ public:
      *        3.14.2.2 DISCONNECT Properties
      */
     virtual void on_v5_disconnect(v5::disconnect_reason_code reason_code,
-                                  std::vector<v5::property_variant> props) = 0;
+                                  v5::properties props) = 0;
 
     /**
      * @brief Auth handler
@@ -589,7 +589,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     virtual bool on_v5_auth(v5::auth_reason_code reason_code,
-                            std::vector<v5::property_variant> props) = 0;
+                            v5::properties props) = 0;
 
     // Original handlers
 
@@ -777,7 +777,7 @@ public:
         std::string contents,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if(qos_value == qos::at_most_once) {
@@ -832,7 +832,7 @@ public:
         any life_keeper,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if(qos_value == qos::at_most_once) {
@@ -870,7 +870,7 @@ public:
         buffer contents,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
@@ -898,7 +898,7 @@ public:
     packet_id_t subscribe(
         string_view topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_subscribe(packet_id, topic_name, option, force_move(props));
@@ -925,7 +925,7 @@ public:
     packet_id_t subscribe(
         as::const_buffer topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_subscribe(packet_id, topic_name, option, force_move(props));
@@ -952,7 +952,7 @@ public:
     packet_id_t subscribe(
         buffer topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_subscribe(packet_id, force_move(topic_name), option, force_move(props));
@@ -975,7 +975,7 @@ public:
      */
     packet_id_t subscribe(
         std::vector<std::tuple<string_view, subscribe_options>> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
         std::vector<std::tuple<buffer, subscribe_options>> buf_params;
@@ -1004,7 +1004,7 @@ public:
      */
     packet_id_t subscribe(
         std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_subscribe(packet_id, force_move(params), force_move(props));
@@ -1027,7 +1027,7 @@ public:
      */
     packet_id_t subscribe(
         std::vector<std::tuple<buffer, subscribe_options>> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_subscribe(packet_id, force_move(params), force_move(props));
@@ -1049,7 +1049,7 @@ public:
      */
     packet_id_t unsubscribe(
         string_view topic_name,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         return unsubscribe(as::buffer(topic_name.data(), topic_name.size()), force_move(props));
     }
@@ -1069,7 +1069,7 @@ public:
      */
     packet_id_t unsubscribe(
         as::const_buffer topic_name,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_unsubscribe(packet_id, topic_name, force_move(props));
@@ -1091,7 +1091,7 @@ public:
      */
     packet_id_t unsubscribe(
         buffer topic_name,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_unsubscribe(packet_id, force_move(topic_name), force_move(props));
@@ -1112,7 +1112,7 @@ public:
      */
     packet_id_t unsubscribe(
         std::vector<string_view> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         std::vector<buffer> buf_params;
         buf_params.reserve(params.size());
@@ -1139,7 +1139,7 @@ public:
      */
     packet_id_t unsubscribe(
         std::vector<as::const_buffer> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_unsubscribe(packet_id, force_move(params), force_move(props));
@@ -1160,7 +1160,7 @@ public:
      */
     packet_id_t unsubscribe(
         std::vector<buffer> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
         acquired_unsubscribe(packet_id, force_move(params), force_move(props));
@@ -1184,7 +1184,7 @@ public:
      */
     void disconnect(
         v5::disconnect_reason_code reason = v5::disconnect_reason_code::normal_disconnection,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (connected_ && mqtt_connected_) {
             disconnect_requested_ = true;
@@ -1232,7 +1232,7 @@ public:
         std::string contents,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         auto sp_topic    = std::make_shared<std::string>(force_move(topic_name));
         auto sp_contents = std::make_shared<std::string>(force_move(contents));
@@ -1273,7 +1273,7 @@ public:
         any life_keeper,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
@@ -1313,7 +1313,7 @@ public:
         any life_keeper,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
@@ -1350,7 +1350,7 @@ public:
         std::string contents,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         auto sp_topic    = std::make_shared<std::string>(force_move(topic_name));
         auto sp_contents = std::make_shared<std::string>(force_move(contents));
@@ -1391,7 +1391,7 @@ public:
         any life_keeper,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
@@ -1428,7 +1428,7 @@ public:
         buffer contents,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if (register_packet_id(packet_id)) {
@@ -1461,7 +1461,7 @@ public:
         packet_id_t packet_id,
         string_view topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (register_packet_id(packet_id)) {
             acquired_subscribe(packet_id, topic_name, option, force_move(props));
@@ -1493,7 +1493,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (register_packet_id(packet_id)) {
             acquired_subscribe(packet_id, topic_name, option, force_move(props));
@@ -1519,7 +1519,7 @@ public:
     bool subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<string_view, subscribe_options>> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (register_packet_id(packet_id)) {
             std::vector<std::tuple<buffer, subscribe_options>> buf_params;
@@ -1551,7 +1551,7 @@ public:
     bool subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (register_packet_id(packet_id)) {
             acquired_subscribe(packet_id, force_move(params), force_move(props));
@@ -1577,7 +1577,7 @@ public:
     bool subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<buffer, subscribe_options>> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (register_packet_id(packet_id)) {
             acquired_subscribe(packet_id, force_move(params), force_move(props));
@@ -1604,7 +1604,7 @@ public:
     bool unsubscribe(
         packet_id_t packet_id,
         string_view topic_name,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (register_packet_id(packet_id)) {
             acquired_unsubscribe(packet_id, topic_name, force_move(props));
@@ -1631,7 +1631,7 @@ public:
     bool unsubscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (register_packet_id(packet_id)) {
             acquired_unsubscribe(packet_id, topic_name, force_move(props));
@@ -1657,7 +1657,7 @@ public:
     bool unsubscribe(
         packet_id_t packet_id,
         std::vector<string_view> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (register_packet_id(packet_id)) {
             std::vector<buffer> buf_params;
@@ -1689,7 +1689,7 @@ public:
     bool unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (register_packet_id(packet_id)) {
             acquired_unsubscribe(packet_id, force_move(params), force_move(props));
@@ -1715,7 +1715,7 @@ public:
     bool unsubscribe(
         packet_id_t packet_id,
         std::vector<buffer> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if (register_packet_id(packet_id)) {
             acquired_unsubscribe(packet_id, force_move(params), force_move(props));
@@ -1753,7 +1753,7 @@ public:
         std::string contents,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if(qos_value == qos::at_most_once) {
             // In the at_most_once case, we know a priori that send_publish won't track the lifetime.
@@ -1812,7 +1812,7 @@ public:
         any life_keeper,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
@@ -1856,7 +1856,7 @@ public:
         buffer contents,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
@@ -1900,7 +1900,7 @@ public:
         std::string contents,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         if(qos_value == qos::at_most_once)
         {
@@ -1961,7 +1961,7 @@ public:
         any life_keeper,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
@@ -2005,7 +2005,7 @@ public:
         buffer contents,
         qos qos_value = qos::at_most_once,
         bool retain = false,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
@@ -2044,7 +2044,7 @@ public:
         packet_id_t packet_id,
         string_view topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         std::vector<std::tuple<buffer, subscribe_options>> params;
         send_subscribe(force_move(params), packet_id, topic_name, option, force_move(props));
@@ -2072,7 +2072,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         std::vector<std::tuple<buffer, subscribe_options>> params;
         send_subscribe(force_move(params), packet_id, topic_name, option, force_move(props));
@@ -2094,7 +2094,7 @@ public:
     void acquired_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<string_view, subscribe_options>> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         std::vector<std::tuple<buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
@@ -2120,7 +2120,7 @@ public:
     void acquired_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<buffer, subscribe_options>> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         send_subscribe(force_move(params), packet_id, force_move(props));
     }
@@ -2142,7 +2142,7 @@ public:
     void acquired_unsubscribe(
         packet_id_t packet_id,
         string_view topic_name,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
 
         std::vector<buffer> params;
@@ -2167,7 +2167,7 @@ public:
     void acquired_unsubscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
 
         std::vector<buffer> params;
@@ -2191,7 +2191,7 @@ public:
     void acquired_unsubscribe(
         packet_id_t packet_id,
         std::vector<string_view> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         std::vector<buffer> cb_params;
         cb_params.reserve(params.size());
@@ -2218,7 +2218,7 @@ public:
     void acquired_unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         std::vector<buffer> cb_params;
         cb_params.reserve(params.size());
@@ -2245,7 +2245,7 @@ public:
     void acquired_unsubscribe(
         packet_id_t packet_id,
         std::vector<buffer> params,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         send_unsubscribe(force_move(params), packet_id, force_move(props));
     }
@@ -2280,7 +2280,7 @@ public:
      */
     void auth(
         v5::auth_reason_code reason_code = v5::auth_reason_code::success,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         send_auth(reason_code, force_move(props));
     }
@@ -2321,7 +2321,7 @@ public:
         optional<std::string> const& password,
         optional<will> w,
         std::uint16_t keep_alive_sec,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         connect_requested_ = true;
         send_connect(
@@ -2384,7 +2384,7 @@ public:
         optional<buffer> password,
         optional<will> w,
         std::uint16_t keep_alive_sec,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         connect_requested_ = true;
         send_connect(
@@ -2410,7 +2410,7 @@ public:
     void connack(
         bool session_present,
         variant<connect_return_code, v5::connect_reason_code> reason_code,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         send_connack(session_present, reason_code, force_move(props));
     }
@@ -2430,7 +2430,7 @@ public:
     void puback(
         packet_id_t packet_id,
         v5::puback_reason_code reason_code = v5::puback_reason_code::success,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         send_puback(packet_id, reason_code, force_move(props));
     }
@@ -2450,7 +2450,7 @@ public:
     void pubrec(
         packet_id_t packet_id,
         v5::pubrec_reason_code reason_code = v5::pubrec_reason_code::success,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         send_pubrec(packet_id, reason_code, force_move(props));
     }
@@ -2473,7 +2473,7 @@ public:
     void pubrel(
         packet_id_t packet_id,
         v5::pubrel_reason_code reason_code = v5::pubrel_reason_code::success,
-        std::vector<v5::property_variant> props = {},
+        v5::properties props = {},
         any life_keeper = any()
     ) {
         send_pubrel(packet_id, reason_code, force_move(props), force_move(life_keeper));
@@ -2494,7 +2494,7 @@ public:
     void pubcomp(
         packet_id_t packet_id,
         v5::pubcomp_reason_code reason_code = v5::pubcomp_reason_code::success,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         send_pubcomp(packet_id, reason_code, force_move(props));
     }
@@ -2514,7 +2514,7 @@ public:
     void suback(
         packet_id_t packet_id,
         variant<suback_return_code, v5::suback_reason_code> reason,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> params;
         send_suback(force_move(params), packet_id, std::move(reason), std::move(props));
@@ -2535,7 +2535,7 @@ public:
     void suback(
         packet_id_t packet_id,
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> reasons,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         send_suback(force_move(reasons), packet_id, force_move(props));
     }
@@ -2565,7 +2565,7 @@ public:
     void unsuback(
         packet_id_t packet_id,
         v5::unsuback_reason_code reason,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         send_unsuback(std::vector<v5::unsuback_reason_code>{}, packet_id, reason, std::move(reason), std::move(props));
     }
@@ -2585,7 +2585,7 @@ public:
     void unsuback(
         packet_id_t packet_id,
         std::vector<v5::unsuback_reason_code> reasons,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         send_unsuback(force_move(reasons), packet_id, force_move(props));
     }
@@ -2646,7 +2646,7 @@ public:
         std::string contents,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -2717,7 +2717,7 @@ public:
         any life_keeper,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -2782,7 +2782,7 @@ public:
         buffer contents,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -2839,7 +2839,7 @@ public:
     packet_id_t async_subscribe(
         std::string topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -2894,7 +2894,7 @@ public:
     packet_id_t async_subscribe(
         as::const_buffer topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -2949,7 +2949,7 @@ public:
     packet_id_t async_subscribe(
         buffer topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -2998,7 +2998,7 @@ public:
      */
     packet_id_t async_subscribe(
         std::vector<std::tuple<std::string, subscribe_options>> const& params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3047,7 +3047,7 @@ public:
      */
     packet_id_t async_subscribe(
         std::vector<std::tuple<as::const_buffer, subscribe_options>> const& params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3096,7 +3096,7 @@ public:
      */
     packet_id_t async_subscribe(
         std::vector<std::tuple<buffer, subscribe_options>> params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3141,7 +3141,7 @@ public:
      */
     packet_id_t async_unsubscribe(
         std::string topic_name,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3186,7 +3186,7 @@ public:
      */
     packet_id_t async_unsubscribe(
         as::const_buffer topic_name,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3231,7 +3231,7 @@ public:
      */
     packet_id_t async_unsubscribe(
         buffer topic_name,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3276,7 +3276,7 @@ public:
      */
     packet_id_t async_unsubscribe(
         std::vector<std::string> const& params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3321,7 +3321,7 @@ public:
      */
     packet_id_t async_unsubscribe(
         std::vector<as::const_buffer> const& params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3366,7 +3366,7 @@ public:
      */
     packet_id_t async_unsubscribe(
         std::vector<buffer> params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
@@ -3389,7 +3389,7 @@ public:
             disconnect_requested_ = true;
             // The reason code and property vector are only used if we're using mqttv5.
             async_send_disconnect(v5::disconnect_reason_code::normal_disconnection,
-                                  std::vector<v5::property_variant>{},
+                                  v5::properties{},
                                   force_move(func));
         }
     }
@@ -3412,7 +3412,7 @@ public:
      */
     void async_disconnect(
         v5::disconnect_reason_code reason,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (connected_ && mqtt_connected_) {
@@ -3487,7 +3487,7 @@ public:
         std::string contents,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -3567,7 +3567,7 @@ public:
         any life_keeper,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -3641,7 +3641,7 @@ public:
         buffer contents,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -3716,7 +3716,7 @@ public:
         std::string contents,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -3796,7 +3796,7 @@ public:
         any life_keeper,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -3870,7 +3870,7 @@ public:
         buffer contents,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -3936,7 +3936,7 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4001,7 +4001,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4066,7 +4066,7 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4123,7 +4123,7 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<std::string, subscribe_options>> const& params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4180,7 +4180,7 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, subscribe_options>> const& params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4237,7 +4237,7 @@ public:
     bool async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<buffer, subscribe_options>> params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4292,7 +4292,7 @@ public:
     bool async_unsubscribe(
         packet_id_t packet_id,
         buffer topic_name,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4347,7 +4347,7 @@ public:
     bool async_unsubscribe(
         packet_id_t packet_id,
         std::vector<std::string> const& params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4402,7 +4402,7 @@ public:
     bool async_unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> const& params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4457,7 +4457,7 @@ public:
     bool async_unsubscribe(
         packet_id_t packet_id,
         std::vector<buffer> params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
@@ -4510,7 +4510,7 @@ public:
             retain,
             false,
             packet_id,
-            std::vector<v5::property_variant>{},
+            v5::properties{},
             buffer(sv_contents),
             force_move(func),
             std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
@@ -4546,7 +4546,7 @@ public:
         std::string contents,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -4609,7 +4609,7 @@ public:
             retain,
             false,
             packet_id,
-            std::vector<v5::property_variant>{},
+            v5::properties{},
             buffer(string_view(get_pointer(contents), get_size(contents))),
             force_move(func),
             force_move(life_keeper)
@@ -4648,7 +4648,7 @@ public:
         any life_keeper,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -4703,7 +4703,7 @@ public:
             retain,
             false,
             packet_id,
-            std::vector<v5::property_variant>{},
+            v5::properties{},
             force_move(contents),
             force_move(func),
             any()
@@ -4739,7 +4739,7 @@ public:
         buffer contents,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -4799,7 +4799,7 @@ public:
             retain,
             true,
             packet_id,
-            std::vector<v5::property_variant>{},
+            v5::properties{},
             buffer(sv_contents),
             force_move(func),
             std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
@@ -4835,7 +4835,7 @@ public:
         std::string contents,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -4897,7 +4897,7 @@ public:
             retain,
             true,
             packet_id,
-            std::vector<v5::property_variant>{},
+            v5::properties{},
             buffer(string_view(get_pointer(contents), get_size(contents))),
             force_move(func),
             force_move(life_keeper)
@@ -4936,7 +4936,7 @@ public:
         any life_keeper,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -4990,7 +4990,7 @@ public:
             retain,
             true,
             packet_id,
-            std::vector<v5::property_variant>{},
+            v5::properties{},
             force_move(contents),
             force_move(func),
             any()
@@ -5028,7 +5028,7 @@ public:
         buffer contents,
         qos qos_value,
         bool retain,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
@@ -5108,7 +5108,7 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
@@ -5182,7 +5182,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
 
@@ -5259,7 +5259,7 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         subscribe_options option,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
 
@@ -5337,7 +5337,7 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<std::string, subscribe_options>> params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
 
@@ -5418,7 +5418,7 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
 
@@ -5498,7 +5498,7 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<buffer, subscribe_options>> params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
 
@@ -5597,7 +5597,7 @@ public:
     void acquired_async_unsubscribe(
         packet_id_t packet_id,
         buffer topic_name,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         std::vector<buffer> params { force_move(topic_name) };
@@ -5660,7 +5660,7 @@ public:
     void acquired_async_unsubscribe(
         packet_id_t packet_id,
         std::vector<std::string> params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
 
@@ -5743,7 +5743,7 @@ public:
     void acquired_async_unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
 
@@ -5801,7 +5801,7 @@ public:
     void acquired_async_unsubscribe(
         packet_id_t packet_id,
         std::vector<buffer> params,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
 
@@ -5850,7 +5850,7 @@ public:
      */
     void async_auth(
         v5::auth_reason_code reason_code = v5::auth_reason_code::success,
-        std::vector<v5::property_variant> props = {},
+        v5::properties props = {},
         async_handler_t func = async_handler_t()) {
         async_send_auth(reason_code, force_move(props), force_move(func));
     }
@@ -5891,7 +5891,7 @@ public:
             force_move(password),
             force_move(w),
             keep_alive_sec,
-            std::vector<v5::property_variant>{},
+            v5::properties{},
             force_move(func));
     }
 
@@ -5928,7 +5928,7 @@ public:
         optional<buffer> password,
         optional<will> w,
         std::uint16_t keep_alive_sec,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         connect_requested_ = true;
@@ -5954,7 +5954,7 @@ public:
         variant<connect_return_code, v5::connect_reason_code> reason_code,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_connack(session_present, reason_code, std::vector<v5::property_variant>{}, force_move(func));
+        async_send_connack(session_present, reason_code, v5::properties{}, force_move(func));
     }
 
     /**
@@ -5972,7 +5972,7 @@ public:
     void async_connack(
         bool session_present,
         variant<connect_return_code, v5::connect_reason_code> reason_code,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         async_send_connack(session_present, reason_code, force_move(props), force_move(func));
@@ -5989,7 +5989,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_puback(packet_id, v5::puback_reason_code::success, std::vector<v5::property_variant>{}, force_move(func));
+        async_send_puback(packet_id, v5::puback_reason_code::success, v5::properties{}, force_move(func));
     }
 
     /**
@@ -6010,7 +6010,7 @@ public:
     void async_puback(
         packet_id_t packet_id,
         v5::puback_reason_code reason_code,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         async_send_puback(packet_id, reason_code, force_move(props), force_move(func));
@@ -6027,7 +6027,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrec(packet_id, v5::pubrec_reason_code::success, std::vector<v5::property_variant>{}, force_move(func));
+        async_send_pubrec(packet_id, v5::pubrec_reason_code::success, v5::properties{}, force_move(func));
     }
 
     /**
@@ -6048,7 +6048,7 @@ public:
     void async_pubrec(
         packet_id_t packet_id,
         v5::pubrec_reason_code reason_code,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         async_send_pubrec(packet_id, reason_code, force_move(props), force_move(func));
@@ -6065,7 +6065,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubrel(packet_id, v5::pubrel_reason_code::success, std::vector<v5::property_variant>{}, force_move(func));
+        async_send_pubrel(packet_id, v5::pubrel_reason_code::success, v5::properties{}, force_move(func));
     }
 
     /**
@@ -6088,7 +6088,7 @@ public:
     void async_pubrel(
         packet_id_t packet_id,
         v5::pubrel_reason_code reason_code,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t(),
         any life_keeper = any()
     ) {
@@ -6106,7 +6106,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_pubcomp(packet_id, v5::pubcomp_reason_code::success, std::vector<v5::property_variant>{}, force_move(func));
+        async_send_pubcomp(packet_id, v5::pubcomp_reason_code::success, v5::properties{}, force_move(func));
     }
 
     /**
@@ -6127,7 +6127,7 @@ public:
     void async_pubcomp(
         packet_id_t packet_id,
         v5::pubcomp_reason_code reason_code,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         async_send_pubcomp(packet_id, reason_code, force_move(props), force_move(func));
@@ -6149,7 +6149,7 @@ public:
         variant<suback_return_code, v5::suback_reason_code> reason,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_suback(std::vector<std::uint8_t>{}, packet_id, reason, std::vector<v5::property_variant>{}, force_move(func));
+        async_send_suback(std::vector<std::uint8_t>{}, packet_id, reason, v5::properties{}, force_move(func));
     }
 
     /**
@@ -6170,7 +6170,7 @@ public:
     void async_suback(
         packet_id_t packet_id,
         variant<suback_return_code, v5::suback_reason_code> reason,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         async_send_suback(std::vector<std::uint8_t>{}, packet_id, reason, force_move(props), force_move(func));
@@ -6192,7 +6192,7 @@ public:
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> reasons,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_suback(force_move(reasons), packet_id, std::vector<v5::property_variant>{}, force_move(func));
+        async_send_suback(force_move(reasons), packet_id, v5::properties{}, force_move(func));
     }
 
     /**
@@ -6213,7 +6213,7 @@ public:
     void async_suback(
         packet_id_t packet_id,
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> reasons,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         async_send_suback(force_move(reasons), packet_id, force_move(props), force_move(func));
@@ -6256,7 +6256,7 @@ public:
     void async_unsuback(
         packet_id_t packet_id,
         v5::unsuback_reason_code reason,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         async_send_unsuback(std::vector<v5::unsuback_reason_code>{}, packet_id, reason, force_move(props), force_move(func));
@@ -6278,7 +6278,7 @@ public:
         std::vector<v5::unsuback_reason_code> reasons,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_unsuback(force_move(reasons), packet_id, std::vector<v5::property_variant>{}, force_move(func));
+        async_send_unsuback(force_move(reasons), packet_id, v5::properties{}, force_move(func));
     }
 
     /**
@@ -6299,7 +6299,7 @@ public:
     void async_unsuback(
         packet_id_t packet_id,
         std::vector<v5::unsuback_reason_code> reasons,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         async_send_unsuback(force_move(reasons), packet_id, force_move(props), force_move(func));
@@ -7674,7 +7674,7 @@ private:
     void process_properties(
         any session_life_keeper,
         buffer buf,
-        std::function<void(std::vector<v5::property_variant>, buffer, any, this_type_sp)> handler,
+        std::function<void(v5::properties, buffer, any, this_type_sp)> handler,
         this_type_sp self
     ) {
         process_variable_length(
@@ -7690,7 +7690,7 @@ private:
                     return;
                 }
                 if (property_length == 0) {
-                    handler(std::vector<v5::property_variant>(), force_move(buf), force_move(session_life_keeper), force_move(self));
+                    handler(v5::properties(), force_move(buf), force_move(session_life_keeper), force_move(self));
                     return;
                 }
 
@@ -7735,7 +7735,7 @@ private:
                                 force_move(session_life_keeper),
                                 buffer(string_view(result.address, result.len), result.spa),
                                 property_length,
-                                std::vector<v5::property_variant>(),
+                                v5::properties(),
                                 force_move(handler),
                                 force_move(self)
                             );
@@ -7757,7 +7757,7 @@ private:
                                 force_move(session_life_keeper),
                                 force_move(buf),
                                 property_length,
-                                std::vector<v5::property_variant>(),
+                                v5::properties(),
                                 force_move(handler),
                                 force_move(self)
                             );
@@ -7773,8 +7773,8 @@ private:
         any session_life_keeper,
         buffer buf,
         std::size_t property_length_rest,
-        std::vector<v5::property_variant> props,
-        std::function<void(std::vector<v5::property_variant>, buffer, any, this_type_sp)> handler,
+        v5::properties props,
+        std::function<void(v5::properties, buffer, any, this_type_sp)> handler,
         this_type_sp self
     ) {
 
@@ -7843,8 +7843,8 @@ private:
         buffer buf,
         v5::property::id id,
         std::size_t property_length_rest,
-        std::vector<v5::property_variant> props,
-        std::function<void(std::vector<v5::property_variant>, buffer, any, this_type_sp)> handler,
+        v5::properties props,
+        std::function<void(v5::properties, buffer, any, this_type_sp)> handler,
         this_type_sp self
     ) {
 
@@ -8776,9 +8776,9 @@ private:
         std::size_t header_len;
         char connect_flag;
         std::uint16_t keep_alive;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
         buffer client_id;
-        std::vector<v5::property_variant> will_props;
+        v5::properties will_props;
         buffer will_topic;
         buffer will_payload;
         optional<buffer> user_name;
@@ -8876,7 +8876,7 @@ private:
                     info = force_move(info)
                 ]
                 (
-                    std::vector<v5::property_variant> props,
+                    v5::properties props,
                     buffer buf,
                     any session_life_keeper,
                     this_type_sp self
@@ -9010,7 +9010,7 @@ private:
                         topic_message_proc
                     ]
                     (
-                         std::vector<v5::property_variant> will_props,
+                         v5::properties will_props,
                          buffer buf,
                          any session_life_keeper,
                          this_type_sp self
@@ -9152,7 +9152,7 @@ private:
         std::size_t header_len;
         bool session_present;
         variant<connect_return_code, v5::connect_reason_code> reason_code;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
     };
 
     void process_connack(
@@ -9230,7 +9230,7 @@ private:
                     info = force_move(info)
                 ]
                 (
-                    std::vector<v5::property_variant> props,
+                    v5::properties props,
                     buffer buf,
                     any session_life_keeper,
                     this_type_sp self
@@ -9330,7 +9330,7 @@ private:
     struct publish_info {
         buffer topic_name;
         optional<packet_id_t> packet_id;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
     };
 
     void process_publish(
@@ -9449,7 +9449,7 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_publish_impl<publish_phase::payload>(
                         force_move(session_life_keeper),
@@ -9523,7 +9523,7 @@ private:
                                         async_send_puback(
                                             *info.packet_id,
                                             v5::puback_reason_code::success,
-                                            std::vector<v5::property_variant>{},
+                                            v5::properties{},
                                             [session_life_keeper](auto){}
                                         );
                                     }
@@ -9545,7 +9545,7 @@ private:
                                         async_send_pubrec(
                                             *info.packet_id,
                                             v5::pubrec_reason_code::success,
-                                            std::vector<v5::property_variant>{},
+                                            v5::properties{},
                                             [session_life_keeper](auto){}
                                         );
                                     }
@@ -9573,7 +9573,7 @@ private:
     struct puback_info {
         packet_id_t packet_id;
         v5::puback_reason_code reason_code;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
     };
 
     void process_puback(
@@ -9667,7 +9667,7 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_puback_impl<puback_phase::finish>(
                         force_move(session_life_keeper),
@@ -9718,7 +9718,7 @@ private:
     struct pubrec_info {
         packet_id_t packet_id;
         v5::pubrec_reason_code reason_code;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
     };
 
     void process_pubrec(
@@ -9812,7 +9812,7 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_pubrec_impl<pubrec_phase::finish>(
                         force_move(session_life_keeper),
@@ -9849,7 +9849,7 @@ private:
                                 async_send_pubrel(
                                     info.packet_id,
                                     v5::pubrel_reason_code::success,
-                                    std::vector<v5::property_variant>{},
+                                    v5::properties{},
                                     [session_life_keeper](auto){}
                                 );
                             }
@@ -9891,7 +9891,7 @@ private:
     struct pubrel_info {
         packet_id_t packet_id;
         v5::pubrel_reason_code reason_code;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
     };
 
     void process_pubrel(
@@ -9985,7 +9985,7 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_pubrel_impl<pubrel_phase::finish>(
                         force_move(session_life_keeper),
@@ -10011,7 +10011,7 @@ private:
                                 async_send_pubcomp(
                                     info.packet_id,
                                     v5::pubcomp_reason_code::success,
-                                    std::vector<v5::property_variant>{},
+                                    v5::properties{},
                                     [session_life_keeper](auto){}
                                 );
                             }
@@ -10051,7 +10051,7 @@ private:
     struct pubcomp_info {
         packet_id_t packet_id;
         v5::pubcomp_reason_code reason_code;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
     };
 
     void process_pubcomp(
@@ -10145,7 +10145,7 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_pubcomp_impl<pubcomp_phase::finish>(
                         force_move(session_life_keeper),
@@ -10196,7 +10196,7 @@ private:
 
     struct subscribe_info {
         packet_id_t packet_id;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
         std::vector<std::tuple<buffer, subscribe_options>> entries;
     };
 
@@ -10269,7 +10269,7 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_subscribe_impl<subscribe_phase::topic>(
                         force_move(session_life_keeper),
@@ -10361,7 +10361,7 @@ private:
 
     struct suback_info {
         packet_id_t packet_id;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
     };
 
     void process_suback(
@@ -10433,7 +10433,7 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_suback_impl<suback_phase::reasons>(
                         force_move(session_life_keeper),
@@ -10534,7 +10534,7 @@ private:
 
     struct unsubscribe_info {
         packet_id_t packet_id;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
         std::vector<buffer> entries;
     };
 
@@ -10607,7 +10607,7 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_unsubscribe_impl<unsubscribe_phase::topic>(
                         force_move(session_life_keeper),
@@ -10678,7 +10678,7 @@ private:
 
     struct unsuback_info {
         packet_id_t packet_id;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
     };
 
     void process_unsuback(
@@ -10755,7 +10755,7 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_unsuback_impl<unsuback_phase::reasons>(
                         force_move(session_life_keeper),
@@ -10845,7 +10845,7 @@ private:
 
     struct disconnect_info {
         v5::disconnect_reason_code reason_code;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
     };
 
     void process_disconnect(
@@ -10854,7 +10854,7 @@ private:
         this_type_sp self
     ) {
         if (remaining_length_ == 0) {
-            disconnect_info info { v5::disconnect_reason_code::normal_disconnection, std::vector<v5::property_variant>() };
+            disconnect_info info { v5::disconnect_reason_code::normal_disconnection, v5::properties() };
             process_disconnect_impl<disconnect_phase::finish>(
                 force_move(session_life_keeper),
                 buffer(),
@@ -10924,7 +10924,7 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_disconnect_impl<disconnect_phase::finish>(
                         force_move(session_life_keeper),
@@ -10961,7 +10961,7 @@ private:
 
     struct auth_info {
         v5::auth_reason_code reason_code;
-        std::vector<v5::property_variant> props;
+        v5::properties props;
     };
 
     void process_auth(
@@ -10978,7 +10978,7 @@ private:
             process_auth_impl<auth_phase::finish>(
                 force_move(session_life_keeper),
                 buffer(),
-                auth_info{ v5::auth_reason_code::success, std::vector<v5::property_variant>() },
+                auth_info{ v5::auth_reason_code::success, v5::properties() },
                 force_move(self)
             );
             return;
@@ -11039,7 +11039,7 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (std::vector<v5::property_variant> props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.props = force_move(props);
                     process_auth_impl<auth_phase::finish>(
                         force_move(session_life_keeper),
@@ -11075,7 +11075,7 @@ private:
         optional<buffer> password,
         optional<will> w,
         std::uint16_t keep_alive_sec,
-        std::vector<v5::property_variant> props
+        v5::properties props
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -11112,7 +11112,7 @@ private:
     void send_connack(
         bool session_present,
         variant<connect_return_code, v5::connect_reason_code> reason_code,
-        std::vector<v5::property_variant> props
+        v5::properties props
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -11144,7 +11144,7 @@ private:
         bool retain,
         bool dup,
         packet_id_t packet_id,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         buffer payload,
         any life_keeper) {
 
@@ -11205,7 +11205,7 @@ private:
     void send_puback(
         packet_id_t packet_id,
         v5::puback_reason_code reason = v5::puback_reason_code::success,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -11225,7 +11225,7 @@ private:
     void send_pubrec(
         packet_id_t packet_id,
         v5::pubrec_reason_code reason = v5::pubrec_reason_code::success,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -11243,7 +11243,7 @@ private:
     void send_pubrel(
         packet_id_t packet_id,
         v5::pubrel_reason_code reason = v5::pubrel_reason_code::success,
-        std::vector<v5::property_variant> props = {},
+        v5::properties props = {},
         any life_keeper = any()
     ) {
 
@@ -11291,7 +11291,7 @@ private:
     void store_pubrel(
         packet_id_t packet_id,
         v5::pubrel_reason_code reason = v5::pubrel_reason_code::success,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
 
         auto impl =
@@ -11336,7 +11336,7 @@ private:
     void send_pubcomp(
         packet_id_t packet_id,
         v5::pubcomp_reason_code reason = v5::pubcomp_reason_code::success,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -11389,7 +11389,7 @@ private:
     void send_subscribe(
         std::vector<std::tuple<buffer, subscribe_options>> params,
         packet_id_t packet_id,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         for(auto const& p : params)
         {
@@ -11426,7 +11426,7 @@ private:
     void send_suback(
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> params,
         packet_id_t packet_id,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -11474,7 +11474,7 @@ private:
     void send_unsubscribe(
         std::vector<buffer> params,
         packet_id_t packet_id,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -11518,7 +11518,7 @@ private:
     void send_unsuback(
         std::vector<v5::unsuback_reason_code> params,
         packet_id_t packet_id,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -11563,7 +11563,7 @@ private:
 
     void send_auth(
         v5::auth_reason_code reason = v5::auth_reason_code::success,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -11580,7 +11580,7 @@ private:
 
     void send_disconnect(
         v5::disconnect_reason_code reason = v5::disconnect_reason_code::normal_disconnection,
-        std::vector<v5::property_variant> props = {}
+        v5::properties props = {}
     ) {
         switch (version_) {
         case protocol_version::v3_1_1:
@@ -11622,7 +11622,7 @@ private:
         optional<will> const& w,
         bool clean_session,
         std::uint16_t keep_alive_sec,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func) {
 
         clean_session_ = clean_session;
@@ -11664,7 +11664,7 @@ private:
     void async_send_connack(
         bool session_present,
         variant<connect_return_code, v5::connect_reason_code> reason_code,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func
     ) {
         switch (version_) {
@@ -11699,7 +11699,7 @@ private:
         bool retain,
         bool dup,
         packet_id_t packet_id,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         buffer payload,
         async_handler_t func,
         any life_keeper) {
@@ -11769,7 +11769,7 @@ private:
     void async_send_puback(
         packet_id_t packet_id,
         v5::puback_reason_code reason,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func
     ) {
         switch (version_) {
@@ -11802,7 +11802,7 @@ private:
     void async_send_pubrec(
         packet_id_t packet_id,
         v5::pubrec_reason_code reason,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func
     ) {
         switch (version_) {
@@ -11827,7 +11827,7 @@ private:
     void async_send_pubrel(
         packet_id_t packet_id,
         v5::pubrel_reason_code reason,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func,
         any life_keeper = any()
     ) {
@@ -11900,7 +11900,7 @@ private:
     void async_send_pubcomp(
         packet_id_t packet_id,
         v5::pubcomp_reason_code reason,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func
     ) {
         switch (version_) {
@@ -11991,7 +11991,7 @@ private:
         std::vector<std::tuple<buffer, subscribe_options>> params,
         any life_keepers,
         packet_id_t packet_id,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func) {
 
         switch (version_) {
@@ -12044,7 +12044,7 @@ private:
     void async_send_suback(
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> params,
         packet_id_t packet_id,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func
     ) {
         switch (version_) {
@@ -12130,7 +12130,7 @@ private:
         std::vector<buffer> params,
         any life_keepers,
         packet_id_t packet_id,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func) {
 
         switch (version_) {
@@ -12195,7 +12195,7 @@ private:
     void async_send_unsuback(
         std::vector<v5::unsuback_reason_code> params,
         packet_id_t packet_id,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func
     ) {
         switch (version_) {
@@ -12248,7 +12248,7 @@ private:
 
     void async_send_auth(
         v5::auth_reason_code reason,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func
     ) {
         switch (version_) {
@@ -12266,7 +12266,7 @@ private:
 
     void async_send_disconnect(
         v5::disconnect_reason_code reason,
-        std::vector<v5::property_variant> props,
+        v5::properties props,
         async_handler_t func
     ) {
         switch (version_) {

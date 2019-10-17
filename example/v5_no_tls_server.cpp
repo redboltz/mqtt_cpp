@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
                  MQTT_NS::optional<MQTT_NS::will>,
                  bool clean_session,
                  std::uint16_t keep_alive,
-                 std::vector<MQTT_NS::v5::property_variant> /*props*/){
+                 MQTT_NS::v5::properties /*props*/){
                     using namespace MQTT_NS::literals;
                     std::cout << "[server] client_id    : " << client_id << std::endl;
                     std::cout << "[server] username     : " << (username ? username.value() : "none"_mb) << std::endl;
@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
             );
             ep.set_v5_disconnect_handler( // use v5 handler
                 [&connections, &subs, wp]
-                (MQTT_NS::v5::disconnect_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (MQTT_NS::v5::disconnect_reason_code reason_code, MQTT_NS::v5::properties /*props*/) {
                     std::cout <<
                         "[server] disconnect received." <<
                         " reason_code: " << reason_code << std::endl;
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
                 });
             ep.set_v5_puback_handler( // use v5 handler
                 []
-                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
+                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code reason_code, MQTT_NS::v5::properties /*props*/){
                     std::cout <<
                         "[server] puback received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
                 });
             ep.set_v5_pubrec_handler( // use v5 handler
                 []
-                (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
+                (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code reason_code, MQTT_NS::v5::properties /*props*/){
                     std::cout <<
                         "[server] pubrec received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
                 });
             ep.set_v5_pubrel_handler( // use v5 handler
                 []
-                (packet_id_t packet_id, MQTT_NS::v5::pubrel_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
+                (packet_id_t packet_id, MQTT_NS::v5::pubrel_reason_code reason_code, MQTT_NS::v5::properties /*props*/){
                     std::cout <<
                         "[server] pubrel received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
                 });
             ep.set_v5_pubcomp_handler( // use v5 handler
                 []
-                (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
+                (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code reason_code, MQTT_NS::v5::properties /*props*/){
                     std::cout <<
                         "[server] pubcomp received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
@@ -181,7 +181,7 @@ int main(int argc, char** argv) {
                  MQTT_NS::optional<packet_id_t> packet_id,
                  MQTT_NS::buffer topic_name,
                  MQTT_NS::buffer contents,
-                 std::vector<MQTT_NS::v5::property_variant> /*props*/){
+                 MQTT_NS::v5::properties /*props*/){
                     std::cout << "[server] publish received."
                               << " dup: " << std::boolalpha << is_dup
                               << " qos: " << qos_value
@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
                 [&subs, wp]
                 (packet_id_t packet_id,
                  std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> entries,
-                 std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                 MQTT_NS::v5::properties /*props*/) {
                     std::cout << "[server] subscribe received. packet_id: " << packet_id << std::endl;
                     std::vector<MQTT_NS::v5::suback_reason_code> res;
                     res.reserve(entries.size());
@@ -228,7 +228,7 @@ int main(int argc, char** argv) {
                 [&subs, wp]
                 (packet_id_t packet_id,
                  std::vector<MQTT_NS::buffer> topics,
-                 std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                 MQTT_NS::v5::properties /*props*/) {
                     std::cout << "[server] unsubscribe received. packet_id: " << packet_id << std::endl;
                     for (auto const& topic : topics) {
                         subs.erase(topic);

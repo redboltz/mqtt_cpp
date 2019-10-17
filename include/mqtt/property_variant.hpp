@@ -11,6 +11,8 @@
 #include <mqtt/property.hpp>
 #include <mqtt/variant.hpp>
 
+#include <vector>
+
 namespace MQTT_NS {
 
 namespace v5 {
@@ -45,6 +47,8 @@ using property_variant = variant<
     property::subscription_identifier_available,
     property::shared_subscription_available
 >;
+
+using properties = std::vector<property_variant>;
 
 namespace property {
 

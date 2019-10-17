@@ -15,7 +15,7 @@ inline void connect_no_clean(Client& c) {
     c->set_clean_session(false);
     if (c->get_protocol_version() == MQTT_NS::protocol_version::v5) {
         // set session_expiry_interval as infinity.
-        c->connect(std::vector<MQTT_NS::v5::property_variant>{MQTT_NS::v5::property::session_expiry_interval(0xFFFFFFFFUL)});
+        c->connect(MQTT_NS::v5::properties{MQTT_NS::v5::property::session_expiry_interval(0xFFFFFFFFUL)});
     }
     else {
         c->connect();
@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c]
-                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     auto ret = chk.match(
                         "start",
@@ -101,7 +101,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 });
             c->set_v5_puback_handler(
                 [&chk, &c, &pid_pub]
-                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code /*reason*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code /*reason*/, MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c]
-                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     auto ret = chk.match(
                         "start",
@@ -232,14 +232,14 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 });
             c->set_v5_pubrec_handler(
                 [&chk, &pid_pub]
-                (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code /*reason*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code /*reason*/, MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_pubrec");
                     BOOST_TEST(packet_id == pid_pub);
                     return true;
                 });
             c->set_v5_pubcomp_handler(
                 [&chk, &c, &pid_pub]
-                (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code/*reason*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code/*reason*/, MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
@@ -354,7 +354,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c]
-                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     auto ret = chk.match(
                         "start",
@@ -376,7 +376,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 });
             c->set_v5_puback_handler(
                 [&chk, &c, &pid_pub1, &pid_pub2]
-                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code /*reason*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code /*reason*/, MQTT_NS::v5::properties /*props*/) {
                     auto ret = chk.match(
                         "h_connack2",
                         [&] {
@@ -490,7 +490,7 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c]
-                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     auto ret = chk.match(
                         "start",
@@ -512,7 +512,7 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                 });
             c->set_v5_puback_handler(
                 [&chk, &c, &pid_pub]
-                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code /*reason*/, std::vector<MQTT_NS::v5::property_variant> /*props*/) {
+                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code /*reason*/, MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     c->async_disconnect();

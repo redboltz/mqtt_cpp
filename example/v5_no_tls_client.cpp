@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
     // Setup handlers
     c->set_v5_connack_handler( // use v5 handler
         [&c, &pid_sub1, &pid_sub2]
-        (bool sp, MQTT_NS::v5::connect_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
+        (bool sp, MQTT_NS::v5::connect_reason_code reason_code, MQTT_NS::v5::properties /*props*/){
             std::cout << "[client] Connack handler called" << std::endl;
             std::cout << "[client] Clean Session: " << std::boolalpha << sp << std::endl;
             std::cout << "[client] Connect Reason Code: " << reason_code << std::endl;
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
         });
     c->set_v5_puback_handler( // use v5 handler
         [&]
-        (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
+        (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code reason_code, MQTT_NS::v5::properties /*props*/){
             std::cout <<
                 "[client] puback received. packet_id: " << packet_id <<
                 " reason_code: " << reason_code << std::endl;
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
         });
     c->set_v5_pubrec_handler( // use v5 handler
         [&]
-        (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
+        (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code reason_code, MQTT_NS::v5::properties /*props*/){
             std::cout <<
                 "[client] pubrec received. packet_id: " << packet_id <<
                 " reason_code: " << reason_code << std::endl;
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
         });
     c->set_v5_pubcomp_handler( // use v5 handler
         [&]
-        (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code reason_code, std::vector<MQTT_NS::v5::property_variant> /*props*/){
+        (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code reason_code, MQTT_NS::v5::properties /*props*/){
             std::cout <<
                 "[client] pubcomp received. packet_id: " << packet_id <<
                 " reason_code: " << reason_code << std::endl;
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
         [&]
         (packet_id_t packet_id,
          std::vector<MQTT_NS::v5::suback_reason_code> reasons,
-         std::vector<MQTT_NS::v5::property_variant> /*props*/){
+         MQTT_NS::v5::properties /*props*/){
             std::cout << "[client] suback received. packet_id: " << packet_id << std::endl;
             for (auto const& e : reasons) {
                 switch (e) {
@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
          MQTT_NS::optional<packet_id_t> packet_id,
          MQTT_NS::string_view topic_name,
          MQTT_NS::string_view contents,
-         std::vector<MQTT_NS::v5::property_variant> /*props*/){
+         MQTT_NS::v5::properties /*props*/){
             std::cout << "[client] publish received. "
                       << "dup: " << std::boolalpha << is_dup
                       << " qos: " << qos_value
