@@ -108,17 +108,16 @@ public:
              std::uint16_t keep_alive) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return
-                    connect_handler(
-                        MQTT_NS::force_move(sp),
-                        std::move(client_id),
-                        std::move(username),
-                        std::move(password),
-                        std::move(will),
-                        clean_session,
-                        keep_alive,
-                        {}
-                    );
+                return connect_handler(
+                    MQTT_NS::force_move(sp),
+                    MQTT_NS::force_move(client_id),
+                    MQTT_NS::force_move(username),
+                    MQTT_NS::force_move(password),
+                    MQTT_NS::force_move(will),
+                    clean_session,
+                    keep_alive,
+                    MQTT_NS::v5::properties{}
+                );
             }
         );
         ep.set_v5_connect_handler(
@@ -132,17 +131,16 @@ public:
              MQTT_NS::v5::properties props) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return
-                    connect_handler(
-                        MQTT_NS::force_move(sp),
-                        std::move(client_id),
-                        std::move(username),
-                        std::move(password),
-                        std::move(will),
-                        clean_session,
-                        keep_alive,
-                        std::move(props)
-                    );
+                return connect_handler(
+                    MQTT_NS::force_move(sp),
+                    MQTT_NS::force_move(client_id),
+                    MQTT_NS::force_move(username),
+                    MQTT_NS::force_move(password),
+                    MQTT_NS::force_move(will),
+                    clean_session,
+                    keep_alive,
+                    MQTT_NS::force_move(props)
+                );
             }
         );
         ep.set_disconnect_handler(
@@ -150,18 +148,16 @@ public:
             (){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return
-                    disconnect_handler(MQTT_NS::force_move(sp));
+                return disconnect_handler(MQTT_NS::force_move(sp));
             }
         );
         ep.set_v5_disconnect_handler(
             [this, wp]
             (MQTT_NS::v5::disconnect_reason_code /*reason_code*/, MQTT_NS::v5::properties props) {
-                if (h_disconnect_props_) h_disconnect_props_(std::move(props));
+                if (h_disconnect_props_) h_disconnect_props_(MQTT_NS::force_move(props));
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return
-                    disconnect_handler(MQTT_NS::force_move(sp));
+                return disconnect_handler(MQTT_NS::force_move(sp));
             }
         );
         ep.set_puback_handler(
@@ -236,9 +232,9 @@ public:
                     MQTT_NS::force_move(sp),
                     packet_id,
                     pubopts,
-                    std::move(topic_name),
-                    std::move(contents),
-                    {}
+                    MQTT_NS::force_move(topic_name),
+                    MQTT_NS::force_move(contents),
+                    MQTT_NS::v5::properties{}
                 );
             });
         ep.set_v5_publish_handler(
@@ -256,9 +252,9 @@ public:
                     MQTT_NS::force_move(sp),
                     packet_id,
                     pubopts,
-                    std::move(topic_name),
-                    std::move(contents),
-                    std::move(props)
+                    MQTT_NS::force_move(topic_name),
+                    MQTT_NS::force_move(contents),
+                    MQTT_NS::force_move(props)
                 );
             });
         ep.set_subscribe_handler(
@@ -270,8 +266,8 @@ public:
                 return subscribe_handler(
                     MQTT_NS::force_move(sp),
                     packet_id,
-                    std::move(entries),
-                    {}
+                    MQTT_NS::force_move(entries),
+                    MQTT_NS::v5::properties{}
                 );
             }
         );
@@ -286,8 +282,8 @@ public:
                 return subscribe_handler(
                     MQTT_NS::force_move(sp),
                     packet_id,
-                    std::move(entries),
-                    std::move(props)
+                    MQTT_NS::force_move(entries),
+                    MQTT_NS::force_move(props)
                 );
             }
         );
@@ -300,8 +296,8 @@ public:
                 return unsubscribe_handler(
                     MQTT_NS::force_move(sp),
                     packet_id,
-                    std::move(topics),
-                    {}
+                    MQTT_NS::force_move(topics),
+                    MQTT_NS::v5::properties{}
                 );
             }
         );
@@ -316,8 +312,8 @@ public:
                 return unsubscribe_handler(
                     MQTT_NS::force_move(sp),
                     packet_id,
-                    std::move(topics),
-                    std::move(props)
+                    MQTT_NS::force_move(topics),
+                    MQTT_NS::force_move(props)
                 );
             }
         );
@@ -334,78 +330,78 @@ public:
             (MQTT_NS::v5::auth_reason_code /*reason_code*/,
              MQTT_NS::v5::properties props
             ) {
-                if (h_auth_props_) h_auth_props_(std::move(props));
+                if (h_auth_props_) h_auth_props_(MQTT_NS::force_move(props));
                 return true;
             }
         );
     }
 
     void set_connack_props(MQTT_NS::v5::properties props) {
-        connack_props_ = std::move(props);
+        connack_props_ = MQTT_NS::force_move(props);
     }
 
     void set_suback_props(MQTT_NS::v5::properties props) {
-        suback_props_ = std::move(props);
+        suback_props_ = MQTT_NS::force_move(props);
     }
 
     void set_unsuback_props(MQTT_NS::v5::properties props) {
-        unsuback_props_ = std::move(props);
+        unsuback_props_ = MQTT_NS::force_move(props);
     }
 
     void set_puback_props(MQTT_NS::v5::properties props) {
-        puback_props_ = std::move(props);
+        puback_props_ = MQTT_NS::force_move(props);
     }
 
     void set_pubrec_props(MQTT_NS::v5::properties props) {
-        pubrec_props_ = std::move(props);
+        pubrec_props_ = MQTT_NS::force_move(props);
     }
 
     void set_pubrel_props(MQTT_NS::v5::properties props) {
-        pubrel_props_ = std::move(props);
+        pubrel_props_ = MQTT_NS::force_move(props);
     }
 
     void set_pubcomp_props(MQTT_NS::v5::properties props) {
-        pubcomp_props_ = std::move(props);
+        pubcomp_props_ = MQTT_NS::force_move(props);
     }
 
     void set_connect_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
-        h_connect_props_ = std::move(h);
+        h_connect_props_ = MQTT_NS::force_move(h);
     }
 
     void set_disconnect_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
-        h_disconnect_props_ = std::move(h);
+        h_disconnect_props_ = MQTT_NS::force_move(h);
     }
 
     void set_publish_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
-        h_publish_props_ = std::move(h);
+        h_publish_props_ = MQTT_NS::force_move(h);
     }
 
     void set_puback_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
-        h_puback_props_ = std::move(h);
+        h_puback_props_ = MQTT_NS::force_move(h);
     }
 
     void set_pubrec_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
-        h_pubrec_props_ = std::move(h);
+        h_pubrec_props_ = MQTT_NS::force_move(h);
     }
 
     void set_pubrel_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
-        h_pubrel_props_ = std::move(h);
+        h_pubrel_props_ = MQTT_NS::force_move(h);
     }
 
     void set_pubcomp_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
-        h_pubcomp_props_ = std::move(h);
+        h_pubcomp_props_ = MQTT_NS::force_move(h);
     }
 
     void set_subscribe_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
-        h_subscribe_props_ = std::move(h);
+        h_subscribe_props_ = MQTT_NS::force_move(h);
     }
 
     void set_unsubscribe_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
-        h_unsubscribe_props_ = std::move(h);
+        h_unsubscribe_props_ = MQTT_NS::force_move(h);
     }
 
     void set_auth_props_handler(std::function<void(MQTT_NS::v5::properties const&)> h) {
-        h_auth_props_ = std::move(h);
+        h_auth_props_ = MQTT_NS::force_move(h);
     }
 
 private:
@@ -436,9 +432,9 @@ private:
         std::uint16_t /*keep_alive*/,
         MQTT_NS::v5::properties props
     ) {
+        auto& ep = *spep;
 
         MQTT_NS::optional<boost::posix_time::time_duration> session_expiry_interval;
-        auto& ep = *spep;
 
         if (ep.get_protocol_version() == MQTT_NS::protocol_version::v5) {
             for (auto const& p : props) {
@@ -531,22 +527,27 @@ private:
             // If we have a saved session, we can transfer the state from it
             // to the active_session container.
             if(non_act_sess_it == non_act_sess_idx.end()) {
-                auto const& ret = active_sessions_.emplace(client_id, spep, std::move(will), std::move(session_expiry_interval));
-                act_sess_it = ret.first;
+                auto const& ret = active_sessions_.emplace(spep,
+                                                           client_id,
+                                                           MQTT_NS::force_move(will),
+                                                           MQTT_NS::force_move(session_expiry_interval));
                 BOOST_ASSERT(ret.second);
+                act_sess_it = active_sessions_.project<tag_client_id>(ret.first);
                 BOOST_ASSERT(act_sess_it->client_id == client_id);
                 BOOST_ASSERT(act_sess_it == act_sess_idx.find(client_id));
             }
             else {
                 session_state state;
-                non_act_sess_idx.modify(non_act_sess_it, [&](session_state & val) { state = val; });
+                non_act_sess_idx.modify(non_act_sess_it,
+                                        [&](session_state & val) { state = val; },
+                                        [](session_state&) { BOOST_ASSERT(false); });
                 state.con = spep;
                 non_act_sess_idx.erase(non_act_sess_it);
                 BOOST_ASSERT(non_act_sess_idx.end() == non_act_sess_idx.find(client_id));
 
-                auto const& ret = active_sessions_.insert(std::move(state));
-                act_sess_it = ret.first;
+                auto const& ret = active_sessions_.insert(MQTT_NS::force_move(state));
                 BOOST_ASSERT(ret.second);
+                act_sess_it = active_sessions_.project<tag_client_id>(ret.first);
                 BOOST_ASSERT(act_sess_it->client_id == client_id);
                 BOOST_ASSERT(act_sess_it == act_sess_idx.find(client_id));
                 BOOST_ASSERT(active_sessions_.project<tag_con>(act_sess_it) == active_sessions_.get<tag_con>().find(spep));
@@ -572,14 +573,14 @@ private:
                     for(auto it = range.begin(); it != range.end(); std::advance(it, 1)) {
                         subs_idx.modify_key(it,
                                             [&](con_sp_t & val) { val = spep; },
-                                            [&](con_sp_t&) { BOOST_ASSERT(false); });
+                                            [](con_sp_t&) { BOOST_ASSERT(false); });
                     }
                 }
                 BOOST_ASSERT(subs_idx.count(act_sess_it->con) == 0);
             }
             active_sessions_.get<tag_con>().modify_key(active_sessions_.project<tag_con>(act_sess_it),
                                                        [&](con_sp_t & val) { val = spep; },
-                                                       [&](con_sp_t&) { BOOST_ASSERT(false); });
+                                                       [](con_sp_t&) { BOOST_ASSERT(false); });
         }
 
         if (clean_session) {
@@ -618,10 +619,9 @@ private:
         con_sp_t spep
     ) {
         if (delay_disconnect_) {
-            con_wp_t wp(spep);
             tim_disconnect_.expires_from_now(delay_disconnect_.value());
             tim_disconnect_.async_wait(
-                [&, wp](MQTT_NS::error_code ec) {
+                [&, wp = con_wp_t(MQTT_NS::force_move(spep))](MQTT_NS::error_code ec) {
                     if (!ec) {
                         if (con_sp_t sp = wp.lock()) {
                             close_proc(MQTT_NS::force_move(sp), false);
@@ -631,7 +631,7 @@ private:
             );
         }
         else {
-            close_proc(spep, false);
+            close_proc(MQTT_NS::force_move(spep), false);
         }
     }
 
@@ -645,10 +645,10 @@ private:
 
         auto& ep = *spep;
         do_publish(
-            std::move(topic_name),
-            std::move(contents),
+            MQTT_NS::force_move(topic_name),
+            MQTT_NS::force_move(contents),
             pubopts.get_qos() | pubopts.get_retain(),
-            std::move(props));
+            MQTT_NS::force_move(props));
 
         switch (ep.get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
@@ -707,7 +707,7 @@ private:
                 res.emplace_back(MQTT_NS::qos_to_suback_return_code(qos_value)); // converts to granted_qos_x
                 // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
                 // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
-                subs_.emplace(std::move(topic), spep, qos_value);
+                subs_.emplace(MQTT_NS::force_move(topic), spep, qos_value);
             }
             // Acknowledge the subscriptions, and the registered QOS settings
             ep.suback(packet_id, MQTT_NS::force_move(res));
@@ -723,7 +723,7 @@ private:
                 res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(qos_value)); // converts to granted_qos_x
                 // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
                 // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
-                subs_.emplace(std::move(topic), spep, qos_value);
+                subs_.emplace(MQTT_NS::force_move(topic), spep, qos_value);
             }
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
@@ -734,6 +734,7 @@ private:
             BOOST_ASSERT(false);
             break;
         }
+
         for (auto const& e : entries) {
             MQTT_NS::buffer const& topic = std::get<0>(e);
             MQTT_NS::subscribe_options options = std::get<1>(e);
@@ -792,11 +793,15 @@ private:
                 }
             }
         }
+
         for(auto const& item : boost::make_iterator_range( subs_.get<tag_con>().equal_range(spep))) {
+            (void)item;
             for(auto const& topic : topics) {
+                (void)topic;
                 BOOST_ASSERT(item.topic != topic);
             }
         }
+
         switch (ep.get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
             ep.unsuback(packet_id);
@@ -861,10 +866,7 @@ private:
                                        sp_props,
                                        std::min(it->qos_value, pubopts.get_qos()));
                                },
-                               [&](session_subscription&)
-                               {
-                                   BOOST_ASSERT(false);
-                               });
+                               [](session_subscription&) { BOOST_ASSERT(false); });
                 }
             }
         }
@@ -898,23 +900,21 @@ private:
             else {
                 auto const& it = retains_.find(topic);
                 if(it == retains_.end()) {
-                    auto const& ret = retains_.emplace(topic, contents, std::move(props), pubopts.get_qos());
+                    auto const& ret = retains_.emplace(MQTT_NS::force_move(topic),
+                                                       MQTT_NS::force_move(contents),
+                                                       MQTT_NS::force_move(props),
+                                                       pubopts.get_qos());
                     BOOST_ASSERT(ret.second);
-                    BOOST_ASSERT(ret.first->topic == topic);
-                    BOOST_ASSERT(ret.first->contents == contents);
                 }
                 else {
                     retains_.modify(it,
                                     [&](retain& val)
                                     {
                                         val.qos_value = pubopts.get_qos();
-                                        val.props = std::move(props);
-                                        val.contents = contents;
+                                        val.props = MQTT_NS::force_move(props);
+                                        val.contents = MQTT_NS::force_move(contents);
                                     },
-                                    [&](retain&)
-                                    {
-                                        BOOST_ASSERT(false);
-                                    });
+                                    [](retain&) { BOOST_ASSERT(false); });
                 }
             }
         }
@@ -945,6 +945,7 @@ private:
         if (ep.clean_session() && session_clear) {
             client_id = std::move(act_sess_it->client_id);
             will = std::move(act_sess_it->will);
+
             act_sess_idx.erase(act_sess_it);
 
             BOOST_ASSERT(active_sessions_.get<tag_client_id>().count(client_id) == 0);
@@ -963,6 +964,7 @@ private:
 
             // TODO: Should yank out the messages from this connection object and store it in the session_state object??
             state.con.reset(); // clear the shared pointer, so it doesn't stay alive after this funciton ends.
+
             act_sess_idx.erase(act_sess_it);
             BOOST_ASSERT(active_sessions_.get<tag_client_id>().count(client_id) == 0);
             BOOST_ASSERT(active_sessions_.get<tag_client_id>().find(client_id) == active_sessions_.get<tag_client_id>().end());
@@ -973,7 +975,8 @@ private:
             BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().count(client_id) == 0);
             BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().find(client_id) == non_active_sessions_.get<tag_client_id>().end());
 
-            auto const& ret = non_active_sessions_.insert(std::move(state));
+            auto const& ret = non_active_sessions_.insert(MQTT_NS::force_move(state));
+            (void)ret;
             BOOST_ASSERT(ret.second);
             BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().count(client_id) == 1);
             BOOST_ASSERT(ret.first->client_id == client_id);
@@ -985,7 +988,7 @@ private:
         {
             auto& idx = subs_.get<tag_con>();
             auto const& range = boost::make_iterator_range(idx.equal_range(spep));
-            // In v3_1_1, sessin_expiry_interval is not set. So clean on close.
+            // In v3_1_1, session_expiry_interval is not set. So clean on close.
             if (ep.clean_session() && session_clear) {
                 // Remove all subscriptions for this clientid
                 idx.erase(range.begin(), range.end());
@@ -996,6 +999,7 @@ private:
                     auto const& ret = saved_subs_.emplace(client_id,
                                                           item.topic,
                                                           item.qos_value);
+                    (void)ret;
                     BOOST_ASSERT(ret.second);
                     BOOST_ASSERT(ret.first == saved_subs_.find(client_id));
                 }
@@ -1008,10 +1012,10 @@ private:
             // TODO: This should be triggered by the will delay
             // Not sent immediately.
             do_publish(
-                std::move(will.value().topic()),
-                std::move(will.value().message()),
+                MQTT_NS::force_move(will.value().topic()),
+                MQTT_NS::force_move(will.value().message()),
                 will.value().get_qos() | will.value().get_retain(),
-                std::move(will.value().props()));
+                MQTT_NS::force_move(will.value().props()));
         }
     }
 
@@ -1040,14 +1044,14 @@ private:
     struct session_state {
         // TODO: Currently not fully implemented...
         session_state(
-            MQTT_NS::buffer client_id,
             con_sp_t con,
+            MQTT_NS::buffer client_id,
             MQTT_NS::optional<MQTT_NS::will> will,
             MQTT_NS::optional<boost::posix_time::time_duration> session_expiry_interval = MQTT_NS::nullopt)
-            :client_id(std::move(client_id)),
-             con(std::move(con)),
-             will(std::move(will)),
-             session_expiry_interval(std::move(session_expiry_interval))
+            :con(MQTT_NS::force_move(con)),
+             client_id(MQTT_NS::force_move(client_id)),
+             will(MQTT_NS::force_move(will)),
+             session_expiry_interval(MQTT_NS::force_move(session_expiry_interval))
         {}
 
         session_state() = default;
@@ -1056,8 +1060,8 @@ private:
         session_state& operator=(session_state &&) = default;
         session_state& operator=(session_state const&) = default;
 
-        MQTT_NS::buffer client_id;
         con_sp_t con;
+        MQTT_NS::buffer client_id;
 
         // TODO:
         // Messages sent to client, but not acknowledged.
@@ -1074,12 +1078,12 @@ private:
         session_state,
         mi::indexed_by<
             mi::ordered_unique<
-                mi::tag<tag_client_id>,
-                BOOST_MULTI_INDEX_MEMBER(session_state, MQTT_NS::buffer, client_id)
-            >,
-            mi::ordered_unique<
                 mi::tag<tag_con>,
                 BOOST_MULTI_INDEX_MEMBER(session_state, con_sp_t, con)
+            >,
+            mi::ordered_unique<
+                mi::tag<tag_client_id>,
+                BOOST_MULTI_INDEX_MEMBER(session_state, MQTT_NS::buffer, client_id)
             >
         >
     >;
@@ -1102,7 +1106,7 @@ private:
             MQTT_NS::buffer topic,
             con_sp_t con,
             MQTT_NS::qos qos_value)
-            :topic(std::move(topic)), con(std::move(con)), qos_value(qos_value) {}
+            :topic(MQTT_NS::force_move(topic)), con(MQTT_NS::force_move(con)), qos_value(qos_value) {}
         MQTT_NS::buffer topic;
         con_sp_t con;
         MQTT_NS::qos qos_value;
@@ -1132,15 +1136,19 @@ private:
         >
     >;
 
-    // A collection of topics that have been retained in
-    // case clients add a new subscription to the topic.
+    // A collection of messages that have been retained in
+    // case clients add a new subscription to the associated topics.
     struct retain {
         retain(
             MQTT_NS::buffer topic,
             MQTT_NS::buffer contents,
             MQTT_NS::v5::properties props,
             MQTT_NS::qos qos_value)
-            :topic(std::move(topic)), contents(std::move(contents)), props(std::move(props)), qos_value(qos_value) {}
+            :topic(MQTT_NS::force_move(topic)),
+             contents(MQTT_NS::force_move(contents)),
+             props(MQTT_NS::force_move(props)),
+             qos_value(qos_value)
+        { }
         MQTT_NS::buffer topic;
         MQTT_NS::buffer contents;
         MQTT_NS::v5::properties props;
@@ -1165,7 +1173,7 @@ private:
             MQTT_NS::buffer contents,
             std::shared_ptr<MQTT_NS::v5::properties> props,
             MQTT_NS::qos qos_value)
-            : contents(std::move(contents)), props(std::move(props)), qos_value(qos_value) {}
+            : contents(MQTT_NS::force_move(contents)), props(MQTT_NS::force_move(props)), qos_value(qos_value) {}
         MQTT_NS::buffer contents;
         std::shared_ptr<MQTT_NS::v5::properties> props;
         MQTT_NS::qos qos_value;
@@ -1178,7 +1186,7 @@ private:
             MQTT_NS::buffer client_id,
             MQTT_NS::buffer topic,
             MQTT_NS::qos qos_value)
-            :client_id(std::move(client_id)), topic(std::move(topic)), qos_value(qos_value) {}
+            :client_id(MQTT_NS::force_move(client_id)), topic(MQTT_NS::force_move(topic)), qos_value(qos_value) {}
         MQTT_NS::buffer client_id;
         MQTT_NS::buffer topic;
         std::vector<saved_message> messages;
