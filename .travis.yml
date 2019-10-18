@@ -1,6 +1,8 @@
 sudo: false
 language: cpp
 
+if: type != push OR branch = master OR branch =~ /^v\d+\.\d+(\.\d+)?(-\S*)?$/
+
 dist: xenial
 osx_image: xcode10.3
 
