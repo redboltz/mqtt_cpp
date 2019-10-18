@@ -2046,8 +2046,7 @@ public:
         subscribe_options option,
         v5::properties props = {}
     ) {
-        std::vector<std::tuple<buffer, subscribe_options>> params;
-        send_subscribe(force_move(params), packet_id, topic_name, option, force_move(props));
+        send_subscribe({ { buffer(topic_name), option } }, packet_id, force_move(props));
     }
 
     /**
@@ -2074,8 +2073,9 @@ public:
         subscribe_options option,
         v5::properties props = {}
     ) {
-        std::vector<std::tuple<buffer, subscribe_options>> params;
-        send_subscribe(force_move(params), packet_id, topic_name, option, force_move(props));
+        send_subscribe({ { buffer(string_view(get_pointer(topic_name), get_size(topic_name))), option } },
+                       packet_id,
+                       force_move(props));
     }
 
     /**
@@ -2144,10 +2144,7 @@ public:
         string_view topic_name,
         v5::properties props = {}
     ) {
-
-        std::vector<buffer> params;
-
-        send_unsubscribe(force_move(params), packet_id, topic_name, force_move(props));
+        send_unsubscribe({ buffer(topic_name) }, packet_id, force_move(props));
     }
 
     /**
@@ -2169,10 +2166,9 @@ public:
         as::const_buffer topic_name,
         v5::properties props = {}
     ) {
-
-        std::vector<buffer> params;
-
-        send_unsubscribe(force_move(params), packet_id, topic_name, force_move(props));
+        send_unsubscribe({ buffer(string_view(get_pointer(topic_name), get_size(topic_name))) },
+                         packet_id,
+                         force_move(props));
     }
 
     /**
@@ -5537,7 +5533,12 @@ public:
         std::string topic_name,
         async_handler_t func = async_handler_t()
     ) {
-        acquired_async_unsubscribe_imp(packet_id, force_move(topic_name), force_move(func));
+        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
+        auto sv_topic_name = string_view(*sp_topic_name);
+        async_send_unsubscribe({ buffer(sv_topic_name) },
+                               force_move(sp_topic_name),
+                               packet_id,
+                               force_move(func));
     }
 
     /**
@@ -5554,9 +5555,13 @@ public:
     void acquired_async_unsubscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
+        any life_keeper,
         async_handler_t func = async_handler_t()
     ) {
-        acquired_async_unsubscribe_imp(packet_id, topic_name, force_move(func));
+        async_send_unsubscribe({ buffer(string_view(get_pointer(topic_name), get_size(topic_name))) },
+                               force_move(life_keeper),
+                               packet_id,
+                               force_move(func));
     }
 
     /**
@@ -5575,8 +5580,7 @@ public:
         buffer topic_name,
         async_handler_t func = async_handler_t()
     ) {
-        std::vector<buffer> params { force_move(topic_name) };
-        async_send_unsubscribe(force_move(params), any(), packet_id, force_move(func));
+        async_send_unsubscribe({ force_move(topic_name) }, any(), packet_id, force_move(func));
     }
 
     /**
@@ -5600,8 +5604,7 @@ public:
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
-        std::vector<buffer> params { force_move(topic_name) };
-        async_send_unsubscribe(force_move(params), any(), packet_id, force_move(props), force_move(func));
+        async_send_unsubscribe({ force_move(topic_name) }, any(), packet_id, force_move(props), force_move(func));
     }
 
     /**
@@ -5621,7 +5624,6 @@ public:
         std::vector<std::string> params,
         async_handler_t func = async_handler_t()
     ) {
-
         std::vector<buffer> cb_params;
         cb_params.reserve(params.size());
 
@@ -5663,7 +5665,6 @@ public:
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
-
         std::vector<as::const_buffer> cb_params;
         cb_params.reserve(params.size());
 
@@ -5699,9 +5700,9 @@ public:
     void acquired_async_unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
+        any life_keeper,
         async_handler_t func = async_handler_t()
     ) {
-
         std::vector<buffer> cb_params;
         cb_params.reserve(params.size());
 
@@ -5718,7 +5719,7 @@ public:
 
         async_send_unsubscribe(
             force_move(cb_params),
-            any(),
+            force_move(life_keeper),
             packet_id,
             force_move(func)
         );
@@ -5743,13 +5744,27 @@ public:
     void acquired_async_unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
+        any life_keeper,
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
+        std::vector<buffer> cb_params;
+        cb_params.reserve(params.size());
+
+        for (auto const& e : params) {
+            cb_params.emplace_back(
+                buffer(
+                    string_view(
+                        get_pointer(e),
+                        get_size(e)
+                    )
+                )
+            );
+        }
 
         async_send_unsubscribe(
-            force_move(params),
-            any(),
+            force_move(cb_params),
+            force_move(life_keeper),
             packet_id,
             force_move(props),
             force_move(func)
@@ -6821,264 +6836,6 @@ private:
     void shutdown_from_client(T& socket) {
         boost::system::error_code ec;
         socket.lowest_layer().close(ec);
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            any
-        >::value
-    >::type
-    acquired_async_subscribe_imp(
-        packet_id_t packet_id,
-        std::string topic_name,
-        qos qos_value,
-        Args&&... args) {
-
-        std::vector<std::tuple<buffer, subscribe_options>> params;
-        params.reserve((sizeof...(args) + 2) / 2);
-
-        async_send_subscribe(
-            force_move(params),
-            any(),
-            packet_id,
-            force_move(topic_name),
-            qos_value,
-            std::forward<Args>(args)...
-        );
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            any
-        >::value
-    >::type
-    acquired_async_subscribe_imp(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        qos qos_value,
-        Args&&... args) {
-
-        std::vector<std::tuple<buffer, subscribe_options>> params;
-        params.reserve((sizeof...(args) + 2) / 2);
-
-        async_send_subscribe(
-            force_move(params),
-            any(),
-            packet_id,
-            topic_name,
-            qos_value,
-            std::forward<Args>(args)...
-        );
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            any
-        >::value
-    >::type
-    acquired_async_subscribe_imp(
-        packet_id_t packet_id,
-        std::string topic_name,
-        qos qos_value,
-        Args&&... args) {
-
-        std::vector<std::tuple<buffer, subscribe_options>> params;
-        params.reserve((sizeof...(args) + 2) / 2);
-
-        async_send_subscribe(
-            force_move(params),
-            any(),
-            packet_id,
-            force_move(topic_name),
-            qos_value,
-            std::forward<Args>(args)...,
-            any()
-        );
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            any
-        >::value
-    >::type
-    acquired_async_subscribe_imp(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        qos qos_value,
-        Args&&... args) {
-
-        std::vector<std::tuple<buffer, subscribe_options>> params;
-        params.reserve((sizeof...(args) + 2) / 2);
-
-        async_send_subscribe(
-            force_move(params),
-            any(),
-            packet_id,
-            topic_name,
-            qos_value,
-            std::forward<Args>(args)...,
-            any()
-        );
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            any
-        >::value
-    >::type
-    acquired_async_unsubscribe_imp(
-        packet_id_t packet_id,
-        std::string topic_name,
-        Args&&... args) {
-
-        std::vector<buffer> params;
-        params.reserve(sizeof...(args));
-
-        async_send_unsubscribe(
-            force_move(params),
-            any(),
-            packet_id,
-            force_move(topic_name),
-            std::forward<Args>(args)...
-        );
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            any
-        >::value
-    >::type
-    acquired_async_unsubscribe_imp(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        Args&&... args) {
-
-        std::vector<buffer> params;
-        params.reserve(sizeof...(args));
-
-        async_send_unsubscribe(
-            force_move(params),
-            any(),
-            packet_id,
-            topic_name,
-            std::forward<Args>(args)...
-        );
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            any
-        >::value
-    >::type
-    acquired_async_unsubscribe_imp(
-        packet_id_t packet_id,
-        std::string topic_name,
-        Args&&... args) {
-
-        std::vector<buffer> params;
-        params.reserve(sizeof...(args) + 1);
-
-        async_send_unsubscribe(
-            force_move(params),
-            any(),
-            packet_id,
-            force_move(topic_name),
-            std::forward<Args>(args)...,
-            any()
-        );
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            any
-        >::value
-    >::type
-    acquired_async_unsubscribe_imp(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        Args&&... args) {
-
-        std::vector<buffer> params;
-        params.reserve(sizeof...(args) + 1);
-
-        async_send_unsubscribe(
-            force_move(params),
-            any(),
-            packet_id,
-            topic_name,
-            std::forward<Args>(args)...,
-            any()
-        );
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            any
-        >::value
-    >::type
-    async_suback_imp(
-        packet_id_t packet_id,
-        std::uint8_t qos_value,
-        Args&&... args) {
-        async_send_suback(std::vector<std::uint8_t>{}, packet_id, qos_value, std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            any
-        >::value
-    >::type
-    async_suback_imp(
-        packet_id_t packet_id,
-        Args&&... qos_values) {
-        async_send_suback(std::vector<std::uint8_t>({qos_values...}), packet_id, any());
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            any
-        >::value
-    >::type
-    async_unsuback_imp(
-        packet_id_t packet_id,
-        v5::unsuback_reason_code payload,
-        Args&&... args) {
-        async_send_unsuback(std::vector<v5::unsuback_reason_code>{}, packet_id, payload, std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::tuple_element<sizeof...(Args) - 1, std::tuple<Args...>>::type,
-            any
-        >::value
-    >::type
-    async_unsuback_imp(
-        packet_id_t packet_id,
-        Args&&... payload) {
-        async_send_unsuback(std::vector<v5::unsuback_reason_code>({payload...}), packet_id, any());
     }
 
     class send_buffer {
@@ -11353,39 +11110,6 @@ private:
         on_pub_res_sent(packet_id);
     }
 
-    template <typename... Args>
-    void send_subscribe(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        subscribe_options option,
-        Args&&... args) {
-        params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))), option);
-        send_subscribe(force_move(params), packet_id, std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    void send_subscribe(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        packet_id_t packet_id,
-        string_view topic_name,
-        subscribe_options option,
-        Args&&... args) {
-        params.emplace_back(buffer(force_move(topic_name)), option);
-        send_subscribe(force_move(params), packet_id, std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    void send_subscribe(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        packet_id_t packet_id,
-        buffer topic_name,
-        qos qos_value,
-        Args&&... args) {
-        params.emplace_back(force_move(topic_name), qos_value);
-        send_subscribe(force_move(params), packet_id, std::forward<Args>(args)...);
-    }
-
     void send_subscribe(
         std::vector<std::tuple<buffer, subscribe_options>> params,
         packet_id_t packet_id,
@@ -11413,16 +11137,6 @@ private:
         }
     }
 
-    template <typename... Args>
-    void send_suback(
-        variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> params,
-        packet_id_t packet_id,
-        variant<suback_return_code, v5::suback_reason_code> reason,
-        Args&&... args) {
-        visit([reason](auto & vect){ vect.push_back(reason); }, params);
-        send_suback(force_move(params), packet_id, std::forward<Args>(args)...);
-    }
-
     void send_suback(
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> params,
         packet_id_t packet_id,
@@ -11439,36 +11153,6 @@ private:
             BOOST_ASSERT(false);
             break;
         }
-    }
-
-    template <typename... Args>
-    void send_unsubscribe(
-        std::vector<buffer> params,
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        Args&&... args) {
-        params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))));
-        send_unsubscribe(force_move(params), packet_id, std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    void send_unsubscribe(
-        std::vector<buffer> params,
-        packet_id_t packet_id,
-        string_view topic_name,
-        Args&&... args) {
-        params.emplace_back(buffer(topic_name));
-        send_unsubscribe(force_move(params), packet_id, std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    void send_unsubscribe(
-        std::vector<buffer> params,
-        packet_id_t packet_id,
-        buffer topic_name,
-        Args&&... args) {
-        params.emplace_back(force_move(topic_name));
-        send_unsubscribe(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void send_unsubscribe(
@@ -11503,16 +11187,6 @@ private:
             BOOST_ASSERT(false);
             break;
         }
-    }
-
-    template <typename... Args>
-    void send_unsuback(
-        std::vector<v5::unsuback_reason_code> params,
-        packet_id_t packet_id,
-        v5::unsuback_reason_code reason,
-        Args&&... args) {
-        params.push_back(reason);
-        send_suback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void send_unsuback(
@@ -11930,32 +11604,6 @@ private:
         }
     }
 
-    template <typename... Args>
-    void async_send_subscribe(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        any life_keepers,
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        qos qos_value,
-        Args&&... args) {
-        params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))), qos_value);
-        async_send_subscribe(force_move(params), force_move(life_keepers), packet_id, std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    void async_send_subscribe(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        any life_keepers,
-        packet_id_t packet_id,
-        std::string topic_name,
-        qos qos_value,
-        Args&&... args) {
-
-        auto sp_topic = std::make_shared<std::string>(force_move(topic_name));
-        params.emplace_back(buffer(string_view(*sp_topic)), qos_value);
-        async_send_subscribe(force_move(params), std::make_pair(force_move(life_keepers), force_move(sp_topic)), packet_id, std::forward<Args>(args)...);
-    }
-
     void async_send_subscribe(
         std::vector<std::tuple<buffer, subscribe_options>> params,
         any life_keepers,
@@ -12019,28 +11667,6 @@ private:
         }
     }
 
-    template <typename... Args>
-    void async_send_suback(
-        variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> params,
-        packet_id_t packet_id,
-        variant<suback_return_code, v5::suback_reason_code> reason_code,
-        Args&&... args) {
-        if((0 == variant_idx(params)) && (0 == variant_idx(reason_code)))
-        {
-            variant_get<std::vector<suback_return_code>>(params).push_back(variant_get<suback_return_code>(reason_code));
-        }
-        else if((1 == variant_idx(params)) && (1 == variant_idx(reason_code)))
-        {
-            variant_get<std::vector<v5::suback_reason_code>>(params).push_back(variant_get<v5::suback_reason_code>(reason_code));
-        }
-        else
-        {
-            BOOST_ASSERT(false);
-        }
-
-        async_send_suback(force_move(params), packet_id, std::forward<Args>(args)...);
-    }
-
     void async_send_suback(
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> params,
         packet_id_t packet_id,
@@ -12062,30 +11688,6 @@ private:
             BOOST_ASSERT(false);
             break;
         }
-    }
-
-    template <typename... Args>
-    void async_send_unsubscribe(
-        std::vector<buffer> params,
-        any life_keepers,
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        Args&&... args) {
-        params.emplace_back(buffer(string_view(get_pointer(topic_name), get_size(topic_name))));
-        async_send_unsubscribe(force_move(params), force_move(life_keepers), packet_id, std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    void async_send_unsubscribe(
-        std::vector<buffer> params,
-        any life_keepers,
-        packet_id_t packet_id,
-        std::string topic_name,
-        Args&&... args) {
-
-        auto sp_topic = std::make_shared<std::string>(force_move(topic_name));
-        params.emplace_back(buffer(string_view(*sp_topic)));
-        async_send_unsubscribe(force_move(params), std::make_pair(force_move(life_keepers), force_move(sp_topic)), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_unsubscribe(
@@ -12180,16 +11782,6 @@ private:
             BOOST_ASSERT(false);
             break;
         }
-    }
-
-    template <typename... Args>
-    void async_send_unsuback(
-        std::vector<v5::unsuback_reason_code> params,
-        packet_id_t packet_id,
-        v5::unsuback_reason_code payload,
-        Args&&... args) {
-        params.push_back(payload);
-        async_send_unsuback(force_move(params), packet_id, std::forward<Args>(args)...);
     }
 
     void async_send_unsuback(
