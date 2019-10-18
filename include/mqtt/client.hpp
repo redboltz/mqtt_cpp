@@ -384,9 +384,7 @@ public:
      * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
     void connect(any session_life_keeper = any()) {
-        boost::system::error_code ec;
-        connect(ec, force_move(session_life_keeper));
-        if (ec) throw ec;
+        connect(v5::properties{}, force_move(session_life_keeper));
     }
 
     /**
@@ -408,9 +406,10 @@ public:
      * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
     void connect(v5::properties props, any session_life_keeper = any()) {
-        boost::system::error_code ec;
-        connect(force_move(props), ec, force_move(session_life_keeper));
-        if (ec) throw ec;
+        as::ip::tcp::resolver r(ioc_);
+        auto eps = r.resolve(host_, port_);
+        setup_socket(socket_);
+        connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper));
     }
 
     /**
@@ -441,9 +440,7 @@ public:
      * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
     void connect(std::shared_ptr<Socket>&& socket, any session_life_keeper = any()) {
-        boost::system::error_code ec;
-        connect(force_move(socket), ec, force_move(session_life_keeper));
-        if (ec) throw ec;
+        connect(force_move(socket), v5::properties{}, force_move(session_life_keeper));
     }
 
     /**
@@ -475,9 +472,11 @@ public:
         std::shared_ptr<Socket>&& socket,
         v5::properties props,
         any session_life_keeper = any()) {
-        boost::system::error_code ec;
-        connect(force_move(socket), force_move(props), ec, force_move(session_life_keeper));
-        if (ec) throw ec;
+        as::ip::tcp::resolver r(ioc_);
+        auto eps = r.resolve(host_, port_);
+        socket_ = force_move(socket);
+        base::socket_optional().emplace(socket_);
+        connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper));
     }
 
     /**
@@ -1027,6 +1026,14 @@ private:
     void handshake_socket(
         tcp_endpoint<as::ip::tcp::socket, Strand>&,
         v5::properties props,
+        any session_life_keeper) {
+        start_session(force_move(props), force_move(session_life_keeper));
+    }
+
+    template <typename Strand>
+    void handshake_socket(
+        tcp_endpoint<as::ip::tcp::socket, Strand>&,
+        v5::properties props,
         any session_life_keeper,
         boost::system::error_code& ec) {
         start_session(force_move(props), force_move(session_life_keeper));
@@ -1034,6 +1041,16 @@ private:
     }
 
 #if defined(MQTT_USE_WS)
+
+    template <typename Strand>
+    void handshake_socket(
+        ws_endpoint<as::ip::tcp::socket, Strand>& socket,
+        v5::properties props,
+        any session_life_keeper) {
+        socket.handshake(host_, path_);
+        start_session(force_move(props), force_move(session_life_keeper));
+    }
+
     template <typename Strand>
     void handshake_socket(
         ws_endpoint<as::ip::tcp::socket, Strand>& socket,
@@ -1044,9 +1061,19 @@ private:
         if (ec) return;
         start_session(force_move(props), force_move(session_life_keeper));
     }
+
 #endif // defined(MQTT_USE_WS)
 
 #if defined(MQTT_USE_TLS)
+
+    template <typename Strand>
+    void handshake_socket(
+        tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
+        v5::properties props,
+        any session_life_keeper) {
+        socket.handshake(as::ssl::stream_base::client);
+        start_session(force_move(props), force_move(session_life_keeper));
+    }
 
     template <typename Strand>
     void handshake_socket(
@@ -1060,6 +1087,17 @@ private:
     }
 
 #if defined(MQTT_USE_WS)
+
+    template <typename Strand>
+    void handshake_socket(
+        ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
+        v5::properties props,
+        any session_life_keeper) {
+        socket.next_layer().handshake(as::ssl::stream_base::client);
+        socket.handshake(host_, path_);
+        start_session(force_move(props), force_move(session_life_keeper));
+    }
+
     template <typename Strand>
     void handshake_socket(
         ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
@@ -1072,6 +1110,7 @@ private:
         if (ec) return;
         start_session(force_move(props), force_move(session_life_keeper));
     }
+
 #endif // defined(MQTT_USE_WS)
 
 #endif // defined(MQTT_USE_TLS)
@@ -1177,6 +1216,21 @@ private:
 #endif // defined(MQTT_USE_WS)
 
 #endif // defined(MQTT_USE_TLS)
+
+    template <typename Iterator>
+    void connect_impl(
+        Socket& socket,
+        Iterator it,
+        Iterator end,
+        v5::properties props,
+        any session_life_keeper) {
+        as::connect(socket.lowest_layer(), it, end);
+        base::set_connect();
+        if (ping_duration_ms_ != 0) {
+            set_timer();
+        }
+        handshake_socket(socket, force_move(props), force_move(session_life_keeper));
+    }
 
     template <typename Iterator>
     void connect_impl(
