@@ -85,7 +85,8 @@ matrix:
 
 script:
   - CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
-  - mkdir build && cd build && cmake $FLAGS .. && make check_deps VERBOSE=1 && travis_wait 50 make $MAKEFLAGS VERBOSE=1 && ctest -VV
+  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then mkdir build && cd build && cmake $FLAGS .. && travis_wait 50 make $MAKEFLAGS VERBOSE=1 && ctest -VV; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then mkdir build && cd build && cmake $FLAGS .. && make check_deps VERBOSE=1 && travis_wait 50 make $MAKEFLAGS VERBOSE=1 && ctest -VV; fi
 
 after_success:
   # Create lcov report
