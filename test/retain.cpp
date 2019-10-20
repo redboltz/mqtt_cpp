@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_SUITE(test_retain)
 using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( simple ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -179,10 +179,10 @@ BOOST_AUTO_TEST_CASE( simple ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -197,7 +197,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
 }
 
 BOOST_AUTO_TEST_CASE( overwrite ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -367,10 +367,10 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -385,7 +385,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
 }
 
 BOOST_AUTO_TEST_CASE( retain_and_publish ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -615,10 +615,10 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -633,8 +633,11 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
 }
 
 BOOST_AUTO_TEST_CASE( prop ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
-        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) return;
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
+        }
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
@@ -785,10 +788,10 @@ BOOST_AUTO_TEST_CASE( prop ) {
                 return true;
             });
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []

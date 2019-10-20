@@ -56,10 +56,17 @@ public:
     }
 
 #if defined(MQTT_USE_TLS)
+
+    template <typename... Args>
+    void handshake(Args&& ... args) {
+        tcp_.handshake(std::forward<Args>(args)...);
+    }
+
     template <typename... Args>
     void async_handshake(Args&& ... args) {
         tcp_.async_handshake(std::forward<Args>(args)...);
     }
+
 #endif // defined(MQTT_USE_TLS)
 
     template <typename MutableBufferSequence, typename ReadHandler>

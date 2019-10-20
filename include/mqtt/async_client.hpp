@@ -225,6 +225,7 @@ public:
         base::set_auto_pub_response(b, true);
     }
 
+    void connect() = delete;
     void disconnect() = delete;
     void publish_at_most_once() = delete;
     void publish_at_least_once() = delete;

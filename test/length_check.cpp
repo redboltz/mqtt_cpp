@@ -13,8 +13,11 @@
 BOOST_AUTO_TEST_SUITE(test_length_check)
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
-        if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) return;
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
+            finish();
+            return;
+        }
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
@@ -46,11 +49,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                 BOOST_CHECK(false);
             });
         c->set_error_handler(
-            [&chk, &c, &s]
+            [&chk, &c, &finish]
             (boost::system::error_code const& ec) {
                 MQTT_CHK("h_error");
                 BOOST_TEST(ec == boost::system::errc::message_size);
-                s.close();
+                finish();
                 c->force_disconnect();
             });
         c->set_suback_handler(

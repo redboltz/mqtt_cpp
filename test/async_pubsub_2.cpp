@@ -18,7 +18,7 @@ BOOST_AUTO_TEST_SUITE(test_async_pubsub_2)
 using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -178,10 +178,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             (std::uint16_t) {
                 BOOST_CHECK(false);
             });
-        c->connect();
+        c->async_connect();
         ioc.run();
         BOOST_TEST(chk.all());
     };
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -376,17 +376,17 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
-        c->connect();
+        c->async_connect();
         ioc.run();
         BOOST_TEST(chk.all());
     };
@@ -395,7 +395,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
 
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -573,17 +573,17 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
-        c->connect();
+        c->async_connect();
         ioc.run();
         BOOST_TEST(chk.all());
     };
@@ -591,7 +591,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_function ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -751,17 +751,17 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
-        c->connect();
+        c->async_connect();
         ioc.run();
         BOOST_TEST(chk.all());
     };
@@ -769,7 +769,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_dup_function ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -936,17 +936,17 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
-        c->connect();
+        c->async_connect();
         ioc.run();
         BOOST_TEST(chk.all());
     };
@@ -954,7 +954,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_dup_function_buffer ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -1121,17 +1121,17 @@ BOOST_AUTO_TEST_CASE( publish_dup_function_buffer ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
-        c->connect();
+        c->async_connect();
         ioc.run();
         BOOST_TEST(chk.all());
     };
@@ -1139,8 +1139,11 @@ BOOST_AUTO_TEST_CASE( publish_dup_function_buffer ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
-        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) return;
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
+        }
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
@@ -1289,10 +1292,10 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
                 return true;
             });
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -1304,7 +1307,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
             (std::uint16_t) {
                 BOOST_CHECK(false);
             });
-        c->connect();
+        c->async_connect();
         ioc.run();
         BOOST_TEST(chk.all());
     };
@@ -1312,8 +1315,11 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
 }
 
 BOOST_AUTO_TEST_CASE( puback_props ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& b) {
-        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) return;
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
+        }
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
@@ -1458,17 +1464,17 @@ BOOST_AUTO_TEST_CASE( puback_props ) {
                 return true;
             });
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
-        c->connect();
+        c->async_connect();
         ioc.run();
         BOOST_TEST(chk.all());
     };
@@ -1476,8 +1482,11 @@ BOOST_AUTO_TEST_CASE( puback_props ) {
 }
 
 BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& b) {
-        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) return;
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
+        }
 
         // client               broker
         //       publish ------>
@@ -1725,17 +1734,17 @@ BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
                 return true;
             });
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
             (boost::system::error_code const&) {
                 BOOST_CHECK(false);
             });
-        c->connect();
+        c->async_connect();
         ioc.run();
         BOOST_TEST(chk.all());
     };

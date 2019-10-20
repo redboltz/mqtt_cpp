@@ -947,10 +947,11 @@ private:
         auto & act_sess_idx = active_sessions_.get<tag_con>();
         auto act_sess_it = act_sess_idx.find(spep);
 
-        // It shouldn't be possible for this function to be called
-        // multiple times with the same endpoint, as we've severed
-        // this endpoint's connection with the broker above.
-        BOOST_ASSERT(act_sess_it != act_sess_idx.end());
+        // act_sess_it == act_sess_idx.end() could happen if broker accepts
+        // the session from client but the client closes the session  before sending
+        // MQTT `CONNECT` message.
+        // In this case, do nothing is correct behavior.
+        if (act_sess_it == act_sess_idx.end()) return;
 
         MQTT_NS::buffer client_id;
         MQTT_NS::optional<MQTT_NS::will> will;

@@ -13,7 +13,7 @@
 BOOST_AUTO_TEST_SUITE(test_as_buffer_pubsub)
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -173,10 +173,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -196,7 +196,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
         bool pub_seq_finished = false;
@@ -365,10 +365,10 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -388,7 +388,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -558,10 +558,10 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             break;
         }
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -581,7 +581,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -741,10 +741,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -764,7 +764,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -943,10 +943,10 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -961,7 +961,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -1143,10 +1143,10 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -1161,7 +1161,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -1321,10 +1321,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -1344,7 +1344,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -1523,10 +1523,10 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -1541,7 +1541,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -1723,10 +1723,10 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -1741,7 +1741,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_function ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -1901,10 +1901,10 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -1919,7 +1919,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_dup_function ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
 
@@ -2084,10 +2084,10 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
         }
 
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []

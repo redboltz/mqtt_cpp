@@ -15,8 +15,11 @@ BOOST_AUTO_TEST_SUITE(test_multi_sub)
 using namespace std::literals::string_literals;
 
 BOOST_AUTO_TEST_CASE( multi_channel ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto& s, auto& /*b*/) {
-        if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) return;
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
+            finish();
+            return;
+        }
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_clean_session(true);
@@ -55,10 +58,10 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
                 return true;
             });
         c->set_close_handler(
-            [&chk, &s]
+            [&chk, &finish]
             () {
                 MQTT_CHK("h_close");
-                s.close();
+                finish();
             });
         c->set_error_handler(
             []
@@ -146,9 +149,30 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
 }
 
 BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
     int sub_count = 0;
 
     std::uint16_t pid_sub1;
@@ -162,7 +186,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
 
     int close_count = 0;
     auto server_close = [&] {
-        if (++close_count == 2) s.close();
+        if (++close_count == 2) finish();
     };
 
     checker chk = {
@@ -351,12 +375,34 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
 
     ioc.run();
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
+    boost::asio::io_context iocb;
+    test_broker b(iocb);
+    MQTT_NS::optional<test_server_no_tls> s;
+    std::promise<void> p;
+    auto f = p.get_future();
+    std::thread th(
+        [&] {
+            s.emplace(iocb, b);
+            p.set_value();
+            iocb.run();
+        }
+    );
+    f.wait();
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
+
     boost::asio::io_context ioc;
-    test_broker b(ioc);
-    test_server_no_tls s(ioc, b);
     // c3 --publish--> topic1 ----> c1, c2
 
     bool c1ready = false;
@@ -403,7 +449,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
 
     int close_count = 0;
     auto server_close = [&] {
-        if (++close_count == 3) s.close();
+        if (++close_count == 3) finish();
     };
 
     std::uint16_t pid_pub3;
@@ -586,6 +632,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
 
     ioc.run();
     BOOST_TEST(chk.all());
+    th.join();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
