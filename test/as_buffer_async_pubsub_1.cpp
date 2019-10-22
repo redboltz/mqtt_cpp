@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     pid_sub = c->async_subscribe(
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_most_once,
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     auto topic1 = std::make_shared<std::string>("topic1");
                     pid_unsub = c->async_unsubscribe(
                         as::buffer(*topic1),
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     pid_sub = c->async_subscribe(
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_most_once,
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -194,7 +194,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     auto topic1 = std::make_shared<std::string>("topic1");
                     pid_unsub = c->async_unsubscribe(
                         as::buffer(*topic1),
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_pub_res_sent_handler(
@@ -261,7 +261,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     pid_sub = c->async_subscribe(
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_most_once,
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -273,7 +273,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     auto topic1 = std::make_shared<std::string>("topic1");
                     pid_unsub = c->async_unsubscribe(
                         as::buffer(*topic1),
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -343,7 +343,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     pid_sub = c->async_subscribe(
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_most_once,
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -355,7 +355,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     auto topic1 = std::make_shared<std::string>("topic1");
                     pid_unsub = c->async_unsubscribe(
                         as::buffer(*topic1),
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -430,7 +430,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_pub_res_sent_handler(
@@ -480,7 +480,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                     pid_sub = c->async_subscribe(
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_most_once,
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -505,7 +505,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                     auto topic1 = std::make_shared<std::string>("topic1");
                     pid_unsub = c->async_unsubscribe(
                         as::buffer(*topic1),
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -563,7 +563,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                     pid_sub = c->async_subscribe(
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_most_once,
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -588,7 +588,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                     auto topic1 = std::make_shared<std::string>("topic1");
                     pid_unsub = c->async_unsubscribe(
                         as::buffer(*topic1),
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -650,7 +650,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_pub_res_sent_handler(
@@ -697,7 +697,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     pid_sub = c->async_subscribe(
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_least_once,
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -761,7 +761,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     auto topic1 = std::make_shared<std::string>("topic1");
                     pid_unsub = c->async_unsubscribe(
                         as::buffer(*topic1),
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -777,7 +777,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     pid_sub = c->async_subscribe(
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_least_once,
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -844,7 +844,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     auto topic1 = std::make_shared<std::string>("topic1");
                     pid_unsub = c->async_unsubscribe(
                         as::buffer(*topic1),
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -861,7 +861,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_pub_res_sent_handler(
@@ -908,7 +908,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                 auto topic1 = std::make_shared<std::string>("topic1");
                 pid_unsub = c->async_unsubscribe(
                     as::buffer(*topic1),
-                    [topic1](boost::system::error_code const&) {}
+                    [topic1](std::error_code) {}
                 );
             });
 
@@ -924,7 +924,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                     pid_sub = c->async_subscribe(
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_least_once,
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -1002,7 +1002,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                     pid_sub = c->async_subscribe(
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_least_once,
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -1084,7 +1084,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();
@@ -1138,7 +1138,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                     pid_sub = c->async_subscribe(
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_least_once,
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -1163,7 +1163,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                     auto topic1 = std::make_shared<std::string>("topic1");
                     pid_unsub = c->async_unsubscribe(
                         as::buffer(*topic1),
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -1222,7 +1222,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                     pid_sub = c->async_subscribe(
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_least_once,
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -1247,7 +1247,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                     auto topic1 = std::make_shared<std::string>("topic1");
                     pid_unsub = c->async_unsubscribe(
                         as::buffer(*topic1),
-                        [topic1](boost::system::error_code const&) {}
+                        [topic1](std::error_code) {}
                     );
                     return true;
                 });
@@ -1310,7 +1310,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();

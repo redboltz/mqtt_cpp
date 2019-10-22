@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_puback_handler(
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_puback_handler(
@@ -286,7 +286,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_puback_handler(

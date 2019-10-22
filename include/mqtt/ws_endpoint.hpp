@@ -39,7 +39,7 @@ public:
             ws_.read(buffer, ec);
         } while (!ec);
         if (ec != boost::beast::websocket::error::closed) return;
-        ec = boost::system::errc::make_error_code(boost::system::errc::success);
+        ec = {};
     }
 
     as::io_context& get_io_context() {
@@ -101,20 +101,20 @@ public:
         auto req_size = as::buffer_size(buffers);
 
         using beast_read_handler_t =
-            std::function<void(boost::system::error_code const& ec, std::shared_ptr<void>)>;
+            std::function<void(std::error_code ec, std::shared_ptr<void>)>;
 
         std::shared_ptr<beast_read_handler_t> beast_read_handler;
         if (req_size <= buffer_.size()) {
             as::buffer_copy(buffers, buffer_.data(), req_size);
             buffer_.consume(req_size);
-            handler(boost::system::errc::make_error_code(boost::system::errc::success), req_size);
+            handler({}, req_size);
             return;
         }
 
         beast_read_handler.reset(
             new beast_read_handler_t(
                 [this, req_size, buffers, handler = std::forward<ReadHandler>(handler)]
-                (boost::system::error_code const& ec, std::shared_ptr<void> const& v) mutable {
+                (std::error_code ec, std::shared_ptr<void> const& v) mutable {
                     if (ec) {
                         std::forward<ReadHandler>(handler)(ec, 0);
                         return;
@@ -132,7 +132,7 @@ public:
                             as::bind_executor(
                                 strand_,
                                 [beast_read_handler]
-                                (boost::system::error_code const& ec, std::size_t) {
+                                (std::error_code ec, std::size_t) {
                                     (*beast_read_handler)(ec, beast_read_handler);
                                 }
                             )
@@ -141,7 +141,7 @@ public:
                     }
                     as::buffer_copy(buffers, buffer_.data(), req_size);
                     buffer_.consume(req_size);
-                    std::forward<ReadHandler>(handler)(boost::system::errc::make_error_code(boost::system::errc::success), req_size);
+                    std::forward<ReadHandler>(handler)({}, req_size);
                 }
             )
         );
@@ -150,7 +150,7 @@ public:
             as::bind_executor(
                 strand_,
                 [beast_read_handler]
-                (boost::system::error_code const& ec, std::size_t) {
+                (std::error_code ec, std::size_t) {
                     (*beast_read_handler)(ec, beast_read_handler);
                 }
             )

@@ -185,7 +185,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_pub_res_sent_handler(
@@ -383,7 +383,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();
@@ -580,7 +580,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();
@@ -758,7 +758,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();
@@ -943,7 +943,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();
@@ -1128,7 +1128,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function_buffer ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();
@@ -1299,7 +1299,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_pub_res_sent_handler(
@@ -1471,7 +1471,7 @@ BOOST_AUTO_TEST_CASE( puback_props ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();
@@ -1741,7 +1741,7 @@ BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();

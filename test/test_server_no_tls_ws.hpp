@@ -29,7 +29,7 @@ public:
             }
         ), b_(b) {
         server_.set_error_handler(
-            [](boost::system::error_code const& /*ec*/) {
+            [](std::error_code /*ec*/) {
             }
         );
 

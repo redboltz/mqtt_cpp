@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_puback_handler(
@@ -228,7 +228,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
         });
     c1->set_error_handler(
         []
-        (boost::system::error_code const&) {
+        (std::error_code) {
             BOOST_CHECK(false);
         });
     c1->set_puback_handler(
@@ -311,7 +311,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos0 ) {
         });
     c2->set_error_handler(
         []
-        (boost::system::error_code const&) {
+        (std::error_code) {
             BOOST_CHECK(false);
         });
     c2->set_puback_handler(
@@ -474,7 +474,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
         });
     c1->set_error_handler(
         []
-        (boost::system::error_code const&) {
+        (std::error_code) {
             BOOST_CHECK(false);
         });
     c1->set_suback_handler(
@@ -538,7 +538,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
         });
     c2->set_error_handler(
         []
-        (boost::system::error_code const&) {
+        (std::error_code) {
             BOOST_CHECK(false);
         });
     c2->set_suback_handler(
@@ -602,7 +602,7 @@ BOOST_AUTO_TEST_CASE( multi_client_qos1 ) {
         });
     c3->set_error_handler(
         []
-        (boost::system::error_code const&) {
+        (std::error_code) {
             BOOST_CHECK(false);
         });
     c3->set_puback_handler(

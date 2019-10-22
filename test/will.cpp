@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
         });
     c1->set_error_handler(
         [&chk]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error_1");
         });
 
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
         });
     c2->set_error_handler(
         []
-        (boost::system::error_code const&) {
+        (std::error_code) {
             BOOST_CHECK(false);
         });
     c2->set_suback_handler(
@@ -246,7 +246,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
         });
     c1->set_error_handler(
         [&chk]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error_1");
         });
 
@@ -271,7 +271,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
         });
     c2->set_error_handler(
         []
-        (boost::system::error_code const&) {
+        (std::error_code) {
             BOOST_CHECK(false);
         });
     c2->set_suback_handler(
@@ -396,7 +396,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
         });
     c1->set_error_handler(
         [&chk]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error_1");
         });
 
@@ -421,7 +421,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
         });
     c2->set_error_handler(
         []
-        (boost::system::error_code const&) {
+        (std::error_code) {
             BOOST_CHECK(false);
         });
     c2->set_suback_handler(
@@ -555,7 +555,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
         });
     c1->set_error_handler(
         [&chk]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error_1");
         });
 
@@ -580,7 +580,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
         });
     c2->set_error_handler(
         []
-        (boost::system::error_code const&) {
+        (std::error_code) {
             BOOST_CHECK(false);
         });
     c2->set_suback_handler(
@@ -805,7 +805,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
         });
     c1->set_error_handler(
         [&chk]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error_1");
         });
 
@@ -834,7 +834,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
         });
     c2->set_error_handler(
         []
-        (boost::system::error_code const&) {
+        (std::error_code) {
             BOOST_CHECK(false);
         });
     c2->set_v5_suback_handler(

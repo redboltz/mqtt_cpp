@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -191,7 +191,7 @@ BOOST_AUTO_TEST_CASE( sub_v5_options ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -292,7 +292,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -399,7 +399,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -434,14 +434,14 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    c->async_subscribe("topic1", MQTT_NS::qos::at_most_once, [](boost::system::error_code const&) {});
+                    c->async_subscribe("topic1", MQTT_NS::qos::at_most_once, [](std::error_code) {});
                     return true;
                 });
             c->set_suback_handler(
                 [&chk, &c]
                 (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_return_code> /*results*/) {
                     MQTT_CHK("h_suback");
-                    c->async_unsubscribe("topic1", [](boost::system::error_code const&) {});
+                    c->async_unsubscribe("topic1", [](std::error_code) {});
                     return true;
                 });
             c->set_unsuback_handler(
@@ -459,14 +459,14 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
-                    c->async_subscribe("topic1", MQTT_NS::qos::at_most_once, [](boost::system::error_code const&) {});
+                    c->async_subscribe("topic1", MQTT_NS::qos::at_most_once, [](std::error_code) {});
                     return true;
                 });
             c->set_v5_suback_handler(
                 [&chk, &c]
                 (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::suback_reason_code> /*reasons*/, MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_suback");
-                    c->async_unsubscribe("topic1", [](boost::system::error_code const&) {});
+                    c->async_unsubscribe("topic1", [](std::error_code) {});
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -490,7 +490,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();
@@ -530,7 +530,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                             {"topic1", MQTT_NS::qos::at_most_once},
                             {"topic2", MQTT_NS::qos::exactly_once}
                         },
-                        [](boost::system::error_code const&) {}
+                        [](std::error_code) {}
                     );
                     return true;
                 });
@@ -543,7 +543,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                             "topic1",
                             "topic2"
                         },
-                        [](boost::system::error_code const&) {}
+                        [](std::error_code) {}
                     );
                     return true;
                 });
@@ -567,7 +567,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                             {"topic1", MQTT_NS::qos::at_most_once},
                             {"topic2", MQTT_NS::qos::exactly_once}
                         },
-                        [](boost::system::error_code const&) {}
+                        [](std::error_code) {}
                     );
                     return true;
                 });
@@ -580,7 +580,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                             "topic1",
                             "topic2"
                         },
-                        [](boost::system::error_code const&) {}
+                        [](std::error_code) {}
                     );
                     return true;
                 });
@@ -605,7 +605,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();
@@ -645,7 +645,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                     v.emplace_back("topic2", MQTT_NS::qos::exactly_once);
                     c->async_subscribe(
                         v,
-                        [](boost::system::error_code const&) {}
+                        [](std::error_code) {}
                     );
                     return true;
                 });
@@ -660,7 +660,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                         };
                     c->async_unsubscribe(
                         v,
-                        [](boost::system::error_code const&) {}
+                        [](std::error_code) {}
                     );
                     return true;
                 });
@@ -684,7 +684,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                     v.emplace_back("topic2", MQTT_NS::qos::exactly_once);
                     c->async_subscribe(
                         v,
-                        [](boost::system::error_code const&) {}
+                        [](std::error_code) {}
                     );
                     return true;
                 });
@@ -699,7 +699,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
                         };
                     c->async_unsubscribe(
                         v,
-                        [](boost::system::error_code const&) {}
+                        [](std::error_code) {}
                     );
                     return true;
                 });
@@ -724,7 +724,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();
@@ -866,7 +866,7 @@ BOOST_AUTO_TEST_CASE( sub_unsub_prop ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -1007,7 +1007,7 @@ BOOST_AUTO_TEST_CASE( suback_unsuback_prop ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();

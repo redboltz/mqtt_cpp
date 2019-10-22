@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
         });
     c->set_error_handler(
         []
-        (boost::system::error_code const& ec){
+        (std::error_code ec){
             std::cout << "error: " << ec.message() << std::endl;
         });
     c->set_puback_handler(

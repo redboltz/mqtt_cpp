@@ -54,7 +54,7 @@ public:
      * @brief Error handler
      * @param ec error code
      */
-    using error_handler = std::function<void(boost::system::error_code const& ec)>;
+    using error_handler = std::function<void(std::error_code ec)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server(
@@ -148,7 +148,7 @@ private:
         acceptor_.value().async_accept(
             socket->lowest_layer(),
             [this, socket]
-            (boost::system::error_code const& ec) mutable {
+            (std::error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
@@ -196,7 +196,7 @@ public:
      * @brief Error handler
      * @param ec error code
      */
-    using error_handler = std::function<void(boost::system::error_code const& ec)>;
+    using error_handler = std::function<void(std::error_code ec)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls(
@@ -324,7 +324,7 @@ private:
         acceptor_.value().async_accept(
             ps->lowest_layer(),
             [this, socket = force_move(socket)]
-            (boost::system::error_code const& ec) mutable {
+            (std::error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
@@ -335,7 +335,7 @@ private:
                 tim->expires_from_now(underlying_connect_timeout_);
                 tim->async_wait(
                     [socket, tim, underlying_finished]
-                    (boost::system::error_code ec) {
+                    (std::error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return;
                         boost::system::error_code close_ec;
@@ -346,7 +346,7 @@ private:
                 ps->async_handshake(
                     as::ssl::stream_base::server,
                     [this, socket = force_move(socket), tim, underlying_finished]
-                    (boost::system::error_code ec) mutable {
+                    (std::error_code ec) mutable {
                         *underlying_finished = true;
                         tim->cancel();
                         if (ec) {
@@ -415,7 +415,7 @@ public:
      * @brief Error handler
      * @param ec error code
      */
-    using error_handler = std::function<void(boost::system::error_code const& ec)>;
+    using error_handler = std::function<void(std::error_code ec)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_ws(
@@ -522,7 +522,7 @@ private:
         acceptor_.value().async_accept(
             ps->next_layer(),
             [this, socket = force_move(socket)]
-            (boost::system::error_code const& ec) mutable {
+            (std::error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
@@ -533,7 +533,7 @@ private:
                 tim->expires_from_now(underlying_connect_timeout_);
                 tim->async_wait(
                     [socket, tim, underlying_finished]
-                    (boost::system::error_code ec) {
+                    (std::error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return;
                         boost::system::error_code close_ec;
@@ -549,7 +549,7 @@ private:
                     *sb,
                     *request,
                     [this, socket = force_move(socket), sb, request, tim, underlying_finished]
-                    (boost::system::error_code const& ec, std::size_t) mutable {
+                    (std::error_code ec, std::size_t) mutable {
                         if (ec) {
                             *underlying_finished = true;
                             tim->cancel();
@@ -571,7 +571,7 @@ private:
                                 }
                             },
                             [this, socket = force_move(socket), tim, underlying_finished]
-                            (boost::system::error_code const& ec) mutable {
+                            (std::error_code ec) mutable {
                                 *underlying_finished = true;
                                 tim->cancel();
                                 if (ec) {
@@ -625,7 +625,7 @@ public:
      * @brief Error handler
      * @param ec error code
      */
-    using error_handler = std::function<void(boost::system::error_code const& ec)>;
+    using error_handler = std::function<void(std::error_code ec)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls_ws(
@@ -752,7 +752,7 @@ private:
         acceptor_.value().async_accept(
             socket->next_layer().next_layer(),
             [this, socket]
-            (boost::system::error_code const& ec) {
+            (std::error_code ec) {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
@@ -763,7 +763,7 @@ private:
                 tim->expires_from_now(underlying_connect_timeout_);
                 tim->async_wait(
                     [socket, tim, underlying_finished]
-                    (boost::system::error_code ec) {
+                    (std::error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return;
                         boost::system::error_code close_ec;
@@ -773,7 +773,7 @@ private:
                 socket->next_layer().async_handshake(
                     as::ssl::stream_base::server,
                     [this, socket, tim, underlying_finished]
-                    (boost::system::error_code ec) {
+                    (std::error_code ec) {
                         if (ec) {
                             *underlying_finished = true;
                             tim->cancel();
@@ -786,7 +786,7 @@ private:
                             *sb,
                             *request,
                             [this, socket, sb, request, tim, underlying_finished]
-                            (boost::system::error_code const& ec, std::size_t) {
+                            (std::error_code ec, std::size_t) {
                                 if (ec) {
                                     *underlying_finished = true;
                                     tim->cancel();
@@ -807,7 +807,7 @@ private:
                                         }
                                     },
                                     [this, socket, tim, underlying_finished]
-                                    (boost::system::error_code const& ec) mutable {
+                                    (std::error_code ec) mutable {
                                         *underlying_finished = true;
                                         tim->cancel();
                                         if (ec) {

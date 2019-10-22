@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         MQTT_CHK("start");
@@ -284,7 +284,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         MQTT_CHK("start");
@@ -433,7 +433,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         MQTT_CHK("start");
@@ -549,8 +549,8 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                             "topic1_contents",
                             MQTT_NS::qos::at_least_once,
                             false, // retain
-                            [&chk](boost::system::error_code const& ec){
-                                BOOST_TEST(ec == boost::system::errc::success);
+                            [&chk](std::error_code ec){
+                                BOOST_TEST( ! ec);
                                 MQTT_CHK("h_pub_finish");
                             }
                         );
@@ -566,7 +566,7 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (std::error_code) {
                 BOOST_CHECK(false);
             });
         MQTT_CHK("start");

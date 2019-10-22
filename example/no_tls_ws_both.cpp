@@ -52,7 +52,7 @@ void client_proc(
         });
     c->set_error_handler(
         []
-        (boost::system::error_code const& ec){
+        (std::error_code ec){
             std::cout << "[client] error: " << ec.message() << std::endl;
         });
     c->set_puback_handler(
@@ -162,7 +162,7 @@ inline void close_proc(std::set<con_sp_t>& cons, mi_sub_con& subs, con_sp_t cons
 template <typename Server>
 void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
     s.set_error_handler(
-        [](boost::system::error_code const& ec) {
+        [](std::error_code ec) {
             std::cout << "[server] error: " << ec.message() << std::endl;
         }
     );
@@ -196,7 +196,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 });
             ep.set_error_handler(
                 [&connections, &subs, wp]
-                (boost::system::error_code const& ec){
+                (std::error_code ec){
                     std::cout << "[server] error: " << ec.message() << std::endl;
                     auto sp = wp.lock();
                     BOOST_ASSERT(sp);

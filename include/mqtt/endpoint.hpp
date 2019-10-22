@@ -77,7 +77,7 @@ class endpoint : public std::enable_shared_from_this<endpoint<Mutex, LockGuard, 
     using this_type_sp = std::shared_ptr<this_type>;
 
 public:
-    using async_handler_t = std::function<void(boost::system::error_code const& ec)>;
+    using async_handler_t = std::function<void(std::error_code ec)>;
     using packet_id_t = typename packet_id_type<PacketIdBytes>::type;
 
     /**
@@ -608,7 +608,7 @@ public:
      *
      * @param ec error code
      */
-    virtual void on_error(boost::system::error_code const& ec) = 0;
+    virtual void on_error(std::error_code ec) = 0;
 
     /**
      * @brief Publish response sent handler
@@ -6749,7 +6749,7 @@ protected:
         socket_->async_read(
             as::buffer(buf_.data(), 1),
             [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper)](
-                boost::system::error_code const& ec,
+                std::error_code ec,
                 std::size_t bytes_transferred) mutable {
                 if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                 handle_control_packet_type(force_move(session_life_keeper), force_move(self));
@@ -6757,7 +6757,7 @@ protected:
         );
     }
 
-    bool handle_close_or_error(boost::system::error_code const& ec) {
+    bool handle_close_or_error(std::error_code ec) {
         if (!ec) return false;
         if (connected_) {
             connected_ = false;
@@ -6767,18 +6767,16 @@ protected:
                 socket_->close(ec);
             }
         }
-        if (ec == as::error::eof ||
-            ec == as::error::connection_reset
+        if (   (ec == std::error_code(as::error::eof, as::error::misc_category))
+            || (ec == std::error_code(as::error::connection_reset, as::error::system_category))
 #if defined(MQTT_USE_WS)
-            ||
-            ec == boost::beast::websocket::error::closed
+            || (ec == std::error_code(boost::beast::websocket::make_error_code(boost::beast::websocket::error::closed)))
 #endif // defined(MQTT_USE_WS)
 #if defined(MQTT_USE_TLS)
-            ||
 #if defined(SSL_R_SHORT_READ)
-            ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ
+            || (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ)
 #else  // defined(SSL_R_SHORT_READ)
-            ERR_GET_REASON(ec.value()) == boost::asio::ssl::error::stream_truncated
+            || (ERR_GET_REASON(ec.value()) == boost::asio::ssl::error::stream_truncated)
 #endif // defined(SSL_R_SHORT_READ)
 #endif // defined(MQTT_USE_TLS)
         ) {
@@ -6816,7 +6814,7 @@ private:
     }
 
     bool check_error_and_transferred_length(
-        boost::system::error_code const& ec,
+        std::error_code ec,
         std::size_t bytes_transferred,
         std::size_t bytes_expected) {
         if (handle_close_or_error(ec)) return false;
@@ -6926,7 +6924,7 @@ private:
         socket_->async_read(
             as::buffer(buf_.data(), 1),
             [this, self = force_move(self), session_life_keeper = force_move(session_life_keeper)] (
-                boost::system::error_code const& ec,
+                std::error_code ec,
                 std::size_t bytes_transferred) mutable {
                 if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                 handle_remaining_length(force_move(session_life_keeper), force_move(self));
@@ -6949,7 +6947,7 @@ private:
             socket_->async_read(
                 as::buffer(buf_.data(), 1),
                 [this, self = force_move(self), session_life_keeper = force_move(session_life_keeper)](
-                    boost::system::error_code const& ec,
+                    std::error_code ec,
                     std::size_t bytes_transferred) mutable {
                     if (handle_close_or_error(ec)) {
                         return;
@@ -7126,7 +7124,7 @@ private:
                     handler = force_move(handler),
                     buf = buffer(string_view(ptr, size), force_move(spa))
                 ]
-                (boost::system::error_code const& ec,
+                (std::error_code ec,
                  std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, bytes_transferred, buf.size())) return;
                     handler(
@@ -7186,7 +7184,7 @@ private:
                     session_life_keeper = force_move(session_life_keeper),
                     handler = force_move(handler)
                 ]
-                (boost::system::error_code const& ec,
+                (std::error_code ec,
                  std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, bytes_transferred, Bytes)) return;
                     handler(
@@ -7310,7 +7308,7 @@ private:
                     multiplier,
                     proc = force_move(proc)
                 ]
-                (boost::system::error_code const& ec,
+                (std::error_code ec,
                  std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                     proc(
@@ -7486,7 +7484,7 @@ private:
                             property_length,
                             result
                         ]
-                        (boost::system::error_code const& ec, std::size_t bytes_transferred) mutable {
+                        (std::error_code ec, std::size_t bytes_transferred) mutable {
                             if (!check_error_and_transferred_length(ec, bytes_transferred, result.len)) return;
                             process_property_id(
                                 force_move(session_life_keeper),
@@ -7552,7 +7550,7 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (boost::system::error_code const& ec,
+                (std::error_code ec,
                  std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                     process_property_body(
@@ -8472,7 +8470,7 @@ private:
                     info = std::forward<InfoType>(info),
                     self = force_move(self)
                 ]
-                (boost::system::error_code const& ec, std::size_t bytes_transferred) mutable {
+                (std::error_code ec, std::size_t bytes_transferred) mutable {
                     if (!check_error_and_transferred_length(ec, bytes_transferred, remaining_length_)) return;
                     (this->*NextFunc)(
                         force_move(session_life_keeper),
@@ -8504,7 +8502,7 @@ private:
                 info = std::forward<InfoType>(info),
                 self = force_move(self)
             ]
-            (boost::system::error_code const& ec,
+            (std::error_code ec,
              std::size_t bytes_transferred) mutable {
                 if (!check_error_and_transferred_length(ec, bytes_transferred, header_len)) return;
                 (this->*NextFunc)(
@@ -11394,7 +11392,7 @@ private:
                 }
                 do_async_write(
                     force_move(msg),
-                    [life_keeper = force_move(life_keeper), func = force_move(func)](boost::system::error_code const& ec) {
+                    [life_keeper = force_move(life_keeper), func = force_move(func)](std::error_code ec) {
                         if (func) func(ec);
                     }
                 );
@@ -11445,7 +11443,7 @@ private:
             do_async_write(
                 v3_1_1::basic_puback_message<PacketIdBytes>(packet_id),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (boost::system::error_code const& ec){
+                (std::error_code ec){
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
                 }
@@ -11455,7 +11453,7 @@ private:
             do_async_write(
                 v5::basic_puback_message<PacketIdBytes>(packet_id, reason, force_move(props)),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (boost::system::error_code const& ec){
+                (std::error_code ec){
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
                 }
@@ -11540,7 +11538,7 @@ private:
 
                 do_async_write(
                     force_move(msg),
-                    [life_keeper = force_move(life_keeper), func = force_move(func)](boost::system::error_code const& ec) {
+                    [life_keeper = force_move(life_keeper), func = force_move(func)](std::error_code ec) {
                         if (func) func(ec);
                     }
                 );
@@ -11576,7 +11574,7 @@ private:
             do_async_write(
                 v3_1_1::basic_pubcomp_message<PacketIdBytes>(packet_id),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (boost::system::error_code const& ec){
+                (std::error_code ec){
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
                 }
@@ -11586,7 +11584,7 @@ private:
             do_async_write(
                 v5::basic_pubcomp_message<PacketIdBytes>(packet_id, reason, force_move(props)),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (boost::system::error_code const& ec){
+                (std::error_code ec){
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
                 }
@@ -11609,7 +11607,7 @@ private:
             do_async_write(
                 v3_1_1::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id),
                 [life_keepers = force_move(life_keepers), func = force_move(func)]
-                (boost::system::error_code const& ec) {
+                (std::error_code ec) {
                     if (func) func(ec);
                 }
             );
@@ -11618,7 +11616,7 @@ private:
             do_async_write(
                 v5::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id, {}),
                 [life_keepers = force_move(life_keepers), func = force_move(func)]
-                (boost::system::error_code const& ec) {
+                (std::error_code ec) {
                     if (func) func(ec);
                 }
             );
@@ -11641,7 +11639,7 @@ private:
             do_async_write(
                 v3_1_1::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id),
                 [life_keepers = force_move(life_keepers), func = force_move(func)]
-                (boost::system::error_code const& ec) {
+                (std::error_code ec) {
                     if (func) func(ec);
                 }
             );
@@ -11650,7 +11648,7 @@ private:
             do_async_write(
                 v5::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id, force_move(props)),
                 [life_keepers = force_move(life_keepers), func = force_move(func)]
-                (boost::system::error_code const& ec) {
+                (std::error_code ec) {
                     if (func) func(ec);
                 }
             );
@@ -11698,7 +11696,7 @@ private:
                     packet_id
                 ),
                 [life_keepers = force_move(life_keepers), func = force_move(func)]
-                (boost::system::error_code const& ec) {
+                (std::error_code ec) {
                     if (func) func(ec);
                 }
             );
@@ -11711,7 +11709,7 @@ private:
                     {}
                 ),
                 [life_keepers = force_move(life_keepers), func = force_move(func)]
-                (boost::system::error_code const& ec) {
+                (std::error_code ec) {
                     if (func) func(ec);
                 }
             );
@@ -11737,7 +11735,7 @@ private:
                     packet_id
                 ),
                 [life_keepers = force_move(life_keepers), func = force_move(func)]
-                (boost::system::error_code const& ec) {
+                (std::error_code ec) {
                     if (func) func(ec);
                 }
             );
@@ -11750,7 +11748,7 @@ private:
                     force_move(props)
                 ),
                 [life_keepers = force_move(life_keepers), func = force_move(func)]
-                (boost::system::error_code const& ec) {
+                (std::error_code ec) {
                     if (func) func(ec);
                 }
             );
@@ -11880,7 +11878,7 @@ private:
             do_async_write(
                 e.message(),
                 [g]
-                (boost::system::error_code const& /*ec*/) {
+                (std::error_code /*ec*/) {
                 }
             );
         }
@@ -11925,7 +11923,7 @@ private:
             // it's a bug if the handler is invalid when constructed.
             BOOST_ASSERT(func_);
         }
-        void operator()(boost::system::error_code const& ec) const {
+        void operator()(std::error_code ec) const {
             func_(ec);
             for (std::size_t i = 0; i != num_of_messages_; ++i) {
                 self_->queue_.pop_front();
@@ -11945,7 +11943,7 @@ private:
             }
         }
         void operator()(
-            boost::system::error_code const& ec,
+            std::error_code ec,
             std::size_t bytes_transferred) const {
             func_(ec);
             for (std::size_t i = 0; i != num_of_messages_; ++i) {
@@ -12028,7 +12026,7 @@ private:
             write_completion_handler(
                 this->shared_from_this(),
                 [handlers = force_move(handlers)]
-                (boost::system::error_code const& ec) {
+                (std::error_code ec) {
                     for (auto const& h : handlers) {
                         if (h) h(ec);
                     }
@@ -12046,7 +12044,7 @@ private:
             () mutable {
                 if (!connected_) {
                     // offline async publish is successfully finished, because there's nothing to do.
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+                    if (func) func({});
                     return;
                 }
                 queue_.emplace_back(force_move(mv), force_move(func));

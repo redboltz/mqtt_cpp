@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
         });
     c1->set_error_handler(
         [&chk, &c2, &serialized, &tim]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
@@ -144,8 +144,8 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             // no corresponding connection exists
             tim.expires_from_now(boost::posix_time::milliseconds(100));
             tim.async_wait(
-                [&c2] (boost::system::error_code const& ec) {
-                    BOOST_ASSERT(ec == boost::system::errc::success);
+                [&c2] (std::error_code ec) {
+                    BOOST_ASSERT( ! ec);
                     connect_no_clean(c2);
                 }
             );
@@ -275,7 +275,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         });
     c1->set_error_handler(
         [&chk, &c2, &serialized, &tim]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
@@ -289,8 +289,8 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             // no corresponding connection exists
             tim.expires_from_now(boost::posix_time::milliseconds(100));
             tim.async_wait(
-                [&c2] (boost::system::error_code const& ec) {
-                    BOOST_ASSERT(ec == boost::system::errc::success);
+                [&c2] (std::error_code ec) {
+                    BOOST_ASSERT( ! ec);
                     connect_no_clean(c2);
                 }
             );
@@ -425,7 +425,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
         });
     c1->set_error_handler(
         [&chk, &c2, &serialized, &tim]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
@@ -439,8 +439,8 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             // no corresponding connection exists
             tim.expires_from_now(boost::posix_time::milliseconds(100));
             tim.async_wait(
-                [&c2] (boost::system::error_code const& ec) {
-                    BOOST_ASSERT(ec == boost::system::errc::success);
+                [&c2] (std::error_code ec) {
+                    BOOST_ASSERT( ! ec);
                     connect_no_clean(c2);
                 }
             );
@@ -580,7 +580,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
         });
     c1->set_error_handler(
         [&chk, &c2, &serialized, &tim]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error1");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
@@ -594,8 +594,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             // no corresponding connection exists
             tim.expires_from_now(boost::posix_time::milliseconds(100));
             tim.async_wait(
-                [&c2] (boost::system::error_code const& ec) {
-                    BOOST_ASSERT(ec == boost::system::errc::success);
+                [&c2] (std::error_code ec) {
+                    BOOST_ASSERT( ! ec);
                     connect_no_clean(c2);
                 }
             );
@@ -830,7 +830,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
         });
     c1->set_error_handler(
         [&chk, &c2, &serialized, &tim]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
@@ -844,8 +844,8 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
             // no corresponding connection exists
             tim.expires_from_now(boost::posix_time::milliseconds(100));
             tim.async_wait(
-                [&c2] (boost::system::error_code const& ec) {
-                    BOOST_ASSERT(ec == boost::system::errc::success);
+                [&c2] (std::error_code ec) {
+                    BOOST_ASSERT( ! ec);
                     connect_no_clean(c2);
                 }
             );
@@ -977,7 +977,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
         });
     c1->set_error_handler(
         [&chk, &c2, &serialized, &tim]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
@@ -991,8 +991,8 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
             // no corresponding connection exists
             tim.expires_from_now(boost::posix_time::milliseconds(100));
             tim.async_wait(
-                [&c2] (boost::system::error_code const& ec) {
-                    BOOST_ASSERT(ec == boost::system::errc::success);
+                [&c2] (std::error_code ec) {
+                    BOOST_ASSERT( ! ec);
                     connect_no_clean(c2);
                 }
             );
@@ -1179,7 +1179,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
         });
     c1->set_error_handler(
         [&chk, &c2, &serialized, &tim]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
                 restore_v5_serialized_message(c2, e);
@@ -1193,8 +1193,8 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
             // no corresponding connection exists
             tim.expires_from_now(boost::posix_time::milliseconds(100));
             tim.async_wait(
-                [&c2] (boost::system::error_code const& ec) {
-                    BOOST_ASSERT(ec == boost::system::errc::success);
+                [&c2] (std::error_code ec) {
+                    BOOST_ASSERT( ! ec);
                     connect_no_clean(c2);
                 }
             );
@@ -1337,7 +1337,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
         });
     c1->set_error_handler(
         [&chk, &c2, &serialized, &tim]
-        (boost::system::error_code const&) {
+        (std::error_code) {
             MQTT_CHK("h_error1");
             for (auto const& e : serialized) {
                 restore_serialized_message(c2, e);
@@ -1351,8 +1351,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
             // no corresponding connection exists
             tim.expires_from_now(boost::posix_time::milliseconds(100));
             tim.async_wait(
-                [&c2] (boost::system::error_code const& ec) {
-                    BOOST_ASSERT(ec == boost::system::errc::success);
+                [&c2] (std::error_code ec) {
+                    BOOST_ASSERT( ! ec);
                     connect_no_clean(c2);
                 }
             );
