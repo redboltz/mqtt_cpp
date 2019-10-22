@@ -53,7 +53,7 @@ void client_proc(
         });
     c->set_error_handler( // this handler doesn't depend on MQTT protocol version
         []
-        (boost::system::error_code const& ec){
+        (MQTT_NS::error_code ec){
             locked_cout() << "[client] error: " << ec.message() << std::endl;
         });
     c->set_v5_puback_handler( // use v5 handler
@@ -185,7 +185,7 @@ inline void close_proc(std::set<con_sp_t>& cons, mi_sub_con& subs, con_sp_t cons
 template <typename Server>
 void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
     s.set_error_handler( // this handler doesn't depend on MQTT protocol version
-        [](boost::system::error_code const& ec) {
+        [](MQTT_NS::error_code ec) {
             locked_cout() << "[server] error: " << ec.message() << std::endl;
         }
     );
@@ -219,7 +219,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 });
             ep.set_error_handler(
                 [&connections, &subs, wp]
-                (boost::system::error_code const& ec){
+                (MQTT_NS::error_code ec){
                     locked_cout() << "[server] error: " << ec.message() << std::endl;
                     auto sp = wp.lock();
                     BOOST_ASSERT(sp);

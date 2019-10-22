@@ -252,7 +252,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();

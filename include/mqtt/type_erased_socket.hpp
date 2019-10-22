@@ -16,6 +16,7 @@
 
 #include <mqtt/namespace.hpp>
 #include <mqtt/shared_any.hpp>
+#include <mqtt/error_code.hpp>
 
 // I intentionally use old style boost type_erasure member fucntion concept definition.
 // The new style requires compiler extension.
@@ -46,8 +47,8 @@ using namespace boost::type_erasure;
 using socket = shared_any<
     mpl::vector<
         destructible<>,
-        has_async_read<void(as::mutable_buffer, std::function<void(boost::system::error_code const&, std::size_t)>)>,
-        has_async_write<void(std::vector<as::const_buffer>, std::function<void(boost::system::error_code const&, std::size_t)>)>,
+        has_async_read<void(as::mutable_buffer, std::function<void(error_code, std::size_t)>)>,
+        has_async_write<void(std::vector<as::const_buffer>, std::function<void(error_code, std::size_t)>)>,
         has_write<std::size_t(std::vector<as::const_buffer>, boost::system::error_code&)>,
         has_post<void(std::function<void()>)>,
         has_lowest_layer<as::ip::tcp::socket::lowest_layer_type&()>,

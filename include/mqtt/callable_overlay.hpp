@@ -643,7 +643,7 @@ struct callable_overlay final : public Impl
      *
      * @param ec error code
      */
-    MQTT_ALWAYS_INLINE void on_error(boost::system::error_code const& ec) override final {
+    MQTT_ALWAYS_INLINE void on_error(error_code ec) override final {
         if(h_error_) h_error_(ec);
     }
 
@@ -1284,7 +1284,7 @@ struct callable_overlay final : public Impl
      *
      * @param ec error code
      */
-    using error_handler = std::function<void(boost::system::error_code const& ec)>;
+    using error_handler = std::function<void(error_code ec)>;
 
     /**
      * @brief Publish response sent handler

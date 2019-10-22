@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -374,7 +374,7 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -622,7 +622,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -795,7 +795,7 @@ BOOST_AUTO_TEST_CASE( prop ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();

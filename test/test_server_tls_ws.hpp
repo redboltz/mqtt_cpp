@@ -39,7 +39,7 @@ public:
             }
         ), b_(b) {
         server_.set_error_handler(
-            [](boost::system::error_code const& /*ec*/) {
+            [](MQTT_NS::error_code /*ec*/) {
             }
         );
 

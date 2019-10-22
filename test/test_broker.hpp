@@ -91,7 +91,7 @@ public:
             });
         ep.set_error_handler(
             [this, wp]
-            (boost::system::error_code const& /*ec*/){
+            (MQTT_NS::error_code /*ec*/){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 close_proc(MQTT_NS::force_move(sp), true);
@@ -629,7 +629,7 @@ private:
             con_wp_t wp(spep);
             tim_disconnect_.expires_from_now(delay_disconnect_.value());
             tim_disconnect_.async_wait(
-                [&, wp](boost::system::error_code const& ec) {
+                [&, wp](MQTT_NS::error_code ec) {
                     if (!ec) {
                         if (con_sp_t sp = wp.lock()) {
                             close_proc(MQTT_NS::force_move(sp), false);

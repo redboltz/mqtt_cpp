@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             });
         c->set_error_handler(
             [&chk, &c, &finish]
-            (boost::system::error_code const& ec) {
+            (MQTT_NS::error_code ec) {
                 MQTT_CHK("h_error");
                 BOOST_TEST(ec == boost::system::errc::message_size);
                 finish();

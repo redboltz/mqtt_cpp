@@ -183,7 +183,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_pub_res_sent_handler(
@@ -380,7 +380,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_pub_res_sent_handler(
@@ -570,7 +570,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_pub_res_sent_handler(
@@ -753,7 +753,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_pub_res_sent_handler(
@@ -950,7 +950,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();
@@ -1146,7 +1146,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->async_connect();

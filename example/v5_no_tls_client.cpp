@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
         });
     c->set_error_handler( // this handler doesn't depend on MQTT protocol version
         []
-        (boost::system::error_code const& ec){
+        (MQTT_NS::error_code ec){
             std::cout << "[client] error: " << ec.message() << std::endl;
         });
     c->set_v5_puback_handler( // use v5 handler
