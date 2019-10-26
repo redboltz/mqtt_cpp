@@ -11288,12 +11288,9 @@ private:
         optional<buffer> user_name,
         optional<buffer> password,
         optional<will> const& w,
-        bool clean_session,
         std::uint16_t keep_alive_sec,
         v5::properties props,
         async_handler_t func) {
-
-        clean_session_ = clean_session;
 
         switch (version_) {
         case protocol_version::v3_1_1:

@@ -1022,6 +1022,23 @@ private:
         );
     }
 
+    void async_start_session(v5::properties props, any session_life_keeper, async_handler_t func) {
+        base::async_read_control_packet_type(force_move(session_life_keeper));
+        // sync base::connect() refer to parameters only in the function.
+        // So they can be passed as view.
+        base::async_connect(
+            buffer(string_view(client_id_)),
+            ( user_name_ ? buffer(string_view(user_name_.value()))
+                         : buffer() ),
+            ( password_  ? buffer(string_view(password_.value()))
+                         : buffer() ),
+            will_,
+            keep_alive_sec_,
+            force_move(props),
+            force_move(func)
+        );
+    }
+
     template <typename Strand>
     void handshake_socket(
         tcp_endpoint<as::ip::tcp::socket, Strand>&,
@@ -1121,8 +1138,7 @@ private:
         v5::properties props,
         any session_life_keeper,
         async_handler_t func) {
-        start_session(force_move(props), force_move(session_life_keeper));
-        if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+        async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
     }
 
 #if defined(MQTT_USE_WS)
