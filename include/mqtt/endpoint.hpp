@@ -6735,6 +6735,10 @@ public:
         return socket_.value();
     }
 
+    auto get_executor() {
+        return socket_.value().get_executor();
+    }
+
 protected:
 
     /**

@@ -34,8 +34,8 @@ public:
         tcp_.lowest_layer().close(std::forward<Args>(args)...);
     }
 
-    typename Socket::executor_type get_executor() {
-        return tcp_.get_executor();
+    auto get_executor() {
+        return lowest_layer().get_executor();
     }
 
     Socket& socket() { return tcp_; }

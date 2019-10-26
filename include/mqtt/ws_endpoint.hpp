@@ -42,8 +42,8 @@ public:
         ec = boost::system::errc::make_error_code(boost::system::errc::success);
     }
 
-    typename Socket::executor_type get_executor() {
-        return ws_.get_executor();
+    auto get_executor() {
+        return lowest_layer().get_executor();
     }
 
 #if BOOST_VERSION >= 107000
