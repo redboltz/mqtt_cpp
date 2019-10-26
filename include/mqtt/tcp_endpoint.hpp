@@ -34,8 +34,8 @@ public:
         tcp_.lowest_layer().close(std::forward<Args>(args)...);
     }
 
-    as::io_context& get_io_context() {
-        return tcp_.get_io_context();
+    auto get_executor() {
+        return lowest_layer().get_executor();
     }
 
     Socket& socket() { return tcp_; }

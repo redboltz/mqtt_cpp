@@ -27,6 +27,7 @@ BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_write), write, 2)
 BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_post), post, 1)
 BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_lowest_layer), lowest_layer, 0)
 BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_close), close, 1)
+BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_get_executor), get_executor, 0)
 
 namespace MQTT_NS {
 
@@ -50,7 +51,8 @@ using socket = shared_any<
         has_write<std::size_t(std::vector<as::const_buffer>, boost::system::error_code&)>,
         has_post<void(std::function<void()>)>,
         has_lowest_layer<as::ip::tcp::socket::lowest_layer_type&()>,
-        has_close<void(boost::system::error_code&)>
+        has_close<void(boost::system::error_code&)>,
+        has_get_executor<as::executor()>
     >
 >;
 
