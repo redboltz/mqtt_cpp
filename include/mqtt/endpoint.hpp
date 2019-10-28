@@ -792,11 +792,10 @@ public:
             return 0;
         }
         else {
-            auto sp_topic    = std::make_shared<std::string>(force_move(topic_name));
-            auto sp_contents = std::make_shared<std::string>(force_move(contents));
-
-            as::const_buffer topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
-            as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
+            auto sp_topic     = std::make_shared<std::string>(force_move(topic_name));
+            auto sp_contents  = std::make_shared<std::string>(force_move(contents));
+            auto topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
+            auto contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
             packet_id_t packet_id = acquire_unique_packet_id();
             acquired_publish(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos_value, retain, force_move(props));
@@ -1234,11 +1233,10 @@ public:
         bool retain = false,
         v5::properties props = {}
     ) {
-        auto sp_topic    = std::make_shared<std::string>(force_move(topic_name));
-        auto sp_contents = std::make_shared<std::string>(force_move(contents));
-
-        as::const_buffer topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
-        as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
+        auto sp_topic     = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents  = std::make_shared<std::string>(force_move(contents));
+        auto topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
+        auto contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
         return publish(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos_value, retain, force_move(props));
     }
@@ -1352,11 +1350,10 @@ public:
         bool retain = false,
         v5::properties props = {}
     ) {
-        auto sp_topic    = std::make_shared<std::string>(force_move(topic_name));
-        auto sp_contents = std::make_shared<std::string>(force_move(contents));
-
-        as::const_buffer topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
-        as::const_buffer contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
+        auto sp_topic     = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents  = std::make_shared<std::string>(force_move(contents));
+        auto topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
+        auto contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
         return publish_dup(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos_value, retain, force_move(props));
     }
@@ -1768,9 +1765,8 @@ public:
         else {
             auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
             auto sp_contents   = std::make_shared<std::string>(force_move(contents));
-
-            auto topic_buf    = as::buffer(*sp_topic_name);
-            auto contents_buf = as::buffer(*sp_contents);
+            auto topic_buf     = as::buffer(*sp_topic_name);
+            auto contents_buf  = as::buffer(*sp_contents);
 
             acquired_publish(packet_id,
                              topic_buf,
@@ -1818,13 +1814,13 @@ public:
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         send_publish(
-            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
+            topic_name,
             qos_value,
             retain,
             false,
             packet_id,
             force_move(props),
-            buffer(string_view(get_pointer(contents), get_size(contents))),
+            contents,
             force_move(life_keeper)
         );
     }
@@ -1861,15 +1857,17 @@ public:
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
+        auto topic_name_buf = as::buffer(topic_name);
+        auto contents_buf   = as::buffer(contents);
         send_publish(
-            force_move(topic_name),
+            topic_name_buf,
             qos_value,
             retain,
             false,
             packet_id,
             force_move(props),
-            force_move(contents),
-            any()
+            contents_buf,
+            std::make_pair(force_move(topic_name), force_move(contents))
         );
     }
 
@@ -1917,9 +1915,8 @@ public:
         {
             auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
             auto sp_contents   = std::make_shared<std::string>(force_move(contents));
-
-            auto topic_buf    = as::buffer(*sp_topic_name);
-            auto contents_buf = as::buffer(*sp_contents);
+            auto topic_buf     = as::buffer(*sp_topic_name);
+            auto contents_buf  = as::buffer(*sp_contents);
 
             acquired_publish_dup(packet_id,
                                  topic_buf,
@@ -1967,13 +1964,13 @@ public:
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         send_publish(
-            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
+            topic_name,
             qos_value,
             retain,
             true,
             packet_id,
             force_move(props),
-            buffer(string_view(get_pointer(contents), get_size(contents))),
+            contents,
             force_move(life_keeper)
         );
     }
@@ -2010,15 +2007,18 @@ public:
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
+        auto topic_name_buf = as::buffer(topic_name);
+        auto contents_buf   = as::buffer(contents);
+
         send_publish(
-            force_move(topic_name),
+            topic_name_buf,
             qos_value,
             retain,
             true,
             packet_id,
             force_move(props),
-            force_move(contents),
-            any()
+            contents_buf,
+            std::make_pair(force_move(topic_name), force_move(contents))
         );
     }
 
@@ -2046,7 +2046,7 @@ public:
         subscribe_options option,
         v5::properties props = {}
     ) {
-        send_subscribe({ { buffer(topic_name), option } }, packet_id, force_move(props));
+        send_subscribe({ { as::buffer(topic_name.data(), topic_name.size()), option } }, packet_id, force_move(props));
     }
 
     /**
@@ -2073,9 +2073,7 @@ public:
         subscribe_options option,
         v5::properties props = {}
     ) {
-        send_subscribe({ { buffer(string_view(get_pointer(topic_name), get_size(topic_name))), option } },
-                       packet_id,
-                       force_move(props));
+        send_subscribe({ { topic_name, option } }, packet_id, force_move(props));
     }
 
     /**
@@ -2122,7 +2120,12 @@ public:
         std::vector<std::tuple<buffer, subscribe_options>> params,
         v5::properties props = {}
     ) {
-        send_subscribe(force_move(params), packet_id, force_move(props));
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> buffers;
+        buffers.reserve(params.size());
+        for (auto const& tup : params) {
+            buffers.emplace_back(as::buffer(std::get<0>(tup)), std::get<1>(tup));
+        }
+        send_subscribe(force_move(buffers), packet_id, force_move(props));
     }
 
     /**
@@ -2144,7 +2147,7 @@ public:
         string_view topic_name,
         v5::properties props = {}
     ) {
-        send_unsubscribe({ buffer(topic_name) }, packet_id, force_move(props));
+        send_unsubscribe({ as::buffer(topic_name.data(), topic_name.size()) }, packet_id, force_move(props));
     }
 
     /**
@@ -2166,9 +2169,7 @@ public:
         as::const_buffer topic_name,
         v5::properties props = {}
     ) {
-        send_unsubscribe({ buffer(string_view(get_pointer(topic_name), get_size(topic_name))) },
-                         packet_id,
-                         force_move(props));
+        send_unsubscribe({ topic_name }, packet_id, force_move(props));
     }
 
     /**
@@ -2189,11 +2190,11 @@ public:
         std::vector<string_view> params,
         v5::properties props = {}
     ) {
-        std::vector<buffer> cb_params;
+        std::vector<as::const_buffer> cb_params;
         cb_params.reserve(params.size());
 
         for (auto&& e : params) {
-            cb_params.emplace_back(buffer(force_move(e)));
+            cb_params.emplace_back(as::buffer(e.data(), e.size()));
         }
         send_unsubscribe(force_move(cb_params), packet_id, force_move(props));
     }
@@ -2222,7 +2223,7 @@ public:
         for (auto&& e : params) {
             cb_params.emplace_back(buffer(string_view(get_pointer(e), get_size(e))));
         }
-        send_unsubscribe(force_move(cb_params), packet_id, force_move(props));
+        send_unsubscribe(params, packet_id, force_move(props));
     }
 
     /**
@@ -2243,7 +2244,13 @@ public:
         std::vector<buffer> params,
         v5::properties props = {}
     ) {
-        send_unsubscribe(force_move(params), packet_id, force_move(props));
+        std::vector<as::const_buffer> cb_params;
+        cb_params.reserve(params.size());
+
+        for (auto&& e : params) {
+            cb_params.emplace_back(as::buffer(e));
+        }
+        send_unsubscribe(force_move(cb_params), packet_id, force_move(props));
     }
 
     /**
@@ -4495,19 +4502,19 @@ public:
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
-        auto sp_topic_name = std::make_shared<std::string>(topic_name);
-        auto sp_contents   = std::make_shared<std::string>(contents);
-        auto sv_topic_name = string_view(*sp_topic_name);
-        auto sv_contents = string_view(*sp_contents);
+        auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents    = std::make_shared<std::string>(force_move(contents));
+        auto topic_name_buf = as::buffer(*sp_topic_name);
+        auto contents_buf   = as::buffer(*sp_contents);
 
         async_send_publish(
-            buffer(sv_topic_name),
+            topic_name_buf,
             qos_value,
             retain,
             false,
             packet_id,
             v5::properties{},
-            buffer(sv_contents),
+            contents_buf,
             force_move(func),
             std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
@@ -4548,19 +4555,19 @@ public:
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
-        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
-        auto sp_contents   = std::make_shared<std::string>(force_move(contents));
-        auto sv_topic_name = string_view(*sp_topic_name);
-        auto sv_contents = string_view(*sp_contents);
+        auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents    = std::make_shared<std::string>(force_move(contents));
+        auto topic_name_buf = as::buffer(*sp_topic_name);
+        auto contents_buf   = as::buffer(*sp_contents);
 
         async_send_publish(
-            buffer(sv_topic_name),
+            topic_name_buf,
             qos_value,
             retain,
             false,
             packet_id,
             force_move(props),
-            buffer(sv_contents),
+            contents_buf,
             force_move(func),
             std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
@@ -4600,13 +4607,13 @@ public:
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
-            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
+            topic_name,
             qos_value,
             retain,
             false,
             packet_id,
             v5::properties{},
-            buffer(string_view(get_pointer(contents), get_size(contents))),
+            contents,
             force_move(func),
             force_move(life_keeper)
         );
@@ -4651,13 +4658,13 @@ public:
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
-            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
+            topic_name,
             qos_value,
             retain,
             false,
             packet_id,
             force_move(props),
-            buffer(string_view(get_pointer(contents), get_size(contents))),
+            contents,
             force_move(func),
             force_move(life_keeper)
         );
@@ -4693,16 +4700,19 @@ public:
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
+        auto topic_name_buf = as::buffer(topic_name);
+        auto contents_buf   = as::buffer(contents);
+
         async_send_publish(
-            force_move(topic_name),
+            topic_name_buf,
             qos_value,
             retain,
             false,
             packet_id,
             v5::properties{},
-            force_move(contents),
+            contents_buf,
             force_move(func),
-            any()
+            std::make_pair(force_move(topic_name), force_move(contents))
         );
     }
 
@@ -4741,16 +4751,19 @@ public:
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
+        auto topic_name_buf = as::buffer(topic_name);
+        auto contents_buf   = as::buffer(contents);
+
         async_send_publish(
-            force_move(topic_name),
+            topic_name_buf,
             qos_value,
             retain,
             false,
             packet_id,
             force_move(props),
-            force_move(contents),
+            contents_buf,
             force_move(func),
-            any()
+            std::make_pair(force_move(topic_name), force_move(contents))
         );
     }
 
@@ -4784,19 +4797,19 @@ public:
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
-        auto sp_topic_name = std::make_shared<std::string>(topic_name);
-        auto sp_contents = std::make_shared<std::string>(contents);
-        auto sv_topic_name = string_view(*sp_topic_name);
-        auto sv_contents = string_view(*sp_contents);
+        auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents    = std::make_shared<std::string>(force_move(contents));
+        auto topic_name_buf = as::buffer(*sp_topic_name);
+        auto contents_buf   = as::buffer(*sp_contents);
 
         async_send_publish(
-            buffer(sv_topic_name),
+            topic_name_buf,
             qos_value,
             retain,
             true,
             packet_id,
             v5::properties{},
-            buffer(sv_contents),
+            contents_buf,
             force_move(func),
             std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
@@ -4837,19 +4850,19 @@ public:
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
-        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
-        auto sp_contents   = std::make_shared<std::string>(force_move(contents));
-        auto sv_topic_name = string_view(*sp_topic_name);
-        auto sv_contents = string_view(*sp_contents);
+        auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents    = std::make_shared<std::string>(force_move(contents));
+        auto topic_name_buf = as::buffer(*sp_topic_name);
+        auto contents_buf   = as::buffer(*sp_contents);
 
         async_send_publish(
-            buffer(sv_topic_name),
+            topic_name_buf,
             qos_value,
             retain,
             true,
             packet_id,
             force_move(props),
-            buffer(sv_contents),
+            contents_buf,
             force_move(func),
             std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
@@ -4888,13 +4901,13 @@ public:
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
-            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
+            topic_name,
             qos_value,
             retain,
             true,
             packet_id,
             v5::properties{},
-            buffer(string_view(get_pointer(contents), get_size(contents))),
+            contents,
             force_move(func),
             force_move(life_keeper)
         );
@@ -4939,13 +4952,13 @@ public:
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
-            buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
+            topic_name,
             qos_value,
             retain,
             true,
             packet_id,
             force_move(props),
-            buffer(string_view(get_pointer(contents), get_size(contents))),
+            contents,
             force_move(func),
             force_move(life_keeper)
         );
@@ -4980,16 +4993,19 @@ public:
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
+        auto topic_name_buf = as::buffer(topic_name);
+        auto contents_buf   = as::buffer(contents);
+
         async_send_publish(
-            force_move(topic_name),
+            topic_name_buf,
             qos_value,
             retain,
             true,
             packet_id,
             v5::properties{},
-            force_move(contents),
+            contents_buf,
             force_move(func),
-            any()
+            std::make_pair(force_move(topic_name), force_move(contents))
         );
     }
 
@@ -5030,16 +5046,19 @@ public:
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
 
+        auto topic_name_buf = as::buffer(topic_name);
+        auto contents_buf   = as::buffer(contents);
+
         async_send_publish(
-            force_move(topic_name),
+            topic_name_buf,
             qos_value,
             retain,
             true,
             packet_id,
             force_move(props),
-            force_move(contents),
+            contents_buf,
             force_move(func),
-            any()
+            std::make_pair(force_move(topic_name), force_move(contents))
         );
     }
 
@@ -5069,11 +5088,11 @@ public:
         subscribe_options option,
         async_handler_t func = async_handler_t()
     ) {
-        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
-        auto sv_topic_name = string_view(*sp_topic_name);
+        auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
+        auto topic_name_buf = as::buffer(*sp_topic_name);
 
         async_send_subscribe(
-            std::vector<std::tuple<buffer, subscribe_options>>({std::make_tuple(buffer(sv_topic_name), option)}),
+            { { topic_name_buf, option } },
             force_move(sp_topic_name),
             packet_id,
             force_move(func)
@@ -5139,16 +5158,11 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         subscribe_options option,
+        any life_keeper,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_subscribe(
-            std::vector<std::tuple<buffer, subscribe_options>>({
-                std::make_tuple(
-                    buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
-                    option
-                )
-            }),
-            any(),
+        async_send_subscribe({ { topic_name, option } },
+            force_move(life_keeper),
             packet_id,
             force_move(func)
         );
@@ -5218,14 +5232,9 @@ public:
         subscribe_options option,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_subscribe(
-            std::vector<std::tuple<buffer, subscribe_options>>({
-                std::make_tuple(
-                    force_move(topic_name),
-                    option
-                )
-            }),
-            any(),
+        auto topic_name_buf = as::buffer(topic_name);
+        async_send_subscribe({ { topic_name_buf, option } },
+            force_move(topic_name),
             packet_id,
             force_move(func)
         );
@@ -5293,7 +5302,7 @@ public:
         async_handler_t func = async_handler_t()
     ) {
 
-        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
         std::vector<std::shared_ptr<std::string>> life_keepers;
@@ -5301,7 +5310,7 @@ public:
 
         for (auto&& e : params) {
             auto sp_topic_name = std::make_shared<std::string>(force_move(std::get<0>(e)));
-            cb_params.emplace_back(buffer(string_view(*sp_topic_name)), std::get<1>(e));
+            cb_params.emplace_back(as::buffer(*sp_topic_name), std::get<1>(e));
             life_keepers.emplace_back(force_move(sp_topic_name));
         }
         async_send_subscribe(
@@ -5371,27 +5380,12 @@ public:
     void acquired_async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
+        any life_keeper,
         async_handler_t func = async_handler_t()
     ) {
-
-        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
-        cb_params.reserve(params.size());
-
-        for (auto const& e : params) {
-            cb_params.emplace_back(
-                buffer(
-                    string_view(
-                        get_pointer(std::get<0>(e)),
-                        get_size(std::get<0>(e))
-                    )
-                ),
-                std::get<1>(e)
-            );
-        }
-
         async_send_subscribe(
-            force_move(cb_params),
-            any(),
+            force_move(params),
+            force_move(life_keeper),
             packet_id,
             force_move(func)
         );
@@ -5534,11 +5528,8 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
-        auto sv_topic_name = string_view(*sp_topic_name);
-        async_send_unsubscribe({ buffer(sv_topic_name) },
-                               force_move(sp_topic_name),
-                               packet_id,
-                               force_move(func));
+        auto topic_name_buf = as::buffer(*sp_topic_name);
+        async_send_unsubscribe({ topic_name_buf }, force_move(sp_topic_name), packet_id, force_move(func) );
     }
 
     /**
@@ -5558,10 +5549,7 @@ public:
         any life_keeper,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_unsubscribe({ buffer(string_view(get_pointer(topic_name), get_size(topic_name))) },
-                               force_move(life_keeper),
-                               packet_id,
-                               force_move(func));
+        async_send_unsubscribe({ topic_name }, force_move(life_keeper), packet_id, force_move(func));
     }
 
     /**
@@ -5580,7 +5568,8 @@ public:
         buffer topic_name,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_unsubscribe({ force_move(topic_name) }, any(), packet_id, force_move(func));
+        auto topic_name_buf = as::buffer(topic_name);
+        async_send_unsubscribe({ topic_name_buf }, force_move(topic_name), packet_id, force_move(func));
     }
 
     /**
@@ -5604,7 +5593,8 @@ public:
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_unsubscribe({ force_move(topic_name) }, any(), packet_id, force_move(props), force_move(func));
+        auto topic_name_buf = as::buffer(topic_name);
+        async_send_unsubscribe({ topic_name_buf }, force_move(topic_name), packet_id, force_move(props), force_move(func));
     }
 
     /**
@@ -5624,7 +5614,7 @@ public:
         std::vector<std::string> params,
         async_handler_t func = async_handler_t()
     ) {
-        std::vector<buffer> cb_params;
+        std::vector<as::const_buffer> cb_params;
         cb_params.reserve(params.size());
 
         std::vector<std::shared_ptr<std::string>> life_keepers;
@@ -5632,7 +5622,7 @@ public:
 
         for (auto&& e : params) {
             life_keepers.emplace_back(std::make_shared<std::string>(force_move(e)));
-            cb_params.emplace_back(buffer(string_view(*life_keepers.back())));
+            cb_params.emplace_back(as::buffer(*life_keepers.back()));
         }
 
         async_send_unsubscribe(
@@ -5673,12 +5663,12 @@ public:
 
         for (auto&& e : params) {
             life_keepers.emplace_back(std::make_shared<std::string>(force_move(e)));
-            cb_params.emplace_back(buffer(string_view(*life_keepers.back())));
+            cb_params.emplace_back(as::buffer(*life_keepers.back()));
         }
 
         async_send_unsubscribe(
             force_move(cb_params),
-            life_keepers,
+            force_move(life_keepers),
             packet_id,
             force_move(props),
             force_move(func)
@@ -5703,22 +5693,8 @@ public:
         any life_keeper,
         async_handler_t func = async_handler_t()
     ) {
-        std::vector<buffer> cb_params;
-        cb_params.reserve(params.size());
-
-        for (auto const& e : params) {
-            cb_params.emplace_back(
-                buffer(
-                    string_view(
-                        get_pointer(e),
-                        get_size(e)
-                    )
-                )
-            );
-        }
-
         async_send_unsubscribe(
-            force_move(cb_params),
+            force_move(params),
             force_move(life_keeper),
             packet_id,
             force_move(func)
@@ -5763,7 +5739,7 @@ public:
         }
 
         async_send_unsubscribe(
-            force_move(cb_params),
+            force_move(params),
             force_move(life_keeper),
             packet_id,
             force_move(props),
@@ -5788,10 +5764,16 @@ public:
         std::vector<buffer> params,
         async_handler_t func = async_handler_t()
     ) {
+        std::vector<as::const_buffer> cb_params;
+        cb_params.reserve(params.size());
+        for (auto const& buf : params) {
+            cb_params.emplace_back(as::buffer(buf));
+        }
 
         async_send_unsubscribe(
+            force_move(cb_params),
+            // params become life keeper
             force_move(params),
-            any(),
             packet_id,
             force_move(func)
         );
@@ -5819,10 +5801,16 @@ public:
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
+        std::vector<as::const_buffer> cb_params;
+        cb_params.reserve(params.size());
+        for (auto const& buf : params) {
+            cb_params.emplace_back(as::buffer(buf));
+        }
 
         async_send_unsubscribe(
+            force_move(cb_params),
+            // params become life keeper
             force_move(params),
-            any(),
             packet_id,
             force_move(props),
             force_move(func)
@@ -5869,6 +5857,7 @@ public:
         async_handler_t func = async_handler_t()) {
         async_send_auth(reason_code, force_move(props), force_move(func));
     }
+
     /**
      * @brief Send connect packet.
      * @param client_id
@@ -5956,6 +5945,7 @@ public:
             force_move(props),
             force_move(func));
     }
+
     /**
      * @brief Send connack packet. This function is for broker.
      * @param session_present See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349255
@@ -6333,7 +6323,6 @@ public:
         async_handler_t func = async_handler_t()) {
         async_send_unsuback(packet_id, force_move(func));
     }
-
 
     /**
      * @brief Clear stored publish message that has packet_id.
@@ -10894,13 +10883,13 @@ private:
     }
 
     void send_publish(
-        buffer topic_name,
+        as::const_buffer topic_name,
         qos qos_value,
         bool retain,
         bool dup,
         packet_id_t packet_id,
         v5::properties props,
-        buffer payload,
+        as::const_buffer payload,
         any life_keeper) {
 
         auto do_send_publish =
@@ -10927,12 +10916,12 @@ private:
         case protocol_version::v3_1_1:
             do_send_publish(
                 v3_1_1::basic_publish_message<PacketIdBytes>(
-                    force_move(topic_name),
+                    topic_name,
                     qos_value,
                     retain,
                     dup,
                     packet_id,
-                    force_move(payload)
+                    payload
                 ),
                 &endpoint::on_serialize_publish_message
             );
@@ -10940,13 +10929,13 @@ private:
         case protocol_version::v5:
             do_send_publish(
                 v5::basic_publish_message<PacketIdBytes>(
-                    force_move(topic_name),
+                    topic_name,
                     qos_value,
                     retain,
                     dup,
                     packet_id,
                     force_move(props),
-                    force_move(payload)
+                    payload
                 ),
                 &endpoint::on_serialize_v5_publish_message
             );
@@ -11109,7 +11098,7 @@ private:
     }
 
     void send_subscribe(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         packet_id_t packet_id,
         v5::properties props = {}
     ) {
@@ -11154,7 +11143,7 @@ private:
     }
 
     void send_unsubscribe(
-        std::vector<buffer> params,
+        std::vector<as::const_buffer> params,
         packet_id_t packet_id,
         v5::properties props = {}
     ) {
@@ -11363,13 +11352,13 @@ private:
     }
 
     void async_send_publish(
-        buffer topic_name,
+        as::const_buffer topic_name,
         qos qos_value,
         bool retain,
         bool dup,
         packet_id_t packet_id,
         v5::properties props,
-        buffer payload,
+        as::const_buffer payload,
         async_handler_t func,
         any life_keeper) {
 
@@ -11395,7 +11384,8 @@ private:
                 }
                 do_async_write(
                     force_move(msg),
-                    [life_keeper = force_move(life_keeper), func = force_move(func)](boost::system::error_code const& ec) {
+                    [life_keeper = force_move(life_keeper), func = force_move(func)]
+                    (boost::system::error_code const& ec) {
                         if (func) func(ec);
                     }
                 );
@@ -11405,12 +11395,12 @@ private:
         case protocol_version::v3_1_1:
             do_async_send_publish(
                 v3_1_1::basic_publish_message<PacketIdBytes>(
-                    force_move(topic_name),
+                    topic_name,
                     qos_value,
                     retain,
                     dup,
                     packet_id,
-                    force_move(payload)
+                    payload
                 ),
                 &endpoint::on_serialize_publish_message
             );
@@ -11418,13 +11408,13 @@ private:
         case protocol_version::v5:
             do_async_send_publish(
                 v5::basic_publish_message<PacketIdBytes>(
-                    force_move(topic_name),
+                    topic_name,
                     qos_value,
                     retain,
                     dup,
                     packet_id,
                     force_move(props),
-                    force_move(payload)
+                    payload
                 ),
                 &endpoint::on_serialize_v5_publish_message
             );
@@ -11446,7 +11436,7 @@ private:
             do_async_write(
                 v3_1_1::basic_puback_message<PacketIdBytes>(packet_id),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (boost::system::error_code const& ec){
+                (boost::system::error_code const& ec) {
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
                 }
@@ -11456,7 +11446,7 @@ private:
             do_async_write(
                 v5::basic_puback_message<PacketIdBytes>(packet_id, reason, force_move(props)),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (boost::system::error_code const& ec){
+                (boost::system::error_code const& ec) {
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
                 }
@@ -11577,7 +11567,7 @@ private:
             do_async_write(
                 v3_1_1::basic_pubcomp_message<PacketIdBytes>(packet_id),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (boost::system::error_code const& ec){
+                (boost::system::error_code const& ec) {
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
                 }
@@ -11587,7 +11577,7 @@ private:
             do_async_write(
                 v5::basic_pubcomp_message<PacketIdBytes>(packet_id, reason, force_move(props)),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (boost::system::error_code const& ec){
+                (boost::system::error_code const& ec) {
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
                 }
@@ -11600,8 +11590,8 @@ private:
     }
 
     void async_send_subscribe(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        any life_keepers,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
+        any life_keeper,
         packet_id_t packet_id,
         async_handler_t func) {
 
@@ -11609,7 +11599,7 @@ private:
         case protocol_version::v3_1_1:
             do_async_write(
                 v3_1_1::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id),
-                [life_keepers = force_move(life_keepers), func = force_move(func)]
+                [life_keeper = force_move(life_keeper), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -11618,7 +11608,7 @@ private:
         case protocol_version::v5:
             do_async_write(
                 v5::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id, {}),
-                [life_keepers = force_move(life_keepers), func = force_move(func)]
+                [life_keeper = force_move(life_keeper), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -11631,8 +11621,8 @@ private:
     }
 
     void async_send_subscribe(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        any life_keepers,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
+        any life_keeper,
         packet_id_t packet_id,
         v5::properties props,
         async_handler_t func) {
@@ -11641,7 +11631,7 @@ private:
         case protocol_version::v3_1_1:
             do_async_write(
                 v3_1_1::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id),
-                [life_keepers = force_move(life_keepers), func = force_move(func)]
+                [life_keeper = force_move(life_keeper), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -11650,7 +11640,7 @@ private:
         case protocol_version::v5:
             do_async_write(
                 v5::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id, force_move(props)),
-                [life_keepers = force_move(life_keepers), func = force_move(func)]
+                [life_keeper = force_move(life_keeper), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -11686,19 +11676,16 @@ private:
     }
 
     void async_send_unsubscribe(
-        std::vector<buffer> params,
-        any life_keepers,
+        std::vector<as::const_buffer> params,
+        any life_keeper,
         packet_id_t packet_id,
         async_handler_t func) {
 
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
-                v3_1_1::basic_unsubscribe_message<PacketIdBytes>(
-                    force_move(params),
-                    packet_id
-                ),
-                [life_keepers = force_move(life_keepers), func = force_move(func)]
+                v3_1_1::basic_unsubscribe_message<PacketIdBytes>(force_move(params), packet_id),
+                [life_keeper = force_move(life_keeper), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -11706,12 +11693,8 @@ private:
             break;
         case protocol_version::v5:
             do_async_write(
-                v5::basic_unsubscribe_message<PacketIdBytes>(
-                    force_move(params),
-                    packet_id,
-                    {}
-                ),
-                [life_keepers = force_move(life_keepers), func = force_move(func)]
+                v5::basic_unsubscribe_message<PacketIdBytes>(force_move(params), packet_id, {}),
+                [life_keeper = force_move(life_keeper), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -11724,8 +11707,8 @@ private:
     }
 
     void async_send_unsubscribe(
-        std::vector<buffer> params,
-        any life_keepers,
+        std::vector<as::const_buffer> params,
+        any life_keeper,
         packet_id_t packet_id,
         v5::properties props,
         async_handler_t func) {
@@ -11737,7 +11720,7 @@ private:
                     force_move(params),
                     packet_id
                 ),
-                [life_keepers = force_move(life_keepers), func = force_move(func)]
+                [life_keeper = force_move(life_keeper), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
@@ -11750,7 +11733,7 @@ private:
                     packet_id,
                     force_move(props)
                 ),
-                [life_keepers = force_move(life_keepers), func = force_move(func)]
+                [life_keeper = force_move(life_keeper), func = force_move(func)]
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                 }
