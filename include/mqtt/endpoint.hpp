@@ -2974,11 +2974,11 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t async_subscribe(
-        std::vector<std::tuple<std::string, subscribe_options>> const& params,
+        std::vector<std::tuple<std::string, subscribe_options>> params,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, params, force_move(func));
+        acquired_async_subscribe(packet_id, force_move(params), force_move(func));
         return packet_id;
     }
 
@@ -3000,12 +3000,12 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t async_subscribe(
-        std::vector<std::tuple<std::string, subscribe_options>> const& params,
+        std::vector<std::tuple<std::string, subscribe_options>> params,
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, params, force_move(props), force_move(func));
+        acquired_async_subscribe(packet_id, force_move(params), force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -3023,11 +3023,11 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t async_subscribe(
-        std::vector<std::tuple<as::const_buffer, subscribe_options>> const& params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, params, force_move(func));
+        acquired_async_subscribe(packet_id, force_move(params), force_move(func));
         return packet_id;
     }
 
@@ -3049,12 +3049,12 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     packet_id_t async_subscribe(
-        std::vector<std::tuple<as::const_buffer, subscribe_options>> const& params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, params, force_move(props), force_move(func));
+        acquired_async_subscribe(packet_id, force_move(params), force_move(props), force_move(func));
         return packet_id;
     }
 
@@ -4095,11 +4095,11 @@ public:
      */
     bool async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<std::string, subscribe_options>> const& params,
+        std::vector<std::tuple<std::string, subscribe_options>> params,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, params, force_move(func));
+            acquired_async_subscribe(packet_id, force_move(params), force_move(func));
             return true;
         }
         return false;
@@ -4125,12 +4125,12 @@ public:
      */
     bool async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<std::string, subscribe_options>> const& params,
+        std::vector<std::tuple<std::string, subscribe_options>> params,
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, params, force_move(props), force_move(func));
+            acquired_async_subscribe(packet_id, force_move(params), force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -4152,11 +4152,11 @@ public:
      */
     bool async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<as::const_buffer, subscribe_options>> const& params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, params, force_move(func));
+            acquired_async_subscribe(packet_id, force_move(params), force_move(func));
             return true;
         }
         return false;
@@ -4182,12 +4182,12 @@ public:
      */
     bool async_subscribe(
         packet_id_t packet_id,
-        std::vector<std::tuple<as::const_buffer, subscribe_options>> const& params,
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
         if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, params, force_move(props), force_move(func));
+            acquired_async_subscribe(packet_id, force_move(params), force_move(props), force_move(func));
             return true;
         }
         return false;
@@ -5095,6 +5095,7 @@ public:
             { { topic_name_buf, option } },
             force_move(sp_topic_name),
             packet_id,
+            v5::properties{},
             force_move(func)
         );
     }
@@ -5126,11 +5127,11 @@ public:
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
-        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
-        auto sv_topic_name = string_view(*sp_topic_name);
+        auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
+        auto topic_name_buf = as::buffer(*sp_topic_name);
 
         async_send_subscribe(
-            std::vector<std::tuple<buffer, subscribe_options>>({std::make_tuple(buffer(sv_topic_name), option)}),
+            { { topic_name_buf, option } },
             force_move(sp_topic_name),
             packet_id,
             force_move(props),
@@ -5161,9 +5162,11 @@ public:
         any life_keeper,
         async_handler_t func = async_handler_t()
     ) {
-        async_send_subscribe({ { topic_name, option } },
+        async_send_subscribe(
+            { { topic_name, option } },
             force_move(life_keeper),
             packet_id,
+            v5::properties{},
             force_move(func)
         );
     }
@@ -5195,15 +5198,9 @@ public:
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
-
         async_send_subscribe(
-            std::vector<std::tuple<buffer, subscribe_options>>({
-                std::make_tuple(
-                    buffer(string_view(get_pointer(topic_name), get_size(topic_name))),
-                    option
-                )
-            }),
-            any(),
+            { { topic_name, option } },
+            any{},
             packet_id,
             force_move(props),
             force_move(func)
@@ -5233,9 +5230,11 @@ public:
         async_handler_t func = async_handler_t()
     ) {
         auto topic_name_buf = as::buffer(topic_name);
-        async_send_subscribe({ { topic_name_buf, option } },
+        async_send_subscribe(
+            { { topic_name_buf, option } },
             force_move(topic_name),
             packet_id,
+            v5::properties{},
             force_move(func)
         );
     }
@@ -5267,15 +5266,10 @@ public:
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
-
+        auto topic_name_buf = as::buffer(topic_name);
         async_send_subscribe(
-            std::vector<std::tuple<buffer, subscribe_options>>({
-                std::make_tuple(
-                    force_move(topic_name),
-                    option
-                )
-            }),
-            any(),
+            { { topic_name_buf, option } },
+            force_move(topic_name),
             packet_id,
             force_move(props),
             force_move(func)
@@ -5301,7 +5295,6 @@ public:
         std::vector<std::tuple<std::string, subscribe_options>> params,
         async_handler_t func = async_handler_t()
     ) {
-
         std::vector<std::tuple<as::const_buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
@@ -5313,10 +5306,12 @@ public:
             cb_params.emplace_back(as::buffer(*sp_topic_name), std::get<1>(e));
             life_keepers.emplace_back(force_move(sp_topic_name));
         }
+
         async_send_subscribe(
             force_move(cb_params),
             force_move(life_keepers),
             packet_id,
+            v5::properties{},
             force_move(func)
         );
     }
@@ -5345,8 +5340,7 @@ public:
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
-
-        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
         std::vector<std::shared_ptr<std::string>> life_keepers;
@@ -5354,12 +5348,12 @@ public:
 
         for (auto&& e : params) {
             auto sp_topic_name = std::make_shared<std::string>(force_move(std::get<0>(e)));
-            cb_params.emplace_back(buffer(string_view(*sp_topic_name)), std::get<1>(e));
+            cb_params.emplace_back(as::buffer(*sp_topic_name), std::get<1>(e));
             life_keepers.emplace_back(force_move(sp_topic_name));
         }
         async_send_subscribe(
             force_move(cb_params),
-            life_keepers,
+            force_move(life_keepers),
             packet_id,
             force_move(props),
             force_move(func)
@@ -5387,6 +5381,7 @@ public:
             force_move(params),
             force_move(life_keeper),
             packet_id,
+            v5::properties{},
             force_move(func)
         );
     }
@@ -5411,25 +5406,9 @@ public:
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
-
-        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
-        cb_params.reserve(params.size());
-
-        for (auto const& e : params) {
-            cb_params.emplace_back(
-                buffer(
-                    string_view(
-                        get_pointer(std::get<0>(e)),
-                        get_size(std::get<0>(e))
-                    )
-                ),
-                std::get<1>(e)
-            );
-        }
-
         async_send_subscribe(
-            force_move(cb_params),
-            any(),
+            force_move(params),
+            any{},
             packet_id,
             force_move(props),
             force_move(func)
@@ -5452,21 +5431,21 @@ public:
         std::vector<std::tuple<buffer, subscribe_options>> params,
         async_handler_t func = async_handler_t()
     ) {
-
-        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
         for (auto&& e : params) {
             cb_params.emplace_back(
-                force_move(std::get<0>(e)),
+                as::buffer(std::get<0>(e)),
                 std::get<1>(e)
             );
         }
 
         async_send_subscribe(
             force_move(cb_params),
-            any(),
+            force_move(params),
             packet_id,
+            v5::properties{},
             force_move(func)
         );
     }
@@ -5491,20 +5470,19 @@ public:
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
-
-        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
         for (auto&& e : params) {
             cb_params.emplace_back(
-                force_move(std::get<0>(e)),
+                as::buffer(std::get<0>(e)),
                 std::get<1>(e)
             );
         }
 
         async_send_subscribe(
             force_move(cb_params),
-            any(),
+            force_move(params),
             packet_id,
             force_move(props),
             force_move(func)
@@ -11580,37 +11558,6 @@ private:
                 (boost::system::error_code const& ec) {
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
-                }
-            );
-            break;
-        default:
-            BOOST_ASSERT(false);
-            break;
-        }
-    }
-
-    void async_send_subscribe(
-        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
-        any life_keeper,
-        packet_id_t packet_id,
-        async_handler_t func) {
-
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            do_async_write(
-                v3_1_1::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id),
-                [life_keeper = force_move(life_keeper), func = force_move(func)]
-                (boost::system::error_code const& ec) {
-                    if (func) func(ec);
-                }
-            );
-            break;
-        case protocol_version::v5:
-            do_async_write(
-                v5::basic_subscribe_message<PacketIdBytes>(force_move(params), packet_id, {}),
-                [life_keeper = force_move(life_keeper), func = force_move(func)]
-                (boost::system::error_code const& ec) {
-                    if (func) func(ec);
                 }
             );
             break;
