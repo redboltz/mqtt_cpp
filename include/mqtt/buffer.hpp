@@ -48,7 +48,7 @@ public:
      * @param spa shared_ptr_array that holds sv target's lifetime
      * If user creates buffer via this constructor, spa's lifetime is held by the buffer.
      */
-    buffer(MQTT_NS::string_view sv, shared_ptr_array spa)
+    buffer(MQTT_NS::string_view sv, const_shared_ptr_array spa)
         : MQTT_NS::string_view(force_move(sv)),
           lifetime_(force_move(spa)) {
     }
@@ -80,7 +80,7 @@ public:
     }
 
 private:
-    shared_ptr_array lifetime_;
+    const_shared_ptr_array lifetime_;
 };
 
 inline namespace literals {
