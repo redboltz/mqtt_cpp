@@ -18,6 +18,7 @@
  *   - `boost::shared_ptr<char []>` can be used on C++14.
  */
 using shared_ptr_array = std::shared_ptr<char []>;
+using const_shared_ptr_array = std::shared_ptr<char const []>;
 
 /**
  * @brief shared_ptr_array creating function.
@@ -43,6 +44,7 @@ inline shared_ptr_array make_shared_ptr_array(std::size_t size);
 namespace MQTT_NS {
 
 using shared_ptr_array = std::shared_ptr<char []>;
+using const_shared_ptr_array = std::shared_ptr<char const []>;
 
 inline shared_ptr_array make_shared_ptr_array(std::size_t size) {
 #if __cplusplus > 201703L // C++20 date is not determined yet
@@ -62,6 +64,7 @@ inline shared_ptr_array make_shared_ptr_array(std::size_t size) {
 namespace MQTT_NS {
 
 using shared_ptr_array = boost::shared_ptr<char []>;
+using const_shared_ptr_array = boost::shared_ptr<char const []>;
 
 inline shared_ptr_array make_shared_ptr_array(std::size_t size) {
     return boost::make_shared<char[]>(size);
