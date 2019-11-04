@@ -13203,8 +13203,7 @@ private:
                 auto& idx = store_.template get<tag_packet_id_type>();
                 auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::pubcomp));
                 idx.erase(std::get<0>(r), std::get<1>(r));
-                // packet_id shouldn't be erased here.
-                // It is reused for pubrel/pubcomp.
+                packet_id_.erase(info.packet_id);
             }
             if (h_serialize_remove_) h_serialize_remove_(info.packet_id);
             switch (version_) {

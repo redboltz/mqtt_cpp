@@ -1,3 +1,6 @@
+## 6.0.7
+* Fixed packet_id leak on QoS2 publish. (backported) (#541, #542, #543)
+
 ## 6.0.6
 * Fixed server side endpoint lifetime management problem. (#439, #440)
 
