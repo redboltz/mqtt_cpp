@@ -1,3 +1,6 @@
+## 7.0.1
+* Fixed packet_id leak on QoS2 publish. (#541, #542)
+
 ## 7.0.0
 * Added explicit destructor to clients. (#481)
 * Fixed warnings. (#480)
