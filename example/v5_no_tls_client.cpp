@@ -123,17 +123,15 @@ int main(int argc, char** argv) {
         });
     c->set_v5_publish_handler( // use v5 handler
         [&]
-        (bool is_dup,
-         MQTT_NS::qos qos_value,
-         bool is_retain,
-         MQTT_NS::optional<packet_id_t> packet_id,
+        (MQTT_NS::optional<packet_id_t> packet_id,
+         MQTT_NS::publish_options pubopts,
          MQTT_NS::buffer topic_name,
          MQTT_NS::buffer contents,
          MQTT_NS::v5::properties /*props*/){
             std::cout << "[client] publish received. "
-                      << "dup: " << std::boolalpha << is_dup
-                      << " qos: " << qos_value
-                      << " retain: " << std::boolalpha << is_retain << std::endl;
+                      << "dup: "     << pubopts.get_dup()
+                      << " qos: "    << pubopts.get_qos()
+                      << " retain: " << pubopts.get_retain() << std::endl;
             if (packet_id)
                 std::cout << "[client] packet_id: " << *packet_id << std::endl;
             std::cout << "[client] topic_name: " << topic_name << std::endl;

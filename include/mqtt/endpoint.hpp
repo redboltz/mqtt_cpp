@@ -69,6 +69,37 @@
 
 namespace MQTT_NS {
 
+namespace detail {
+
+
+template <typename T>
+constexpr
+std::enable_if_t< ! std::is_convertible<std::decay_t<T>, publish_options>::value, bool>
+check_qos_value(T const&) {
+    return false;
+}
+
+constexpr bool check_qos_value(publish_options pubopts) {
+    return pubopts.get_qos() != qos::at_most_once;
+}
+
+template<typename ... Params>
+constexpr bool should_generate_packet_id(Params const& ... params) {
+#if __cplusplus >= 201703L // C++20 date is not determined yet
+    return (check_qos_value(params) || ...); // defaults to false for empty.
+#else  // __cplusplus >= 201703L
+    const bool results[] = {false, check_qos_value(params)... };
+    bool ret = false;
+    for(const bool val : results)
+    {
+        ret |= val;
+    }
+    return ret;
+#endif // __cplusplus >= 201703L
+}
+
+} // namespace detail
+
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
@@ -182,25 +213,23 @@ public:
 
     /**
      * @brief Publish handler
-     * @param fixed_header
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718038<BR>
-     *        3.3.1 Fixed header<BR>
-     *        You can check the fixed header using MQTT_NS::publish functions.
      * @param packet_id
      *        packet identifier<BR>
      *        If received publish's QoS is 0, packet_id is MQTT_NS::nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718039<BR>
      *        3.3.2  Variable header
+     * @param pubopts
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718038<BR>
+     *        3.3.1 Fixed header<BR>
+     *        You can check the fixed header using MQTT_NS::publish functions.
      * @param topic_name
      *        Topic name
      * @param contents
      *        Published contents
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_publish(bool dup,
-                            qos qos_value,
-                            bool retain,
-                            MQTT_NS::optional<packet_id_t> packet_id,
+    virtual bool on_publish(MQTT_NS::optional<packet_id_t> packet_id,
+                            MQTT_NS::publish_options pubopts,
                             MQTT_NS::buffer topic_name,
                             MQTT_NS::buffer contents) = 0;
 
@@ -373,15 +402,15 @@ public:
 
     /**
      * @brief Publish handler
-     * @param fixed_header
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901101<BR>
-     *        3.3.1 Fixed header<BR>
-     *        You can check the fixed header using MQTT_NS::publish functions.
      * @param packet_id
      *        packet identifier<BR>
      *        If received publish's QoS is 0, packet_id is MQTT_NS::nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901108<BR>
      *        3.3.2.2 Packet Identifier
+     * @param pubopts
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901101<BR>
+     *        3.3.1 Fixed header<BR>
+     *        You can check the fixed header using MQTT_NS::publish functions.
      * @param topic_name
      *        Topic name<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901107<BR>
@@ -396,10 +425,8 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_publish(bool dup,
-                               qos qos_value,
-                               bool retain,
-                               MQTT_NS::optional<packet_id_t> packet_id,
+    virtual bool on_v5_publish(MQTT_NS::optional<packet_id_t> packet_id,
+                               MQTT_NS::publish_options pubopts,
                                MQTT_NS::buffer topic_name,
                                MQTT_NS::buffer contents,
                                v5::properties props) = 0;
@@ -757,12 +784,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
+     * @param pubopts
+     *        qos, retain flag, and dup flag.
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
@@ -773,109 +796,18 @@ public:
      * @note If you know ahead of time that qos will be at_most_once, then prefer
      *       publish_at_most_once() over publish() as it is slightly more efficent.
      */
-    packet_id_t publish(
-        std::string topic_name,
-        std::string contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        v5::properties props = {}
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if(qos_value == qos::at_most_once) {
-            publish(
-                0,
-                force_move(topic_name),
-                force_move(contents),
-                qos::at_most_once,
-                retain,
-                force_move(props)
-            );
-            return 0;
-        }
-        else {
-            auto sp_topic     = std::make_shared<std::string>(force_move(topic_name));
-            auto sp_contents  = std::make_shared<std::string>(force_move(contents));
-            auto topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
-            auto contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
-
+    template <typename T, typename... Params>
+    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value, packet_id_t >
+    publish(T&& t, Params&&... params) {
+        if(detail::should_generate_packet_id(params...)) {
             packet_id_t packet_id = acquire_unique_packet_id();
-            publish(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos_value, retain, force_move(props));
+            publish(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
             return packet_id;
         }
-    }
-
-    /**
-     * @brief Publish
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     *        If qos is qos::at_most_once, then no life_keeper required. You can pass `any()` as the life_keeper.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @return packet_id. If qos is set to at_most_once, return 0.
-     * packet_id is automatically generated.
-     */
-    packet_id_t publish(
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        v5::properties props = {}
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if(qos_value == qos::at_most_once) {
-            publish(0, topic_name, contents, any(), qos::at_most_once, retain, force_move(props));
+        else {
+            publish(0, std::forward<T>(t), std::forward<Params>(params)...);
             return 0;
         }
-        else {
-            packet_id_t packet_id = acquire_unique_packet_id();
-            publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props));
-            return packet_id;
-        }
-    }
-
-    /**
-     * @brief Publish
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @return packet_id. If qos is set to at_most_once, return 0.
-     * packet_id is automatically generated.
-     */
-    packet_id_t publish(
-        buffer topic_name,
-        buffer contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        v5::properties props = {}
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props));
-        return packet_id;
     }
 
     /**
@@ -896,13 +828,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     template <typename T, typename... Params>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::decay<T>::type,
-            packet_id_t
-        >::value,
-    packet_id_t
-    >::type
+    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value, packet_id_t >
     subscribe(T&& t, Params&&... params) {
         packet_id_t packet_id = acquire_unique_packet_id();
         subscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
@@ -923,13 +849,7 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     template <typename T, typename... Params>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::decay<T>::type,
-            packet_id_t
-        >::value,
-        packet_id_t
-    >::type
+    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value, packet_id_t >
     unsubscribe(T&& t, Params&&... params) {
         packet_id_t packet_id = acquire_unique_packet_id();
         unsubscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
@@ -972,8 +892,6 @@ public:
         shutdown_from_client(*socket_);
     }
 
-    // packet_id has already been acquired version
-
     /**
      * @brief Publish with already acquired packet identifier
      * @param packet_id
@@ -984,12 +902,10 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
+     * @param life_keeper
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
+     * @param pubopts
+     *        qos, retain flag, and dup flag.
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
@@ -999,19 +915,17 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
+        publish_options pubopts = {},
         v5::properties props = {}
     ) {
-        if(qos_value == qos::at_most_once) {
+        if(pubopts.get_qos() == qos::at_most_once) {
             // In the at_most_once case, we know a priori that send_publish won't track the lifetime.
-            publish(packet_id,
-                    as::buffer(topic_name),
-                    as::buffer(contents),
-                    any(),
-                    qos_value,
-                    retain,
-                    force_move(props));
+            send_publish(packet_id,
+                         as::buffer(topic_name),
+                         as::buffer(contents),
+                         pubopts,
+                         force_move(props),
+                         any());
         }
         else {
             auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
@@ -1019,13 +933,12 @@ public:
             auto topic_buf     = as::buffer(*sp_topic_name);
             auto contents_buf  = as::buffer(*sp_contents);
 
-            publish(packet_id,
-                    topic_buf,
-                    contents_buf,
-                    std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
-                    qos_value,
-                    retain,
-                    force_move(props));
+            send_publish(packet_id,
+                         topic_buf,
+                         contents_buf,
+                         pubopts,
+                         force_move(props),
+                         std::make_pair(force_move(sp_topic_name), force_move(sp_contents)));
         }
     }
 
@@ -1041,12 +954,8 @@ public:
      *        The contents to publish
      * @param life_keeper
      *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
+     * @param pubopts
+     *        qos, retain flag, and dup flag.
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
@@ -1056,22 +965,18 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        any life_keeper,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
+        MQTT_NS::any life_keeper,
+        publish_options pubopts = {},
         v5::properties props = {}
     ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         send_publish(
-            topic_name,
-            qos_value,
-            retain,
-            false,
             packet_id,
-            force_move(props),
+            topic_name,
             contents,
+            pubopts,
+            force_move(props),
             force_move(life_keeper)
         );
     }
@@ -1086,12 +991,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
+     * @param pubopts
+     *        qos, retain flag, and dup flag.
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
@@ -1101,174 +1002,19 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
+        publish_options pubopts = {},
         v5::properties props = {}
     ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto topic_name_buf = as::buffer(topic_name);
         auto contents_buf   = as::buffer(contents);
         send_publish(
+            packet_id,
             topic_name_buf,
-            qos_value,
-            retain,
-            false,
-            packet_id,
-            force_move(props),
             contents_buf,
-            std::make_pair(force_move(topic_name), force_move(contents))
-        );
-    }
-
-    /**
-     * @brief Publish as dup with already acquired packet identifier
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of the packet_id moves to the library.
-     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     */
-    void publish_dup(
-        packet_id_t packet_id,
-        std::string topic_name,
-        std::string contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        v5::properties props = {}
-    ) {
-        if(qos_value == qos::at_most_once)
-        {
-            // In the at_most_once case, we know a priori that send_publish won't track the lifetime.
-            publish_dup(packet_id,
-                        as::buffer(topic_name),
-                        as::buffer(contents),
-                        any(),
-                        qos::at_most_once,
-                        retain,
-                        force_move(props));
-        }
-        else
-        {
-            auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
-            auto sp_contents   = std::make_shared<std::string>(force_move(contents));
-            auto topic_buf     = as::buffer(*sp_topic_name);
-            auto contents_buf  = as::buffer(*sp_contents);
-
-            publish_dup(packet_id,
-                        topic_buf,
-                        contents_buf,
-                        std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
-                        qos_value,
-                        retain,
-                        force_move(props));
-        }
-    }
-
-    /**
-     * @brief Publish as dup with already acquired packet identifier
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
-     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     */
-    void publish_dup(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        v5::properties props = {}
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
-
-        send_publish(
-            topic_name,
-            qos_value,
-            retain,
-            true,
-            packet_id,
+            pubopts,
             force_move(props),
-            contents,
-            force_move(life_keeper)
-        );
-    }
-
-    /**
-     * @brief Publish as dup with already acquired packet identifier
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
-     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     */
-    void publish_dup(
-        packet_id_t packet_id,
-        buffer topic_name,
-        buffer contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        v5::properties props = {}
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
-
-        auto topic_name_buf = as::buffer(topic_name);
-        auto contents_buf   = as::buffer(contents);
-
-        send_publish(
-            topic_name_buf,
-            qos_value,
-            retain,
-            true,
-            packet_id,
-            force_move(props),
-            contents_buf,
             std::make_pair(force_move(topic_name), force_move(contents))
         );
     }
@@ -1850,235 +1596,28 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * packet_id is automatically generated.
-     */
-    void async_publish(
-        std::string topic_name,
-        std::string contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
-    }
-
-    /**
-     * @brief Publish
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
+     * @param pubopts
+     *        qos, retain flag, and dup flag.
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
-     */
-    void async_publish(
-        std::string topic_name,
-        std::string contents,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
-    }
-
-    /**
-     * @brief Publish
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * packet_id is automatically generated.
-     */
-    void async_publish(
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(func));
-    }
-
-    /**
-     * @brief Publish
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * packet_id is automatically generated.
-     */
-    void async_publish(
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props), force_move(func));
-    }
-
-    /**
-     * @brief Publish
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * packet_id is automatically generated.
-     */
-    void async_publish(
-        buffer topic_name,
-        buffer contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
-    }
-
-    /**
-     * @brief Publish
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * packet_id is automatically generated.
-     */
-    void async_publish(
-        buffer topic_name,
-        buffer contents,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
-    }
-
-    /**
-     * @brief Subscribe
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     *
+     * @note If you know ahead of time that qos will be at_most_once, then prefer
+     *       publish_at_most_once() over publish() as it is slightly more efficent.
      */
     template <typename T, typename... Params>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::decay<T>::type,
-            packet_id_t
-        >::value
-    >::type
-    async_subscribe(T&& t, Params&&... params) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        async_subscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param topic_name
-     *        A topic name to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    template <typename T, typename... Params>
-    typename std::enable_if<
-        !std::is_convertible<
-            typename std::decay<T>::type,
-            packet_id_t
-        >::value
-    >::type
-    async_unsubscribe(T&& t, Params&&... params) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        async_unsubscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
+    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value >
+    async_publish(T&& t, Params&&... params) {
+        if(detail::should_generate_packet_id(params...)) {
+            packet_id_t packet_id = acquire_unique_packet_id();
+            async_publish(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
+        }
+        else {
+            async_publish(0, std::forward<T>(t), std::forward<Params>(params)...);
+        }
     }
 
     /**
@@ -2128,7 +1667,45 @@ public:
         }
     }
 
-    // packet_id has already been acquired version
+    // packet_id manual setting version
+
+    /**
+     * @brief Subscribe
+     * @param topic_name
+     *        A topic name to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    template <typename T, typename... Params>
+    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value >
+    async_subscribe(T&& t, Params&&... params) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        async_subscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param topic_name
+     *        A topic name to unsubscribe
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * packet_id is automatically generated.<BR>
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    template <typename T, typename... Params>
+    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value >
+    async_unsubscribe(T&& t, Params&&... params) {
+        packet_id_t packet_id = acquire_unique_packet_id();
+        async_unsubscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
+    }
 
     /**
      * @brief Publish with a manual set packet identifier
@@ -2140,12 +1717,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
+     * @param pubopts
+     *        qos, retain flag, and dup flag.
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
@@ -2153,12 +1726,47 @@ public:
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
+        publish_options pubopts = {},
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
+
+        auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
+        auto sp_contents    = std::make_shared<std::string>(force_move(contents));
+        auto topic_name_buf = as::buffer(*sp_topic_name);
+        auto contents_buf   = as::buffer(*sp_contents);
+
+        async_send_publish(packet_id, topic_name_buf, contents_buf, pubopts, v5::properties{}, force_move(func), std::make_pair(force_move(sp_topic_name), force_move(sp_contents)));
+    }
+
+    /**
+     * @brief Publish with a manual set packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param pubopts
+     *        qos, retain flag, and dup flag.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     */
+    void async_publish(
+        packet_id_t packet_id,
+        std::string topic_name,
+        std::string contents,
+        publish_options pubopts,
+        v5::properties props,
+        async_handler_t func = async_handler_t()
+    ) {
+        BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
         auto sp_contents    = std::make_shared<std::string>(force_move(contents));
@@ -2166,13 +1774,11 @@ public:
         auto contents_buf   = as::buffer(*sp_contents);
 
         async_send_publish(
-            topic_name_buf,
-            qos_value,
-            retain,
-            false,
             packet_id,
-            v5::properties{},
+            topic_name_buf,
             contents_buf,
+            pubopts,
+            force_move(props),
             force_move(func),
             std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
         );
@@ -2188,47 +1794,24 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
+     * @param life_keeper
+     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
+     * @param pubopts
+     *        qos, retain flag, and dup flag.
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
     void async_publish(
         packet_id_t packet_id,
-        std::string topic_name,
-        std::string contents,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
+        as::const_buffer topic_name,
+        as::const_buffer contents,
+        any life_keeper,
+        publish_options pubopts = {},
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
-        auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
-        auto sp_contents    = std::make_shared<std::string>(force_move(contents));
-        auto topic_name_buf = as::buffer(*sp_topic_name);
-        auto contents_buf   = as::buffer(*sp_contents);
-
-        async_send_publish(
-            topic_name_buf,
-            qos_value,
-            retain,
-            false,
-            packet_id,
-            force_move(props),
-            contents_buf,
-            force_move(func),
-            std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
-        );
+        async_send_publish(packet_id, topic_name, contents, pubopts, v5::properties{}, force_move(func), force_move(life_keeper));
     }
 
     /**
@@ -2243,12 +1826,12 @@ public:
      *        The contents to publish
      * @param life_keeper
      *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
+     * @param pubopts
+     *        qos, retain flag, and dup flag.
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
+     *        3.3.2.3 PUBLISH Properties
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
@@ -2257,24 +1840,13 @@ public:
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
+        publish_options pubopts,
+        v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
-        async_send_publish(
-            topic_name,
-            qos_value,
-            retain,
-            false,
-            packet_id,
-            v5::properties{},
-            contents,
-            force_move(func),
-            force_move(life_keeper)
-        );
+        async_send_publish(packet_id, topic_name, contents, pubopts, force_move(props), force_move(func), force_move(life_keeper));
     }
 
     /**
@@ -2287,45 +1859,24 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
+     * @param pubopts
+     *        qos, retain flag, and dup flag.
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
     void async_publish(
         packet_id_t packet_id,
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
+        buffer topic_name,
+        buffer contents,
+        publish_options pubopts = {},
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
-        async_send_publish(
-            topic_name,
-            qos_value,
-            retain,
-            false,
-            packet_id,
-            force_move(props),
-            contents,
-            force_move(func),
-            force_move(life_keeper)
-        );
+        auto topic_name_buf = as::buffer(topic_name);
+        auto contents_buf   = as::buffer(contents);
+
+        async_send_publish(packet_id, topic_name_buf, contents_buf, pubopts, v5::properties{}, force_move(func), std::make_pair(force_move(topic_name), force_move(contents)));
     }
 
     /**
@@ -2338,58 +1889,8 @@ public:
      *        A topic name to publish
      * @param contents
      *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     */
-    void async_publish(
-        packet_id_t packet_id,
-        buffer topic_name,
-        buffer contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
-
-        auto topic_name_buf = as::buffer(topic_name);
-        auto contents_buf   = as::buffer(contents);
-
-        async_send_publish(
-            topic_name_buf,
-            qos_value,
-            retain,
-            false,
-            packet_id,
-            v5::properties{},
-            contents_buf,
-            force_move(func),
-            std::make_pair(force_move(topic_name), force_move(contents))
-        );
-    }
-
-    /**
-     * @brief Publish with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
-     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
+     * @param pubopts
+     *        qos, retain flag, and dup flag.
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
@@ -2401,325 +1902,17 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        qos qos_value,
-        bool retain,
+        publish_options pubopts,
         v5::properties props,
         async_handler_t func = async_handler_t()
     ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
+        BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto topic_name_buf = as::buffer(topic_name);
         auto contents_buf   = as::buffer(contents);
 
-        async_send_publish(
-            topic_name_buf,
-            qos_value,
-            retain,
-            false,
-            packet_id,
-            force_move(props),
-            contents_buf,
-            force_move(func),
-            std::make_pair(force_move(topic_name), force_move(contents))
-        );
+        async_send_publish(packet_id, topic_name_buf, contents_buf, pubopts, force_move(props), force_move(func), std::make_pair(force_move(topic_name), force_move(contents)));
     }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
-     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     */
-    void async_publish_dup(
-        packet_id_t packet_id,
-        std::string topic_name,
-        std::string contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
-
-        auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
-        auto sp_contents    = std::make_shared<std::string>(force_move(contents));
-        auto topic_name_buf = as::buffer(*sp_topic_name);
-        auto contents_buf   = as::buffer(*sp_contents);
-
-        async_send_publish(
-            topic_name_buf,
-            qos_value,
-            retain,
-            true,
-            packet_id,
-            v5::properties{},
-            contents_buf,
-            force_move(func),
-            std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
-        );
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
-     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     */
-    void async_publish_dup(
-        packet_id_t packet_id,
-        std::string topic_name,
-        std::string contents,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
-
-        auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
-        auto sp_contents    = std::make_shared<std::string>(force_move(contents));
-        auto topic_name_buf = as::buffer(*sp_topic_name);
-        auto contents_buf   = as::buffer(*sp_contents);
-
-        async_send_publish(
-            topic_name_buf,
-            qos_value,
-            retain,
-            true,
-            packet_id,
-            force_move(props),
-            contents_buf,
-            force_move(func),
-            std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
-        );
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
-     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param life_keeper A object that stays alive until the async operation is finished.
-     */
-    void async_publish_dup(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
-
-        async_send_publish(
-            topic_name,
-            qos_value,
-            retain,
-            true,
-            packet_id,
-            v5::properties{},
-            contents,
-            force_move(func),
-            force_move(life_keeper)
-        );
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
-     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     */
-    void async_publish_dup(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
-
-        async_send_publish(
-            topic_name,
-            qos_value,
-            retain,
-            true,
-            packet_id,
-            force_move(props),
-            contents,
-            force_move(func),
-            force_move(life_keeper)
-        );
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
-     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param life_keeper A object that stays alive until the async operation is finished.
-     */
-    void async_publish_dup(
-        packet_id_t packet_id,
-        buffer topic_name,
-        buffer contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
-
-        auto topic_name_buf = as::buffer(topic_name);
-        auto contents_buf   = as::buffer(contents);
-
-        async_send_publish(
-            topic_name_buf,
-            qos_value,
-            retain,
-            true,
-            packet_id,
-            v5::properties{},
-            contents_buf,
-            force_move(func),
-            std::make_pair(force_move(topic_name), force_move(contents))
-        );
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
-     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     */
-    void async_publish_dup(
-        packet_id_t packet_id,
-        buffer topic_name,
-        buffer contents,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        BOOST_ASSERT((qos_value == qos::at_most_once && packet_id == 0) || (qos_value != qos::at_most_once && packet_id != 0));
-
-        auto topic_name_buf = as::buffer(topic_name);
-        auto contents_buf   = as::buffer(contents);
-
-        async_send_publish(
-            topic_name_buf,
-            qos_value,
-            retain,
-            true,
-            packet_id,
-            force_move(props),
-            contents_buf,
-            force_move(func),
-            std::make_pair(force_move(topic_name), force_move(contents))
-        );
-    }
-
     /**
      * @brief Subscribe
      * @param packet_id
@@ -4080,7 +3273,7 @@ public:
      * @param e         iterator end of the message
      */
     template <typename Iterator>
-    typename std::enable_if<std::is_convertible<typename Iterator::value_type, char>::value>::type
+    std::enable_if_t< std::is_convertible<typename Iterator::value_type, char>::value >
     restore_serialized_message(packet_id_t /*packet_id*/, Iterator b, Iterator e) {
         static_assert(
             std::is_same<
@@ -4199,7 +3392,7 @@ public:
      * @param e         iterator end of the message
      */
     template <typename Iterator>
-    typename std::enable_if<std::is_convertible<typename Iterator::value_type, char>::value>::type
+    std::enable_if_t< std::is_convertible<typename Iterator::value_type, char>::value >
     restore_v5_serialized_message(packet_id_t /*packet_id*/, Iterator b, Iterator e) {
         if (b == e) return;
 
@@ -6480,8 +5673,7 @@ private:
                         ? optional<will>(in_place_init,
                                          force_move(info.will_topic),
                                          force_move(info.will_payload),
-                                         connect_flags::has_will_retain(info.connect_flag),
-                                         connect_flags::will_qos(info.connect_flag))
+                                         connect_flags::has_will_retain(info.connect_flag) | connect_flags::will_qos(info.connect_flag))
                         : optional<will>(nullopt),
                         clean_session_,
                         info.keep_alive
@@ -6499,8 +5691,7 @@ private:
                         ? optional<will>(in_place_init,
                                          force_move(info.will_topic),
                                          force_move(info.will_payload),
-                                         connect_flags::has_will_retain(info.connect_flag),
-                                         connect_flags::will_qos(info.connect_flag),
+                                         connect_flags::has_will_retain(info.connect_flag) | connect_flags::will_qos(info.connect_flag),
                                          force_move(info.will_props))
                         : optional<will>(nullopt),
                         clean_session_,
@@ -6854,10 +6045,8 @@ private:
                             switch (version_) {
                             case protocol_version::v3_1_1:
                                 if (on_publish(
-                                            publish::is_dup(fixed_header_),
-                                            publish::get_qos(fixed_header_),
-                                            publish::is_retain(fixed_header_),
                                             info.packet_id,
+                                            publish_options(fixed_header_),
                                             force_move(info.topic_name),
                                             force_move(payload))) {
                                     on_mqtt_message_processed(force_move(session_life_keeper));
@@ -6866,10 +6055,8 @@ private:
                                 break;
                             case protocol_version::v5:
                                 if (on_v5_publish(
-                                            publish::is_dup(fixed_header_),
-                                            publish::get_qos(fixed_header_),
-                                            publish::is_retain(fixed_header_),
                                             info.packet_id,
+                                            publish_options(fixed_header_),
                                             force_move(info.topic_name),
                                             force_move(payload),
                                             force_move(info.props)
@@ -8516,25 +7703,23 @@ private:
     }
 
     void send_publish(
+        packet_id_t      packet_id,
         as::const_buffer topic_name,
-        qos qos_value,
-        bool retain,
-        bool dup,
-        packet_id_t packet_id,
-        v5::properties props,
         as::const_buffer payload,
-        any life_keeper) {
+        publish_options  pubopts,
+        v5::properties   props,
+        any              life_keeper) {
 
         auto do_send_publish =
             [&](auto msg, auto const& serialize_publish) {
 
-                if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
+                if (pubopts.get_qos() == qos::at_least_once || pubopts.get_qos() == qos::exactly_once) {
                     auto store_msg = msg;
                     store_msg.set_dup(true);
                     LockGuard<Mutex> lck (store_mtx_);
                     store_.emplace(
                         packet_id,
-                        qos_value == qos::at_least_once
+                        pubopts.get_qos() == qos::at_least_once
                          ? control_packet_type::puback
                          : control_packet_type::pubrec,
                         store_msg,
@@ -8549,12 +7734,10 @@ private:
         case protocol_version::v3_1_1:
             do_send_publish(
                 v3_1_1::basic_publish_message<PacketIdBytes>(
-                    topic_name,
-                    qos_value,
-                    retain,
-                    dup,
                     packet_id,
-                    payload
+                    topic_name,
+                    payload,
+                    pubopts
                 ),
                 &endpoint::on_serialize_publish_message
             );
@@ -8562,13 +7745,11 @@ private:
         case protocol_version::v5:
             do_send_publish(
                 v5::basic_publish_message<PacketIdBytes>(
-                    topic_name,
-                    qos_value,
-                    retain,
-                    dup,
                     packet_id,
-                    force_move(props),
-                    payload
+                    topic_name,
+                    payload,
+                    pubopts,
+                    force_move(props)
                 ),
                 &endpoint::on_serialize_v5_publish_message
             );
@@ -8985,27 +8166,25 @@ private:
     }
 
     void async_send_publish(
-        as::const_buffer topic_name,
-        qos qos_value,
-        bool retain,
-        bool dup,
         packet_id_t packet_id,
-        v5::properties props,
+        as::const_buffer topic_name,
         as::const_buffer payload,
+        publish_options pubopts,
+        v5::properties props,
         async_handler_t func,
         any life_keeper) {
 
         auto do_async_send_publish =
             [&](auto msg, auto const& serialize_publish) {
-                if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
+                if (pubopts.get_qos() == qos::at_least_once || pubopts.get_qos() == qos::exactly_once) {
                     auto store_msg = msg;
                     store_msg.set_dup(true);
                     {
                         LockGuard<Mutex> lck (store_mtx_);
                         auto ret = store_.emplace(
                             packet_id,
-                            qos_value == qos::at_least_once ? control_packet_type::puback
-                                                            : control_packet_type::pubrec,
+                            pubopts.get_qos() == qos::at_least_once ? control_packet_type::puback
+                                                                    : control_packet_type::pubrec,
                             store_msg,
                             life_keeper
                         );
@@ -9027,12 +8206,10 @@ private:
         case protocol_version::v3_1_1:
             do_async_send_publish(
                 v3_1_1::basic_publish_message<PacketIdBytes>(
-                    topic_name,
-                    qos_value,
-                    retain,
-                    dup,
                     packet_id,
-                    payload
+                    topic_name,
+                    payload,
+                    pubopts
                 ),
                 &endpoint::on_serialize_publish_message
             );
@@ -9040,13 +8217,11 @@ private:
         case protocol_version::v5:
             do_async_send_publish(
                 v5::basic_publish_message<PacketIdBytes>(
-                    topic_name,
-                    qos_value,
-                    retain,
-                    dup,
                     packet_id,
-                    force_move(props),
-                    payload
+                    topic_name,
+                    payload,
+                    pubopts,
+                    force_move(props)
                 ),
                 &endpoint::on_serialize_v5_publish_message
             );

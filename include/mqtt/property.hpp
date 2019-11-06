@@ -672,40 +672,28 @@ public:
 };
 
 template <typename Property>
-typename std::enable_if<
-    Property::of_ == detail::ostream_format::direct,
-    std::ostream&
->::type
+std::enable_if_t< Property::of_ == detail::ostream_format::direct, std::ostream& >
 operator<<(std::ostream& o, Property const& p) {
     o << p.val();
     return o;
 }
 
 template <typename Property>
-typename std::enable_if<
-    Property::of_ == detail::ostream_format::int_cast,
-    std::ostream&
->::type
+std::enable_if_t< Property::of_ == detail::ostream_format::int_cast, std::ostream& >
 operator<<(std::ostream& o, Property const& p) {
     o << static_cast<int>(p.val());
     return o;
 }
 
 template <typename Property>
-typename std::enable_if<
-    Property::of_ == detail::ostream_format::key_val,
-    std::ostream&
->::type
+std::enable_if_t< Property::of_ == detail::ostream_format::key_val, std::ostream& >
 operator<<(std::ostream& o, Property const& p) {
     o << p.key() << ':' << p.val();
     return o;
 }
 
 template <typename Property>
-typename std::enable_if<
-    Property::of_ == detail::ostream_format::binary_string,
-    std::ostream&
->::type
+std::enable_if_t< Property::of_ == detail::ostream_format::binary_string, std::ostream& >
 operator<<(std::ostream& o, Property const& p) {
     // Note this only compiles because both strings below are the same length.
     o << ((p.val() == payload_format_indicator::binary) ? "binary" : "string");

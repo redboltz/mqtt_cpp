@@ -65,10 +65,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             });
         c->set_publish_handler(
             []
-            (bool /* is_dup */,
-             MQTT_NS::qos /* qos_value */,
-             bool /* is_retain */,
-             MQTT_NS::optional<packet_id_t> ,
+            (MQTT_NS::optional<packet_id_t> /*packet_id*/,
+             MQTT_NS::publish_options /*pubopts*/,
              MQTT_NS::buffer /*topic*/,
              MQTT_NS::buffer /*contents*/) {
                 BOOST_CHECK(false);

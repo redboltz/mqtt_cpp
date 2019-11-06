@@ -227,14 +227,10 @@ public:
 
     void connect() = delete;
     void disconnect() = delete;
-    void publish_at_most_once() = delete;
-    void publish_at_least_once() = delete;
-    void publish_exactly_once() = delete;
 
     void publish() = delete;
     void subscribe() = delete;
     void unsubscribe() = delete;
-    void publish_dup() = delete;
     void pingresp() = delete;
     void connack() = delete;
     void puback() = delete;

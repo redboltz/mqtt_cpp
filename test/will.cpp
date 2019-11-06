@@ -145,16 +145,14 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
         });
     c2->set_publish_handler(
         [&chk, &c2, &pid_unsub2]
-        (bool is_dup,
-         MQTT_NS::qos qos_value,
-         bool is_retain,
-         MQTT_NS::optional<packet_id_t> packet_id,
+        (MQTT_NS::optional<packet_id_t> packet_id,
+         MQTT_NS::publish_options pubopts,
          MQTT_NS::buffer topic,
          MQTT_NS::buffer contents) {
             MQTT_CHK("h_publish_2");
-            BOOST_TEST(is_dup == false);
-            BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);
-            BOOST_TEST(is_retain == false);
+            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_most_once);
+            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
             BOOST_CHECK(!packet_id);
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
@@ -294,16 +292,14 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
         });
     c2->set_publish_handler(
         [&chk, &c2, &pid_unsub2]
-        (bool is_dup,
-         MQTT_NS::qos qos_value,
-         bool is_retain,
-         MQTT_NS::optional<packet_id_t> packet_id,
+        (MQTT_NS::optional<packet_id_t> packet_id,
+         MQTT_NS::publish_options pubopts,
          MQTT_NS::buffer topic,
          MQTT_NS::buffer contents) {
             MQTT_CHK("h_publish_2");
-            BOOST_TEST(is_dup == false);
-            BOOST_TEST(qos_value == MQTT_NS::qos::at_least_once);
-            BOOST_TEST(is_retain == false);
+            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_least_once);
+            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
             BOOST_CHECK(*packet_id != 0);
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
@@ -444,16 +440,14 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
         });
     c2->set_publish_handler(
         [&chk]
-        (bool is_dup,
-         MQTT_NS::qos qos_value,
-         bool is_retain,
-         MQTT_NS::optional<packet_id_t> packet_id,
+        (MQTT_NS::optional<packet_id_t> packet_id,
+         MQTT_NS::publish_options pubopts,
          MQTT_NS::buffer topic,
          MQTT_NS::buffer contents) {
             MQTT_CHK("h_publish_2");
-            BOOST_TEST(is_dup == false);
-            BOOST_TEST(qos_value == MQTT_NS::qos::exactly_once);
-            BOOST_TEST(is_retain == false);
+            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
+            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
             BOOST_CHECK(*packet_id != 0);
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
@@ -504,7 +498,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
     c1->set_client_id("cid1");
     c1->set_clean_session(true);
     c1->set_will(
-        MQTT_NS::will("topic1"_mb, "will_contents"_mb, true));
+        MQTT_NS::will("topic1"_mb, "will_contents"_mb, MQTT_NS::retain::yes));
     int c1fd_count = 0;
     auto c1_force_disconnect = [&c1, &c1fd_count] {
         if (++c1fd_count == 2) c1->force_disconnect();
@@ -624,14 +618,12 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
         });
     c2->set_publish_handler(
         [&chk, &c2, &pid_unsub2]
-        (bool is_dup,
-         MQTT_NS::qos qos_value,
-         bool is_retain,
-         MQTT_NS::optional<packet_id_t> packet_id,
+        (MQTT_NS::optional<packet_id_t> packet_id,
+         MQTT_NS::publish_options pubopts,
          MQTT_NS::buffer topic,
          MQTT_NS::buffer contents) {
-            BOOST_TEST(is_dup == false);
-            BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);
+            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_most_once);
             BOOST_CHECK(!packet_id);
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
@@ -640,12 +632,12 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
                 "h_suback1_2",
                 [&] {
                     MQTT_CHK("h_publish1_2");
-                    BOOST_TEST(is_retain == false);
+                    BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
                 },
                 "h_suback2_2",
                 [&] {
                     MQTT_CHK("h_publish2_2");
-                    BOOST_TEST(is_retain == true);
+                    BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);
                 }
             );
             BOOST_TEST(ret);
@@ -755,7 +747,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
         MQTT_NS::will(
             "topic1"_mb,
             "will_contents"_mb,
-            false,
+            MQTT_NS::retain::yes,
             std::move(ps)
         ));
 
@@ -859,17 +851,15 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
         });
     c2->set_v5_publish_handler(
         [&chk, &c2, &pid_unsub2, prop_size, &user_prop_count]
-        (bool is_dup,
-         MQTT_NS::qos qos_value,
-         bool is_retain,
-         MQTT_NS::optional<packet_id_t> packet_id,
+        (MQTT_NS::optional<packet_id_t> packet_id,
+         MQTT_NS::publish_options pubopts,
          MQTT_NS::buffer topic,
          MQTT_NS::buffer contents,
          MQTT_NS::v5::properties props) {
             MQTT_CHK("h_publish_2");
-            BOOST_TEST(is_dup == false);
-            BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);
-            BOOST_TEST(is_retain == false);
+            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_most_once);
+            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
             BOOST_CHECK(!packet_id);
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");

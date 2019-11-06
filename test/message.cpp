@@ -18,7 +18,7 @@ using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( connect_cbuf ) {
     auto cid = "cid"_mb;
-    MQTT_NS::optional<MQTT_NS::will> w = MQTT_NS::will("wt"_mb, "wmsg"_mb, false, MQTT_NS::qos::at_most_once);
+    MQTT_NS::optional<MQTT_NS::will> w = MQTT_NS::will("wt"_mb, "wmsg"_mb, MQTT_NS::retain::no | MQTT_NS::qos::at_most_once);
     MQTT_NS::optional<MQTT_NS::buffer> user = "user"_mb;
     MQTT_NS::optional<MQTT_NS::buffer> password = "pw"_mb;
     auto m = MQTT_NS::connect_message(

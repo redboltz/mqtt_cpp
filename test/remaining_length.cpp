@@ -101,16 +101,14 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
             });
         c->set_publish_handler(
             [&chk, &c, &pid_unsub, &test_contents]
-            (bool is_dup,
-             MQTT_NS::qos qos_value,
-             bool is_retain,
-             MQTT_NS::optional<packet_id_t> packet_id,
+            (MQTT_NS::optional<packet_id_t> packet_id,
+             MQTT_NS::publish_options pubopts,
              MQTT_NS::buffer topic,
              MQTT_NS::buffer contents) {
                 MQTT_CHK("h_publish");
-                BOOST_TEST(is_dup == false);
-                BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);
-                BOOST_TEST(is_retain == false);
+                BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_most_once);
+                BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
                 BOOST_CHECK(!packet_id);
                 BOOST_TEST(topic == "topic1");
                 BOOST_TEST(contents == test_contents);
@@ -213,16 +211,14 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
             });
         c->set_publish_handler(
             [&chk, &c, &pid_unsub, &test_contents]
-            (bool is_dup,
-             MQTT_NS::qos qos_value,
-             bool is_retain,
-             MQTT_NS::optional<packet_id_t> packet_id,
+            (MQTT_NS::optional<packet_id_t> packet_id,
+             MQTT_NS::publish_options pubopts,
              MQTT_NS::buffer topic,
              MQTT_NS::buffer contents) {
                 MQTT_CHK("h_publish");
-                BOOST_TEST(is_dup == false);
-                BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);
-                BOOST_TEST(is_retain == false);
+                BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_most_once);
+                BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
                 BOOST_CHECK(!packet_id);
                 BOOST_TEST(topic == "topic1");
                 BOOST_TEST(contents == test_contents);
@@ -327,16 +323,14 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
             });
         c->set_publish_handler(
             [&chk, &c, &pid_unsub, &test_contents]
-            (bool is_dup,
-             MQTT_NS::qos qos_value,
-             bool is_retain,
-             MQTT_NS::optional<packet_id_t> packet_id,
+            (MQTT_NS::optional<packet_id_t> packet_id,
+             MQTT_NS::publish_options pubopts,
              MQTT_NS::buffer topic,
              MQTT_NS::buffer contents) {
                 MQTT_CHK("h_publish");
-                BOOST_TEST(is_dup == false);
-                BOOST_TEST(qos_value == MQTT_NS::qos::at_most_once);
-                BOOST_TEST(is_retain == false);
+                BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_most_once);
+                BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
                 BOOST_CHECK(!packet_id);
                 BOOST_TEST(topic == "topic1");
                 BOOST_TEST(contents == test_contents);

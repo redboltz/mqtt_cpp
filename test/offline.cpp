@@ -549,8 +549,7 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                             pid_pub,
                             "topic1",
                             "topic1_contents",
-                            MQTT_NS::qos::at_least_once,
-                            false, // retain
+                            MQTT_NS::qos::at_least_once  | MQTT_NS::retain::no,
                             [&chk](MQTT_NS::error_code ec){
                                 BOOST_TEST( ! ec);
                                 MQTT_CHK("h_pub_finish");

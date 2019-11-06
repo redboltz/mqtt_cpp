@@ -226,20 +226,16 @@ public:
             });
         ep.set_publish_handler(
             [this, wp]
-            (bool is_dup,
-             MQTT_NS::qos qos_value,
-             bool is_retain,
-             MQTT_NS::optional<packet_id_t> packet_id,
+            (MQTT_NS::optional<packet_id_t> packet_id,
+             MQTT_NS::publish_options pubopts,
              MQTT_NS::buffer topic_name,
              MQTT_NS::buffer contents){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return publish_handler(
                     MQTT_NS::force_move(sp),
-                    is_dup,
-                    qos_value,
-                    is_retain,
                     packet_id,
+                    pubopts,
                     std::move(topic_name),
                     std::move(contents),
                     {}
@@ -247,10 +243,8 @@ public:
             });
         ep.set_v5_publish_handler(
             [this, wp]
-            (bool is_dup,
-             MQTT_NS::qos qos_value,
-             bool is_retain,
-             MQTT_NS::optional<packet_id_t> packet_id,
+            (MQTT_NS::optional<packet_id_t> packet_id,
+             MQTT_NS::publish_options pubopts,
              MQTT_NS::buffer topic_name,
              MQTT_NS::buffer contents,
              MQTT_NS::v5::properties props
@@ -260,10 +254,8 @@ public:
                 BOOST_ASSERT(sp);
                 return publish_handler(
                     MQTT_NS::force_move(sp),
-                    is_dup,
-                    qos_value,
-                    is_retain,
                     packet_id,
+                    pubopts,
                     std::move(topic_name),
                     std::move(contents),
                     std::move(props)
@@ -609,8 +601,8 @@ private:
                         as::buffer(item.topic),
                         as::buffer(d.contents),
                         std::make_pair(item.topic, d.contents),
-                        std::min(item.qos_value, d.qos_value),
-                        true, // TODO: why is this 'retain'?
+                        // TODO: why is this 'retain'?
+                        std::min(item.qos_value, d.qos_value) | MQTT_NS::retain::yes,
                         *(d.props)
                         );
                 }
@@ -645,26 +637,22 @@ private:
 
     bool publish_handler(
         con_sp_t spep,
-        bool is_dup,
-        MQTT_NS::qos qos_value,
-        bool is_retain,
         MQTT_NS::optional<packet_id_t> packet_id,
+        MQTT_NS::publish_options pubopts,
         MQTT_NS::buffer topic_name,
         MQTT_NS::buffer contents,
         MQTT_NS::v5::properties props) {
-        (void)is_dup;
 
         auto& ep = *spep;
         do_publish(
             std::move(topic_name),
             std::move(contents),
-            qos_value,
-            is_retain,
+            pubopts.get_qos() | pubopts.get_retain(),
             std::move(props));
 
         switch (ep.get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
-            switch (qos_value) {
+            switch (pubopts.get_qos()) {
             case MQTT_NS::qos::at_least_once:
                 ep.puback(packet_id.value());
                 break;
@@ -676,7 +664,7 @@ private:
             }
             break;
         case MQTT_NS::protocol_version::v5:
-            switch (qos_value) {
+            switch (pubopts.get_qos()) {
             case MQTT_NS::qos::at_least_once:
                 ep.puback(packet_id.value(), MQTT_NS::v5::puback_reason_code::success, puback_props_);
                 break;
@@ -756,8 +744,7 @@ private:
                     as::buffer(it->topic),
                     as::buffer(it->contents),
                     std::make_pair(it->topic, it->contents),
-                    std::min(it->qos_value, options.get_qos()),
-                    true,
+                    std::min(it->qos_value, options.get_qos()) | MQTT_NS::retain::yes,
                     it->props);
             }
         }
@@ -836,8 +823,7 @@ private:
     void do_publish(
         MQTT_NS::buffer topic,
         MQTT_NS::buffer contents,
-        MQTT_NS::qos qos_value,
-        bool is_retain,
+        MQTT_NS::publish_options pubopts,
         MQTT_NS::v5::properties props) {
         // For each active subscription registered for this topic
         for(auto const& sub : boost::make_iterator_range(subs_.get<tag_topic>().equal_range(topic))) {
@@ -850,8 +836,7 @@ private:
             sub.con->publish(
                 topic,
                 contents,
-                std::min(sub.qos_value, qos_value),
-                false,
+                std::min(sub.qos_value, pubopts.get_qos()) | MQTT_NS::retain::no,
                 props // TODO: Copying the properties vector for each subscription.
             );
         }
@@ -873,7 +858,7 @@ private:
                                    val.messages.emplace_back(
                                        contents,
                                        sp_props,
-                                       std::min(it->qos_value, qos_value));
+                                       std::min(it->qos_value, pubopts.get_qos()));
                                },
                                [&](session_subscription&)
                                {
@@ -904,7 +889,7 @@ private:
          *        received message has the retain flag set, in which case
          *        the retained message is removed.
          */
-        if (is_retain) {
+        if (pubopts.get_retain() == MQTT_NS::retain::yes) {
             if (contents.empty()) {
                 retains_.erase(topic);
                 BOOST_ASSERT(retains_.count(topic) == 0);
@@ -912,7 +897,7 @@ private:
             else {
                 auto const& it = retains_.find(topic);
                 if(it == retains_.end()) {
-                    auto const& ret = retains_.emplace(topic, contents, std::move(props), qos_value);
+                    auto const& ret = retains_.emplace(topic, contents, std::move(props), pubopts.get_qos());
                     BOOST_ASSERT(ret.second);
                     BOOST_ASSERT(ret.first->topic == topic);
                     BOOST_ASSERT(ret.first->contents == contents);
@@ -921,7 +906,7 @@ private:
                     retains_.modify(it,
                                     [&](retain& val)
                                     {
-                                        val.qos_value = qos_value;
+                                        val.qos_value = pubopts.get_qos();
                                         val.props = std::move(props);
                                         val.contents = contents;
                                     },
@@ -1024,8 +1009,7 @@ private:
             do_publish(
                 std::move(will.value().topic()),
                 std::move(will.value().message()),
-                will.value().get_qos(),
-                will.value().retain(),
+                will.value().get_qos() | will.value().get_retain(),
                 std::move(will.value().props()));
         }
     }
