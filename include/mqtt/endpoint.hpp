@@ -782,7 +782,7 @@ public:
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if(qos_value == qos::at_most_once) {
-            acquired_publish(
+            publish(
                 0,
                 force_move(topic_name),
                 force_move(contents),
@@ -799,7 +799,7 @@ public:
             auto contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
 
             packet_id_t packet_id = acquire_unique_packet_id();
-            acquired_publish(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos_value, retain, force_move(props));
+            publish(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos_value, retain, force_move(props));
             return packet_id;
         }
     }
@@ -836,12 +836,12 @@ public:
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         if(qos_value == qos::at_most_once) {
-            acquired_publish(0, topic_name, contents, any(), qos::at_most_once, retain, force_move(props));
+            publish(0, topic_name, contents, any(), qos::at_most_once, retain, force_move(props));
             return 0;
         }
         else {
             packet_id_t packet_id = acquire_unique_packet_id();
-            acquired_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props));
+            publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props));
             return packet_id;
         }
     }
@@ -874,7 +874,7 @@ public:
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        acquired_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props));
+        publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props));
         return packet_id;
     }
 
@@ -895,142 +895,17 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    packet_id_t subscribe(
-        string_view topic_name,
-        subscribe_options option,
-        v5::properties props = {}
-    ) {
+    template <typename T, typename... Params>
+    typename std::enable_if<
+        !std::is_convertible<
+            typename std::decay<T>::type,
+            packet_id_t
+        >::value,
+    packet_id_t
+    >::type
+    subscribe(T&& t, Params&&... params) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, topic_name, option, force_move(props));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t subscribe(
-        as::const_buffer topic_name,
-        subscribe_options option,
-        v5::properties props = {}
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, topic_name, option, force_move(props));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t subscribe(
-        buffer topic_name,
-        subscribe_options option,
-        v5::properties props = {}
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, force_move(topic_name), option, force_move(props));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param params a vector of the topic_filter and option pair.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t subscribe(
-        std::vector<std::tuple<string_view, subscribe_options>> params,
-        v5::properties props = {}
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        std::vector<std::tuple<buffer, subscribe_options>> buf_params;
-        buf_params.reserve(params.size());
-        for(auto&& p : params)
-        {
-            buf_params.emplace_back(buffer(force_move(std::get<0>(p))), std::get<1>(p));
-        }
-        acquired_subscribe(packet_id, force_move(buf_params), force_move(props));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param params a vector of the topic_filter and option pair.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t subscribe(
-        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
-        v5::properties props = {}
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, force_move(params), force_move(props));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param params a vector of the topic_filter and option pair.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t subscribe(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        v5::properties props = {}
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_subscribe(packet_id, force_move(params), force_move(props));
+        subscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
         return packet_id;
     }
 
@@ -1047,123 +922,17 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    packet_id_t unsubscribe(
-        string_view topic_name,
-        v5::properties props = {}
-    ) {
-        return unsubscribe(as::buffer(topic_name.data(), topic_name.size()), force_move(props));
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param topic_name
-     *        A topic name to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t unsubscribe(
-        as::const_buffer topic_name,
-        v5::properties props = {}
-    ) {
+    template <typename T, typename... Params>
+    typename std::enable_if<
+        !std::is_convertible<
+            typename std::decay<T>::type,
+            packet_id_t
+        >::value,
+        packet_id_t
+    >::type
+    unsubscribe(T&& t, Params&&... params) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_unsubscribe(packet_id, topic_name, force_move(props));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param topic_name
-     *        A topic name to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t unsubscribe(
-        buffer topic_name,
-        v5::properties props = {}
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_unsubscribe(packet_id, force_move(topic_name), force_move(props));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param params a collection of topic_filter.
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t unsubscribe(
-        std::vector<string_view> params,
-        v5::properties props = {}
-    ) {
-        std::vector<buffer> buf_params;
-        buf_params.reserve(params.size());
-        for(auto&& p : params)
-        {
-            buf_params.emplace_back(buffer(force_move(p)));
-        }
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_unsubscribe(packet_id, force_move(buf_params), force_move(props));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param params a collection of topic_filter.
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t unsubscribe(
-        std::vector<as::const_buffer> params,
-        v5::properties props = {}
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_unsubscribe(packet_id, force_move(params), force_move(props));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param params a collection of topic_filter.
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t unsubscribe(
-        std::vector<buffer> params,
-        v5::properties props = {}
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_unsubscribe(packet_id, force_move(params), force_move(props));
+        unsubscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
         return packet_id;
     }
 
@@ -1203,525 +972,6 @@ public:
         shutdown_from_client(*socket_);
     }
 
-    // packet_id manual setting version
-
-    /**
-     * @brief Publish with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool publish(
-        packet_id_t packet_id,
-        std::string topic_name,
-        std::string contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        v5::properties props = {}
-    ) {
-        auto sp_topic     = std::make_shared<std::string>(force_move(topic_name));
-        auto sp_contents  = std::make_shared<std::string>(force_move(contents));
-        auto topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
-        auto contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
-
-        return publish(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos_value, retain, force_move(props));
-    }
-
-    /**
-     * @brief Publish with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool publish(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        v5::properties props = {}
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool publish(
-        packet_id_t packet_id,
-        buffer topic_name,
-        buffer contents,
-        any life_keeper,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        v5::properties props = {}
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_publish(packet_id, force_move(topic_name), force_move(contents), force_move(life_keeper), qos_value, retain, force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool publish_dup(
-        packet_id_t packet_id,
-        std::string topic_name,
-        std::string contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        v5::properties props = {}
-    ) {
-        auto sp_topic     = std::make_shared<std::string>(force_move(topic_name));
-        auto sp_contents  = std::make_shared<std::string>(force_move(contents));
-        auto topic_buf    = as::buffer(sp_topic->data(), sp_topic->size());
-        auto contents_buf = as::buffer(sp_contents->data(), sp_contents->size());
-
-        return publish_dup(packet_id, topic_buf, contents_buf, std::make_pair(force_move(sp_topic), force_move(sp_contents)), qos_value, retain, force_move(props));
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool publish_dup(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        v5::properties props = {}
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_publish_dup(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool publish_dup(
-        packet_id_t packet_id,
-        buffer topic_name,
-        buffer contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        v5::properties props = {}
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
-     */
-    bool subscribe(
-        packet_id_t packet_id,
-        string_view topic_name,
-        subscribe_options option,
-        v5::properties props = {}
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_subscribe(packet_id, topic_name, option, force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
-     */
-    bool subscribe(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        subscribe_options option,
-        v5::properties props = {}
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_subscribe(packet_id, topic_name, option, force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param params a vector of the topic_filter and qos pair.
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
-     */
-    bool subscribe(
-        packet_id_t packet_id,
-        std::vector<std::tuple<string_view, subscribe_options>> params,
-        v5::properties props = {}
-    ) {
-        if (register_packet_id(packet_id)) {
-            std::vector<std::tuple<buffer, subscribe_options>> buf_params;
-            buf_params.reserve(params.size());
-            for(auto&& p : params)
-            {
-                buf_params.emplace_back(buffer(std::get<0>(p)), std::get<1>(p));
-            }
-            acquired_subscribe(packet_id, force_move(buf_params), force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param params a vector of the topic_filter and qos pair.
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
-     */
-    bool subscribe(
-        packet_id_t packet_id,
-        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
-        v5::properties props = {}
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_subscribe(packet_id, force_move(params), force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param params a vector of the topic_filter and qos pair.
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
-     */
-    bool subscribe(
-        packet_id_t packet_id,
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        v5::properties props = {}
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_subscribe(packet_id, force_move(params), force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool unsubscribe(
-        packet_id_t packet_id,
-        string_view topic_name,
-        v5::properties props = {}
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_unsubscribe(packet_id, topic_name, force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool unsubscribe(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        v5::properties props = {}
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_unsubscribe(packet_id, topic_name, force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param params a collection of topic_filter
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool unsubscribe(
-        packet_id_t packet_id,
-        std::vector<string_view> params,
-        v5::properties props = {}
-    ) {
-        if (register_packet_id(packet_id)) {
-            std::vector<buffer> buf_params;
-            buf_params.reserve(params.size());
-            for(auto&& p : params)
-            {
-                buf_params.emplace_back(buffer(force_move(p)));
-            }
-            acquired_unsubscribe(packet_id, force_move(buf_params), force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param params a collection of topic_filter
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool unsubscribe(
-        packet_id_t packet_id,
-        std::vector<as::const_buffer> params,
-        v5::properties props = {}
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_unsubscribe(packet_id, force_move(params), force_move(props));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param params a collection of topic_filter
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool unsubscribe(
-        packet_id_t packet_id,
-        std::vector<buffer> params,
-        v5::properties props = {}
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_unsubscribe(packet_id, force_move(params), force_move(props));
-            return true;
-        }
-        return false;
-    }
-
     // packet_id has already been acquired version
 
     /**
@@ -1745,7 +995,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
-    void acquired_publish(
+    void publish(
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
@@ -1755,13 +1005,13 @@ public:
     ) {
         if(qos_value == qos::at_most_once) {
             // In the at_most_once case, we know a priori that send_publish won't track the lifetime.
-            acquired_publish(packet_id,
-                             as::buffer(topic_name),
-                             as::buffer(contents),
-                             any(),
-                             qos_value,
-                             retain,
-                             force_move(props));
+            publish(packet_id,
+                    as::buffer(topic_name),
+                    as::buffer(contents),
+                    any(),
+                    qos_value,
+                    retain,
+                    force_move(props));
         }
         else {
             auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
@@ -1769,13 +1019,13 @@ public:
             auto topic_buf     = as::buffer(*sp_topic_name);
             auto contents_buf  = as::buffer(*sp_contents);
 
-            acquired_publish(packet_id,
-                             topic_buf,
-                             contents_buf,
-                             std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
-                             qos_value,
-                             retain,
-                             force_move(props));
+            publish(packet_id,
+                    topic_buf,
+                    contents_buf,
+                    std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
+                    qos_value,
+                    retain,
+                    force_move(props));
         }
     }
 
@@ -1802,7 +1052,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
-    void acquired_publish(
+    void publish(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -1847,7 +1097,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
-    void acquired_publish(
+    void publish(
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
@@ -1893,7 +1143,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
-    void acquired_publish_dup(
+    void publish_dup(
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
@@ -1904,13 +1154,13 @@ public:
         if(qos_value == qos::at_most_once)
         {
             // In the at_most_once case, we know a priori that send_publish won't track the lifetime.
-            acquired_publish_dup(packet_id,
-                                 as::buffer(topic_name),
-                                 as::buffer(contents),
-                                 any(),
-                                 qos::at_most_once,
-                                 retain,
-                                 force_move(props));
+            publish_dup(packet_id,
+                        as::buffer(topic_name),
+                        as::buffer(contents),
+                        any(),
+                        qos::at_most_once,
+                        retain,
+                        force_move(props));
         }
         else
         {
@@ -1919,13 +1169,13 @@ public:
             auto topic_buf     = as::buffer(*sp_topic_name);
             auto contents_buf  = as::buffer(*sp_contents);
 
-            acquired_publish_dup(packet_id,
-                                 topic_buf,
-                                 contents_buf,
-                                 std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
-                                 qos_value,
-                                 retain,
-                                 force_move(props));
+            publish_dup(packet_id,
+                        topic_buf,
+                        contents_buf,
+                        std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
+                        qos_value,
+                        retain,
+                        force_move(props));
         }
     }
 
@@ -1952,7 +1202,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
-    void acquired_publish_dup(
+    void publish_dup(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -1997,7 +1247,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
-    void acquired_publish_dup(
+    void publish_dup(
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
@@ -2041,7 +1291,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
-    void acquired_subscribe(
+    void subscribe(
         packet_id_t packet_id,
         string_view topic_name,
         subscribe_options option,
@@ -2068,7 +1318,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
-    void acquired_subscribe(
+    void subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         subscribe_options option,
@@ -2090,12 +1340,12 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
-    void acquired_subscribe(
+    void subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<string_view, subscribe_options>> params,
         v5::properties props = {}
     ) {
-        std::vector<std::tuple<buffer, subscribe_options>> cb_params;
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
         for (auto const& e : params) {
             cb_params.emplace_back(as::buffer(std::get<0>(e).data(), std::get<0>(e).size()), std::get<1>(e));
@@ -2116,7 +1366,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161<BR>
      */
-    void acquired_subscribe(
+    void subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<buffer, subscribe_options>> params,
         v5::properties props = {}
@@ -2143,7 +1393,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void acquired_unsubscribe(
+    void unsubscribe(
         packet_id_t packet_id,
         string_view topic_name,
         v5::properties props = {}
@@ -2165,7 +1415,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void acquired_unsubscribe(
+    void unsubscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         v5::properties props = {}
@@ -2186,7 +1436,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void acquired_unsubscribe(
+    void unsubscribe(
         packet_id_t packet_id,
         std::vector<string_view> params,
         v5::properties props = {}
@@ -2213,7 +1463,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void acquired_unsubscribe(
+    void unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
         v5::properties props = {}
@@ -2240,7 +1490,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void acquired_unsubscribe(
+    void unsubscribe(
         packet_id_t packet_id,
         std::vector<buffer> params,
         v5::properties props = {}
@@ -2608,10 +1858,9 @@ public:
      *        3.3.1.3 RETAIN
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
-    packet_id_t async_publish(
+    void async_publish(
         std::string topic_name,
         std::string contents,
         qos qos_value = qos::at_most_once,
@@ -2620,8 +1869,7 @@ public:
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
-        return packet_id;
+        async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
     }
 
     /**
@@ -2642,10 +1890,9 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
-    packet_id_t async_publish(
+    void async_publish(
         std::string topic_name,
         std::string contents,
         qos qos_value,
@@ -2655,8 +1902,7 @@ public:
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
-        return packet_id;
+        async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
     }
 
     /**
@@ -2675,10 +1921,9 @@ public:
      *        3.3.1.3 RETAIN
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
-    packet_id_t async_publish(
+    void async_publish(
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
@@ -2688,8 +1933,7 @@ public:
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(func));
-        return packet_id;
+        async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(func));
     }
 
     /**
@@ -2712,10 +1956,9 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
-    packet_id_t async_publish(
+    void async_publish(
         as::const_buffer topic_name,
         as::const_buffer contents,
         any life_keeper,
@@ -2726,8 +1969,7 @@ public:
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props), force_move(func));
-        return packet_id;
+        async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props), force_move(func));
     }
 
     /**
@@ -2744,10 +1986,9 @@ public:
      *        3.3.1.3 RETAIN
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
-    packet_id_t async_publish(
+    void async_publish(
         buffer topic_name,
         buffer contents,
         qos qos_value = qos::at_most_once,
@@ -2756,8 +1997,7 @@ public:
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
-        return packet_id;
+        async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
     }
 
     /**
@@ -2778,10 +2018,9 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
      */
-    packet_id_t async_publish(
+    void async_publish(
         buffer topic_name,
         buffer contents,
         qos qos_value,
@@ -2791,8 +2030,7 @@ public:
     ) {
         BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
         packet_id_t packet_id = (qos_value == qos::at_most_once) ? 0 : acquire_unique_packet_id();
-        acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
-        return packet_id;
+        async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
     }
 
     /**
@@ -2805,307 +2043,20 @@ public:
      *        3.8.3.1 Subscription Options
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    packet_id_t async_subscribe(
-        std::string topic_name,
-        subscribe_options option,
-        async_handler_t func = async_handler_t()
-    ) {
+    template <typename T, typename... Params>
+    typename std::enable_if<
+        !std::is_convertible<
+            typename std::decay<T>::type,
+            packet_id_t
+        >::value
+    >::type
+    async_subscribe(T&& t, Params&&... params) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-
-    packet_id_t async_subscribe(
-        std::string topic_name,
-        subscribe_options option,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(props), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t async_subscribe(
-        as::const_buffer topic_name,
-        subscribe_options option,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, option, force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t async_subscribe(
-        as::const_buffer topic_name,
-        subscribe_options option,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, topic_name, option, force_move(props), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t async_subscribe(
-        buffer topic_name,
-        subscribe_options option,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t async_subscribe(
-        buffer topic_name,
-        subscribe_options option,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(props), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param params
-     *        A collection of the pair of topic_name and option to subscribe.<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t async_subscribe(
-        std::vector<std::tuple<std::string, subscribe_options>> params,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, force_move(params), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param params
-     * A collection of the pair of topic_name and option to subscribe.<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t async_subscribe(
-        std::vector<std::tuple<std::string, subscribe_options>> params,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, force_move(params), force_move(props), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param params
-     *        A collection of the pair of topic_name and option to subscribe.<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t async_subscribe(
-        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, force_move(params), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param params
-     *        A collection of the pair of topic_name and option to subscribe.<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t async_subscribe(
-        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, force_move(params), force_move(props), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param params
-     *        A collection of the pair of topic_name and option to subscribe.<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t async_subscribe(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, force_move(params), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param params
-     *        A collection of the pair of topic_name and option to subscribe.<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    packet_id_t async_subscribe(
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_subscribe(packet_id, force_move(params), force_move(props), force_move(func));
-        return packet_id;
+        async_subscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
     }
 
     /**
@@ -3114,268 +2065,20 @@ public:
      *        A topic name to unsubscribe
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    packet_id_t async_unsubscribe(
-        std::string topic_name,
-        async_handler_t func = async_handler_t()
-    ) {
+    template <typename T, typename... Params>
+    typename std::enable_if<
+        !std::is_convertible<
+            typename std::decay<T>::type,
+            packet_id_t
+        >::value
+    >::type
+    async_unsubscribe(T&& t, Params&&... params) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, force_move(topic_name), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param topic_name
-     *        A topic name to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t async_unsubscribe(
-        std::string topic_name,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, force_move(topic_name), force_move(props), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param topic_name
-     *        A topic name to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t async_unsubscribe(
-        as::const_buffer topic_name,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, topic_name, force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param topic_name
-     *        A topic name to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t async_unsubscribe(
-        as::const_buffer topic_name,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, topic_name, force_move(props), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param topic_name
-     *        A topic name to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t async_unsubscribe(
-        buffer topic_name,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, force_move(topic_name), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param topic_name
-     *        A topic name to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t async_unsubscribe(
-        buffer topic_name,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, force_move(topic_name), force_move(props), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param params
-     *        A collection of the topic name to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t async_unsubscribe(
-        std::vector<std::string> const& params,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, params, force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param params
-     *        A collection of the topic name to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t async_unsubscribe(
-        std::vector<std::string> const& params,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, params, force_move(props), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param params
-     *        A collection of the topic name to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t async_unsubscribe(
-        std::vector<as::const_buffer> const& params,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, params, force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param params
-     *        A collection of the topic name to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t async_unsubscribe(
-        std::vector<as::const_buffer> const& params,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, params, force_move(props), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param params
-     *        A collection of the topic name to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t async_unsubscribe(
-        std::vector<buffer> params,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, force_move(params), force_move(func));
-        return packet_id;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param params
-     *        A collection of the topic name to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return packet_id.
-     * packet_id is automatically generated.<BR>
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    packet_id_t async_unsubscribe(
-        std::vector<buffer> params,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        packet_id_t packet_id = acquire_unique_packet_id();
-        acquired_async_unsubscribe(packet_id, force_move(params), force_move(props), force_move(func));
-        return packet_id;
+        async_unsubscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
     }
 
     /**
@@ -3425,1052 +2128,6 @@ public:
         }
     }
 
-    // packet_id manual setting version
-
-    /**
-     * @brief Publish with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool async_publish(
-        packet_id_t packet_id,
-        std::string topic_name,
-        std::string contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool async_publish(
-        packet_id_t packet_id,
-        std::string topic_name,
-        std::string contents,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param life_keeper A object that stays alive until the async operation is finished.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool async_publish(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool async_publish(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param life_keeper A object that stays alive until the async operation is finished.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool async_publish(
-        packet_id_t packet_id,
-        buffer topic_name,
-        buffer contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool async_publish(
-        packet_id_t packet_id,
-        buffer topic_name,
-        buffer contents,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_async_publish(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool async_publish_dup(
-        packet_id_t packet_id,
-        std::string topic_name,
-        std::string contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool async_publish_dup(
-        packet_id_t packet_id,
-        std::string topic_name,
-        std::string contents,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param life_keeper A object that stays alive until the async operation is finished.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool async_publish_dup(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param life_keeper
-     *        An object that stays alive (but is moved with force_move()) until the async operation is finished.
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool async_publish_dup(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        as::const_buffer contents,
-        any life_keeper,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, topic_name, contents, force_move(life_keeper), qos_value, retain, force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param life_keeper A object that stays alive until the async operation is finished.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool async_publish_dup(
-        packet_id_t packet_id,
-        buffer topic_name,
-        buffer contents,
-        qos qos_value = qos::at_most_once,
-        bool retain = false,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents), qos_value, retain, force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Publish as dup with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to publish
-     * @param contents
-     *        The contents to publish
-     * @param qos
-     *        qos
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901104<BR>
-     *        3.3.1.3 RETAIN
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
-     *        3.3.2.3 PUBLISH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         contents don't publish, otherwise return true and contents publish.
-     */
-    bool async_publish_dup(
-        packet_id_t packet_id,
-        buffer topic_name,
-        buffer contents,
-        qos qos_value,
-        bool retain,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        BOOST_ASSERT(qos_value == qos::at_most_once || qos_value == qos::at_least_once || qos_value == qos::exactly_once);
-        if (register_packet_id(packet_id)) {
-            acquired_async_publish_dup(packet_id, force_move(topic_name), force_move(contents),  qos_value, retain, force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    bool async_subscribe(
-        packet_id_t packet_id,
-        std::string topic_name,
-        subscribe_options option,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    bool async_subscribe(
-        packet_id_t packet_id,
-        std::string topic_name,
-        subscribe_options option,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    bool async_subscribe(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        subscribe_options option,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, option, force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    bool async_subscribe(
-        packet_id_t packet_id,
-        as::const_buffer topic_name,
-        subscribe_options option,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, topic_name, option, force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    bool async_subscribe(
-        packet_id_t packet_id,
-        buffer topic_name,
-        subscribe_options option,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    bool async_subscribe(
-        packet_id_t packet_id,
-        buffer topic_name,
-        subscribe_options option,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, force_move(topic_name), option, force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier
-     * @param params A collection of the pair of topic_name and option to subscribe.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    bool async_subscribe(
-        packet_id_t packet_id,
-        std::vector<std::tuple<std::string, subscribe_options>> params,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, force_move(params), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier
-     * @param params A collection of the pair of topic_name and option to subscribe.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    bool async_subscribe(
-        packet_id_t packet_id,
-        std::vector<std::tuple<std::string, subscribe_options>> params,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, force_move(params), force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier
-     * @param params A collection of the pair of topic_name and option to subscribe.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    bool async_subscribe(
-        packet_id_t packet_id,
-        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, force_move(params), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier
-     * @param params A collection of the pair of topic_name and option to subscribe.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    bool async_subscribe(
-        packet_id_t packet_id,
-        std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, force_move(params), force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier
-     * @param params A collection of the pair of topic_name and option to subscribe.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    bool async_subscribe(
-        packet_id_t packet_id,
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, force_move(params), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier
-     * @param params A collection of the pair of topic_name and option to subscribe.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't subscribe, otherwise return true and subscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    bool async_subscribe(
-        packet_id_t packet_id,
-        std::vector<std::tuple<buffer, subscribe_options>> params,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_subscribe(packet_id, force_move(params), force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool async_unsubscribe(
-        packet_id_t packet_id,
-        buffer topic_name,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, force_move(topic_name), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe with a manual set packet identifier
-     * @param packet_id
-     *        packet identifier
-     * @param topic_name
-     *        A topic name to subscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool async_unsubscribe(
-        packet_id_t packet_id,
-        buffer topic_name,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, force_move(topic_name), force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param packet_id
-     *        packet identifier
-     * @param params
-     *        A collection of the topic name to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool async_unsubscribe(
-        packet_id_t packet_id,
-        std::vector<std::string> const& params,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, params, force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param packet_id
-     *        packet identifier
-     * @param params
-     *        A collection of the topic names to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool async_unsubscribe(
-        packet_id_t packet_id,
-        std::vector<std::string> const& params,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, params, force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param packet_id
-     *        packet identifier
-     * @param params
-     *        A collection of the topic names to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool async_unsubscribe(
-        packet_id_t packet_id,
-        std::vector<as::const_buffer> const& params,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, params, force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param packet_id
-     *        packet identifier
-     * @param params
-     *        A collection of the topic name to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool async_unsubscribe(
-        packet_id_t packet_id,
-        std::vector<as::const_buffer> const& params,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, params, force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param packet_id
-     *        packet identifier
-     * @param params
-     *        A collection of the topic names to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool async_unsubscribe(
-        packet_id_t packet_id,
-        std::vector<buffer> params,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, force_move(params), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param packet_id
-     *        packet identifier
-     * @param params
-     *        A collection of the topic name to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * @return If packet_id is used in the publishing/subscribing sequence, then returns false and
-     *         doesn't unsubscribe, otherwise return true and unsubscribes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    bool async_unsubscribe(
-        packet_id_t packet_id,
-        std::vector<buffer> params,
-        v5::properties props,
-        async_handler_t func = async_handler_t()
-    ) {
-        if (register_packet_id(packet_id)) {
-            acquired_async_unsubscribe(packet_id, force_move(params), force_move(props), force_move(func));
-            return true;
-        }
-        return false;
-    }
-
     // packet_id has already been acquired version
 
     /**
@@ -4492,7 +2149,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
-    void acquired_async_publish(
+    void async_publish(
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
@@ -4544,7 +2201,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
-    void acquired_async_publish(
+    void async_publish(
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
@@ -4595,7 +2252,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
-    void acquired_async_publish(
+    void async_publish(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -4645,7 +2302,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
-    void acquired_async_publish(
+    void async_publish(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -4690,7 +2347,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
-    void acquired_async_publish(
+    void async_publish(
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
@@ -4740,7 +2397,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
-    void acquired_async_publish(
+    void async_publish(
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
@@ -4787,7 +2444,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
-    void acquired_async_publish_dup(
+    void async_publish_dup(
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
@@ -4839,7 +2496,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
-    void acquired_async_publish_dup(
+    void async_publish_dup(
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
@@ -4889,7 +2546,7 @@ public:
      *        3.3.1.3 RETAIN
      * @param life_keeper A object that stays alive until the async operation is finished.
      */
-    void acquired_async_publish_dup(
+    void async_publish_dup(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -4939,7 +2596,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
-    void acquired_async_publish_dup(
+    void async_publish_dup(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
@@ -4983,7 +2640,7 @@ public:
      *        3.3.1.3 RETAIN
      * @param life_keeper A object that stays alive until the async operation is finished.
      */
-    void acquired_async_publish_dup(
+    void async_publish_dup(
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
@@ -5035,7 +2692,7 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
-    void acquired_async_publish_dup(
+    void async_publish_dup(
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
@@ -5083,7 +2740,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_subscribe(
+    void async_subscribe(
         packet_id_t packet_id,
         std::string topic_name,
         subscribe_options option,
@@ -5121,7 +2778,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_subscribe(
+    void async_subscribe(
         packet_id_t packet_id,
         std::string topic_name,
         subscribe_options option,
@@ -5156,7 +2813,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_subscribe(
+    void async_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         subscribe_options option,
@@ -5192,7 +2849,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_subscribe(
+    void async_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         subscribe_options option,
@@ -5224,7 +2881,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_subscribe(
+    void async_subscribe(
         packet_id_t packet_id,
         buffer topic_name,
         subscribe_options option,
@@ -5260,7 +2917,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_subscribe(
+    void async_subscribe(
         packet_id_t packet_id,
         buffer topic_name,
         subscribe_options option,
@@ -5291,7 +2948,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_subscribe(
+    void async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<std::string, subscribe_options>> params,
         async_handler_t func = async_handler_t()
@@ -5335,7 +2992,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_subscribe(
+    void async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<std::string, subscribe_options>> params,
         v5::properties props,
@@ -5372,7 +3029,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_subscribe(
+    void async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         any life_keeper,
@@ -5401,7 +3058,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_subscribe(
+    void async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         v5::properties props,
@@ -5427,7 +3084,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_subscribe(
+    void async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<buffer, subscribe_options>> params,
         async_handler_t func = async_handler_t()
@@ -5465,7 +3122,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_subscribe(
+    void async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<buffer, subscribe_options>> params,
         v5::properties props,
@@ -5501,7 +3158,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_unsubscribe(
+    void async_unsubscribe(
         packet_id_t packet_id,
         std::string topic_name,
         async_handler_t func = async_handler_t()
@@ -5522,7 +3179,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_unsubscribe(
+    void async_unsubscribe(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         any life_keeper,
@@ -5542,7 +3199,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_unsubscribe(
+    void async_unsubscribe(
         packet_id_t packet_id,
         buffer topic_name,
         async_handler_t func = async_handler_t()
@@ -5566,7 +3223,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void acquired_async_unsubscribe(
+    void async_unsubscribe(
         packet_id_t packet_id,
         buffer topic_name,
         v5::properties props,
@@ -5588,7 +3245,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void acquired_async_unsubscribe(
+    void async_unsubscribe(
         packet_id_t packet_id,
         std::vector<std::string> params,
         async_handler_t func = async_handler_t()
@@ -5628,7 +3285,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void acquired_async_unsubscribe(
+    void async_unsubscribe(
         packet_id_t packet_id,
         std::vector<std::string> params,
         v5::properties props,
@@ -5666,7 +3323,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void acquired_async_unsubscribe(
+    void async_unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
         any life_keeper,
@@ -5696,7 +3353,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void acquired_async_unsubscribe(
+    void async_unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
         any life_keeper,
@@ -5738,7 +3395,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void acquired_async_unsubscribe(
+    void async_unsubscribe(
         packet_id_t packet_id,
         std::vector<buffer> params,
         async_handler_t func = async_handler_t()
@@ -5774,7 +3431,7 @@ public:
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void acquired_async_unsubscribe(
+    void async_unsubscribe(
         packet_id_t packet_id,
         std::vector<buffer> params,
         v5::properties props,

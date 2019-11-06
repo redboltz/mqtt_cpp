@@ -45,7 +45,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_sub = c->async_subscribe(
+                    pid_sub = c->acquire_unique_packet_id();
+                    c->async_subscribe(
+                        pid_sub,
                         as::buffer(*topic1),
                         MQTT_NS::qos::exactly_once,
                         [topic1](MQTT_NS::error_code) {}
@@ -112,7 +114,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_unsub = c->async_unsubscribe(
+                    pid_unsub = c->acquire_unique_packet_id();
+                    c->async_unsubscribe(
+                        pid_unsub,
                         as::buffer(*topic1),
                         [topic1](MQTT_NS::error_code) {}
                     );
@@ -127,7 +131,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_sub = c->async_subscribe(
+                    pid_sub = c->acquire_unique_packet_id();
+                    c->async_subscribe(
+                        pid_sub,
                         as::buffer(*topic1),
                         MQTT_NS::qos::exactly_once,
                         [topic1](MQTT_NS::error_code) {}
@@ -197,7 +203,9 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_unsub = c->async_unsubscribe(
+                    pid_unsub = c->acquire_unique_packet_id();
+                    c->async_unsubscribe(
+                        pid_unsub,
                         as::buffer(*topic1),
                         [topic1](MQTT_NS::error_code) {}
                     );
@@ -272,7 +280,9 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_sub = c->async_subscribe(
+                    pid_sub = c->acquire_unique_packet_id();
+                    c->async_subscribe(
+                        pid_sub,
                         as::buffer(*topic1),
                         MQTT_NS::qos::exactly_once,
                         [topic1](MQTT_NS::error_code) {}
@@ -285,7 +295,9 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_unsub = c->async_unsubscribe(
+                    pid_unsub = c->acquire_unique_packet_id();
+                    c->async_unsubscribe(
+                        pid_unsub,
                         as::buffer(*topic1),
                         [topic1](MQTT_NS::error_code) {}
                     );
@@ -312,7 +324,9 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->async_publish(
+                    pid_pub = c->acquire_unique_packet_id();
+                    c->async_publish(
+                        pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
                         std::make_pair(topic1, contents),
@@ -355,7 +369,9 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_sub = c->async_subscribe(
+                    pid_sub = c->acquire_unique_packet_id();
+                    c->async_subscribe(
+                        pid_sub,
                         as::buffer(*topic1),
                         MQTT_NS::qos::exactly_once,
                         [topic1](MQTT_NS::error_code) {}
@@ -368,7 +384,9 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_unsub = c->async_unsubscribe(
+                    pid_unsub = c->acquire_unique_packet_id();
+                    c->async_unsubscribe(
+                        pid_unsub,
                         as::buffer(*topic1),
                         [topic1](MQTT_NS::error_code) {}
                     );
@@ -395,7 +413,9 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_2);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->async_publish(
+                    pid_pub = c->acquire_unique_packet_id();
+                    c->async_publish(
+                        pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
                         std::make_pair(topic1, contents),
@@ -498,7 +518,9 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_sub = c->async_subscribe(
+                    pid_sub = c->acquire_unique_packet_id();
+                    c->async_subscribe(
+                        pid_sub,
                         as::buffer(*topic1),
                         MQTT_NS::qos::exactly_once,
                         [topic1](MQTT_NS::error_code) {}
@@ -524,7 +546,9 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_unsub = c->async_unsubscribe(
+                    pid_unsub = c->acquire_unique_packet_id();
+                    c->async_unsubscribe(
+                        pid_unsub,
                         as::buffer(*topic1),
                         [topic1](MQTT_NS::error_code) {}
                     );
@@ -539,7 +563,9 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->async_publish(
+                    pid_pub = c->acquire_unique_packet_id();
+                    c->async_publish(
+                        pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
                         std::make_pair(topic1, contents),
@@ -582,7 +608,9 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_sub = c->async_subscribe(
+                    pid_sub = c->acquire_unique_packet_id();
+                    c->async_subscribe(
+                        pid_sub,
                         as::buffer(*topic1),
                         MQTT_NS::qos::exactly_once,
                         [topic1](MQTT_NS::error_code) {}
@@ -608,7 +636,9 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_unsub = c->async_unsubscribe(
+                    pid_unsub = c->acquire_unique_packet_id();
+                    c->async_unsubscribe(
+                        pid_unsub,
                         as::buffer(*topic1),
                         [topic1](MQTT_NS::error_code) {}
                     );
@@ -623,7 +653,9 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_2);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
-                    pid_pub = c->async_publish(
+                    pid_pub = c->acquire_unique_packet_id();
+                    c->async_publish(
+                        pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
                         std::make_pair(topic1, contents),
@@ -713,7 +745,9 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_sub = c->async_subscribe(
+                    pid_sub = c->acquire_unique_packet_id();
+                    c->async_subscribe(
+                        pid_sub,
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_most_once,
                         [topic1](MQTT_NS::error_code) {}
@@ -779,7 +813,9 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_unsub = c->async_unsubscribe(
+                    pid_unsub = c->acquire_unique_packet_id();
+                    c->async_unsubscribe(
+                        pid_unsub,
                         as::buffer(*topic1),
                         [topic1](MQTT_NS::error_code) {}
                     );
@@ -794,7 +830,9 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_sub = c->async_subscribe(
+                    pid_sub = c->acquire_unique_packet_id();
+                    c->async_subscribe(
+                        pid_sub,
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_most_once,
                         [topic1](MQTT_NS::error_code) {}
@@ -863,7 +901,9 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_unsub = c->async_unsubscribe(
+                    pid_unsub = c->acquire_unique_packet_id();
+                    c->async_unsubscribe(
+                        pid_unsub,
                         as::buffer(*topic1),
                         [topic1](MQTT_NS::error_code) {}
                     );
@@ -922,7 +962,9 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto topic1 = MQTT_NS::allocate_buffer("topic1");
-                    pid_sub = c->async_subscribe(
+                    pid_sub = c->acquire_unique_packet_id();
+                    c->async_subscribe(
+                        pid_sub,
                         std::move(topic1),
                         MQTT_NS::qos::at_most_once,
                         [topic1](MQTT_NS::error_code) {}
@@ -987,7 +1029,9 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     auto topic1 = MQTT_NS::allocate_buffer("topic1");
-                    pid_unsub = c->async_unsubscribe(
+                    pid_unsub = c->acquire_unique_packet_id();
+                    c->async_unsubscribe(
+                        pid_unsub,
                         std::move(topic1),
                         [topic1](MQTT_NS::error_code) {}
                     );
@@ -1002,7 +1046,9 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     auto topic1 = MQTT_NS::allocate_buffer("topic1");
-                    pid_sub = c->async_subscribe(
+                    pid_sub = c->acquire_unique_packet_id();
+                    c->async_subscribe(
+                        pid_sub,
                         std::move(topic1),
                         MQTT_NS::qos::at_most_once,
                         [topic1](MQTT_NS::error_code) {}
@@ -1070,7 +1116,9 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     auto topic1 = MQTT_NS::allocate_buffer("topic1");
-                    pid_unsub = c->async_unsubscribe(
+                    pid_unsub = c->acquire_unique_packet_id();
+                    c->async_unsubscribe(
+                        pid_unsub,
                         std::move(topic1),
                         [topic1](MQTT_NS::error_code) {}
                     );
@@ -1130,7 +1178,9 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_sub = c->async_subscribe(
+                    pid_sub = c->acquire_unique_packet_id();
+                    c->async_subscribe(
+                        pid_sub,
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_least_once,
                         [topic1](MQTT_NS::error_code) {}
@@ -1143,7 +1193,9 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == 1);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_unsub = c->async_unsubscribe(
+                    pid_unsub = c->acquire_unique_packet_id();
+                    c->async_unsubscribe(
+                        pid_unsub,
                         as::buffer(*topic1),
                         [topic1](MQTT_NS::error_code) {}
                     );
@@ -1170,14 +1222,14 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_1);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
-                    auto ret = c->async_publish_dup(
+                    c->register_packet_id(1);
+                    c->async_publish_dup(
                         1,
                         as::buffer(*topic1),
                         as::buffer(*contents),
                         std::make_pair(topic1, contents),
                         MQTT_NS::qos::at_least_once
                     );
-                    BOOST_TEST(ret == true);
                     return true;
                 });
             c->set_unsuback_handler(
@@ -1214,7 +1266,9 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_sub = c->async_subscribe(
+                    pid_sub = c->acquire_unique_packet_id();
+                    c->async_subscribe(
+                        pid_sub,
                         as::buffer(*topic1),
                         MQTT_NS::qos::at_least_once,
                         [topic1](MQTT_NS::error_code) {}
@@ -1227,7 +1281,9 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == 1);
                     auto topic1 = std::make_shared<std::string>("topic1");
-                    pid_unsub = c->async_unsubscribe(
+                    pid_unsub = c->acquire_unique_packet_id();
+                    c->async_unsubscribe(
+                        pid_unsub,
                         as::buffer(*topic1),
                         [topic1](MQTT_NS::error_code) {}
                     );
@@ -1254,14 +1310,14 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_1);
                     auto topic1 = std::make_shared<std::string>("topic1");
                     auto contents = std::make_shared<std::string>("topic1_contents");
-                    auto ret = c->async_publish_dup(
+                    c->register_packet_id(1);
+                    c->async_publish_dup(
                         1,
                         as::buffer(*topic1),
                         as::buffer(*contents),
                         std::make_pair(topic1, contents),
                         MQTT_NS::qos::at_least_once
                     );
-                    BOOST_TEST(ret == true);
                     return true;
                 });
             c->set_v5_unsuback_handler(

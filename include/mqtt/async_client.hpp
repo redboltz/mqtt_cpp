@@ -235,13 +235,6 @@ public:
     void subscribe() = delete;
     void unsubscribe() = delete;
     void publish_dup() = delete;
-    void acquired_publish_at_least_once() = delete;
-    void acquired_publish_exactly_once() = delete;
-    void acquired_publish() = delete;
-    void acquired_publish_dup() = delete;
-    void acquired_subscribe() = delete;
-    void acquired_unsubscribe() = delete;
-    void acquired_pingreq() = delete;
     void pingresp() = delete;
     void connack() = delete;
     void puback() = delete;

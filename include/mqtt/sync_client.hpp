@@ -234,13 +234,6 @@ public:
     void async_subscribe() = delete;
     void async_unsubscribe() = delete;
     void async_publish_dup() = delete;
-    void acquired_async_publish_at_least_once() = delete;
-    void acquired_async_publish_exactly_once() = delete;
-    void acquired_async_publish() = delete;
-    void acquired_async_publish_dup() = delete;
-    void acquired_async_subscribe() = delete;
-    void acquired_async_unsubscribe() = delete;
-    void acquired_pingreq() = delete;
     void async_pingresp() = delete;
     void async_connack() = delete;
     void async_puback() = delete;
