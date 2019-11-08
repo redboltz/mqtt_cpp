@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE( connect ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE( connect_no_strand ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_pingresp_handler(
@@ -230,15 +230,15 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     tim.expires_from_now(boost::posix_time::seconds(2));
                     tim.async_wait(
-                        [&chk, &c, &tim](boost::system::error_code const& ec) {
+                        [&chk, &c, &tim](MQTT_NS::error_code ec) {
                             MQTT_CHK("2sec");
                             BOOST_CHECK(!ec);
                             c->publish("topic1", "timer_reset", MQTT_NS::qos::at_most_once);
                             tim.expires_from_now(boost::posix_time::seconds(4));
                             tim.async_wait(
-                                [&chk](boost::system::error_code const& ec) {
+                                [&chk](MQTT_NS::error_code ec) {
                                     MQTT_CHK("4sec_cancelled");
-                                    BOOST_TEST(ec == boost::asio::error::operation_aborted );
+                                    BOOST_TEST(ec == boost::asio::error::operation_aborted);
                                 }
                             );
                         }
@@ -255,15 +255,15 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     tim.expires_from_now(boost::posix_time::seconds(2));
                     tim.async_wait(
-                        [&chk, &c, &tim](boost::system::error_code const& ec) {
+                        [&chk, &c, &tim](MQTT_NS::error_code ec) {
                             MQTT_CHK("2sec");
                             BOOST_CHECK(!ec);
                             c->publish("topic1", "timer_reset", MQTT_NS::qos::at_most_once);
                             tim.expires_from_now(boost::posix_time::seconds(4));
                             tim.async_wait(
-                                [&chk](boost::system::error_code const& ec) {
+                                [&chk](MQTT_NS::error_code ec) {
                                     MQTT_CHK("4sec_cancelled");
-                                    BOOST_TEST(ec == boost::asio::error::operation_aborted );
+                                    BOOST_TEST(ec == boost::asio::error::operation_aborted);
                                 }
                             );
                         }
@@ -284,7 +284,7 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->set_pingresp_handler(
@@ -374,7 +374,7 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -431,7 +431,7 @@ BOOST_AUTO_TEST_CASE( nocid ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -484,7 +484,7 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
             });
         c->set_error_handler(
             [&chk, &finish]
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 MQTT_CHK("h_error");
                 finish();
             });
@@ -625,7 +625,7 @@ BOOST_AUTO_TEST_CASE( noclean ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -684,7 +684,7 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
             });
         c->set_error_handler(
             [&chk, &finish]
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 MQTT_CHK("h_error");
                 finish();
             });
@@ -745,7 +745,7 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();
@@ -804,7 +804,7 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
             });
         c->set_error_handler(
             [&chk, &finish]
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 MQTT_CHK("h_error");
                 finish();
             });
@@ -876,15 +876,15 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         switch (c->get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->async_connect(
                 []
-                (boost::system::error_code const& ec) {
-                    BOOST_TEST(ec == boost::system::errc::success);
+                (MQTT_NS::error_code ec) {
+                    BOOST_TEST( ! ec);
                 }
             );
             break;
@@ -892,8 +892,8 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
             c->async_connect(
                 MQTT_NS::v5::properties(),
                 []
-                (boost::system::error_code const& ec) {
-                    BOOST_TEST(ec == boost::system::errc::success);
+                (MQTT_NS::error_code ec) {
+                    BOOST_TEST( ! ec);
                 }
             );
             break;
@@ -1066,7 +1066,7 @@ BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect(std::move(con_ps));
@@ -1217,7 +1217,7 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
             });
         c->set_error_handler(
             []
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 BOOST_CHECK(false);
             });
         c->connect();

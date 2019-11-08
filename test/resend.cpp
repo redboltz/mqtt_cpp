@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             });
         c->set_error_handler(
             [&chk, &c, &tim]
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 MQTT_CHK("h_error");
                 // TCP level disconnection detecting timing is unpredictable.
                 // Sometimes broker first, sometimes the client (this test) first.
@@ -223,8 +223,8 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 // no corresponding connection exists
                 tim.expires_from_now(boost::posix_time::milliseconds(100));
                 tim.async_wait(
-                    [&c] (boost::system::error_code const& ec) {
-                        BOOST_ASSERT(ec == boost::system::errc::success);
+                    [&c] (MQTT_NS::error_code ec) {
+                        BOOST_ASSERT( ! ec);
                         connect_no_clean(c);
                     }
                 );
@@ -381,7 +381,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             });
         c->set_error_handler(
             [&chk, &c, &tim]
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 MQTT_CHK("h_error");
                 // TCP level disconnection detecting timing is unpredictable.
                 // Sometimes broker first, sometimes the client (this test) first.
@@ -392,8 +392,8 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 // no corresponding connection exists
                 tim.expires_from_now(boost::posix_time::milliseconds(100));
                 tim.async_wait(
-                    [&c] (boost::system::error_code const& ec) {
-                        BOOST_ASSERT(ec == boost::system::errc::success);
+                    [&c] (MQTT_NS::error_code ec) {
+                        BOOST_ASSERT( ! ec);
                         connect_no_clean(c);
                     }
                 );
@@ -601,7 +601,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             });
         c->set_error_handler(
             [&chk, &c, &tim]
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 MQTT_CHK("h_error");
                 // TCP level disconnection detecting timing is unpredictable.
                 // Sometimes broker first, sometimes the client (this test) first.
@@ -612,8 +612,8 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 // no corresponding connection exists
                 tim.expires_from_now(boost::posix_time::milliseconds(100));
                 tim.async_wait(
-                    [&c] (boost::system::error_code const& ec) {
-                        BOOST_ASSERT(ec == boost::system::errc::success);
+                    [&c] (MQTT_NS::error_code ec) {
+                        BOOST_ASSERT( ! ec);
                         connect_no_clean(c);
                     }
                 );
@@ -786,7 +786,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
             });
         c->set_error_handler(
             [&chk, &c, &tim]
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 auto ret = chk.match(
                     "h_connack2",
                     [&] {
@@ -800,8 +800,8 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                         // no corresponding connection exists
                         tim.expires_from_now(boost::posix_time::milliseconds(100));
                         tim.async_wait(
-                            [&c] (boost::system::error_code const& ec) {
-                                BOOST_ASSERT(ec == boost::system::errc::success);
+                            [&c] (MQTT_NS::error_code ec) {
+                                BOOST_ASSERT( ! ec);
                                 connect_no_clean(c);
                             }
                         );
@@ -818,8 +818,8 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                         // no corresponding connection exists
                         tim.expires_from_now(boost::posix_time::milliseconds(100));
                         tim.async_wait(
-                            [&c] (boost::system::error_code const& ec) {
-                                BOOST_ASSERT(ec == boost::system::errc::success);
+                            [&c] (MQTT_NS::error_code ec) {
+                                BOOST_ASSERT( ! ec);
                                 connect_no_clean(c);
                             }
                         );
@@ -991,7 +991,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             });
         c->set_error_handler(
             [&chk, &c, &tim]
-            (boost::system::error_code const&) {
+            (MQTT_NS::error_code) {
                 MQTT_CHK("h_error1");
                 // TCP level disconnection detecting timing is unpredictable.
                 // Sometimes broker first, sometimes the client (this test) first.
@@ -1002,8 +1002,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 // no corresponding connection exists
                 tim.expires_from_now(boost::posix_time::milliseconds(100));
                 tim.async_wait(
-                    [&c] (boost::system::error_code const& ec) {
-                        BOOST_ASSERT(ec == boost::system::errc::success);
+                    [&c] (MQTT_NS::error_code ec) {
+                        BOOST_ASSERT( ! ec);
                         connect_no_clean(c);
                     }
                 );

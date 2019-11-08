@@ -16,6 +16,7 @@
 
 #include <mqtt/namespace.hpp>
 #include <mqtt/string_view.hpp>
+#include <mqtt/error_code.hpp>
 
 namespace MQTT_NS {
 
@@ -101,7 +102,7 @@ public:
         auto req_size = as::buffer_size(buffers);
 
         using beast_read_handler_t =
-            std::function<void(boost::system::error_code const& ec, std::shared_ptr<void>)>;
+            std::function<void(error_code ec, std::shared_ptr<void>)>;
 
         std::shared_ptr<beast_read_handler_t> beast_read_handler;
         if (req_size <= buffer_.size()) {
@@ -114,7 +115,7 @@ public:
         beast_read_handler.reset(
             new beast_read_handler_t(
                 [this, req_size, buffers, handler = std::forward<ReadHandler>(handler)]
-                (boost::system::error_code const& ec, std::shared_ptr<void> const& v) mutable {
+                (error_code ec, std::shared_ptr<void> const& v) mutable {
                     if (ec) {
                         std::forward<ReadHandler>(handler)(ec, 0);
                         return;
@@ -132,7 +133,7 @@ public:
                             as::bind_executor(
                                 strand_,
                                 [beast_read_handler]
-                                (boost::system::error_code const& ec, std::size_t) {
+                                (error_code ec, std::size_t) {
                                     (*beast_read_handler)(ec, beast_read_handler);
                                 }
                             )
@@ -150,7 +151,7 @@ public:
             as::bind_executor(
                 strand_,
                 [beast_read_handler]
-                (boost::system::error_code const& ec, std::size_t) {
+                (error_code ec, std::size_t) {
                     (*beast_read_handler)(ec, beast_read_handler);
                 }
             )

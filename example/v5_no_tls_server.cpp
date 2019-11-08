@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
     );
 
     s.set_error_handler(
-        [](boost::system::error_code const& ec) {
+        [](MQTT_NS::error_code ec) {
             std::cout << "error: " << ec.message() << std::endl;
         }
     );
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
                 });
             ep.set_error_handler(
                 [&connections, &subs, wp]
-                (boost::system::error_code const& ec){
+                (MQTT_NS::error_code ec){
                     std::cout << "[server] error: " << ec.message() << std::endl;
                     auto sp = wp.lock();
                     BOOST_ASSERT(sp);

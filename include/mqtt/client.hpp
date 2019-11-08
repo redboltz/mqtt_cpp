@@ -597,7 +597,7 @@ public:
                 r = force_move(r)
             ]
             (
-                boost::system::error_code const& ec,
+                error_code ec,
                 as::ip::tcp::resolver::results_type eps
             ) mutable {
                 if (ec) {
@@ -731,7 +731,7 @@ public:
                 r = force_move(r)
             ]
             (
-                boost::system::error_code const& ec,
+                error_code ec,
                 as::ip::tcp::resolver::results_type eps
             ) mutable {
                 if (ec) {
@@ -771,7 +771,7 @@ public:
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
             tim_close_.expires_from_now(timeout);
             tim_close_.async_wait(
-                [wp = force_move(wp)](boost::system::error_code const& ec) {
+                [wp = force_move(wp)](error_code ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
                             sp->force_disconnect();
@@ -825,7 +825,7 @@ public:
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
             tim_close_.expires_from_now(timeout);
             tim_close_.async_wait(
-                [wp = force_move(wp)](boost::system::error_code const& ec) {
+                [wp = force_move(wp)](error_code ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
                             sp->force_disconnect();
@@ -864,7 +864,7 @@ public:
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
             tim_close_.expires_from_now(timeout);
             tim_close_.async_wait(
-                [wp = force_move(wp)](boost::system::error_code const& ec) {
+                [wp = force_move(wp)](error_code ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
                             sp->force_disconnect();
@@ -1158,7 +1158,7 @@ private:
                 props = force_move(props),
                 func = force_move(func)
             ]
-            (boost::system::error_code const& ec) mutable {
+            (error_code ec) mutable {
                 if (func) func(ec);
                 if (ec) return;
                 start_session(force_move(props), force_move(session_life_keeper));
@@ -1183,7 +1183,7 @@ private:
                 props = force_move(props),
                 func = force_move(func)
             ]
-            (boost::system::error_code const& ec) mutable {
+            (error_code ec) mutable {
                 if (func) func(ec);
                 if (ec) return;
                 start_session(force_move(props), force_move(session_life_keeper));
@@ -1207,7 +1207,7 @@ private:
                 props = force_move(props),
                 func = force_move(func)
             ]
-            (boost::system::error_code const& ec) mutable {
+            (error_code ec) mutable {
                 if (ec) {
                     if (func) func(ec);
                     return;
@@ -1222,7 +1222,7 @@ private:
                         props = force_move(props),
                         func = force_move(func)
                     ]
-                    (boost::system::error_code const& ec) mutable {
+                    (error_code ec) mutable {
                         if (func) func(ec);
                         if (ec) return;
                         start_session(force_move(props), force_move(session_life_keeper));
@@ -1283,7 +1283,7 @@ private:
                 props = force_move(props),
                 func = force_move(func)
             ]
-            (boost::system::error_code const& ec, Iterator) mutable {
+            (error_code ec, Iterator) mutable {
                 if (ec) {
                     if (func) func(ec);
                     return;
@@ -1303,7 +1303,7 @@ private:
         }
     }
 
-    void handle_timer(boost::system::error_code const& ec) {
+    void handle_timer(error_code ec) {
         if (!ec) {
             if (async_pingreq_) {
                 base::async_pingreq();
@@ -1318,7 +1318,7 @@ private:
         tim_ping_.expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
         std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
         tim_ping_.async_wait(
-            [wp = force_move(wp)](boost::system::error_code const& ec) {
+            [wp = force_move(wp)](error_code ec) {
                 if (auto sp = wp.lock()) {
                     sp->handle_timer(ec);
                 }
@@ -1335,7 +1335,7 @@ private:
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
     }
 
-    void on_error(boost::system::error_code const& ec) override {
+    void on_error(error_code ec) override {
         (void)ec;
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
     }

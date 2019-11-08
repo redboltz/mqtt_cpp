@@ -106,7 +106,7 @@ void client_proc(Client& c) {
         });
     c->set_error_handler( // this handler doesn't depend on MQTT protocol version
         []
-        (boost::system::error_code const& ec){
+        (MQTT_NS::error_code ec){
             locked_cout() << "[client] error: " << ec.message() << std::endl;
         });
 
@@ -145,7 +145,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
     using namespace MQTT_NS::literals; // for ""_mb
 
     s.set_error_handler( // this handler doesn't depend on MQTT protocol version
-        [](boost::system::error_code const& ec) {
+        [](MQTT_NS::error_code ec) {
             locked_cout() << "[server] error: " << ec.message() << std::endl;
         }
     );
@@ -178,7 +178,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                 });
             ep.set_error_handler( // this handler doesn't depend on MQTT protocol version
                 [&connections, wp]
-                (boost::system::error_code const& ec){
+                (MQTT_NS::error_code ec){
                     locked_cout() << "[server] error: " << ec.message() << std::endl;
                     auto sp = wp.lock();
                     BOOST_ASSERT(sp);

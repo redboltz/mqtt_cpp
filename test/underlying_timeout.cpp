@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
 #endif // BOOST_VERSION >= 107000
         eps.begin(), eps.end(),
         [&]
-        (boost::system::error_code const& ec, auto) {
+        (MQTT_NS::error_code ec, auto) {
             if (ec) {
                 std::cout << ec.message() << std::endl;
             }
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
                 socket,
                 as::buffer(&buf, 1),
                 [&]
-                (boost::system::error_code const& ec,
+                (MQTT_NS::error_code ec,
                  std::size_t /*bytes_transferred*/){
                     BOOST_TEST(ec);
                     server.close();
@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
 #endif // BOOST_VERSION >= 107000
         eps.begin(), eps.end(),
         [&]
-        (boost::system::error_code const& ec, auto) {
+        (MQTT_NS::error_code ec, auto) {
             if (ec) {
                 std::cout << ec.message() << std::endl;
             }
@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
                 socket,
                 as::buffer(&buf, 1),
                 [&]
-                (boost::system::error_code const& ec,
+                (MQTT_NS::error_code ec,
                  std::size_t /*bytes_transferred*/){
                     BOOST_TEST(ec);
                     server.close();
@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
 #endif // BOOST_VERSION >= 107000
         eps.begin(), eps.end(),
         [&]
-        (boost::system::error_code const& ec, auto) {
+        (MQTT_NS::error_code ec, auto) {
             if (ec) {
                 std::cout << ec.message() << std::endl;
             }
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
             socket.next_layer().async_handshake(
                 as::ssl::stream_base::client,
                 [&]
-                (boost::system::error_code const& ec) {
+                (MQTT_NS::error_code ec) {
                     if (ec) {
                         std::cout << ec.message() << std::endl;
                     }
@@ -211,7 +211,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
                         socket,
                         as::buffer(&buf, 1),
                         [&]
-                        (boost::system::error_code const& ec,
+                        (MQTT_NS::error_code ec,
                          std::size_t /*bytes_transferred*/){
                             BOOST_TEST(ec);
                             server.close();
@@ -271,7 +271,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
         socket.lowest_layer(),
         eps.begin(), eps.end(),
         [&]
-        (boost::system::error_code const& ec, auto) {
+        (MQTT_NS::error_code ec, auto) {
             if (ec) {
                 std::cout << ec.message() << std::endl;
             }
@@ -281,7 +281,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
                 socket,
                 as::buffer(&buf, 1),
                 [&]
-                (boost::system::error_code const& ec,
+                (MQTT_NS::error_code ec,
                  std::size_t /*bytes_transferred*/){
                     BOOST_TEST(ec);
                     server.close();
