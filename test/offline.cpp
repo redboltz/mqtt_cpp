@@ -544,7 +544,9 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                     [&] {
                         MQTT_CHK("h_close1");
                         // offline publish
-                        pid_pub = c->async_publish(
+                        pid_pub = c->acquire_unique_packet_id();
+                        c->async_publish(
+                            pid_pub,
                             "topic1",
                             "topic1_contents",
                             MQTT_NS::qos::at_least_once,

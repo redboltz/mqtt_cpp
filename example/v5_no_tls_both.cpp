@@ -38,6 +38,7 @@ void client_proc(
             if (reason_code == MQTT_NS::v5::connect_reason_code::success) {
                 pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", MQTT_NS::qos::at_most_once);
                 pid_sub2 = c->subscribe(
+                    std::vector<std::tuple<MQTT_NS::string_view, MQTT_NS::subscribe_options>>
                     {
                         { "mqtt_client_cpp/topic2_1", MQTT_NS::qos::at_least_once },
                         { "mqtt_client_cpp/topic2_2", MQTT_NS::qos::exactly_once }

@@ -49,6 +49,7 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                 pid_sub = c->subscribe(
+                    std::vector<std::tuple<MQTT_NS::string_view, MQTT_NS::subscribe_options>>
                     {
                         {"topic1", MQTT_NS::qos::at_most_once},
                         {"topic2", MQTT_NS::qos::at_most_once}
@@ -131,9 +132,10 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
                         BOOST_TEST(topic == "topic2");
                         BOOST_TEST(contents == "topic2_contents");
                         pid_unsub = c->unsubscribe(
+                            std::vector<MQTT_NS::string_view>
                             {
-                                "topic1"s,
-                                "topic2"s
+                                "topic1",
+                                "topic2"
                             }
                         );
                     }

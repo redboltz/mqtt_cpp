@@ -2164,9 +2164,8 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_1);
-                    auto ret =
-                        c->publish_dup(1, "topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
-                    BOOST_TEST(ret == true);
+                    BOOST_TEST(c->register_packet_id(1) == true);
+                    c->publish_dup(1, "topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
                     return true;
                 });
             c->set_unsuback_handler(
@@ -2232,9 +2231,8 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_1);
-                    auto ret =
-                        c->publish_dup(1, "topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
-                    BOOST_TEST(ret == true);
+                    BOOST_TEST(c->register_packet_id(1) == true);
+                    c->publish_dup(1, "topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -2349,9 +2347,8 @@ BOOST_AUTO_TEST_CASE( publish_dup_function_buffer ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_1);
-                    auto ret =
-                        c->publish_dup(1, "topic1"_mb, "topic1_contents"_mb, MQTT_NS::qos::at_least_once);
-                    BOOST_TEST(ret == true);
+                    BOOST_TEST(c->register_packet_id(1) == true);
+                    c->publish_dup(1, "topic1"_mb, "topic1_contents"_mb, MQTT_NS::qos::at_least_once);
                     return true;
                 });
             c->set_unsuback_handler(
@@ -2417,9 +2414,8 @@ BOOST_AUTO_TEST_CASE( publish_dup_function_buffer ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_1);
-                    auto ret =
-                        c->publish_dup(1, "topic1"_mb, "topic1_contents"_mb, MQTT_NS::qos::at_least_once);
-                    BOOST_TEST(ret == true);
+                    BOOST_TEST(c->register_packet_id(1) == true);
+                    c->publish_dup(1, "topic1"_mb, "topic1_contents"_mb, MQTT_NS::qos::at_least_once);
                     return true;
                 });
             c->set_v5_unsuback_handler(

@@ -227,6 +227,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     c->subscribe(
+                        std::vector<std::tuple<MQTT_NS::string_view, MQTT_NS::subscribe_options>>
                         {
                             {"topic1", MQTT_NS::qos::at_most_once},
                             {"topic2", MQTT_NS::qos::exactly_once}
@@ -238,7 +239,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
                 [&chk, &c]
                 (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_return_code> /*results*/) {
                     MQTT_CHK("h_suback");
-                    c->unsubscribe( { MQTT_NS::string_view{"topic1"}, MQTT_NS::string_view{"topic2"} } );
+                    c->unsubscribe( std::vector<MQTT_NS::string_view>{ MQTT_NS::string_view{"topic1"}, MQTT_NS::string_view{"topic2"} } );
                     return true;
                 });
             c->set_unsuback_handler(
@@ -257,6 +258,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     c->subscribe(
+                        std::vector<std::tuple<MQTT_NS::string_view, MQTT_NS::subscribe_options>>
                         {
                             {"topic1", MQTT_NS::qos::at_most_once},
                             {"topic2", MQTT_NS::qos::exactly_once}
@@ -268,7 +270,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
                 [&chk, &c]
                 (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::suback_reason_code> /*reasons*/, MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_suback");
-                    c->unsubscribe( { MQTT_NS::string_view{"topic1"}, MQTT_NS::string_view{"topic2"} });
+                    c->unsubscribe( std::vector<MQTT_NS::string_view>{ MQTT_NS::string_view{"topic1"}, MQTT_NS::string_view{"topic2"} });
                     return true;
                 });
             c->set_v5_unsuback_handler(
@@ -526,6 +528,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     c->async_subscribe(
+                        std::vector<std::tuple<std::string, MQTT_NS::subscribe_options>>
                         {
                             {"topic1", MQTT_NS::qos::at_most_once},
                             {"topic2", MQTT_NS::qos::exactly_once}
@@ -563,6 +566,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     c->async_subscribe(
+                        std::vector<std::tuple<std::string, MQTT_NS::subscribe_options>>
                         {
                             {"topic1", MQTT_NS::qos::at_most_once},
                             {"topic2", MQTT_NS::qos::exactly_once}
