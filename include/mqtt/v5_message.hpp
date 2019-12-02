@@ -200,7 +200,7 @@ public:
         }
         if (w) {
             connect_flags_ |= connect_flags::will_flag;
-            if (w.value().retain()) connect_flags_ |= connect_flags::will_retain;
+            if (w.value().get_retain() == retain::yes) connect_flags_ |= connect_flags::will_retain;
             connect_flags::set_will_qos(connect_flags_, w.value().get_qos());
 
             auto wpb = variable_bytes(will_property_length_);
@@ -544,15 +544,13 @@ template <std::size_t PacketIdBytes>
 class basic_publish_message {
 public:
     basic_publish_message(
-        as::const_buffer topic_name,
-        qos qos_value,
-        bool retain,
-        bool dup,
         typename packet_id_type<PacketIdBytes>::type packet_id,
-        properties props,
-        as::const_buffer payload
+        as::const_buffer topic_name,
+        as::const_buffer payload,
+        publish_options pubopts,
+        properties props
     )
-        : fixed_header_(make_fixed_header(control_packet_type::publish, 0b0000)),
+        : fixed_header_(make_fixed_header(control_packet_type::publish, 0b0000) | pubopts.operator std::uint8_t()),
           topic_name_(topic_name),
           topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_name_.size())) },
           property_length_(
@@ -571,7 +569,7 @@ public:
               2                      // topic name length
               + topic_name_.size()   // topic name
               + payload_.size()      // payload
-              + (  (qos_value == qos::at_least_once || qos_value == qos::exactly_once)
+              + (  (pubopts.get_qos() == qos::at_least_once || pubopts.get_qos() == qos::exactly_once)
                  ? PacketIdBytes // packet_id
                  : 0)
           ),
@@ -580,7 +578,7 @@ public:
               1 +                   // remaining length
               1 +                   // topic name length
               1 +                   // topic name
-              ((qos_value == qos::at_most_once) ? 0U : 1U) + // packet id
+              ((pubopts.get_qos() == qos::at_most_once) ? 0U : 1U) + // packet id
               1 +                   // property length
               std::accumulate(
                   props_.begin(),
@@ -594,9 +592,6 @@ public:
           )
     {
         utf8string_check(topic_name_);
-        publish::set_qos(fixed_header_, qos_value);
-        publish::set_retain(fixed_header_, retain);
-        publish::set_dup(fixed_header_, dup);
 
         auto pb = variable_bytes(property_length_);
         for (auto e : pb) {
@@ -609,8 +604,8 @@ public:
         for (auto e : rb) {
             remaining_length_buf_.push_back(e);
         }
-        if (qos_value == qos::at_least_once ||
-            qos_value == qos::exactly_once) {
+        if (pubopts.get_qos() == qos::at_least_once ||
+            pubopts.get_qos() == qos::exactly_once) {
             packet_id_.reserve(PacketIdBytes);
             add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
         }

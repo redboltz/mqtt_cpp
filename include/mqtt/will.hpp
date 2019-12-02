@@ -10,9 +10,10 @@
 #include <string>
 
 #include <mqtt/namespace.hpp>
-#include <mqtt/subscribe_options.hpp>
-#include <mqtt/property_variant.hpp>
+
 #include <mqtt/move.hpp>
+#include <mqtt/publish.hpp>
+#include <mqtt/property_variant.hpp>
 
 namespace MQTT_NS {
 
@@ -24,57 +25,19 @@ public:
      *        A topic name to publish as a will
      * @param message
      *        The contents to publish as a will
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
-     *        3.3.1.3 RETAIN
+     * @param pubopts
+     *        Qos and retain flag
      * @param qos
      *        qos
      */
     will(buffer topic,
          buffer message,
-         bool retain,
-         qos qos_value,
+         publish_options pubopts = {},
          v5::properties props = {})
         :topic_(force_move(topic)),
          message_(force_move(message)),
-         retain_(retain),
-         qos_(qos_value),
+         pubopts_(pubopts),
          props_(force_move(props))
-    {}
-
-    /**
-     * @brief constructor (QoS0)
-     * @param topic
-     *        A topic name to publish as a will
-     * @param message
-     *        The contents to publish as a will
-     * @param retain
-     *        A retain flag. If set it to true, the contents is retained.<BR>
-     *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718038<BR>
-     *        3.3.1.3 RETAIN
-     */
-    will(buffer topic,
-         buffer message,
-         bool retain = false,
-         v5::properties props = {})
-        :will(force_move(topic), force_move(message), retain, qos::at_most_once, force_move(props))
-    {}
-
-    /**
-     * @brief constructor (retain = false)
-     * @param topic
-     *        A topic name to publish as a will
-     * @param message
-     *        The contents to publish as a will
-     * @param qos
-     *        qos
-     */
-    will(buffer topic,
-         buffer message,
-         qos qos_value,
-         v5::properties props = {})
-        :will(force_move(topic), force_move(message), false, qos_value, force_move(props))
     {}
 
     constexpr buffer const& topic() const {
@@ -89,11 +52,11 @@ public:
     constexpr buffer& message() {
         return message_;
     }
-    constexpr bool retain() const {
-        return retain_;
+    constexpr retain get_retain() const {
+        return pubopts_.get_retain();
     }
     constexpr qos get_qos() const {
-        return qos_;
+        return pubopts_.get_qos();
     }
     constexpr v5::properties const& props() const {
         return props_;
@@ -105,8 +68,7 @@ public:
 private:
     buffer topic_;
     buffer message_;
-    bool retain_ = false;
-    qos qos_ = qos::at_most_once;
+    publish_options pubopts_;
     v5::properties props_;
 };
 

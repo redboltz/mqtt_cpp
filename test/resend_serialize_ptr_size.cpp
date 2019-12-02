@@ -815,7 +815,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
                     // The previous connection is not set Session Expiry Interval.
                     // That means session state is cleared on close.
                     BOOST_TEST(sp == false);
-                    pid_pub = c1->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once, false, std::move(ps));
+                    pid_pub = c1->publish("topic1", "topic1_contents", MQTT_NS::retain::no | MQTT_NS::qos::at_least_once, std::move(ps));
                     c1->force_disconnect();
                 }
             );

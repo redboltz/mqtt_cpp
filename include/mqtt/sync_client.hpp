@@ -226,14 +226,10 @@ public:
 
     void async_connect() = delete;
     void async_disconnect() = delete;
-    void async_publish_at_most_once() = delete;
-    void async_publish_at_least_once() = delete;
-    void async_publish_exactly_once() = delete;
 
     void async_publish() = delete;
     void async_subscribe() = delete;
     void async_unsubscribe() = delete;
-    void async_publish_dup() = delete;
     void async_pingresp() = delete;
     void async_connack() = delete;
     void async_puback() = delete;

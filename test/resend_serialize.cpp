@@ -15,9 +15,7 @@ using namespace MQTT_NS::literals;
 
 template <typename Client, typename Packet>
 inline
-typename std::enable_if<
-    sizeof(typename Client::element_type::packet_id_t) == 2
->::type
+std::enable_if_t< sizeof(typename Client::element_type::packet_id_t) == 2 >
 restore_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_serialized_message(
         MQTT_NS::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size()))),
@@ -27,9 +25,7 @@ restore_serialized_publish_message(Client const& c, Packet const& packet) {
 
 template <typename Client, typename Packet>
 inline
-typename std::enable_if<
-    sizeof(typename Client::element_type::packet_id_t) == 4
->::type
+std::enable_if_t< sizeof(typename Client::element_type::packet_id_t) == 4 >
 restore_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_serialized_message(
         MQTT_NS::publish_32_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size()))),
@@ -39,9 +35,7 @@ restore_serialized_publish_message(Client const& c, Packet const& packet) {
 
 template <typename Client, typename Packet>
 inline
-typename std::enable_if<
-    sizeof(typename Client::element_type::packet_id_t) == 2
->::type
+std::enable_if_t< sizeof(typename Client::element_type::packet_id_t) == 2 >
 restore_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_serialized_message(
         MQTT_NS::pubrel_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size())))
@@ -50,9 +44,7 @@ restore_serialized_pubrel_message(Client const& c, Packet const& packet) {
 
 template <typename Client, typename Packet>
 inline
-typename std::enable_if<
-    sizeof(typename Client::element_type::packet_id_t) == 4
->::type
+std::enable_if_t< sizeof(typename Client::element_type::packet_id_t) == 4 >
 restore_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_serialized_message(
         MQTT_NS::pubrel_32_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size())))
@@ -62,9 +54,7 @@ restore_serialized_pubrel_message(Client const& c, Packet const& packet) {
 
 template <typename Client, typename Serialized>
 inline
-typename std::enable_if<
-    sizeof(typename Client::element_type::packet_id_t) == 2
->::type
+std::enable_if_t< sizeof(typename Client::element_type::packet_id_t) == 2 >
 set_serialize_handlers(Client const& c, Serialized& serialized) {
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_serialize_handlers(
@@ -84,9 +74,7 @@ set_serialize_handlers(Client const& c, Serialized& serialized) {
 
 template <typename Client, typename Serialized>
 inline
-typename std::enable_if<
-    sizeof(typename Client::element_type::packet_id_t) == 4
->::type
+std::enable_if_t< sizeof(typename Client::element_type::packet_id_t) == 4 >
 set_serialize_handlers(Client const& c, Serialized& serialized) {
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_serialize_handlers(
@@ -767,9 +755,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
 
 template <typename Client, typename Packet>
 inline
-typename std::enable_if<
-    sizeof(typename Client::element_type::packet_id_t) == 2
->::type
+std::enable_if_t< sizeof(typename Client::element_type::packet_id_t) == 2 >
 restore_v5_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
         MQTT_NS::v5::publish_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size()))),
@@ -779,9 +765,7 @@ restore_v5_serialized_publish_message(Client const& c, Packet const& packet) {
 
 template <typename Client, typename Packet>
 inline
-typename std::enable_if<
-    sizeof(typename Client::element_type::packet_id_t) == 4
->::type
+std::enable_if_t< sizeof(typename Client::element_type::packet_id_t) == 4 >
 restore_v5_serialized_publish_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
         MQTT_NS::v5::publish_32_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size()))),
@@ -791,9 +775,7 @@ restore_v5_serialized_publish_message(Client const& c, Packet const& packet) {
 
 template <typename Client, typename Packet>
 inline
-typename std::enable_if<
-    sizeof(typename Client::element_type::packet_id_t) == 2
->::type
+std::enable_if_t< sizeof(typename Client::element_type::packet_id_t) == 2 >
 restore_v5_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
         MQTT_NS::v5::pubrel_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size()))),
@@ -803,9 +785,7 @@ restore_v5_serialized_pubrel_message(Client const& c, Packet const& packet) {
 
 template <typename Client, typename Packet>
 inline
-typename std::enable_if<
-    sizeof(typename Client::element_type::packet_id_t) == 4
->::type
+std::enable_if_t< sizeof(typename Client::element_type::packet_id_t) == 4 >
 restore_v5_serialized_pubrel_message(Client const& c, Packet const& packet) {
     c->restore_v5_serialized_message(
         MQTT_NS::v5::pubrel_32_message(MQTT_NS::buffer(MQTT_NS::string_view(packet.data(), packet.size()))),
@@ -816,9 +796,7 @@ restore_v5_serialized_pubrel_message(Client const& c, Packet const& packet) {
 
 template <typename Client, typename Serialized>
 inline
-typename std::enable_if<
-    sizeof(typename Client::element_type::packet_id_t) == 2
->::type
+std::enable_if_t< sizeof(typename Client::element_type::packet_id_t) == 2 >
 set_v5_serialize_handlers(Client const& c, Serialized& serialized) {
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_v5_serialize_handlers(
@@ -838,9 +816,7 @@ set_v5_serialize_handlers(Client const& c, Serialized& serialized) {
 
 template <typename Client, typename Serialized>
 inline
-typename std::enable_if<
-    sizeof(typename Client::element_type::packet_id_t) == 4
->::type
+std::enable_if_t< sizeof(typename Client::element_type::packet_id_t) == 4 >
 set_v5_serialize_handlers(Client const& c, Serialized& serialized) {
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_v5_serialize_handlers(
@@ -1013,7 +989,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
                     // The previous connection is not set Session Expiry Interval.
                     // That means session state is cleared on close.
                     BOOST_TEST(sp == false);
-                    pid_pub = c1->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once, false, std::move(ps));
+                    pid_pub = c1->publish("topic1", "topic1_contents", MQTT_NS::retain::no | MQTT_NS::qos::at_least_once, std::move(ps));
                     c1->force_disconnect();
                 }
             );

@@ -9,7 +9,7 @@
 
 #include <cstdint>
 #include <mqtt/namespace.hpp>
-#include <mqtt/subscribe_options.hpp>
+#include <mqtt/publish.hpp>
 
 namespace MQTT_NS {
 
@@ -29,8 +29,10 @@ constexpr bool has_will_flag(char v) {
     return (v & will_flag) != 0;
 }
 
-constexpr bool has_will_retain(char v) {
-    return (v & will_retain) != 0;
+constexpr retain has_will_retain(char v) {
+    return   ((v & will_retain) != 0)
+           ? retain::yes
+           : retain::no;
 }
 
 constexpr bool has_password_flag(char v) {

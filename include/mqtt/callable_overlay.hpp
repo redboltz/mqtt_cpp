@@ -126,32 +126,28 @@ struct callable_overlay final : public Impl
 
     /**
      * @brief Publish handler
-     * @param fixed_header
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718038<BR>
-     *        3.3.1 Fixed header<BR>
-     *        You can check the fixed header using MQTT_NS::publish functions.
      * @param packet_id
      *        packet identifier<BR>
      *        If received publish's QoS is 0, packet_id is MQTT_NS::nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718039<BR>
      *        3.3.2  Variable header
+     * @param fixed_header
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718038<BR>
+     *        3.3.1 Fixed header<BR>
+     *        You can check the fixed header using MQTT_NS::publish functions.
      * @param topic_name
      *        Topic name
      * @param contents
      *        Published contents
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    MQTT_ALWAYS_INLINE bool on_publish(bool dup,
-                                           qos qos_value,
-                                           bool retain,
-                                           MQTT_NS::optional<packet_id_t> packet_id,
-                                           MQTT_NS::buffer topic_name,
-                                           MQTT_NS::buffer contents) override final {
+    MQTT_ALWAYS_INLINE bool on_publish(MQTT_NS::optional<packet_id_t> packet_id,
+                                       MQTT_NS::publish_options pubopts,
+                                       MQTT_NS::buffer topic_name,
+                                       MQTT_NS::buffer contents) override final {
         return    ! h_publish_
-               || h_publish_(dup,
-                             qos_value,
-                             retain,
-                             packet_id,
+               || h_publish_(packet_id,
+                             pubopts,
                              MQTT_NS::force_move(topic_name),
                              MQTT_NS::force_move(contents));
     }
@@ -366,15 +362,15 @@ struct callable_overlay final : public Impl
 
     /**
      * @brief Publish handler
-     * @param fixed_header
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901101<BR>
-     *        3.3.1 Fixed header<BR>
-     *        You can check the fixed header using MQTT_NS::publish functions.
      * @param packet_id
      *        packet identifier<BR>
      *        If received publish's QoS is 0, packet_id is MQTT_NS::nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901108<BR>
      *        3.3.2.2 Packet Identifier
+     * @param fixed_header
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901101<BR>
+     *        3.3.1 Fixed header<BR>
+     *        You can check the fixed header using MQTT_NS::publish functions.
      * @param topic_name
      *        Topic name<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901107<BR>
@@ -389,18 +385,14 @@ struct callable_overlay final : public Impl
      *        3.3.2.3 PUBLISH Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    MQTT_ALWAYS_INLINE bool on_v5_publish(bool dup,
-                                              qos qos_value,
-                                              bool retain,
-                                              MQTT_NS::optional<packet_id_t> packet_id,
-                                              MQTT_NS::buffer topic_name,
-                                              MQTT_NS::buffer contents,
-                                              v5::properties props) override final {
+    MQTT_ALWAYS_INLINE bool on_v5_publish(MQTT_NS::optional<packet_id_t> packet_id,
+                                          MQTT_NS::publish_options pubopts,
+                                          MQTT_NS::buffer topic_name,
+                                          MQTT_NS::buffer contents,
+                                          v5::properties props) override final {
         return    ! h_v5_publish_
-               || h_v5_publish_(dup,
-                                qos_value,
-                                retain,
-                                packet_id,
+               || h_v5_publish_(packet_id,
+                                pubopts,
                                 MQTT_NS::force_move(topic_name),
                                 MQTT_NS::force_move(contents),
                                 MQTT_NS::force_move(props));
@@ -843,10 +835,8 @@ struct callable_overlay final : public Impl
      *        Published contents
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using publish_handler = std::function<bool(bool dup,
-                                               qos qos_value,
-                                               bool retain,
-                                               MQTT_NS::optional<packet_id_t> packet_id,
+    using publish_handler = std::function<bool(MQTT_NS::optional<packet_id_t> packet_id,
+                                               MQTT_NS::publish_options pubopts,
                                                MQTT_NS::buffer topic_name,
                                                MQTT_NS::buffer contents)>;
 
@@ -1025,15 +1015,15 @@ struct callable_overlay final : public Impl
 
     /**
      * @brief Publish handler
-     * @param fixed_header
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901101<BR>
-     *        3.3.1 Fixed header<BR>
-     *        You can check the fixed header using MQTT_NS::publish functions.
      * @param packet_id
      *        packet identifier<BR>
      *        If received publish's QoS is 0, packet_id is MQTT_NS::nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901108<BR>
      *        3.3.2.2 Packet Identifier
+     * @param fixed_header
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901101<BR>
+     *        3.3.1 Fixed header<BR>
+     *        You can check the fixed header using MQTT_NS::publish functions.
      * @param topic_name
      *        Topic name<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901107<BR>
@@ -1049,10 +1039,8 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using v5_publish_handler = std::function<
-        bool(bool dup,
-             qos qos_value,
-             bool retain,
-             MQTT_NS::optional<packet_id_t> packet_id,
+        bool(MQTT_NS::optional<packet_id_t> packet_id,
+             MQTT_NS::publish_options pubopts,
              MQTT_NS::buffer topic_name,
              MQTT_NS::buffer contents,
              v5::properties props)
