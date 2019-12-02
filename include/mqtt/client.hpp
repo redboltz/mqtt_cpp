@@ -1296,7 +1296,7 @@ private:
             });
     }
 
-    void on_pre_send() override
+    void on_pre_send() noexcept override
     {
         if (ping_duration_ms_ != 0) {
             reset_timer();
@@ -1331,11 +1331,11 @@ private:
         set_timer();
     }
 
-    void on_close() override {
+    void on_close() noexcept override {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
     }
 
-    void on_error(error_code ec) override {
+    void on_error(error_code ec) noexcept override {
         (void)ec;
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
     }

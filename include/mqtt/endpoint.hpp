@@ -140,7 +140,7 @@ public:
      *        3.13 PINGREQ – PING request
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_pingreq() = 0;
+    virtual bool on_pingreq() noexcept = 0;
 
     /**
      * @brief Pingresp handler
@@ -148,7 +148,7 @@ public:
      *        3.13 PINGRESP – PING response
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_pingresp() = 0;
+    virtual bool on_pingresp() noexcept = 0;
 
 
     // MQTT v3_1_1 handlers
@@ -195,7 +195,7 @@ public:
                             MQTT_NS::optional<MQTT_NS::buffer> password,
                             MQTT_NS::optional<will> will,
                             bool clean_session,
-                            std::uint16_t keep_alive) = 0;
+                            std::uint16_t keep_alive) noexcept = 0;
 
     /**
      * @brief Connack handler
@@ -209,7 +209,7 @@ public:
      *        3.2.2.3 Connect Return code
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_connack(bool session_present, connect_return_code return_code) = 0;
+    virtual bool on_connack(bool session_present, connect_return_code return_code) noexcept = 0;
 
     /**
      * @brief Publish handler
@@ -231,7 +231,7 @@ public:
     virtual bool on_publish(MQTT_NS::optional<packet_id_t> packet_id,
                             MQTT_NS::publish_options pubopts,
                             MQTT_NS::buffer topic_name,
-                            MQTT_NS::buffer contents) = 0;
+                            MQTT_NS::buffer contents) noexcept = 0;
 
     /**
      * @brief Puback handler
@@ -241,7 +241,7 @@ public:
      *        3.4.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_puback(packet_id_t packet_id) = 0;
+    virtual bool on_puback(packet_id_t packet_id) noexcept = 0;
 
     /**
      * @brief Pubrec handler
@@ -251,7 +251,7 @@ public:
      *        3.5.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_pubrec(packet_id_t packet_id) = 0;
+    virtual bool on_pubrec(packet_id_t packet_id) noexcept = 0;
 
     /**
      * @brief Pubrel handler
@@ -261,7 +261,7 @@ public:
      *        3.6.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_pubrel(packet_id_t packet_id) = 0;
+    virtual bool on_pubrel(packet_id_t packet_id) noexcept = 0;
 
     /**
      * @brief Pubcomp handler
@@ -271,7 +271,7 @@ public:
      *        3.7.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_pubcomp(packet_id_t packet_id) = 0;
+    virtual bool on_pubcomp(packet_id_t packet_id) noexcept = 0;
 
     /**
      * @brief Subscribe handler
@@ -284,7 +284,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     virtual bool on_subscribe(packet_id_t packet_id,
-                              std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries) = 0;
+                              std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries) noexcept = 0;
 
     /**
      * @brief Suback handler
@@ -297,7 +297,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718071<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_suback(packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> returns) = 0;
+    virtual bool on_suback(packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> returns) noexcept = 0;
 
     /**
      * @brief Unsubscribe handler
@@ -309,7 +309,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800448<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_unsubscribe(packet_id_t packet_id, std::vector<MQTT_NS::buffer> topics) = 0;
+    virtual bool on_unsubscribe(packet_id_t packet_id, std::vector<MQTT_NS::buffer> topics) noexcept = 0;
 
     /**
      * @brief Unsuback handler
@@ -318,14 +318,14 @@ public:
      *        3.11.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_unsuback(packet_id_t) = 0;
+    virtual bool on_unsuback(packet_id_t) noexcept = 0;
 
     /**
      * @brief Disconnect handler
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800463<BR>
      *        3.14 DISCONNECT – Disconnect notification
      */
-    virtual void on_disconnect() = 0;
+    virtual void on_disconnect() noexcept = 0;
 
     // MQTT v5 handlers
 
@@ -378,7 +378,7 @@ public:
                                MQTT_NS::optional<will> will,
                                bool clean_start,
                                std::uint16_t keep_alive,
-                               v5::properties props) = 0;
+                               v5::properties props) noexcept = 0;
 
     /**
      * @brief Connack handler
@@ -398,7 +398,7 @@ public:
      */
     virtual bool on_v5_connack(bool session_present,
                                v5::connect_reason_code reason_code,
-                               v5::properties props) = 0;
+                               v5::properties props) noexcept = 0;
 
     /**
      * @brief Publish handler
@@ -429,7 +429,7 @@ public:
                                MQTT_NS::publish_options pubopts,
                                MQTT_NS::buffer topic_name,
                                MQTT_NS::buffer contents,
-                               v5::properties props) = 0;
+                               v5::properties props) noexcept = 0;
 
     /**
      * @brief Puback handler
@@ -449,7 +449,7 @@ public:
      */
     virtual bool on_v5_puback(packet_id_t packet_id,
                               v5::puback_reason_code reason_code,
-                              v5::properties props) = 0;
+                              v5::properties props) noexcept = 0;
 
     /**
      * @brief Pubrec handler
@@ -469,7 +469,7 @@ public:
      */
     virtual bool on_v5_pubrec(packet_id_t packet_id,
                               v5::pubrec_reason_code reason_code,
-                              v5::properties props) = 0;
+                              v5::properties props) noexcept = 0;
 
     /**
      * @brief Pubrel handler
@@ -489,7 +489,7 @@ public:
      */
     virtual bool on_v5_pubrel(packet_id_t packet_id,
                               v5::pubrel_reason_code reason_code,
-                              v5::properties props) = 0;
+                              v5::properties props) noexcept = 0;
 
     /**
      * @brief Pubcomp handler
@@ -509,7 +509,7 @@ public:
      */
     virtual bool on_v5_pubcomp(packet_id_t packet_id,
                                v5::pubcomp_reason_code reason_code,
-                               v5::properties props) = 0;
+                               v5::properties props) noexcept = 0;
 
     /**
      * @brief Subscribe handler
@@ -527,7 +527,7 @@ public:
      */
     virtual bool on_v5_subscribe(packet_id_t packet_id,
                                  std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries,
-                                 v5::properties props) = 0;
+                                 v5::properties props) noexcept = 0;
 
     /**
      * @brief Suback handler
@@ -546,7 +546,7 @@ public:
      */
     virtual bool on_v5_suback(packet_id_t packet_id,
                               std::vector<MQTT_NS::v5::suback_reason_code> reasons,
-                              v5::properties props) = 0;
+                              v5::properties props) noexcept = 0;
 
     /**
      * @brief Unsubscribe handler
@@ -565,7 +565,7 @@ public:
      */
     virtual bool on_v5_unsubscribe(packet_id_t packet_id,
                                    std::vector<MQTT_NS::buffer> topics,
-                                   v5::properties props) = 0;
+                                   v5::properties props) noexcept = 0;
 
     /**
      * @brief Unsuback handler
@@ -584,7 +584,7 @@ public:
      */
     virtual bool on_v5_unsuback(packet_id_t,
                                 std::vector<v5::unsuback_reason_code> reasons,
-                                v5::properties props) = 0;
+                                v5::properties props) noexcept = 0;
 
     /**
      * @brief Disconnect handler
@@ -600,7 +600,7 @@ public:
      *        3.14.2.2 DISCONNECT Properties
      */
     virtual void on_v5_disconnect(v5::disconnect_reason_code reason_code,
-                                  v5::properties props) = 0;
+                                  v5::properties props) noexcept = 0;
 
     /**
      * @brief Auth handler
@@ -617,7 +617,7 @@ public:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     virtual bool on_v5_auth(v5::auth_reason_code reason_code,
-                            v5::properties props) = 0;
+                            v5::properties props) noexcept = 0;
 
     // Original handlers
 
@@ -627,7 +627,7 @@ public:
      * This handler is called if the client called `disconnect()` and the server closed the socket cleanly.
      * If the socket is closed by other reasons, error_handler is called.
      */
-    virtual void on_close() = 0;
+    virtual void on_close() noexcept = 0;
 
     /**
      * @brief Error handler
@@ -636,7 +636,7 @@ public:
      *
      * @param ec error code
      */
-    virtual void on_error(error_code ec) = 0;
+    virtual void on_error(error_code ec) noexcept = 0;
 
     /**
      * @brief Publish response sent handler
@@ -646,7 +646,7 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901026<BR>
      *        2.2.1 Packet Identifier
      */
-    virtual void on_pub_res_sent(packet_id_t packet_id) = 0;
+    virtual void on_pub_res_sent(packet_id_t packet_id) noexcept = 0;
 
     /**
      * @brief Serialize publish handler
@@ -654,7 +654,7 @@ public:
      *        To restore the message, use restore_serialized_message().
      * @param msg publish message
      */
-    virtual void on_serialize_publish_message(basic_publish_message<sizeof(packet_id_t)> msg) = 0;
+    virtual void on_serialize_publish_message(basic_publish_message<sizeof(packet_id_t)> msg) noexcept = 0;
 
     /**
      * @brief Serialize publish handler
@@ -662,7 +662,7 @@ public:
      *        To restore the message, use restore_serialized_message().
      * @param msg v5::publish message
      */
-    virtual void on_serialize_v5_publish_message(v5::basic_publish_message<sizeof(packet_id_t)> msg) = 0;
+    virtual void on_serialize_v5_publish_message(v5::basic_publish_message<sizeof(packet_id_t)> msg) noexcept = 0;
 
     /**
      * @brief Serialize pubrel handler
@@ -672,7 +672,7 @@ public:
      *        To restore the message, use restore_serialized_message().
      * @param msg pubrel message
      */
-    virtual void on_serialize_pubrel_message(basic_pubrel_message<sizeof(packet_id_t)> msg) = 0;
+    virtual void on_serialize_pubrel_message(basic_pubrel_message<sizeof(packet_id_t)> msg) noexcept = 0;
 
     /**
      * @brief Serialize pubrel handler
@@ -682,19 +682,19 @@ public:
      *        To restore the message, use restore_serialized_message().
      * @param msg pubrel message
      */
-    virtual void on_serialize_v5_pubrel_message(v5::basic_pubrel_message<sizeof(packet_id_t)> msg) = 0;
+    virtual void on_serialize_v5_pubrel_message(v5::basic_pubrel_message<sizeof(packet_id_t)> msg) noexcept = 0;
 
     /**
      * @brief Remove serialized message
      * @param packet_id packet identifier of the removing message
      */
-    virtual void on_serialize_remove(packet_id_t packet_id) = 0;
+    virtual void on_serialize_remove(packet_id_t packet_id) noexcept = 0;
 
     /**
      * @brief Pre-send handler
      *        This handler is called when any mqtt control packet is decided to send.
      */
-    virtual void on_pre_send() = 0;
+    virtual void on_pre_send() noexcept = 0;
 
     /**
      * @brief is valid length handler
@@ -703,14 +703,14 @@ public:
      * @param remaining length
      * @return true if check is success, otherwise false
      */
-    virtual bool check_is_valid_length(control_packet_type packet_type, std::size_t remaining_length) = 0;
+    virtual bool check_is_valid_length(control_packet_type packet_type, std::size_t remaining_length) noexcept = 0;
 
     /**
      * @brief next read handler
      *        This handler is called when the current mqtt message has been processed.
      * @param func A callback function that is called when async operation will finish.
      */
-    MQTT_ALWAYS_INLINE virtual void on_mqtt_message_processed(MQTT_NS::any session_life_keeper)
+    MQTT_ALWAYS_INLINE virtual void on_mqtt_message_processed(MQTT_NS::any session_life_keeper) noexcept
     {
         if(async_read_on_message_processed_)
         {
