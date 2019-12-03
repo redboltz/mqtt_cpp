@@ -600,10 +600,10 @@ private:
                     ep.publish(
                         as::buffer(item.topic),
                         as::buffer(d.contents),
-                        std::make_pair(item.topic, d.contents),
                         // TODO: why is this 'retain'?
                         std::min(item.qos_value, d.qos_value) | MQTT_NS::retain::yes,
-                        *(d.props)
+                        *(d.props),
+                        std::make_tuple(item.topic, d.contents, *(d.props))
                         );
                 }
                 subs_.emplace(item.topic, spep, item.qos_value);
@@ -743,9 +743,10 @@ private:
                 ep.publish(
                     as::buffer(it->topic),
                     as::buffer(it->contents),
-                    std::make_pair(it->topic, it->contents),
                     std::min(it->qos_value, options.get_qos()) | MQTT_NS::retain::yes,
-                    it->props);
+                    it->props,
+                    std::make_pair(it->topic, it->contents)
+                );
             }
         }
         return true;

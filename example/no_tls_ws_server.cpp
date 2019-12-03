@@ -183,8 +183,9 @@ int main(int argc, char** argv) {
                         r.first->con->publish(
                             boost::asio::buffer(topic_name),
                             boost::asio::buffer(contents),
-                            std::make_pair(topic_name, contents),
-                            std::min(r.first->qos_value, pubopts.get_qos()) | pubopts.get_retain()
+                            std::min(r.first->qos_value, pubopts.get_qos()) | pubopts.get_retain(),
+                            MQTT_NS::v5::properties{},
+                            std::make_pair(topic_name, contents)
                         );
                     }
                     return true;

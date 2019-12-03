@@ -81,8 +81,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     c->async_publish(
                         as::buffer("topic1", sizeof("topic1") - 1),
                         as::buffer("topic1_contents", sizeof("topic1_contents") - 1),
-                        MQTT_NS::any(),
-                        MQTT_NS::qos::at_most_once | MQTT_NS::retain::no
+                        MQTT_NS::qos::at_most_once | MQTT_NS::retain::no,
+                        MQTT_NS::any{}
                     );
                     return true;
                 });
@@ -162,8 +162,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     c->async_publish(
                         as::buffer("topic1", sizeof("topic1") - 1),
                         as::buffer("topic1_contents", sizeof("topic1_contents") - 1),
-                        MQTT_NS::any(),
-                        MQTT_NS::qos::at_most_once | MQTT_NS::retain::no
+                        MQTT_NS::qos::at_most_once | MQTT_NS::retain::no,
+                        MQTT_NS::any{}
                     );
                     return true;
                 });
@@ -309,8 +309,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                         pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::at_least_once
+                        MQTT_NS::qos::at_least_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -395,8 +395,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                         pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::at_least_once
+                        MQTT_NS::qos::at_least_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -537,8 +537,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                         pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::exactly_once
+                        MQTT_NS::qos::exactly_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -624,8 +624,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
                         pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::exactly_once
+                        MQTT_NS::qos::exactly_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -749,8 +749,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     c->async_publish(
                         as::buffer("topic1", sizeof("topic1") - 1),
                         as::buffer("topic1_contents", sizeof("topic1_contents") - 1),
-                        MQTT_NS::any(),
-                        MQTT_NS::qos::at_most_once  | MQTT_NS::retain::no
+                        MQTT_NS::qos::at_most_once  | MQTT_NS::retain::no,
+                        MQTT_NS::any{}
                     );
                     return true;
                 });
@@ -830,8 +830,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
                     c->async_publish(
                         as::buffer("topic1", sizeof("topic1") - 1),
                         as::buffer("topic1_contents", sizeof("topic1_contents") - 1),
-                        MQTT_NS::any(),
-                        MQTT_NS::qos::at_most_once | MQTT_NS::retain::no
+                        MQTT_NS::qos::at_most_once | MQTT_NS::retain::no,
+                        MQTT_NS::any{}
                     );
                     return true;
                 });
@@ -985,8 +985,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                         pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::at_least_once
+                        MQTT_NS::qos::at_least_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -1065,8 +1065,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
                         pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::at_least_once
+                        MQTT_NS::qos::at_least_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -1211,8 +1211,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                         pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::exactly_once
+                        MQTT_NS::qos::exactly_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -1299,8 +1299,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
                         pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::exactly_once
+                        MQTT_NS::qos::exactly_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
