@@ -39,7 +39,7 @@ struct callable_overlay final : public Impl
      *        3.13 PINGREQ – PING request
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    MQTT_ALWAYS_INLINE bool on_pingreq() override final {
+    MQTT_ALWAYS_INLINE bool on_pingreq() noexcept override final {
         return ! h_pingreq_ || h_pingreq_();
     }
 
@@ -49,7 +49,7 @@ struct callable_overlay final : public Impl
      *        3.13 PINGRESP – PING response
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    MQTT_ALWAYS_INLINE bool on_pingresp() override final {
+    MQTT_ALWAYS_INLINE bool on_pingresp() noexcept override final {
         return ! h_pingresp_ || h_pingresp_();
     }
 
@@ -93,11 +93,11 @@ struct callable_overlay final : public Impl
      *
      */
     MQTT_ALWAYS_INLINE bool on_connect(MQTT_NS::buffer client_id,
-                                           MQTT_NS::optional<MQTT_NS::buffer> user_name,
-                                           MQTT_NS::optional<MQTT_NS::buffer> password,
-                                           MQTT_NS::optional<will> will,
-                                           bool clean_session,
-                                           std::uint16_t keep_alive) override final {
+                                       MQTT_NS::optional<MQTT_NS::buffer> user_name,
+                                       MQTT_NS::optional<MQTT_NS::buffer> password,
+                                       MQTT_NS::optional<will> will,
+                                       bool clean_session,
+                                       std::uint16_t keep_alive) noexcept override final {
         return    ! h_connect_
                || h_connect_(MQTT_NS::force_move(client_id),
                              MQTT_NS::force_move(user_name),
@@ -119,7 +119,7 @@ struct callable_overlay final : public Impl
      *        3.2.2.3 Connect Return code
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    MQTT_ALWAYS_INLINE bool on_connack(bool session_present, connect_return_code return_code) override final {
+    MQTT_ALWAYS_INLINE bool on_connack(bool session_present, connect_return_code return_code) noexcept override final {
         return    ! h_connack_
                || h_connack_(session_present, return_code);
     }
@@ -144,7 +144,7 @@ struct callable_overlay final : public Impl
     MQTT_ALWAYS_INLINE bool on_publish(MQTT_NS::optional<packet_id_t> packet_id,
                                        MQTT_NS::publish_options pubopts,
                                        MQTT_NS::buffer topic_name,
-                                       MQTT_NS::buffer contents) override final {
+                                       MQTT_NS::buffer contents) noexcept override final {
         return    ! h_publish_
                || h_publish_(packet_id,
                              pubopts,
@@ -160,7 +160,7 @@ struct callable_overlay final : public Impl
      *        3.4.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    MQTT_ALWAYS_INLINE bool on_puback(packet_id_t packet_id) override final {
+    MQTT_ALWAYS_INLINE bool on_puback(packet_id_t packet_id) noexcept override final {
         return    ! h_puback_
                || h_puback_(packet_id);
     }
@@ -173,7 +173,7 @@ struct callable_overlay final : public Impl
      *        3.5.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    MQTT_ALWAYS_INLINE bool on_pubrec(packet_id_t packet_id) override final {
+    MQTT_ALWAYS_INLINE bool on_pubrec(packet_id_t packet_id) noexcept override final {
         return    ! h_pubrec_
                || h_pubrec_(packet_id);
     }
@@ -186,7 +186,7 @@ struct callable_overlay final : public Impl
      *        3.6.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    MQTT_ALWAYS_INLINE bool on_pubrel(packet_id_t packet_id) override final {
+    MQTT_ALWAYS_INLINE bool on_pubrel(packet_id_t packet_id) noexcept override final {
         return    ! h_pubrel_
                || h_pubrel_(packet_id);
     }
@@ -199,7 +199,7 @@ struct callable_overlay final : public Impl
      *        3.7.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    MQTT_ALWAYS_INLINE bool on_pubcomp(packet_id_t packet_id) override final {
+    MQTT_ALWAYS_INLINE bool on_pubcomp(packet_id_t packet_id) noexcept override final {
         return    ! h_pubcomp_
                || h_pubcomp_(packet_id);
     }
@@ -215,8 +215,8 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_subscribe(packet_id_t packet_id,
-                                             std::vector<std::tuple<MQTT_NS::buffer,
-                                                                    subscribe_options>> entries) override final {
+                                         std::vector<std::tuple<MQTT_NS::buffer,
+                                                                subscribe_options>> entries) noexcept override final {
         return    ! h_subscribe_
                || h_subscribe_(packet_id, MQTT_NS::force_move(entries));
     }
@@ -233,7 +233,7 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_suback(packet_id_t packet_id,
-                                          std::vector<MQTT_NS::suback_return_code> reasons) override final {
+                                      std::vector<MQTT_NS::suback_return_code> reasons) noexcept override final {
         return    ! h_suback_
                || h_suback_(packet_id, MQTT_NS::force_move(reasons));
     }
@@ -249,7 +249,7 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_unsubscribe(packet_id_t packet_id,
-                                               std::vector<MQTT_NS::buffer> topics) override final {
+                                           std::vector<MQTT_NS::buffer> topics) noexcept override final {
         return    ! h_unsubscribe_
                || h_unsubscribe_(packet_id, MQTT_NS::force_move(topics));
     }
@@ -261,7 +261,7 @@ struct callable_overlay final : public Impl
      *        3.11.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    MQTT_ALWAYS_INLINE bool on_unsuback(packet_id_t packet_id) override final {
+    MQTT_ALWAYS_INLINE bool on_unsuback(packet_id_t packet_id) noexcept override final {
         return    ! h_unsuback_
                || h_unsuback_(packet_id);
     }
@@ -271,7 +271,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800463<BR>
      *        3.14 DISCONNECT – Disconnect notification
      */
-    MQTT_ALWAYS_INLINE void on_disconnect() override final {
+    MQTT_ALWAYS_INLINE void on_disconnect() noexcept override final {
         if(h_disconnect_) h_disconnect_();
     }
 
@@ -321,12 +321,12 @@ struct callable_overlay final : public Impl
      *
      */
     MQTT_ALWAYS_INLINE bool on_v5_connect(MQTT_NS::buffer client_id,
-                                              MQTT_NS::optional<MQTT_NS::buffer> user_name,
-                                              MQTT_NS::optional<MQTT_NS::buffer> password,
-                                              MQTT_NS::optional<will> will,
-                                              bool clean_start,
-                                              std::uint16_t keep_alive,
-                                              v5::properties props) override final {
+                                          MQTT_NS::optional<MQTT_NS::buffer> user_name,
+                                          MQTT_NS::optional<MQTT_NS::buffer> password,
+                                          MQTT_NS::optional<will> will,
+                                          bool clean_start,
+                                          std::uint16_t keep_alive,
+                                          v5::properties props) noexcept override final {
         return    ! h_v5_connect_
                || h_v5_connect_(MQTT_NS::force_move(client_id),
                                 MQTT_NS::force_move(user_name),
@@ -354,8 +354,8 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_connack(bool session_present,
-                                              v5::connect_reason_code reason_code,
-                                              v5::properties props) override final {
+                                          v5::connect_reason_code reason_code,
+                                          v5::properties props) noexcept override final {
         return    ! h_v5_connack_
                || h_v5_connack_(session_present, reason_code, MQTT_NS::force_move(props));
     }
@@ -389,7 +389,7 @@ struct callable_overlay final : public Impl
                                           MQTT_NS::publish_options pubopts,
                                           MQTT_NS::buffer topic_name,
                                           MQTT_NS::buffer contents,
-                                          v5::properties props) override final {
+                                          v5::properties props) noexcept override final {
         return    ! h_v5_publish_
                || h_v5_publish_(packet_id,
                                 pubopts,
@@ -415,8 +415,8 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_puback(packet_id_t packet_id,
-                                             v5::puback_reason_code reason_code,
-                                             v5::properties props) override final {
+                                         v5::puback_reason_code reason_code,
+                                         v5::properties props) noexcept override final {
         return    ! h_v5_puback_
                || h_v5_puback_(packet_id, reason_code, MQTT_NS::force_move(props));
     }
@@ -438,8 +438,8 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_pubrec(packet_id_t packet_id,
-                                             v5::pubrec_reason_code reason_code,
-                                             v5::properties props) override final {
+                                         v5::pubrec_reason_code reason_code,
+                                         v5::properties props) noexcept override final {
         return    ! h_v5_pubrec_
                || h_v5_pubrec_(packet_id, reason_code, MQTT_NS::force_move(props));
     }
@@ -461,8 +461,8 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_pubrel(packet_id_t packet_id,
-                                             v5::pubrel_reason_code reason_code,
-                                             v5::properties props) override final {
+                                         v5::pubrel_reason_code reason_code,
+                                         v5::properties props) noexcept override final {
         return    ! h_v5_pubrel_
                || h_v5_pubrel_(packet_id, reason_code, MQTT_NS::force_move(props));
     }
@@ -484,8 +484,8 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_pubcomp(packet_id_t packet_id,
-                                              v5::pubcomp_reason_code reason_code,
-                                              v5::properties props) override final {
+                                          v5::pubcomp_reason_code reason_code,
+                                          v5::properties props) noexcept override final {
         return    ! h_v5_pubcomp_
                || h_v5_pubcomp_(packet_id, reason_code, MQTT_NS::force_move(props));
     }
@@ -505,8 +505,8 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_subscribe(packet_id_t packet_id,
-                                                std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries,
-                                                v5::properties props) override final {
+                                            std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries,
+                                            v5::properties props) noexcept override final {
         return    ! h_v5_subscribe_
                || h_v5_subscribe_(packet_id, MQTT_NS::force_move(entries), MQTT_NS::force_move(props));
     }
@@ -527,8 +527,8 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_suback(packet_id_t packet_id,
-                                             std::vector<MQTT_NS::v5::suback_reason_code> reasons,
-                                             v5::properties props) override final {
+                                         std::vector<MQTT_NS::v5::suback_reason_code> reasons,
+                                         v5::properties props) noexcept override final {
         return    ! h_v5_suback_
                || h_v5_suback_(packet_id, MQTT_NS::force_move(reasons), MQTT_NS::force_move(props));
     }
@@ -549,8 +549,8 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_unsubscribe(packet_id_t packet_id,
-                                                  std::vector<MQTT_NS::buffer> topics,
-                                                  v5::properties props) override final {
+                                              std::vector<MQTT_NS::buffer> topics,
+                                              v5::properties props) noexcept override final {
         return    ! h_v5_unsubscribe_
                || h_v5_unsubscribe_(packet_id, MQTT_NS::force_move(topics), MQTT_NS::force_move(props));
     }
@@ -571,8 +571,8 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_unsuback(packet_id_t packet_id,
-                                               std::vector<v5::unsuback_reason_code> reasons,
-                                               v5::properties props) override final {
+                                           std::vector<v5::unsuback_reason_code> reasons,
+                                           v5::properties props) noexcept override final {
         return    ! h_v5_unsuback_
                || h_v5_unsuback_(packet_id, MQTT_NS::force_move(reasons), MQTT_NS::force_move(props));
     }
@@ -591,7 +591,7 @@ struct callable_overlay final : public Impl
      *        3.14.2.2 DISCONNECT Properties
      */
     MQTT_ALWAYS_INLINE void on_v5_disconnect(v5::disconnect_reason_code reason_code,
-                                                 v5::properties props) override final {
+                                             v5::properties props) noexcept override final {
         if(h_v5_disconnect_) h_v5_disconnect_(reason_code, MQTT_NS::force_move(props));
     }
 
@@ -610,7 +610,7 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_auth(v5::auth_reason_code reason_code,
-                                           v5::properties props) override final {
+                                       v5::properties props) noexcept override final {
         return    ! h_v5_auth_
                || h_v5_auth_(reason_code, MQTT_NS::force_move(props));
 
@@ -624,7 +624,7 @@ struct callable_overlay final : public Impl
      * This handler is called if the client called `disconnect()` and the server closed the socket cleanly.
      * If the socket is closed by other reasons, error_handler is called.
      */
-    MQTT_ALWAYS_INLINE void on_close() override final {
+    MQTT_ALWAYS_INLINE void on_close() noexcept override final {
         if(h_close_) h_close_();
     }
 
@@ -635,7 +635,7 @@ struct callable_overlay final : public Impl
      *
      * @param ec error code
      */
-    MQTT_ALWAYS_INLINE void on_error(error_code ec) override final {
+    MQTT_ALWAYS_INLINE void on_error(error_code ec) noexcept override final {
         if(h_error_) h_error_(ec);
     }
 
@@ -647,7 +647,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901026<BR>
      *        2.2.1 Packet Identifier
      */
-    MQTT_ALWAYS_INLINE void on_pub_res_sent(packet_id_t packet_id) override final {
+    MQTT_ALWAYS_INLINE void on_pub_res_sent(packet_id_t packet_id) noexcept override final {
         if(h_pub_res_sent_) h_pub_res_sent_(packet_id);
     }
 
@@ -657,7 +657,7 @@ struct callable_overlay final : public Impl
      *        To restore the message, use restore_serialized_message().
      * @param msg publish message
      */
-    MQTT_ALWAYS_INLINE void on_serialize_publish_message(basic_publish_message<sizeof(packet_id_t)> msg) override final {
+    MQTT_ALWAYS_INLINE void on_serialize_publish_message(basic_publish_message<sizeof(packet_id_t)> msg) noexcept override final {
         if(h_serialize_publish_) h_serialize_publish_(msg);
     }
 
@@ -667,7 +667,7 @@ struct callable_overlay final : public Impl
      *        To restore the message, use restore_serialized_message().
      * @param msg v5::publish message
      */
-    MQTT_ALWAYS_INLINE void on_serialize_v5_publish_message(v5::basic_publish_message<sizeof(packet_id_t)> msg) override final {
+    MQTT_ALWAYS_INLINE void on_serialize_v5_publish_message(v5::basic_publish_message<sizeof(packet_id_t)> msg) noexcept override final {
         if(h_serialize_v5_publish_) h_serialize_v5_publish_(msg);
     }
 
@@ -679,7 +679,7 @@ struct callable_overlay final : public Impl
      *        To restore the message, use restore_serialized_message().
      * @param msg pubrel message
      */
-    MQTT_ALWAYS_INLINE void on_serialize_pubrel_message(basic_pubrel_message<sizeof(packet_id_t)> msg) override final {
+    MQTT_ALWAYS_INLINE void on_serialize_pubrel_message(basic_pubrel_message<sizeof(packet_id_t)> msg) noexcept override final {
         if(h_serialize_pubrel_) h_serialize_pubrel_(msg);
     }
 
@@ -691,7 +691,7 @@ struct callable_overlay final : public Impl
      *        To restore the message, use restore_serialized_message().
      * @param msg pubrel message
      */
-    MQTT_ALWAYS_INLINE void on_serialize_v5_pubrel_message(v5::basic_pubrel_message<sizeof(packet_id_t)> msg) override final {
+    MQTT_ALWAYS_INLINE void on_serialize_v5_pubrel_message(v5::basic_pubrel_message<sizeof(packet_id_t)> msg) noexcept override final {
         if(h_serialize_v5_pubrel_) h_serialize_v5_pubrel_(msg);
     }
 
@@ -699,7 +699,7 @@ struct callable_overlay final : public Impl
      * @brief Remove serialized message
      * @param packet_id packet identifier of the removing message
      */
-    MQTT_ALWAYS_INLINE void on_serialize_remove(packet_id_t packet_id) override final {
+    MQTT_ALWAYS_INLINE void on_serialize_remove(packet_id_t packet_id) noexcept override final {
         if(h_serialize_remove_) h_serialize_remove_(packet_id);
     }
 
@@ -707,7 +707,7 @@ struct callable_overlay final : public Impl
      * @brief Pre-send handler
      *        This handler is called when any mqtt control packet is decided to send.
      */
-    MQTT_ALWAYS_INLINE void on_pre_send() override final {
+    MQTT_ALWAYS_INLINE void on_pre_send() noexcept override final {
         if(h_pre_send_) h_pre_send_();
     }
 
@@ -718,7 +718,7 @@ struct callable_overlay final : public Impl
      * @param remaining length
      * @return true if check is success, otherwise false
      */
-    MQTT_ALWAYS_INLINE bool check_is_valid_length(control_packet_type packet_type, std::size_t remaining_length) override final {
+    MQTT_ALWAYS_INLINE bool check_is_valid_length(control_packet_type packet_type, std::size_t remaining_length) noexcept override final {
         return    ! h_is_valid_length_
                || h_is_valid_length_(packet_type, remaining_length);
     }
@@ -728,7 +728,7 @@ struct callable_overlay final : public Impl
      *        This handler is called when the current mqtt message has been processed.
      * @param func A callback function that is called when async operation will finish.
      */
-    MQTT_ALWAYS_INLINE void on_mqtt_message_processed(MQTT_NS::any session_life_keeper) override final
+    MQTT_ALWAYS_INLINE void on_mqtt_message_processed(MQTT_NS::any session_life_keeper) noexcept override final
     {
         if(h_mqtt_message_processed_)
         {
