@@ -84,8 +84,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     c->async_publish(
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::at_most_once | MQTT_NS::retain::no
+                        MQTT_NS::qos::at_most_once | MQTT_NS::retain::no,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -167,8 +167,8 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
                     c->async_publish(
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::at_most_once | MQTT_NS::retain::no
+                        MQTT_NS::qos::at_most_once | MQTT_NS::retain::no,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -323,8 +323,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                         pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::at_least_once
+                        MQTT_NS::qos::at_least_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -410,8 +410,8 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
                         pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::at_least_once
+                        MQTT_NS::qos::at_least_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -558,8 +558,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                         pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::exactly_once
+                        MQTT_NS::qos::exactly_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -646,8 +646,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
                         pid_pub,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::exactly_once
+                        MQTT_NS::qos::exactly_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -769,8 +769,8 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     c->async_publish(
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::at_most_once
+                        MQTT_NS::qos::at_most_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -852,8 +852,8 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
                     c->async_publish(
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::at_most_once
+                        MQTT_NS::qos::at_most_once,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -1202,8 +1202,8 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                         1,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::at_least_once | MQTT_NS::dup::yes
+                        MQTT_NS::qos::at_least_once | MQTT_NS::dup::yes,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
@@ -1288,8 +1288,8 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
                         1,
                         as::buffer(*topic1),
                         as::buffer(*contents),
-                        std::make_pair(topic1, contents),
-                        MQTT_NS::qos::at_least_once | MQTT_NS::dup::yes
+                        MQTT_NS::qos::at_least_once | MQTT_NS::dup::yes,
+                        std::make_pair(topic1, contents)
                     );
                     return true;
                 });
