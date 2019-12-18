@@ -3074,7 +3074,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = {}
     ) {
-        async_send_pubrel(packet_id, v5::pubrel_reason_code::success, v5::properties{}, force_move(func));
+        async_send_pubrel(packet_id, v5::pubrel_reason_code::success, v5::properties{}, any(), force_move(func));
     }
 
     /**
