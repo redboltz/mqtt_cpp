@@ -92,12 +92,58 @@ constexpr subscribe_options operator|(qos lhs, retain_handling rhs) { return sub
 constexpr subscribe_options operator|(qos lhs, rap rhs)             { return subscribe_options(lhs) | rhs; }
 constexpr subscribe_options operator|(qos lhs, nl rhs)              { return subscribe_options(lhs) | rhs; }
 
+constexpr char const* retain_handling_to_str(retain_handling v) {
+    switch(v) {
+    case retain_handling::send:                       return "send";
+    case retain_handling::send_only_new_subscription: return "send_only_new_subscription";
+    case retain_handling::not_send:                   return "not_send";
+    default:                                          return "invalid_retain_handling";
+    }
+}
+
+template<typename Stream>
+Stream & operator<<(Stream & os, retain_handling val)
+{
+    os << retain_handling_to_str(val);
+    return os;
+}
+
+constexpr char const* rap_to_str(rap v) {
+    switch(v) {
+    case rap::dont:   return "dont";
+    case rap::retain: return "retain";
+    default:          return "invalid_rap";
+    }
+}
+
+template<typename Stream>
+Stream & operator<<(Stream & os, rap val)
+{
+    os << rap_to_str(val);
+    return os;
+}
+
+constexpr char const* nl_to_str(nl v) {
+    switch(v) {
+    case nl::no:   return "no";
+    case nl::yes:  return "yes";
+    default:       return "invalid_nl";
+    }
+}
+
+template<typename Stream>
+Stream & operator<<(Stream & os, nl val)
+{
+    os << nl_to_str(val);
+    return os;
+}
+
 constexpr char const* qos_to_str(qos v) {
     switch(v) {
-        case qos::at_most_once:  return "at_most_once";
-        case qos::at_least_once: return "at_least_once";
-        case qos::exactly_once:  return "exactly_once";
-        default:                 return "invalid_qos";
+    case qos::at_most_once:  return "at_most_once";
+    case qos::at_least_once: return "at_least_once";
+    case qos::exactly_once:  return "exactly_once";
+    default:                 return "invalid_qos";
     }
 }
 
