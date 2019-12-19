@@ -280,9 +280,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                         r.first->con->publish(
                             boost::asio::buffer(topic_name),
                             boost::asio::buffer(contents),
-                            std::min(r.first->qos_value, pubopts.get_qos()),
-                            MQTT_NS::v5::properties{},
-                            std::make_pair(topic_name, contents)
+                            std::min(r.first->qos_value, pubopts.get_qos())
                         );
                     }
                     return true;
