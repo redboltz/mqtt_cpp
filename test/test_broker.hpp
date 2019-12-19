@@ -607,7 +607,7 @@ private:
                         std::make_tuple(item.topic, d.contents, *(d.props))
                         );
                 }
-                subs_.emplace(item.topic, spep, item.qos_value);
+                subs_.emplace(item.topic, spep, item.qos_value, item.rap_value);
             }
             idx.erase(range.begin(), range.end());
             BOOST_ASSERT(idx.count(client_id) == 0);
@@ -720,10 +720,11 @@ private:
             for (auto const& e : entries) {
                 MQTT_NS::buffer topic = std::get<0>(e);
                 MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
+                MQTT_NS::rap rap_value = std::get<1>(e).get_rap();
                 res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(qos_value)); // converts to granted_qos_x
                 // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
                 // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
-                subs_.emplace(MQTT_NS::force_move(topic), spep, qos_value);
+                subs_.emplace(MQTT_NS::force_move(topic), spep, qos_value, rap_value);
             }
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
@@ -842,7 +843,11 @@ private:
             sub.con->publish(
                 topic,
                 contents,
-                std::min(sub.qos_value, pubopts.get_qos()) | MQTT_NS::retain::no,
+                std::min(sub.qos_value, pubopts.get_qos()) |
+                (
+                    sub.rap_value == MQTT_NS::rap::retain ? pubopts.get_retain()
+                                                          : MQTT_NS::retain::no
+                ),
                 props // TODO: Copying the properties vector for each subscription.
             );
         }
@@ -998,7 +1003,8 @@ private:
                 for(auto const& item : range) {
                     auto const& ret = saved_subs_.emplace(client_id,
                                                           item.topic,
-                                                          item.qos_value);
+                                                          item.qos_value,
+                                                          item.rap_value);
                     (void)ret;
                     BOOST_ASSERT(ret.second);
                     BOOST_ASSERT(ret.first == saved_subs_.find(client_id));
@@ -1105,11 +1111,13 @@ private:
         sub_con(
             MQTT_NS::buffer topic,
             con_sp_t con,
-            MQTT_NS::qos qos_value)
-            :topic(MQTT_NS::force_move(topic)), con(MQTT_NS::force_move(con)), qos_value(qos_value) {}
+            MQTT_NS::qos qos_value,
+            MQTT_NS::rap rap_value = MQTT_NS::rap::dont)
+            :topic(MQTT_NS::force_move(topic)), con(MQTT_NS::force_move(con)), qos_value(qos_value), rap_value(rap_value) {}
         MQTT_NS::buffer topic;
         con_sp_t con;
         MQTT_NS::qos qos_value;
+        MQTT_NS::rap rap_value;
     };
     using mi_sub_con = mi::multi_index_container<
         sub_con,
@@ -1185,12 +1193,14 @@ private:
         session_subscription(
             MQTT_NS::buffer client_id,
             MQTT_NS::buffer topic,
-            MQTT_NS::qos qos_value)
-            :client_id(MQTT_NS::force_move(client_id)), topic(MQTT_NS::force_move(topic)), qos_value(qos_value) {}
+            MQTT_NS::qos qos_value,
+            MQTT_NS::rap rap_value)
+            :client_id(MQTT_NS::force_move(client_id)), topic(MQTT_NS::force_move(topic)), qos_value(qos_value), rap_value(rap_value) {}
         MQTT_NS::buffer client_id;
         MQTT_NS::buffer topic;
         std::vector<saved_message> messages;
         MQTT_NS::qos qos_value;
+        MQTT_NS::rap rap_value;
     };
 
     using mi_session_subscription = mi::multi_index_container<
