@@ -22,3 +22,4 @@
 #include <mqtt/utf8encoded_strings.hpp>
 #include <mqtt/visitor_util.hpp>
 #include <mqtt/will.hpp>
+#include <mqtt/make_collection.hpp>

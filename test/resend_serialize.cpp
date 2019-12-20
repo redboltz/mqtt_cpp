@@ -9,6 +9,8 @@
 #include "checker.hpp"
 #include "test_util.hpp"
 
+#include <mqtt/make_collection.hpp>
+
 BOOST_AUTO_TEST_SUITE(test_resend_serialize)
 
 using namespace MQTT_NS::literals;
@@ -59,11 +61,11 @@ set_serialize_handlers(Client const& c, Serialized& serialized) {
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_serialize_handlers(
         [&serialized](MQTT_NS::publish_message msg) {
-            serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
+            serialized.emplace(msg.packet_id(), MQTT_NS::make_collection(true, msg.continuous_buffer()));
         },
         [&serialized](MQTT_NS::pubrel_message msg) {
             BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
-            serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
+            serialized[msg.packet_id()] = MQTT_NS::make_collection(false, msg.continuous_buffer());
         },
         [&serialized](packet_id_t packet_id) {
             BOOST_CHECK(serialized.find(packet_id) != serialized.end());
@@ -79,11 +81,11 @@ set_serialize_handlers(Client const& c, Serialized& serialized) {
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_serialize_handlers(
         [&serialized](MQTT_NS::publish_32_message msg) {
-            serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
+            serialized.emplace(msg.packet_id(), MQTT_NS::make_collection(true, msg.continuous_buffer()));
         },
         [&serialized](MQTT_NS::pubrel_32_message msg) {
             BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
-            serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
+            serialized[msg.packet_id()] = MQTT_NS::make_collection(false, msg.continuous_buffer());
         },
         [&serialized](packet_id_t packet_id) {
             BOOST_CHECK(serialized.find(packet_id) != serialized.end());
@@ -801,11 +803,11 @@ set_v5_serialize_handlers(Client const& c, Serialized& serialized) {
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_v5_serialize_handlers(
         [&serialized](MQTT_NS::v5::publish_message msg) {
-            serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
+            serialized.emplace(msg.packet_id(), MQTT_NS::make_collection(true, msg.continuous_buffer()));
         },
         [&serialized](MQTT_NS::v5::pubrel_message msg) {
             BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
-            serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
+            serialized[msg.packet_id()] = MQTT_NS::make_collection(false, msg.continuous_buffer());
         },
         [&serialized](packet_id_t packet_id) {
             BOOST_CHECK(serialized.find(packet_id) != serialized.end());
@@ -821,11 +823,11 @@ set_v5_serialize_handlers(Client const& c, Serialized& serialized) {
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
     c->set_v5_serialize_handlers(
         [&serialized](MQTT_NS::v5::publish_32_message msg) {
-            serialized.emplace(msg.packet_id(), std::make_tuple(true, msg.continuous_buffer()));
+            serialized.emplace(msg.packet_id(), MQTT_NS::make_collection(true, msg.continuous_buffer()));
         },
         [&serialized](MQTT_NS::v5::pubrel_32_message msg) {
             BOOST_CHECK(serialized.find(msg.packet_id()) != serialized.end());
-            serialized[msg.packet_id()] = std::make_tuple(false, msg.continuous_buffer());
+            serialized[msg.packet_id()] = MQTT_NS::make_collection(false, msg.continuous_buffer());
         },
         [&serialized](packet_id_t packet_id) {
             BOOST_CHECK(serialized.find(packet_id) != serialized.end());

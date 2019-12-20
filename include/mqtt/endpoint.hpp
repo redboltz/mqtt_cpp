@@ -62,6 +62,7 @@
 #include <mqtt/deprecated.hpp>
 #include <mqtt/deprecated_msg.hpp>
 #include <mqtt/error_code.hpp>
+#include <mqtt/make_collection.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -951,7 +952,7 @@ public:
                 contents_buf,
                 pubopts,
                 force_move(props),
-                std::make_tuple(
+                make_collection(
                     force_move(life_keeper),
                     force_move(sp_topic_name),
                     force_move(sp_contents)
@@ -1048,7 +1049,7 @@ public:
             contents_buf,
             pubopts,
             force_move(props),
-            std::make_tuple(
+            make_collection(
                 force_move(life_keeper),
                 force_move(topic_name),
                 force_move(contents)
@@ -1855,7 +1856,7 @@ public:
             contents_buf,
             pubopts,
             force_move(props),
-            std::make_tuple(
+            make_collection(
                 force_move(life_keeper),
                 force_move(sp_topic_name),
                 force_move(sp_contents)
@@ -1991,7 +1992,7 @@ public:
             contents_buf,
             pubopts,
             v5::properties{},
-            std::make_tuple(
+            make_collection(
                 force_move(life_keeper),
                 force_move(topic_name),
                 force_move(contents)
@@ -2047,7 +2048,7 @@ public:
             contents_buf,
             pubopts,
             force_move(props),
-            std::make_tuple(
+            make_collection(
                 force_move(life_keeper),
                 force_move(topic_name),
                 force_move(contents)
@@ -6446,7 +6447,7 @@ private:
             {
                 LockGuard<Mutex> lck (store_mtx_);
                 auto& idx = store_.template get<tag_packet_id_type>();
-                auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::puback));
+                auto r = idx.equal_range(make_collection(info.packet_id, control_packet_type::puback));
                 idx.erase(std::get<0>(r), std::get<1>(r));
                 packet_id_.erase(info.packet_id);
             }
@@ -6591,7 +6592,7 @@ private:
             {
                 LockGuard<Mutex> lck (store_mtx_);
                 auto& idx = store_.template get<tag_packet_id_type>();
-                auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::pubrec));
+                auto r = idx.equal_range(make_collection(info.packet_id, control_packet_type::pubrec));
                 idx.erase(std::get<0>(r), std::get<1>(r));
                 // packet_id shouldn't be erased here.
                 // It is reused for pubrel/pubcomp.
@@ -6936,7 +6937,7 @@ private:
             {
                 LockGuard<Mutex> lck (store_mtx_);
                 auto& idx = store_.template get<tag_packet_id_type>();
-                auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::pubcomp));
+                auto r = idx.equal_range(make_collection(info.packet_id, control_packet_type::pubcomp));
                 idx.erase(std::get<0>(r), std::get<1>(r));
                 packet_id_.erase(info.packet_id);
             }

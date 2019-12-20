@@ -9,6 +9,8 @@
 #include "checker.hpp"
 
 #include <mqtt/optional.hpp>
+#include <mqtt/make_collection.hpp>
+
 
 BOOST_AUTO_TEST_SUITE(test_pubsub)
 
@@ -226,7 +228,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     pid_sub = c->subscribe(
                         std::vector<std::tuple<MQTT_NS::string_view, MQTT_NS::subscribe_options>> {
-                            std::make_tuple("topic1", MQTT_NS::qos::at_most_once)
+                            MQTT_NS::make_collection("topic1", MQTT_NS::qos::at_most_once)
                         }
                     );
                     return true;
@@ -296,7 +298,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     pid_sub = c->subscribe(
                         std::vector<std::tuple<MQTT_NS::string_view, MQTT_NS::subscribe_options>> {
-                            std::make_tuple("topic1", MQTT_NS::qos::at_most_once)
+                            MQTT_NS::make_collection("topic1", MQTT_NS::qos::at_most_once)
                         }
                     );
                     return true;

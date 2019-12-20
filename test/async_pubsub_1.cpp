@@ -9,6 +9,7 @@
 #include "checker.hpp"
 
 #include <mqtt/optional.hpp>
+#include <mqtt/make_collection.hpp>
 
 #include <vector>
 #include <string>
@@ -233,7 +234,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     c->async_subscribe(
                         pid_sub,
                         std::vector<std::tuple<std::string, MQTT_NS::subscribe_options>> {
-                            std::make_tuple("topic1", MQTT_NS::qos::at_most_once)
+                            MQTT_NS::make_collection("topic1", MQTT_NS::qos::at_most_once)
                         }
                     );
                     return true;
@@ -305,7 +306,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
                     c->async_subscribe(
                         pid_sub,
                         std::vector<std::tuple<std::string, MQTT_NS::subscribe_options>> {
-                            std::make_tuple("topic1", MQTT_NS::qos::at_most_once)
+                            MQTT_NS::make_collection("topic1", MQTT_NS::qos::at_most_once)
                         }
                     );
                     return true;

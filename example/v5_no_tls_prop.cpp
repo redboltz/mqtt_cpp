@@ -165,7 +165,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
             // Pass spep to keep lifetime.
             // It makes sure wp.lock() never return nullptr in the handlers below
             // including close_handler and error_handler.
-            ep.start_session(std::make_tuple(std::move(spep), std::move(g)));
+            ep.start_session(MQTT_NS::make_collection(std::move(spep), std::move(g)));
 
             // set connection (lower than MQTT) level handlers
             ep.set_close_handler( // this handler doesn't depend on MQTT protocol version

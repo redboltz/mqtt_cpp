@@ -20,6 +20,7 @@
 #include <mqtt_server_cpp.hpp>
 #include <mqtt/optional.hpp>
 #include <mqtt/visitor_util.hpp>
+#include <mqtt/make_collection.hpp>
 
 #include "test_settings.hpp"
 
@@ -603,7 +604,7 @@ private:
                         // TODO: why is this 'retain'?
                         std::min(item.qos_value, d.qos_value) | MQTT_NS::retain::yes,
                         *(d.props),
-                        std::make_tuple(item.topic, d.contents, *(d.props))
+                        MQTT_NS::make_collection(item.topic, d.contents, *(d.props))
                         );
                 }
                 subs_.emplace(item.topic, spep, item.qos_value);

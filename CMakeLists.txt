@@ -20,6 +20,7 @@ OPTION(MQTT_STD_OPTIONAL "Use std::optional from C++17 instead of boost::optiona
 OPTION(MQTT_STD_STRING_VIEW "Use std::string_view from C++17 instead of boost::string_view" OFF)
 OPTION(MQTT_STD_ANY "Use std::any from C++17 instead of boost::any" OFF)
 OPTION(MQTT_STD_SHARED_PTR_ARRAY "Use std::shared_ptr<char[]> from C++17 instead of boost::shared_ptr<char[]>" OFF)
+OPTION(MQTT_CLANG_STL_WORKAROUND "Work around bug in clang involving std::make_tuple" OFF)
 
 IF (POLICY CMP0074)
   CMAKE_POLICY(SET CMP0074 NEW)
