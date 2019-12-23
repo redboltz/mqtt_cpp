@@ -840,14 +840,20 @@ private:
             //       and the way they have different function names,
             //       it wouldn't be possible for test_broker.hpp to be
             //       used with some hypothetical "async_server" in the future.
+
+            // retain is delivered as the original only if rap_value is rap::retain.
+            // On MQTT v3.1.1, rap_value is always rap::dont.
+            auto retain =
+                [&] {
+                    if (sub.rap_value == MQTT_NS::rap::retain) {
+                        return pubopts.get_retain();
+                    }
+                    return MQTT_NS::retain::no;
+                } ();
             sub.con->publish(
                 topic,
                 contents,
-                std::min(sub.qos_value, pubopts.get_qos()) |
-                (
-                    sub.rap_value == MQTT_NS::rap::retain ? pubopts.get_retain()
-                                                          : MQTT_NS::retain::no
-                ),
+                std::min(sub.qos_value, pubopts.get_qos()) | retain,
                 props // TODO: Copying the properties vector for each subscription.
             );
         }
