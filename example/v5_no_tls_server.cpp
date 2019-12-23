@@ -21,11 +21,12 @@ using con_t = MQTT_NS::server<>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
 
 struct sub_con {
-    sub_con(MQTT_NS::buffer topic, con_sp_t con, MQTT_NS::qos qos_value)
-        :topic(std::move(topic)), con(std::move(con)), qos_value(qos_value) {}
+    sub_con(MQTT_NS::buffer topic, con_sp_t con, MQTT_NS::qos qos_value, MQTT_NS::rap rap_value)
+        :topic(std::move(topic)), con(std::move(con)), qos_value(qos_value), rap_value(rap_value) {}
     MQTT_NS::buffer topic;
     con_sp_t con;
     MQTT_NS::qos qos_value;
+    MQTT_NS::rap rap_value;
 };
 
 struct tag_topic {};
@@ -179,7 +180,7 @@ int main(int argc, char** argv) {
                  MQTT_NS::publish_options pubopts,
                  MQTT_NS::buffer topic_name,
                  MQTT_NS::buffer contents,
-                 MQTT_NS::v5::properties /*props*/){
+                 MQTT_NS::v5::properties props){
                     std::cout << "[server] publish received."
                               << " dup: "    << pubopts.get_dup()
                               << " qos: "    << pubopts.get_qos()
@@ -191,12 +192,18 @@ int main(int argc, char** argv) {
                     auto const& idx = subs.get<tag_topic>();
                     auto r = idx.equal_range(topic_name);
                     for (; r.first != r.second; ++r.first) {
+                        auto retain =
+                            [&] {
+                                if (r.first->rap_value == MQTT_NS::rap::retain) {
+                                    return pubopts.get_retain();
+                                }
+                                return MQTT_NS::retain::no;
+                            } ();
                         r.first->con->publish(
-                            boost::asio::buffer(topic_name),
-                            boost::asio::buffer(contents),
-                            std::min(r.first->qos_value, pubopts.get_qos()) | pubopts.get_retain(),
-                            MQTT_NS::v5::properties{},
-                            std::make_pair(topic_name, contents)
+                            topic_name,
+                            contents,
+                            std::min(r.first->qos_value, pubopts.get_qos()) | retain,
+                            std::move(props)
                         );
                     }
                     return true;
@@ -214,9 +221,13 @@ int main(int argc, char** argv) {
                     for (auto const& e : entries) {
                         MQTT_NS::buffer topic = std::get<0>(e);
                         MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
-                        std::cout << "[server] topic: " << topic  << " qos: " << qos_value << std::endl;
+                        MQTT_NS::rap rap_value = std::get<1>(e).get_rap();
+                        std::cout << "[server] topic: " << topic
+                                  << " qos: " << qos_value
+                                  << " rap: " << rap_value
+                                  << std::endl;
                         res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(qos_value));
-                        subs.emplace(std::move(topic), sp, qos_value);
+                        subs.emplace(std::move(topic), sp, qos_value, rap_value);
                     }
                     sp->suback(packet_id, res);
                     return true;

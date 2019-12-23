@@ -18,6 +18,7 @@
 #include <mqtt/publish.hpp>
 #include <mqtt/subscribe_options.hpp>
 #include <mqtt/remaining_length.hpp>
+#include <mqtt/reason_code.hpp>
 #include <mqtt/session_present.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
 #include <mqtt/visitor_util.hpp>
