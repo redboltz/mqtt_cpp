@@ -991,7 +991,7 @@ public:
         as::const_buffer contents,
         publish_options pubopts,
         v5::properties props,
-        any life_keeper = {}
+        any life_keeper
     ) {
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
@@ -1030,8 +1030,8 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_name,
         as::const_buffer contents,
-        publish_options pubopts = {},
-        any life_keeper = {}
+        publish_options pubopts,
+        any life_keeper
     ) {
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
@@ -1042,6 +1042,54 @@ public:
             pubopts,
             v5::properties{},
             force_move(life_keeper)
+        );
+    }
+
+    /**
+     * @brief Publish with already acquired packet identifier
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     *        If qos == qos::at_most_once, packet_id must be 0. But not checked in release mode due to performance.
+     * @param topic_name
+     *        A topic name to publish
+     * @param contents
+     *        The contents to publish
+     * @param pubopts
+     *        qos, retain flag, and dup flag.
+     * @param life_keeper
+     *        An object that stays alive as long as the library holds a reference to any other parameters.
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        use this parameter to manage their lifetime.
+     *
+     * @note If your QOS level is exactly_once or at_least_once, then the library will store this publish
+     *       internally until the broker has confirmed delivery, which may involve resends, and as such the
+     *       life_keeper parameter is important.
+     *       If topic_name and contents don't manage their lifetimes, then life_keeper should be used to keep
+     *       their lifetimes.
+     */
+    void publish(
+        packet_id_t packet_id,
+        buffer topic_name,
+        buffer contents,
+        publish_options pubopts = {},
+        any life_keeper = {}
+    ) {
+        BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
+
+        auto topic_name_buf = as::buffer(topic_name);
+        auto contents_buf   = as::buffer(contents);
+        send_publish(
+            packet_id,
+            topic_name_buf,
+            contents_buf,
+            pubopts,
+            v5::properties{},
+            std::make_tuple(
+                force_move(life_keeper),
+                force_move(topic_name),
+                force_move(contents)
+            )
         );
     }
 
@@ -1074,8 +1122,8 @@ public:
         packet_id_t packet_id,
         buffer topic_name,
         buffer contents,
-        publish_options pubopts = {},
-        v5::properties props = {},
+        publish_options pubopts,
+        v5::properties props,
         any life_keeper = {}
     ) {
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));

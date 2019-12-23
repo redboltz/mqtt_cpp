@@ -276,8 +276,8 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     auto r = idx.equal_range(topic_name);
                     for (; r.first != r.second; ++r.first) {
                         r.first->con->publish(
-                            boost::asio::buffer(topic_name),
-                            boost::asio::buffer(contents),
+                            topic_name,
+                            contents,
                             std::min(r.first->qos_value, pubopts.get_qos())
                         );
                     }

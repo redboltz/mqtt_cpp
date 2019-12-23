@@ -193,8 +193,8 @@ int main(int argc, char** argv) {
                     auto r = idx.equal_range(topic_name);
                     for (; r.first != r.second; ++r.first) {
                         r.first->con->publish(
-                            boost::asio::buffer(topic_name),
-                            boost::asio::buffer(contents),
+                            topic_name,
+                            contents,
                             std::min(r.first->qos_value, pubopts.get_qos())
                         );
                     }

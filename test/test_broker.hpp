@@ -647,7 +647,7 @@ private:
         do_publish(
             MQTT_NS::force_move(topic_name),
             MQTT_NS::force_move(contents),
-            pubopts.get_qos() | pubopts.get_retain(),
+            pubopts.get_qos() | pubopts.get_retain(), // remove dup flag
             MQTT_NS::force_move(props));
 
         switch (ep.get_protocol_version()) {
