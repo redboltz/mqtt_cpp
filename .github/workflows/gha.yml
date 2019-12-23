@@ -2,8 +2,7 @@ name: CI
 
 on:
   pull_request:
-    types:
-    - '*'
+    types: [opened, synchronize]
   push:
     branches:
     - master
