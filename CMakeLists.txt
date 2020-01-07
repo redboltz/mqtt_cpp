@@ -20,6 +20,7 @@ OPTION(MQTT_STD_OPTIONAL "Use std::optional from C++17 instead of boost::optiona
 OPTION(MQTT_STD_STRING_VIEW "Use std::string_view from C++17 instead of boost::string_view" OFF)
 OPTION(MQTT_STD_ANY "Use std::any from C++17 instead of boost::any" OFF)
 OPTION(MQTT_STD_SHARED_PTR_ARRAY "Use std::shared_ptr<char[]> from C++17 instead of boost::shared_ptr<char[]>" OFF)
+OPTION(MQTT_DISABLE_LIBSTDCXX_TUPLE_ANY_WORKAROUND "std::tuple<std::any> workaround for libstdc++" OFF)
 
 IF (POLICY CMP0074)
   CMAKE_POLICY(SET CMP0074 NEW)
@@ -40,7 +41,7 @@ ENDIF ()
 IF (MQTT_ALWAYS_SEND_REASON_CODE)
     MESSAGE (STATUS "Always send reason code enabled")
 ELSE ()
-    MESSAGE (STATUS "Always send reason code enabled")
+    MESSAGE (STATUS "Always send reason code disabled")
 ENDIF ()
 
 IF (MQTT_USE_STR_CHECK)
@@ -78,6 +79,13 @@ IF (MQTT_STD_SHARED_PTR_ARRAY)
 ELSE ()
     MESSAGE (STATUS "Using boost::shared_ptr<char []> instead of std::shared_ptr<char []>")
 ENDIF ()
+
+IF (MQTT_DISABLE_LIBSTDCXX_TUPLE_ANY_WORKAROUND)
+    MESSAGE (STATUS "std::tuple<std::any> workaround for libstdc++ disabled")
+ELSE ()
+    MESSAGE (STATUS "std::tuple<std::any> workaround for libstdc++ enabled")
+ENDIF ()
+
 
 IF (   MQTT_STD_VARIANT
     OR MQTT_STD_OPTIONAL
