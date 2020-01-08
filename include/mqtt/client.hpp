@@ -1295,14 +1295,14 @@ private:
                 async_handshake_socket(socket, force_move(props), force_move(session_life_keeper), force_move(func));
             });
     }
-
+protected:
     void on_pre_send() noexcept override
     {
         if (ping_duration_ms_ != 0) {
             reset_timer();
         }
     }
-
+private:
     void handle_timer(error_code ec) {
         if (!ec) {
             if (async_pingreq_) {

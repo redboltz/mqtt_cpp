@@ -709,6 +709,7 @@ struct callable_overlay final : public Impl
      */
     MQTT_ALWAYS_INLINE void on_pre_send() noexcept override final {
         if(h_pre_send_) h_pre_send_();
+        else base::on_pre_send();
     }
 
     /**
