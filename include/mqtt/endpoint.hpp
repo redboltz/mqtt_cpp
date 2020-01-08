@@ -72,7 +72,7 @@
 // __GLIBCXX__ >= 20190503 with
 // (__GLIBCXX__ >= 20190503 && __GLIBCXX__ < fixed_version)
 #if !defined(MQTT_DISABLE_LIBSTDCXX_TUPLE_ANY_WORKAROUND)
-#if defined(__GLIBCXX__) && (__GLIBCXX__ < 20180726 || __GLIBCXX__ >= 20190503)
+#if defined(MQTT_STD_ANY) && defined(__GLIBCXX__) && (__GLIBCXX__ < 20180726 || __GLIBCXX__ >= 20190503)
 
 template <>
 struct std::is_constructible<std::tuple<std::any>> : std::true_type {
@@ -94,7 +94,7 @@ template <>
 struct std::is_constructible<std::_Head_base<0, std::any, false>, std::_Head_base<0, std::any, false> const&> : std::true_type {
 };
 
-#endif // defined(__GLIBCXX__) && (__GLIBCXX__ < 20180726 || __GLIBCXX__ >= 20190503)
+#endif // defined(MQTT_STD_ANY) && defined(__GLIBCXX__) && (__GLIBCXX__ < 20180726 || __GLIBCXX__ >= 20190503)
 #endif // !defined(MQTT_DISABLE_LIBSTDCXX_TUPLE_ANY_WORKAROUND)
 
 namespace MQTT_NS {
