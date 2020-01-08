@@ -68,11 +68,20 @@
 #endif // defined(MQTT_USE_WS)
 
 // When https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90415 is fixed,
-// then replace
-// __GLIBCXX__ >= 20190503 with
-// (__GLIBCXX__ >= 20190503 && __GLIBCXX__ < fixed_version)
+// update the condition.
+
+// https://gcc.gnu.org/develop.html#timeline
+#define MQTT_LIBSTDCXX_GCC_730 20180125 // workaround required
+#define MQTT_LIBSTDCXX_GCC_740 20181206 // workaround required
+#define MQTT_LIBSTDCXX_GCC_750 20191114 // workaround required
+#define MQTT_LIBSTDCXX_GCC_810 20180502 // workaround required
+#define MQTT_LIBSTDCXX_GCC_820 20180726
+#define MQTT_LIBSTDCXX_GCC_830 20190222
+#define MQTT_LIBSTDCXX_GCC_910 20190503 // workaround required
+#define MQTT_LIBSTDCXX_GCC_920 20190812 // workaround required
+
 #if !defined(MQTT_DISABLE_LIBSTDCXX_TUPLE_ANY_WORKAROUND)
-#if defined(MQTT_STD_ANY) && defined(__GLIBCXX__) && (__GLIBCXX__ < 20180726 || __GLIBCXX__ >= 20190503)
+#if defined(MQTT_STD_ANY) && defined(__GLIBCXX__) && (__GLIBCXX__ != MQTT_LIBSTDCXX_GCC_820) && (__GLIBCXX__ != MQTT_LIBSTDCXX_GCC_830)
 
 template <>
 struct std::is_constructible<std::tuple<std::any>> : std::true_type {
@@ -94,8 +103,17 @@ template <>
 struct std::is_constructible<std::_Head_base<0, std::any, false>, std::_Head_base<0, std::any, false> const&> : std::true_type {
 };
 
-#endif // defined(MQTT_STD_ANY) && defined(__GLIBCXX__) && (__GLIBCXX__ < 20180726 || __GLIBCXX__ >= 20190503)
+#endif // defined(MQTT_STD_ANY) && defined(__GLIBCXX__) && (__GLIBCXX__ != MQTT_LIBSTDCXX_GCC_820) && (__GLIBCXX__ != MQTT_LIBSTDCXX_GCC_830)
 #endif // !defined(MQTT_DISABLE_LIBSTDCXX_TUPLE_ANY_WORKAROUND)
+
+#undef MQTT_LIBSTDCXX_GCC_730
+#undef MQTT_LIBSTDCXX_GCC_740
+#undef MQTT_LIBSTDCXX_GCC_750
+#undef MQTT_LIBSTDCXX_GCC_810
+#undef MQTT_LIBSTDCXX_GCC_820
+#undef MQTT_LIBSTDCXX_GCC_830
+#undef MQTT_LIBSTDCXX_GCC_910
+#undef MQTT_LIBSTDCXX_GCC_920
 
 namespace MQTT_NS {
 
