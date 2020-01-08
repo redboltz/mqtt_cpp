@@ -131,7 +131,7 @@ public:
                   w.value().props().begin(),
                   w.value().props().end(),
                   std::size_t(0U),
-                  [](std::size_t total, property_variant const& pv) -> size_t {
+                  [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
               )
@@ -147,7 +147,7 @@ public:
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -164,7 +164,7 @@ public:
               std::accumulate(
                   props_.begin(),
                   props_.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
                   }
@@ -228,7 +228,7 @@ public:
                 std::accumulate(
                   will_props_.begin(),
                   will_props_.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
                   }
@@ -420,7 +420,7 @@ public:
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -436,7 +436,7 @@ public:
               std::accumulate(
                   props_.begin(),
                   props_.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
                   }
@@ -855,7 +855,7 @@ struct basic_puback_message {
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -881,7 +881,7 @@ struct basic_puback_message {
                       std::accumulate(
                           props_.begin(),
                           props_.end(),
-                          0U,
+                          std::size_t(0U),
                           [](std::size_t total, property_variant const& pv) {
                               return total + v5::num_of_const_buffer_sequence(pv);
                           }
@@ -1034,7 +1034,7 @@ struct basic_pubrec_message {
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -1060,7 +1060,7 @@ struct basic_pubrec_message {
                       std::accumulate(
                           props_.begin(),
                           props_.end(),
-                          0U,
+                          std::size_t(0U),
                           [](std::size_t total, property_variant const& pv) {
                               return total + v5::num_of_const_buffer_sequence(pv);
                           }
@@ -1214,7 +1214,7 @@ struct basic_pubrel_message {
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -1240,7 +1240,7 @@ struct basic_pubrel_message {
                       std::accumulate(
                           props_.begin(),
                           props_.end(),
-                          0U,
+                          std::size_t(0U),
                           [](std::size_t total, property_variant const& pv) {
                               return total + v5::num_of_const_buffer_sequence(pv);
                           }
@@ -1348,7 +1348,7 @@ struct basic_pubrel_message {
                     std::accumulate(
                         props_.begin(),
                         props_.end(),
-                        0U,
+                        std::size_t(0U),
                         [](std::size_t total, property_variant const& pv) {
                             return total + v5::num_of_const_buffer_sequence(pv);
                         }
@@ -1480,7 +1480,7 @@ struct basic_pubcomp_message {
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -1506,7 +1506,7 @@ struct basic_pubcomp_message {
                       std::accumulate(
                           props_.begin(),
                           props_.end(),
-                          0U,
+                          std::size_t(0U),
                           [](std::size_t total, property_variant const& pv) {
                               return total + v5::num_of_const_buffer_sequence(pv);
                           }
@@ -2306,7 +2306,7 @@ struct disconnect_message {
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -2330,7 +2330,7 @@ struct disconnect_message {
                       std::accumulate(
                           props_.begin(),
                           props_.end(),
-                          0U,
+                          std::size_t(0U),
                           [](std::size_t total, property_variant const& pv) {
                               return total + v5::num_of_const_buffer_sequence(pv);
                           }
@@ -2474,7 +2474,7 @@ struct auth_message {
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -2499,7 +2499,7 @@ struct auth_message {
                       std::accumulate(
                           props_.begin(),
                           props_.end(),
-                          0U,
+                          std::size_t(0U),
                           [](std::size_t total, property_variant const& pv) {
                               return total + v5::num_of_const_buffer_sequence(pv);
                           }
