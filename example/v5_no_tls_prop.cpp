@@ -30,7 +30,7 @@ void client_proc(Client& c) {
         [&c]
         (bool sp, v5::connect_reason_code reason_code, MQTT_NS::v5::properties props){
             locked_cout() << "[client] Connack handler called" << std::endl;
-            locked_cout() << "[client] Clean Session: " << std::boolalpha << sp << std::endl;
+            locked_cout() << "[client] Session Present: " << std::boolalpha << sp << std::endl;
             locked_cout() << "[client] Connect Reason Code: " << reason_code << std::endl;
 
             for (auto const& p : props) {

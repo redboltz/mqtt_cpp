@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
         [&c, &pid_sub1, &pid_sub2]
         (bool sp, MQTT_NS::connect_return_code connack_return_code){
             std::cout << "Connack handler called" << std::endl;
-            std::cout << "Clean Session: " << std::boolalpha << sp << std::endl;
+            std::cout << "Session Present: " << std::boolalpha << sp << std::endl;
             std::cout << "Connack Return Code: "
                       << MQTT_NS::connect_return_code_to_str(connack_return_code) << std::endl;
             if (connack_return_code == MQTT_NS::connect_return_code::accepted) {
