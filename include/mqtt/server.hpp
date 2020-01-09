@@ -41,6 +41,8 @@ protected:
     void on_pre_send() noexcept override {}
     void on_close() noexcept override {}
     void on_error(error_code /*ec*/) noexcept override {}
+protected:
+    ~server_endpoint() = default;
 };
 
 template <
