@@ -23,7 +23,7 @@ struct callable_overlay final : public Impl
 
     template<typename ... Args>
     callable_overlay(Args && ... args)
-     : Impl(std::forward<Args>(args)...)
+     : base(std::forward<Args>(args)...)
     { }
     ~callable_overlay() = default;
     callable_overlay(callable_overlay&&) = default;
@@ -592,7 +592,7 @@ struct callable_overlay final : public Impl
      */
     MQTT_ALWAYS_INLINE void on_v5_disconnect(v5::disconnect_reason_code reason_code,
                                              v5::properties props) noexcept override final {
-        if(h_v5_disconnect_) h_v5_disconnect_(reason_code, MQTT_NS::force_move(props));
+        if (h_v5_disconnect_) h_v5_disconnect_(reason_code, MQTT_NS::force_move(props));
     }
 
     /**
@@ -623,20 +623,24 @@ struct callable_overlay final : public Impl
      *
      * This handler is called if the client called `disconnect()` and the server closed the socket cleanly.
      * If the socket is closed by other reasons, error_handler is called.
+     * This calls base::on_close() prior to calling the provided callback, if any.
      */
     MQTT_ALWAYS_INLINE void on_close() noexcept override final {
-        if(h_close_) h_close_();
+        base::on_close();
+        if (h_close_) h_close_();
     }
 
     /**
      * @brief Error handler
      *
      * This handler is called if the socket is closed without client's `disconnect()` call.
+     * This calls base::on_error() prior to calling the provided callback, if any.
      *
      * @param ec error code
      */
     MQTT_ALWAYS_INLINE void on_error(error_code ec) noexcept override final {
-        if(h_error_) h_error_(ec);
+        base::on_error(ec);
+        if (h_error_) h_error_(ec);
     }
 
     /**
@@ -648,7 +652,7 @@ struct callable_overlay final : public Impl
      *        2.2.1 Packet Identifier
      */
     MQTT_ALWAYS_INLINE void on_pub_res_sent(packet_id_t packet_id) noexcept override final {
-        if(h_pub_res_sent_) h_pub_res_sent_(packet_id);
+        if (h_pub_res_sent_) h_pub_res_sent_(packet_id);
     }
 
     /**
@@ -658,7 +662,7 @@ struct callable_overlay final : public Impl
      * @param msg publish message
      */
     MQTT_ALWAYS_INLINE void on_serialize_publish_message(basic_publish_message<sizeof(packet_id_t)> msg) noexcept override final {
-        if(h_serialize_publish_) h_serialize_publish_(msg);
+        if (h_serialize_publish_) h_serialize_publish_(msg);
     }
 
     /**
@@ -668,7 +672,7 @@ struct callable_overlay final : public Impl
      * @param msg v5::publish message
      */
     MQTT_ALWAYS_INLINE void on_serialize_v5_publish_message(v5::basic_publish_message<sizeof(packet_id_t)> msg) noexcept override final {
-        if(h_serialize_v5_publish_) h_serialize_v5_publish_(msg);
+        if (h_serialize_v5_publish_) h_serialize_v5_publish_(msg);
     }
 
     /**
@@ -680,7 +684,7 @@ struct callable_overlay final : public Impl
      * @param msg pubrel message
      */
     MQTT_ALWAYS_INLINE void on_serialize_pubrel_message(basic_pubrel_message<sizeof(packet_id_t)> msg) noexcept override final {
-        if(h_serialize_pubrel_) h_serialize_pubrel_(msg);
+        if (h_serialize_pubrel_) h_serialize_pubrel_(msg);
     }
 
     /**
@@ -692,7 +696,7 @@ struct callable_overlay final : public Impl
      * @param msg pubrel message
      */
     MQTT_ALWAYS_INLINE void on_serialize_v5_pubrel_message(v5::basic_pubrel_message<sizeof(packet_id_t)> msg) noexcept override final {
-        if(h_serialize_v5_pubrel_) h_serialize_v5_pubrel_(msg);
+        if (h_serialize_v5_pubrel_) h_serialize_v5_pubrel_(msg);
     }
 
     /**
@@ -700,7 +704,7 @@ struct callable_overlay final : public Impl
      * @param packet_id packet identifier of the removing message
      */
     MQTT_ALWAYS_INLINE void on_serialize_remove(packet_id_t packet_id) noexcept override final {
-        if(h_serialize_remove_) h_serialize_remove_(packet_id);
+        if (h_serialize_remove_) h_serialize_remove_(packet_id);
     }
 
     /**
@@ -708,7 +712,8 @@ struct callable_overlay final : public Impl
      *        This handler is called when any mqtt control packet is decided to send.
      */
     MQTT_ALWAYS_INLINE void on_pre_send() noexcept override final {
-        if(h_pre_send_) h_pre_send_();
+        base::on_pre_send();
+        if (h_pre_send_) h_pre_send_();
     }
 
     /**
@@ -726,16 +731,24 @@ struct callable_overlay final : public Impl
     /**
      * @brief next read handler
      *        This handler is called when the current mqtt message has been processed.
+     *        This calls base::on_mqtt_message_processed() only if mqtt_message_processed handler is not set.
+     *        * `client` inherits `endpoint` and override `on_pre_send()`, `on_close()`, and `on_error()`.
+     *           And implement important process *1 in the override definition (timer reset, timer cancel).
+     *        * `client` has `set_pre_send_handler()`, `set_on_close()`, and `set_on_error()`.
+     *          If a user of `client` call them, and the event happens, set handler should be called.
+     *          Either the user set handlers or not, *1 should be executed automatically.
+     *        * `endpoint` has the default definition of `on_mqtt_message_processed()`.
+     *          `client` doesn't override `on_mqtt_message_processed()`.
+     *          If a user override this, then the default definition shouldn't be called. It makes conflict behavior.
+     *        * Other `on_*()` doesn't have the default definition. `callable_overlay` calls the corresponding
+     *          handler only if it is set.
      * @param func A callback function that is called when async operation will finish.
      */
-    MQTT_ALWAYS_INLINE void on_mqtt_message_processed(MQTT_NS::any session_life_keeper) noexcept override final
-    {
-        if(h_mqtt_message_processed_)
-        {
+    MQTT_ALWAYS_INLINE void on_mqtt_message_processed(MQTT_NS::any session_life_keeper) noexcept override final {
+        if(h_mqtt_message_processed_) {
             h_mqtt_message_processed_(MQTT_NS::force_move(session_life_keeper));
         }
-        else
-        {
+        else {
             base::on_mqtt_message_processed(MQTT_NS::force_move(session_life_keeper));
         }
     }

@@ -182,6 +182,7 @@ public:
 
     // MQTT Common handlers
 
+private:
     /**
      * @brief Pingreq handler
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718086<BR>
@@ -669,6 +670,7 @@ public:
 
     // Original handlers
 
+protected:
     /**
      * @brief Close handler
      *
@@ -686,6 +688,7 @@ public:
      */
     virtual void on_error(error_code ec) noexcept = 0;
 
+private:
     /**
      * @brief Publish response sent handler
      *        This function is called just after puback sent on QoS1, or pubcomp sent on QoS2.
@@ -738,11 +741,14 @@ public:
      */
     virtual void on_serialize_remove(packet_id_t packet_id) noexcept = 0;
 
+protected:
     /**
      * @brief Pre-send handler
      *        This handler is called when any mqtt control packet is decided to send.
      */
     virtual void on_pre_send() noexcept = 0;
+
+private:
 
     /**
      * @brief is valid length handler
@@ -753,6 +759,7 @@ public:
      */
     virtual bool check_is_valid_length(control_packet_type packet_type, std::size_t remaining_length) noexcept = 0;
 
+protected:
     /**
      * @brief next read handler
      *        This handler is called when the current mqtt message has been processed.
@@ -760,12 +767,12 @@ public:
      */
     MQTT_ALWAYS_INLINE virtual void on_mqtt_message_processed(MQTT_NS::any session_life_keeper) noexcept
     {
-        if(async_read_on_message_processed_)
-        {
+        if (async_read_on_message_processed_) {
             async_read_control_packet_type(force_move(session_life_keeper));
         }
     }
 
+public:
     endpoint(this_type const&) = delete;
     endpoint(this_type&&) = delete;
     endpoint& operator=(this_type const&) = delete;

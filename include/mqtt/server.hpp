@@ -33,6 +33,16 @@ namespace MQTT_NS {
 
 namespace as = boost::asio;
 
+template <typename Mutex, template<typename...> class LockGuard, std::size_t PacketIdBytes>
+class server_endpoint : public endpoint<Mutex, LockGuard, PacketIdBytes> {
+public:
+    using endpoint<Mutex, LockGuard, PacketIdBytes>::endpoint;
+protected:
+    void on_pre_send() noexcept override {}
+    void on_close() noexcept override {}
+    void on_error(error_code /*ec*/) noexcept override {}
+};
+
 template <
     typename Strand = as::io_context::strand,
     typename Mutex = std::mutex,
@@ -42,7 +52,7 @@ template <
 class server {
 public:
     using socket_t = tcp_endpoint<as::ip::tcp::socket, Strand>;
-    using endpoint_t = callable_overlay<endpoint<Mutex, LockGuard, PacketIdBytes>>;
+    using endpoint_t = callable_overlay<server_endpoint<Mutex, LockGuard, PacketIdBytes>>;
 
     /**
      * @brief Accept handler
@@ -184,7 +194,7 @@ template <
 class server_tls {
 public:
     using socket_t = tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
-    using endpoint_t = callable_overlay<endpoint<Mutex, LockGuard, PacketIdBytes>>;
+    using endpoint_t = callable_overlay<server_endpoint<Mutex, LockGuard, PacketIdBytes>>;
 
     /**
      * @brief Accept handler
@@ -388,7 +398,7 @@ template <
 class server_ws {
 public:
     using socket_t = ws_endpoint<as::ip::tcp::socket, Strand>;
-    using endpoint_t = callable_overlay<endpoint<Mutex, LockGuard, PacketIdBytes>>;
+    using endpoint_t = callable_overlay<server_endpoint<Mutex, LockGuard, PacketIdBytes>>;
 
     /**
      * @brief Accept handler
@@ -633,7 +643,7 @@ template <
 class server_tls_ws {
 public:
     using socket_t = ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
-    using endpoint_t = callable_overlay<endpoint<Mutex, LockGuard, PacketIdBytes>>;
+    using endpoint_t = callable_overlay<server_endpoint<Mutex, LockGuard, PacketIdBytes>>;
 
     /**
      * @brief Accept handler
