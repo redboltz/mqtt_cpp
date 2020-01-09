@@ -379,21 +379,6 @@ private:
 
 #if defined(MQTT_USE_WS)
 
-class set_subprotocols {
-public:
-    template <typename T>
-    explicit
-    set_subprotocols(T&& s)
-        : s_(std::forward<T>(s)) {
-    }
-    template<bool isRequest, class Headers>
-    void operator()(boost::beast::http::header<isRequest, Headers>& m) const {
-        m.fields.replace("Sec-WebSocket-Protocol", s_);
-    }
-private:
-    std::string s_;
-};
-
 template <
     typename Strand = as::io_context::strand,
     typename Mutex = std::mutex,
@@ -561,6 +546,37 @@ private:
                             return;
                         }
                         auto ps = socket.get();
+
+#if BOOST_BEAST_VERSION >= 248
+
+                        auto it = request->find("Sec-WebSocket-Protocol");
+                        if (it != request->end()) {
+                            ps->set_option(
+                                boost::beast::websocket::stream_base::decorator(
+                                    [name = it->name(), value = it->value()] // name is enum, value is boost::string_view
+                                    (boost::beast::websocket::response_type& res) {
+                                        // This lambda is called before the scope out point *1
+                                        res.set(name, value);
+                                    }
+                                )
+                            );
+                        }
+                        ps->async_accept(
+                            *request,
+                            [this, socket = force_move(socket), tim, underlying_finished]
+                            (error_code ec) mutable {
+                                *underlying_finished = true;
+                                tim->cancel();
+                                if (ec) {
+                                    return;
+                                }
+                                auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
+                                if (h_accept_) h_accept_(force_move(sp));
+                            }
+                        );
+
+#else  // BOOST_BEAST_VERSION >= 248
+
                         ps->async_accept_ex(
                             *request,
                             [request]
@@ -581,6 +597,10 @@ private:
                                 if (h_accept_) h_accept_(force_move(sp));
                             }
                         );
+
+#endif // BOOST_BEAST_VERSION >= 248
+
+                        // scope out point *1
                     }
                 );
                 do_accept();
@@ -749,10 +769,11 @@ private:
     void do_accept() {
         if (close_request_) return;
         auto socket = std::make_shared<socket_t>(ioc_con_, ctx_);
+        auto ps = socket.get();
         acceptor_.value().async_accept(
-            socket->next_layer().next_layer(),
-            [this, socket]
-            (error_code ec) {
+            ps->next_layer().next_layer(),
+            [this, socket = force_move(socket)]
+            (error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
@@ -770,10 +791,12 @@ private:
                         socket->lowest_layer().close(close_ec);
                     }
                 );
-                socket->next_layer().async_handshake(
+
+                auto ps = socket.get();
+                ps->next_layer().async_handshake(
                     as::ssl::stream_base::server,
-                    [this, socket, tim, underlying_finished]
-                    (error_code ec) {
+                    [this, socket = std::move(socket), tim, underlying_finished]
+                    (error_code ec) mutable {
                         if (ec) {
                             *underlying_finished = true;
                             tim->cancel();
@@ -781,12 +804,13 @@ private:
                         }
                         auto sb = std::make_shared<boost::asio::streambuf>();
                         auto request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
+                        auto ps = socket.get();
                         boost::beast::http::async_read(
-                            socket->next_layer(),
+                            ps->next_layer(),
                             *sb,
                             *request,
-                            [this, socket, sb, request, tim, underlying_finished]
-                            (error_code ec, std::size_t) {
+                            [this, socket = force_move(socket), sb, request, tim, underlying_finished]
+                            (error_code ec, std::size_t) mutable {
                                 if (ec) {
                                     *underlying_finished = true;
                                     tim->cancel();
@@ -797,7 +821,39 @@ private:
                                     tim->cancel();
                                     return;
                                 }
-                                socket->async_accept_ex(
+                                auto ps = socket.get();
+
+#if BOOST_BEAST_VERSION >= 248
+
+                                auto it = request->find("Sec-WebSocket-Protocol");
+                                if (it != request->end()) {
+                                    ps->set_option(
+                                        boost::beast::websocket::stream_base::decorator(
+                                            [name = it->name(), value = it->value()] // name is enum, value is boost::string_view
+                                            (boost::beast::websocket::response_type& res) {
+                                                // This lambda is called before the scope out point *1
+                                                res.set(name, value);
+                                            }
+                                        )
+                                    );
+                                }
+                                ps->async_accept(
+                                    *request,
+                                    [this, socket = force_move(socket), tim, underlying_finished]
+                                    (error_code ec) mutable {
+                                        *underlying_finished = true;
+                                        tim->cancel();
+                                        if (ec) {
+                                            return;
+                                        }
+                                        auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
+                                        if (h_accept_) h_accept_(force_move(sp));
+                                    }
+                                );
+
+#else  // BOOST_BEAST_VERSION >= 248
+
+                                ps->async_accept_ex(
                                     *request,
                                     [request]
                                     (boost::beast::websocket::response_type& m) {
@@ -806,7 +862,7 @@ private:
                                             m.insert(it->name(), it->value());
                                         }
                                     },
-                                    [this, socket, tim, underlying_finished]
+                                    [this, socket = force_move(socket), tim, underlying_finished]
                                     (error_code ec) mutable {
                                         *underlying_finished = true;
                                         tim->cancel();
@@ -820,6 +876,10 @@ private:
                                         if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 );
+
+#endif // BOOST_BEAST_VERSION >= 248
+
+                                // scope out point *1
                             }
                         );
                     }
