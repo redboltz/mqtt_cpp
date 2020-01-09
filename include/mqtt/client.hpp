@@ -1296,6 +1296,7 @@ private:
             });
     }
 
+protected:
     void on_pre_send() noexcept override
     {
         if (ping_duration_ms_ != 0) {
@@ -1303,6 +1304,7 @@ private:
         }
     }
 
+private:
     void handle_timer(error_code ec) {
         if (!ec) {
             if (async_pingreq_) {
@@ -1331,6 +1333,7 @@ private:
         set_timer();
     }
 
+protected:
     void on_close() noexcept override {
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
     }
@@ -1340,7 +1343,6 @@ private:
         if (ping_duration_ms_ != 0) tim_ping_.cancel();
     }
 
-protected:
     // Ensure that only code that knows the *exact* type of an object
     // inheriting from this abstract base class can destruct it.
     // This avoids issues of the destructor not triggering destruction
