@@ -66,6 +66,10 @@ public:
         return ws_.next_layer();
     }
 
+    auto native_handle() {
+        return next_layer().native_handle();
+    }
+
     template <typename T>
     void set_option(T&& t) {
         ws_.set_option(std::forward<T>(t));
