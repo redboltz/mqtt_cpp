@@ -99,18 +99,18 @@ constexpr publish_options operator|(qos lhs, retain rhs) { return publish_option
 constexpr publish_options operator|(qos lhs, dup rhs)    { return publish_options(lhs) | rhs; }
 
 
-constexpr char const* publish_retain_to_str(retain v) {
+constexpr char const* retain_to_str(retain v) {
     switch(v) {
         case retain::yes: return "yes";
         case retain::no:  return "no";
-        default:                  return "invalid_publish_retain";
+        default:          return "invalid_retain";
     }
 }
 
 template<typename Stream>
 Stream & operator<<(Stream & os, retain val)
 {
-    os << publish_retain_to_str(val);
+    os << retain_to_str(val);
     return os;
 }
 
@@ -118,7 +118,7 @@ constexpr char const* dup_to_str(dup v) {
     switch(v) {
         case dup::yes: return "yes";
         case dup::no:  return "no";
-        default:                  return "invalid_publish_retain";
+        default:       return "invalid_dup";
     }
 }
 
