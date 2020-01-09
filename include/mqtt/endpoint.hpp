@@ -3603,13 +3603,12 @@ public:
     /**
      * @brief Restore serialized publish and pubrel messages.
      *        This function should be called before connect.
-     * @param packet_id packet id of the message
      * @param b         iterator begin of the message
      * @param e         iterator end of the message
      */
     template <typename Iterator>
     std::enable_if_t< std::is_convertible<typename Iterator::value_type, char>::value >
-    restore_serialized_message(packet_id_t /*packet_id*/, Iterator b, Iterator e) {
+    restore_serialized_message(Iterator b, Iterator e) {
         static_assert(
             std::is_same<
                 typename std::iterator_traits<Iterator>::iterator_category,
@@ -3724,13 +3723,12 @@ public:
     /**
      * @brief Restore serialized publish and pubrel messages.
      *        This function shouold be called before connect.
-     * @param packet_id packet id of the message
      * @param b         iterator begin of the message
      * @param e         iterator end of the message
      */
     template <typename Iterator>
     std::enable_if_t< std::is_convertible<typename Iterator::value_type, char>::value >
-    restore_v5_serialized_message(packet_id_t /*packet_id*/, Iterator b, Iterator e) {
+    restore_v5_serialized_message(Iterator b, Iterator e) {
         if (b == e) return;
 
         auto fixed_header = static_cast<std::uint8_t>(*b);
