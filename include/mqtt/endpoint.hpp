@@ -677,7 +677,7 @@ protected:
      * This handler is called if the client called `disconnect()` and the server closed the socket cleanly.
      * If the socket is closed by other reasons, error_handler is called.
      */
-    virtual void on_close() noexcept {}
+    virtual void on_close() noexcept = 0;
 
     /**
      * @brief Error handler
@@ -686,7 +686,7 @@ protected:
      *
      * @param ec error code
      */
-    virtual void on_error(error_code /*ec*/) noexcept {}
+    virtual void on_error(error_code ec) noexcept = 0;
 
 private:
     /**
@@ -746,7 +746,7 @@ protected:
      * @brief Pre-send handler
      *        This handler is called when any mqtt control packet is decided to send.
      */
-    virtual void on_pre_send() noexcept {}
+    virtual void on_pre_send() noexcept = 0;
 
 private:
 

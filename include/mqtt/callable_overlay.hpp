@@ -623,7 +623,7 @@ struct callable_overlay final : public Impl
      *
      * This handler is called if the client called `disconnect()` and the server closed the socket cleanly.
      * If the socket is closed by other reasons, error_handler is called.
-     * This calls base class on_close().
+     * This calls base::on_close() prior to calling the provided callback, if any.
      */
     MQTT_ALWAYS_INLINE void on_close() noexcept override final {
         base::on_close();
@@ -634,7 +634,7 @@ struct callable_overlay final : public Impl
      * @brief Error handler
      *
      * This handler is called if the socket is closed without client's `disconnect()` call.
-     * This calls base class on_error().
+     * This calls base::on_error() prior to calling the provided callback, if any.
      *
      * @param ec error code
      */
@@ -732,6 +732,16 @@ struct callable_overlay final : public Impl
      * @brief next read handler
      *        This handler is called when the current mqtt message has been processed.
      *        This calls base::on_mqtt_message_processed() only if mqtt_message_processed handler is not set.
+     *        * `client` inherits `endpoint` and override `on_pre_send()`, `on_close()`, and `on_error()`.
+     *           And implement important process *1 in the override definition (timer reset, timer cancel).
+     *        * `client` has `set_pre_send_handler()`, `set_on_close()`, and `set_on_error()`.
+     *          If a user of `client` call them, and the event happens, set handler should be called.
+     *          Either the user set handlers or not, *1 should be executed automatically.
+     *        * `endpoint` has the default definition of `on_mqtt_message_processed()`.
+     *          `client` doesn't override `on_mqtt_message_processed()`.
+     *          If a user override this, then the default definition shouldn't be called. It makes conflict behavior.
+     *        * Other `on_*()` doesn't have the default definition. `callable_overlay` calls the corresponding
+     *          handler only if it is set.
      * @param func A callback function that is called when async operation will finish.
      */
     MQTT_ALWAYS_INLINE void on_mqtt_message_processed(MQTT_NS::any session_life_keeper) noexcept override final {
