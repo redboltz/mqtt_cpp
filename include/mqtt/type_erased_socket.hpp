@@ -17,6 +17,7 @@
 #include <mqtt/namespace.hpp>
 #include <mqtt/shared_any.hpp>
 #include <mqtt/error_code.hpp>
+#include <mqtt/any.hpp>
 
 // I intentionally use old style boost type_erasure member fucntion concept definition.
 // The new style requires compiler extension.
@@ -27,6 +28,7 @@ BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_async_write), async_write, 3)
 BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_write), write, 2)
 BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_post), post, 1)
 BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_lowest_layer), lowest_layer, 0)
+BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_native_handle), native_handle, 0)
 BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_close), close, 1)
 BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_get_executor), get_executor, 0)
 
@@ -52,6 +54,7 @@ using socket = shared_any<
         has_write<std::size_t(std::vector<as::const_buffer>, boost::system::error_code&)>,
         has_post<void(std::function<void()>)>,
         has_lowest_layer<as::ip::tcp::socket::lowest_layer_type&()>,
+        has_native_handle<any()>,
         has_close<void(boost::system::error_code&)>,
         has_get_executor<as::executor()>
     >

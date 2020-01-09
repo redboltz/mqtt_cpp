@@ -45,6 +45,10 @@ public:
         return tcp_.lowest_layer();
     }
 
+    typename Socket::native_handle_type native_handle() {
+        return tcp_.native_handle();
+    }
+
     template <typename... Args>
     void set_option(Args&& ... args) {
         tcp_.set_option(std::forward<Args>(args)...);
