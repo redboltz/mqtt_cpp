@@ -16,7 +16,7 @@ using namespace MQTT_NS::literals;
 template <typename Client, typename Elem>
 inline
 void restore_serialized_message(Client const& c, Elem const& e) {
-    c->restore_serialized_message(e.first, e.second.begin(), e.second.end());
+    c->restore_serialized_message(e.second.begin(), e.second.end());
 }
 
 template <typename Client, typename Serialized>
@@ -644,7 +644,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
 template <typename Client, typename Elem>
 inline
 void restore_v5_serialized_message(Client const& c, Elem const& e) {
-    c->restore_v5_serialized_message(e.first, e.second.begin(), e.second.end());
+    c->restore_v5_serialized_message(e.second.begin(), e.second.end());
 }
 
 template <typename Client, typename Serialized>
