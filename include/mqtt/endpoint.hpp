@@ -3516,9 +3516,9 @@ public:
 
     /**
      * @brief Apply f to stored messages.
-     * @param f applying function. f should be void(message_variant const&)
+     * @param f applying function. f should be void(message_variant)
      */
-    void for_each_store(std::function<void(message_variant const&)> const& f) {
+    void for_each_store(std::function<void(message_variant)> const& f) {
         LockGuard<Mutex> lck (store_mtx_);
         auto const& idx = store_.template get<tag_seq>();
         for (auto const & e : idx) {
@@ -3825,6 +3825,40 @@ public:
                 );
             }
         }
+    }
+
+private:
+    struct restore_basic_message_variant_visitor
+#if !defined(MQTT_STD_VARIANT)
+        : boost::static_visitor<void>
+#endif // !defined(MQTT_STD_VARIANT)
+    {
+        restore_basic_message_variant_visitor(this_type& ep, any life_keeper):ep_(ep), life_keeper_(force_move(life_keeper)) {}
+
+        void operator()(basic_publish_message<PacketIdBytes>&& msg) const {
+            ep_.restore_serialized_message(force_move(msg), force_move(life_keeper_));
+        }
+        void operator()(basic_pubrel_message<PacketIdBytes>&& msg) const {
+            ep_.restore_serialized_message(force_move(msg), force_move(life_keeper_));
+        }
+        void operator()(v5::basic_publish_message<PacketIdBytes>&& msg) const {
+            ep_.restore_v5_serialized_message(force_move(msg), force_move(life_keeper_));
+        }
+        void operator()(v5::basic_pubrel_message<PacketIdBytes>&& msg) const {
+            ep_.restore_v5_serialized_message(force_move(msg), force_move(life_keeper_));
+        }
+        template <typename T>
+        void operator()(T&&) const {
+            throw restore_type_error();
+        }
+    private:
+        this_type& ep_;
+        mutable any life_keeper_;
+    };
+
+public:
+    void restore_serialized_message(basic_message_variant<PacketIdBytes> msg, any life_keeper = {}) {
+        MQTT_NS::visit(restore_basic_message_variant_visitor(*this, force_move(life_keeper)), force_move(msg));
     }
 
     /**

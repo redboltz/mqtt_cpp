@@ -22,7 +22,7 @@ inline void connect_no_clean(Client& c) {
         c->connect(
             MQTT_NS::v5::properties{
                 MQTT_NS::v5::property::session_expiry_interval(0xFFFFFFFFUL)
-                    }
+            }
         );
         break;
     default:
