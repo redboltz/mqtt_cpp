@@ -55,6 +55,7 @@ ENDIF ()
 IF (MQTT_TEST_5)
     LIST (APPEND check_PROGRAMS
         resend.cpp
+        resend_new_client.cpp
         resend_serialize.cpp
         resend_serialize_ptr_size.cpp
     )

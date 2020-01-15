@@ -112,6 +112,12 @@ struct property_length_error : std::exception {
     }
 };
 
+struct restore_type_error : std::exception {
+    char const* what() const noexcept override final {
+        return "restore type error";
+    }
+};
+
 } // namespace MQTT_NS
 
 #endif // MQTT_EXCEPTION_HPP
