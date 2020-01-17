@@ -53,52 +53,28 @@ using message_variant = basic_message_variant<2>;
 
 namespace detail {
 
-struct const_buffer_sequence_visitor
-
-#if !defined(MQTT_STD_VARIANT)
-    : boost::static_visitor<std::vector<as::const_buffer>>
-#endif // !defined(MQTT_STD_VARIANT)
-
-{
+struct const_buffer_sequence_visitor {
     template <typename T>
     std::vector<as::const_buffer> operator()(T&& t) const {
         return t.const_buffer_sequence();
     }
 };
 
-struct size_visitor
-
-#if !defined(MQTT_STD_VARIANT)
-    : boost::static_visitor<std::size_t>
-#endif // !defined(MQTT_STD_VARIANT)
-
-{
+struct size_visitor {
     template <typename T>
     std::size_t operator()(T&& t) const {
         return t.size();
     }
 };
 
-struct num_of_const_buffer_sequence_visitor
-
-#if !defined(MQTT_STD_VARIANT)
-    : boost::static_visitor<std::size_t>
-#endif // !defined(MQTT_STD_VARIANT)
-
-{
+struct num_of_const_buffer_sequence_visitor {
     template <typename T>
     std::size_t operator()(T&& t) const {
         return t.num_of_const_buffer_sequence();
     }
 };
 
-struct continuous_buffer_visitor
-
-#if !defined(MQTT_STD_VARIANT)
-    : boost::static_visitor<std::string>
-#endif // !defined(MQTT_STD_VARIANT)
-
-{
+struct continuous_buffer_visitor {
     template <typename T>
     std::string operator()(T&& t) const {
         return std::forward<T>(t).continuous_buffer();
@@ -145,13 +121,7 @@ using store_message_variant = basic_store_message_variant<2>;
 namespace detail {
 
 template <std::size_t PacketIdBytes>
-struct basic_message_variant_visitor
-
-#if !defined(MQTT_STD_VARIANT)
-    : boost::static_visitor<basic_message_variant<PacketIdBytes>>
-#endif // !defined(MQTT_STD_VARIANT)
-
-{
+struct basic_message_variant_visitor {
     template <typename T>
     basic_message_variant<PacketIdBytes> operator()(T&& t) const {
         return t;

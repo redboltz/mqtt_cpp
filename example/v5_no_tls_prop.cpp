@@ -35,7 +35,7 @@ void client_proc(Client& c) {
 
             for (auto const& p : props) {
                 MQTT_NS::visit(
-                    MQTT_NS::make_lambda_visitor<void>(
+                    MQTT_NS::make_lambda_visitor(
                         [&](MQTT_NS::v5::property::session_expiry_interval const& t) {
                             locked_cout() << "[client] prop: session_expiry_interval: " << t.val() << std::endl;
                         },
@@ -204,7 +204,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                     // check properties
                     for (auto const& p : props) {
                         MQTT_NS::visit(
-                            MQTT_NS::make_lambda_visitor<void>(
+                            MQTT_NS::make_lambda_visitor(
                                 [&](MQTT_NS::v5::property::session_expiry_interval const& t) {
                                     locked_cout() << "[server] prop: session_expiry_interval: " << t.val() << std::endl;
                                 },

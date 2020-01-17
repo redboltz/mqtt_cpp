@@ -954,7 +954,7 @@ BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
                 BOOST_TEST(size == props.size());
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::session_expiry_interval const& t) {
                                 BOOST_TEST(t.val() == 0x12345678UL);
                             },
@@ -1009,7 +1009,7 @@ BOOST_AUTO_TEST_CASE( connect_disconnect_prop ) {
                 BOOST_TEST(size == props.size());
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::session_expiry_interval const& t) {
                                 BOOST_TEST(t.val() == 0x12345678UL);
                             },
@@ -1132,7 +1132,7 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
 
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::session_expiry_interval const& t) {
                                 BOOST_TEST(t.val() == 0);
                             },

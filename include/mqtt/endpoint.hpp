@@ -3828,23 +3828,19 @@ public:
     }
 
 private:
-    struct restore_basic_message_variant_visitor
-#if !defined(MQTT_STD_VARIANT)
-        : boost::static_visitor<void>
-#endif // !defined(MQTT_STD_VARIANT)
-    {
+    struct restore_basic_message_variant_visitor {
         restore_basic_message_variant_visitor(this_type& ep, any life_keeper):ep_(ep), life_keeper_(force_move(life_keeper)) {}
 
-        void operator()(basic_publish_message<PacketIdBytes>&& msg) const {
+        void operator()(basic_publish_message<PacketIdBytes>&& msg) {
             ep_.restore_serialized_message(force_move(msg), force_move(life_keeper_));
         }
-        void operator()(basic_pubrel_message<PacketIdBytes>&& msg) const {
+        void operator()(basic_pubrel_message<PacketIdBytes>&& msg) {
             ep_.restore_serialized_message(force_move(msg), force_move(life_keeper_));
         }
-        void operator()(v5::basic_publish_message<PacketIdBytes>&& msg) const {
+        void operator()(v5::basic_publish_message<PacketIdBytes>&& msg) {
             ep_.restore_v5_serialized_message(force_move(msg), force_move(life_keeper_));
         }
-        void operator()(v5::basic_pubrel_message<PacketIdBytes>&& msg) const {
+        void operator()(v5::basic_pubrel_message<PacketIdBytes>&& msg) {
             ep_.restore_v5_serialized_message(force_move(msg), force_move(life_keeper_));
         }
         template <typename T>
@@ -3853,7 +3849,7 @@ private:
         }
     private:
         this_type& ep_;
-        mutable any life_keeper_;
+        any life_keeper_;
     };
 
 public:

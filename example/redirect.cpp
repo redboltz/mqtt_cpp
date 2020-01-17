@@ -52,7 +52,7 @@ void set_client_handlers(
                 MQTT_NS::buffer server_reference;
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::server_reference const& t) {
                                 locked_cout() << "[client] prop: server_reference: " << t.val() << std::endl;
                                 server_reference = t.val();

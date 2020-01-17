@@ -1227,7 +1227,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
 
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::payload_format_indicator const& t) {
                                 BOOST_TEST(t.val() == MQTT_NS::v5::property::payload_format_indicator::string);
                             },
@@ -1356,7 +1356,7 @@ BOOST_AUTO_TEST_CASE( puback_props ) {
                 BOOST_TEST(props.size() == size);
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::reason_string const& t) {
                                 BOOST_TEST(t.val() == "test success");
                             },
@@ -1552,7 +1552,7 @@ BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
                 BOOST_TEST(props.size() == size);
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::reason_string const& t) {
                                 BOOST_TEST(t.val() == "test success");
                             },
@@ -1586,7 +1586,7 @@ BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
                 BOOST_TEST(props.size() == size);
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::reason_string const& t) {
                                 BOOST_TEST(t.val() == "test success");
                             },
@@ -1620,7 +1620,7 @@ BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
                 BOOST_TEST(props.size() == size);
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::reason_string const& t) {
                                 BOOST_TEST(t.val() == "test success");
                             },

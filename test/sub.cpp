@@ -779,7 +779,7 @@ BOOST_AUTO_TEST_CASE( sub_unsub_prop ) {
                 BOOST_TEST(props.size() == size);
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::subscription_identifier const& t) {
                                 BOOST_TEST(t.val() == 268435455UL);
                             },
@@ -813,7 +813,7 @@ BOOST_AUTO_TEST_CASE( sub_unsub_prop ) {
                 BOOST_TEST(props.size() == size);
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::user_property const& t) {
                                 switch (unsub_user_prop_count++) {
                                 case 0:
@@ -937,7 +937,7 @@ BOOST_AUTO_TEST_CASE( suback_unsuback_prop ) {
                 BOOST_TEST(props.size() == suback_prop_size);
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::reason_string const& t) {
                                 BOOST_TEST(t.val() == "test success");
                             },
@@ -974,7 +974,7 @@ BOOST_AUTO_TEST_CASE( suback_unsuback_prop ) {
                 BOOST_TEST(props.size() == unsuback_prop_size);
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::reason_string const& t) {
                                 BOOST_TEST(t.val() == "test success");
                             },
