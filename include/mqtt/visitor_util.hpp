@@ -12,47 +12,29 @@
 
 namespace MQTT_NS {
 
-template <typename ReturnType, typename... Lambdas>
+template <typename... Lambdas>
 struct lambda_visitor;
 
-template <typename ReturnType, typename Lambda1, typename... Lambdas>
-struct lambda_visitor<ReturnType, Lambda1, Lambdas...>
-    : Lambda1, lambda_visitor<ReturnType, Lambdas...> {
+template <typename Lambda1, typename... Lambdas>
+struct lambda_visitor<Lambda1, Lambdas...>
+    : Lambda1, lambda_visitor<Lambdas...> {
     using Lambda1::operator();
-    using lambda_visitor<ReturnType, Lambdas...>::operator();
+    using lambda_visitor<Lambdas...>::operator();
     lambda_visitor(Lambda1 lambda1, Lambdas... lambdas)
-        : Lambda1(lambda1), lambda_visitor<ReturnType, Lambdas...>(lambdas...) {}
+        : Lambda1(lambda1), lambda_visitor<Lambdas...>(lambdas...) {}
 };
 
 
-template <typename ReturnType, typename Lambda1>
-struct lambda_visitor<ReturnType, Lambda1>
-    :
-#if !defined(MQTT_STD_VARIANT)
-    boost::static_visitor<ReturnType>,
-#endif // !defined(MQTT_STD_VARIANT)
-    Lambda1 {
+template <typename Lambda1>
+struct lambda_visitor<Lambda1> : Lambda1 {
     using Lambda1::operator();
     lambda_visitor(Lambda1 lambda1)
-        :
-#if !defined(MQTT_STD_VARIANT)
-        boost::static_visitor<ReturnType>(),
-#endif // !defined(MQTT_STD_VARIANT)
-        Lambda1(lambda1) {}
+        : Lambda1(lambda1) {}
 };
 
 
-template <typename ReturnType>
-struct lambda_visitor<ReturnType>
-#if !defined(MQTT_STD_VARIANT)
-    : public boost::static_visitor<ReturnType>
-#endif // !defined(MQTT_STD_VARIANT)
-{
-    lambda_visitor() {}
-};
-
-template <typename ReturnType, typename... Lambdas>
-inline lambda_visitor<ReturnType, Lambdas...> make_lambda_visitor(Lambdas&&... lambdas) {
+template <typename... Lambdas>
+inline lambda_visitor<Lambdas...> make_lambda_visitor(Lambdas&&... lambdas) {
     return { std::forward<Lambdas>(lambdas)... };
 }
 

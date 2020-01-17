@@ -54,13 +54,7 @@ namespace property {
 
 namespace detail {
 
-struct add_const_buffer_sequence_visitor
-
-#if !defined(MQTT_STD_VARIANT)
-    : boost::static_visitor<void>
-#endif // !defined(MQTT_STD_VARIANT)
-
-{
+struct add_const_buffer_sequence_visitor {
     add_const_buffer_sequence_visitor(std::vector<as::const_buffer>& v):v(v) {}
     template <typename T>
     void operator()(T&& t) const {
@@ -69,26 +63,14 @@ struct add_const_buffer_sequence_visitor
     std::vector<as::const_buffer>& v;
 };
 
-struct size_visitor
-
-#if !defined(MQTT_STD_VARIANT)
-    : boost::static_visitor<std::size_t>
-#endif // !defined(MQTT_STD_VARIANT)
-
-{
+struct size_visitor {
     template <typename T>
     std::size_t operator()(T&& t) const {
         return t.size();
     }
 };
 
-struct num_of_const_buffer_sequence_visitor
-
-#if !defined(MQTT_STD_VARIANT)
-    : boost::static_visitor<std::size_t>
-#endif // !defined(MQTT_STD_VARIANT)
-
-{
+struct num_of_const_buffer_sequence_visitor {
     template <typename T>
     std::size_t operator()(T&& t) const {
         return t.num_of_const_buffer_sequence();
@@ -96,13 +78,7 @@ struct num_of_const_buffer_sequence_visitor
 };
 
 template <typename Iterator>
-struct fill_visitor
-
-#if !defined(MQTT_STD_VARIANT)
-    : boost::static_visitor<void>
-#endif // !defined(MQTT_STD_VARIANT)
-
-{
+struct fill_visitor {
     fill_visitor(Iterator b, Iterator e):b(b), e(e) {}
 
     template <typename T>

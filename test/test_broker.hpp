@@ -439,7 +439,7 @@ private:
         if (ep.get_protocol_version() == MQTT_NS::protocol_version::v5) {
             for (auto const& p : props) {
                 MQTT_NS::visit(
-                    MQTT_NS::make_lambda_visitor<void>(
+                    MQTT_NS::make_lambda_visitor(
                         [&session_expiry_interval](MQTT_NS::v5::property::session_expiry_interval const& t) {
                             if (t.val() != 0) {
                                 session_expiry_interval.emplace(boost::posix_time::seconds(t.val()));

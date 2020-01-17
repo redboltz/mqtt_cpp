@@ -868,7 +868,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
 
             for (auto const& p : props) {
                 MQTT_NS::visit(
-                    MQTT_NS::make_lambda_visitor<void>(
+                    MQTT_NS::make_lambda_visitor(
                         [&](MQTT_NS::v5::property::payload_format_indicator const& t) {
                             BOOST_TEST(t.val() == MQTT_NS::v5::property::payload_format_indicator::string);
                         },

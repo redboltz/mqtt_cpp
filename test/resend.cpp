@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::payload_format_indicator const& t) {
                                 BOOST_TEST(t.val() == MQTT_NS::v5::property::payload_format_indicator::string);
                             },
@@ -447,7 +447,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 BOOST_TEST(props.size() == size);
                 for (auto const& p : props) {
                     MQTT_NS::visit(
-                        MQTT_NS::make_lambda_visitor<void>(
+                        MQTT_NS::make_lambda_visitor(
                             [&](MQTT_NS::v5::property::reason_string const& t) {
                                 BOOST_TEST(t.val() == "test success");
                             },
