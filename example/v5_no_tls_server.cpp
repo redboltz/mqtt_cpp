@@ -116,14 +116,14 @@ int main(int argc, char** argv) {
                  MQTT_NS::optional<MQTT_NS::buffer> const& username,
                  MQTT_NS::optional<MQTT_NS::buffer> const& password,
                  MQTT_NS::optional<MQTT_NS::will>,
-                 bool clean_session,
+                 bool clean_start,
                  std::uint16_t keep_alive,
                  MQTT_NS::v5::properties /*props*/){
                     using namespace MQTT_NS::literals;
                     std::cout << "[server] client_id    : " << client_id << std::endl;
                     std::cout << "[server] username     : " << (username ? username.value() : "none"_mb) << std::endl;
                     std::cout << "[server] password     : " << (password ? password.value() : "none"_mb) << std::endl;
-                    std::cout << "[server] clean_session: " << std::boolalpha << clean_session << std::endl;
+                    std::cout << "[server] clean_start  : " << std::boolalpha << clean_start << std::endl;
                     std::cout << "[server] keep_alive   : " << keep_alive << std::endl;
                     auto sp = wp.lock();
                     BOOST_ASSERT(sp);

@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 
     // Setup client
     c->set_client_id("cid1");
-    c->set_clean_session(true);
+    c->set_clean_start(true);
 
     // Setup handlers
     c->set_v5_connack_handler( // use v5 handler

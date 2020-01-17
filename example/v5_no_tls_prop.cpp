@@ -23,7 +23,7 @@ void client_proc(Client& c) {
 
     // Setup client
     c->set_client_id("cid1");
-    c->set_clean_session(true);
+    c->set_clean_start(true);
 
     // Setup handlers
     c->set_v5_connack_handler( // use v5 handler
@@ -192,13 +192,13 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                  MQTT_NS::optional<MQTT_NS::buffer> const& username,
                  MQTT_NS::optional<MQTT_NS::buffer> const& password,
                  MQTT_NS::optional<MQTT_NS::will>,
-                 bool clean_session,
+                 bool clean_start,
                  std::uint16_t keep_alive,
                  MQTT_NS::v5::properties props){
                     locked_cout() << "[server] client_id    : " << client_id << std::endl;
                     locked_cout() << "[server] username     : " << (username ? username.value() : "none"_mb) << std::endl;
                     locked_cout() << "[server] password     : " << (password ? password.value() : "none"_mb) << std::endl;
-                    locked_cout() << "[server] clean_session: " << std::boolalpha << clean_session << std::endl;
+                    locked_cout() << "[server] clean_start  : " << std::boolalpha << clean_start << std::endl;
                     locked_cout() << "[server] keep_alive   : " << keep_alive << std::endl;
 
                     // check properties
