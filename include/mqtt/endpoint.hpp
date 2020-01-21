@@ -4064,7 +4064,7 @@ private:
         basic_message_variant<PacketIdBytes> message() const {
             return get_basic_message_variant<PacketIdBytes>(smv_);
         }
-    private:
+    public:
         packet_id_t packet_id_;
         control_packet_type expected_control_packet_type_;
         basic_store_message_variant<PacketIdBytes> smv_;
@@ -8098,6 +8098,11 @@ private:
                     auto store_msg = msg;
                     store_msg.set_dup(true);
                     LockGuard<Mutex> lck (store_mtx_);
+                    std::cout << "current store dump at send_publish" << std::endl;
+                    for (auto const& e : store_) {
+                        std::cout << "packet_id:" << e.packet_id_ << std::endl;
+                    }
+                    std::cout << "insert packet_id : " << packet_id << std::endl;
                     store_.emplace(
                         packet_id,
                         pubopts.get_qos() == qos::at_least_once
@@ -8190,6 +8195,11 @@ private:
             [&](auto msg, auto const& serialize) {
                 {
                     LockGuard<Mutex> lck (store_mtx_);
+                    std::cout << "current store dump at send_pubrel" << std::endl;
+                    for (auto const& e : store_) {
+                        std::cout << "packet_id:" << e.packet_id_ << std::endl;
+                    }
+                    std::cout << "insert packet_id : " << packet_id << std::endl;
 
                     // insert if not registerd (start from pubrel sending case)
                     packet_id_.insert(packet_id);
@@ -8238,6 +8248,11 @@ private:
             [&](auto msg, auto const& serialize) {
                 {
                     LockGuard<Mutex> lck (store_mtx_);
+                    std::cout << "current store dump at store_pubrel" << std::endl;
+                    for (auto const& e : store_) {
+                        std::cout << "packet_id:" << e.packet_id_ << std::endl;
+                    }
+                    std::cout << "insert packet_id : " << packet_id << std::endl;
 
                     // insert if not registerd (start from pubrel sending case)
                     packet_id_.insert(packet_id);
@@ -8565,6 +8580,11 @@ private:
                     store_msg.set_dup(true);
                     {
                         LockGuard<Mutex> lck (store_mtx_);
+                        std::cout << "current store dump at async_send_publish" << std::endl;
+                        for (auto const& e : store_) {
+                            std::cout << "packet_id:" << e.packet_id_ << std::endl;
+                        }
+                        std::cout << "insert packet_id : " << packet_id << std::endl;
                         auto ret = store_.emplace(
                             packet_id,
                             pubopts.get_qos() == qos::at_least_once ? control_packet_type::puback
@@ -8688,6 +8708,11 @@ private:
             [&](auto msg, auto const& serialize) {
                 {
                     LockGuard<Mutex> lck (store_mtx_);
+                    std::cout << "current store dump at async_send_pubrel" << std::endl;
+                    for (auto const& e : store_) {
+                        std::cout << "packet_id:" << e.packet_id_ << std::endl;
+                    }
+                    std::cout << "insert packet_id : " << packet_id << std::endl;
 
                     // insert if not registerd (start from pubrel sending case)
                     packet_id_.insert(packet_id);
