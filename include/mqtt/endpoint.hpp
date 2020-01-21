@@ -6618,8 +6618,13 @@ private:
                 LockGuard<Mutex> lck (store_mtx_);
                 auto& idx = store_.template get<tag_packet_id_type>();
                 auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::puback));
+                std::cout << "current store dump at store_pubrec" << std::endl;
+                for (auto const& e : store_) {
+                    std::cout << "packet_id:" << e.packet_id_ << std::endl;
+                }
                 idx.erase(std::get<0>(r), std::get<1>(r));
                 packet_id_.erase(info.packet_id);
+                std::cout << "erase at puback packet_id:" << info.packet_id << std::endl;
             }
             on_serialize_remove(info.packet_id);
             switch (version_) {
@@ -6763,7 +6768,12 @@ private:
                 LockGuard<Mutex> lck (store_mtx_);
                 auto& idx = store_.template get<tag_packet_id_type>();
                 auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::pubrec));
+                std::cout << "current store dump at store_pubrec" << std::endl;
+                for (auto const& e : store_) {
+                    std::cout << "packet_id:" << e.packet_id_ << std::endl;
+                }
                 idx.erase(std::get<0>(r), std::get<1>(r));
+                std::cout << "erase at pubrec packet_id:" << info.packet_id << std::endl;
                 // packet_id shouldn't be erased here.
                 // It is reused for pubrel/pubcomp.
             }
@@ -7108,8 +7118,13 @@ private:
                 LockGuard<Mutex> lck (store_mtx_);
                 auto& idx = store_.template get<tag_packet_id_type>();
                 auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::pubcomp));
+                std::cout << "current store dump at store_pubcomp" << std::endl;
+                for (auto const& e : store_) {
+                    std::cout << "packet_id:" << e.packet_id_ << std::endl;
+                }
                 idx.erase(std::get<0>(r), std::get<1>(r));
                 packet_id_.erase(info.packet_id);
+                std::cout << "erase at pubcomp packet_id:" << info.packet_id << std::endl;
             }
             on_serialize_remove(info.packet_id);
             switch (version_) {
