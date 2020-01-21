@@ -24,7 +24,7 @@ struct null_strand {
         as::post(
             ioc_,
             [f = std::forward<Func>(f)] () mutable {
-                std::forward<Func>(f)();
+                std::move(f)();
             }
         );
     }
@@ -33,7 +33,7 @@ struct null_strand {
         as::defer(
             ioc_,
             [f = std::forward<Func>(f)] () mutable {
-                std::forward<Func>(f)();
+                std::move(f)();
             }
         );
     }
