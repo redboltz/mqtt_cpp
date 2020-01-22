@@ -89,7 +89,7 @@ jobs:
         sudo add-apt-repository ppa:mhier/libboost-latest
         sudo apt-get update
         sudo apt-get install cmake
-        sudo apt-get install boost1.67
+        sudo apt-get install boost1.69
         cat /usr/include/boost/version.hpp
         ls -l /usr/lib
     - name: cmake
