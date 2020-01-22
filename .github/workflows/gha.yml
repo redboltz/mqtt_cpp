@@ -88,8 +88,9 @@ jobs:
       run: |
         sudo add-apt-repository ppa:mhier/libboost-latest
         sudo apt-get update
-        sudo apt-get -y --purge remove libboost-all-dev libboost-doc libboost-dev
         sudo apt-get install boost1.67
+        cat /usr/include/boost/version.hpp
+        ls -l /usr/lib
     - name: cmake
       shell: bash
       run: |
