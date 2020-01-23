@@ -86,12 +86,10 @@ jobs:
     - uses: actions/checkout@v1
     - name: install boost
       run: |
-        sudo add-apt-repository ppa:mhier/libboost-latest
-        sudo apt-get update
-        sudo apt-get install cmake
-        sudo apt-get install boost1.69
-        cat /usr/include/boost/version.hpp
         ls -l /usr/lib
+        ls -l /usr/local/lib
+        cat /usr/include/boost/version.hpp
+        cat /usr/local/include/boost/version.hpp
     - name: cmake
       shell: bash
       run: |
