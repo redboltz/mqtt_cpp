@@ -90,8 +90,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install boost1.67
     - name: cmake
-      env:
-        BOOSTROOT: /usr
       shell: bash
       run: |
         if [ ${{ matrix.pattern }} == 0 ]; then
@@ -121,7 +119,7 @@ jobs:
 
         mkdir build
         cd build
-        cmake ${FLAGS} ..
+        cmake ${FLAGS} -DBOOSTROOT=/usr ..
     - name: make check_deps
       run: |
         cd build
