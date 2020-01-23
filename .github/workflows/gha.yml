@@ -90,7 +90,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install boost1.67
     - name: cmake
-      env: BOOSTROOT=/usr
+      env:
+        BOOSTROOT: /usr
       shell: bash
       run: |
         if [ ${{ matrix.pattern }} == 0 ]; then
