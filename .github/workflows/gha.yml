@@ -119,7 +119,7 @@ jobs:
 
         mkdir build
         cd build
-        cmake ${FLAGS} ..
+        cmake ${FLAGS} -DBOOSTROOT=/usr ..
     - name: make check_deps
       run: |
         cd build
