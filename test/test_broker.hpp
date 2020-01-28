@@ -915,6 +915,7 @@ private:
                                                        MQTT_NS::force_move(contents),
                                                        MQTT_NS::force_move(props),
                                                        pubopts.get_qos());
+                    (void)ret;
                     BOOST_ASSERT(ret.second);
                 }
                 else {
