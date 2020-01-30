@@ -1208,7 +1208,7 @@ struct basic_pubrel_message {
         typename packet_id_type<PacketIdBytes>::type packet_id,
         v5::pubrel_reason_code reason_code,
         properties props)
-        : fixed_header_(make_fixed_header(control_packet_type::pubrel, 0b0000)),
+        : fixed_header_(make_fixed_header(control_packet_type::pubrel, 0b0010)),
           reason_code_(reason_code),
           property_length_(
               std::accumulate(
