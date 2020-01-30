@@ -6583,12 +6583,22 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::puback_reason_code>(body[0]);
-                    process_puback_impl<puback_phase::properties>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if (remaining_length_ == 0) {
+                        process_puback_impl<puback_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_puback_impl<puback_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -6728,12 +6738,22 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::pubrec_reason_code>(body[0]);
-                    process_pubrec_impl<pubrec_phase::properties>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if(remaining_length_ == 0) {
+                        process_pubrec_impl<pubrec_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_pubrec_impl<pubrec_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -6911,12 +6931,22 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::pubrel_reason_code>(body[0]);
-                    process_pubrel_impl<pubrel_phase::properties>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if (remaining_length_ == 0) {
+                        process_pubrel_impl<pubrel_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_pubrel_impl<pubrel_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -7073,12 +7103,22 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::pubcomp_reason_code>(body[0]);
-                    process_pubcomp_impl<pubcomp_phase::properties>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    if (remaining_length_ == 0) {
+                        process_pubcomp_impl<pubcomp_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_pubcomp_impl<pubcomp_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
