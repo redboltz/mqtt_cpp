@@ -6551,6 +6551,9 @@ private:
                 ]
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901126
+                    // If the Remaining Length is 0, there is no reason code & property length 
+                    // the value of success is used for reason code, the value of 0 is used for property length
                     if (remaining_length_ == 0) {
                         info.reason_code = v5::puback_reason_code::success;
                         process_puback_impl<puback_phase::finish>(
@@ -6583,12 +6586,24 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::puback_reason_code>(body[0]);
-                    process_puback_impl<puback_phase::properties>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901126
+                    // If the Remaining Length is 0, there is no property length and the value of 0 is used
+                    if (remaining_length_ == 0) {
+                        process_puback_impl<puback_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_puback_impl<puback_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -6696,6 +6711,9 @@ private:
                 ]
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901136
+                    // If the Remaining Length is 0, there is no reason code & property length 
+                    // the value of success is used for reason code, the value of 0 is used for property length
                     if(remaining_length_ == 0) {
                         info.reason_code = v5::pubrec_reason_code::success;
                         process_pubrec_impl<pubrec_phase::finish>(
@@ -6728,12 +6746,24 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::pubrec_reason_code>(body[0]);
-                    process_pubrec_impl<pubrec_phase::properties>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901136
+                    // If the Remaining Length is 0, there is no property length and the value of 0 is used
+                    if(remaining_length_ == 0) {
+                        process_pubrec_impl<pubrec_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_pubrec_impl<pubrec_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -6879,6 +6909,9 @@ private:
                 ]
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901146
+                    // If the Remaining Length is 0, there is no reason code & property length 
+                    // the value of success is used for reason code, the value of 0 is used for property length
                     if (remaining_length_ == 0) {
                         info.reason_code = v5::pubrel_reason_code::success;
                         process_pubrel_impl<pubrel_phase::finish>(
@@ -6911,12 +6944,24 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::pubrel_reason_code>(body[0]);
-                    process_pubrel_impl<pubrel_phase::properties>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901146
+                    // If the Remaining Length is 0, there is no property length and the value of 0 is used
+                    if (remaining_length_ == 0) {
+                        process_pubrel_impl<pubrel_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_pubrel_impl<pubrel_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
@@ -7041,6 +7086,9 @@ private:
                 ]
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901156
+                    // If the Remaining Length is 0, there is no reason code & property length 
+                    // the value of success is used for reason code, the value of 0 is used for property length
                     if (remaining_length_ == 0) {
                         info.reason_code = v5::pubcomp_reason_code::success;
                         process_pubcomp_impl<pubcomp_phase::finish>(
@@ -7073,12 +7121,24 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::pubcomp_reason_code>(body[0]);
-                    process_pubcomp_impl<pubcomp_phase::properties>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901156
+                    // If the Remaining Length is 0, there is no property length and the value of 0 is used
+                    if (remaining_length_ == 0) {
+                        process_pubcomp_impl<pubcomp_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_pubcomp_impl<pubcomp_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
