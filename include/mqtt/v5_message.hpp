@@ -779,6 +779,14 @@ public:
     }
 
     /**
+     * @brief Get publish_options
+     * @return publish_options.
+     */
+    constexpr publish_options get_options() const {
+        return publish_options(fixed_header_);
+    }
+
+    /**
      * @brief Get qos
      * @return qos
      */
@@ -816,6 +824,14 @@ public:
      */
     string_view payload() const {
         return string_view(get_pointer(payload_), get_size(payload_));
+    }
+
+    /**
+     * @brief Get properties
+     * @return properties
+     */
+    properties const& props() const {
+        return props_;
     }
 
     /**
@@ -1452,6 +1468,22 @@ struct basic_pubrel_message {
      */
     decltype(auto) packet_id() const {
         return make_packet_id<PacketIdBytes>::apply(packet_id_.begin(), packet_id_.end());
+    }
+
+    /**
+     * @brief Get reason_code
+     * @return reason_code
+     */
+    v5::pubrel_reason_code reason_code() const {
+        return reason_code_;
+    }
+
+    /**
+     * @brief Get properties
+     * @return properties
+     */
+    properties const& props() const {
+        return props_;
     }
 
     std::uint8_t fixed_header_;
