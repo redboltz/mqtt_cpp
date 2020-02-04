@@ -36,6 +36,7 @@
 #include <mqtt/move.hpp>
 #include <mqtt/reason_code.hpp>
 #include <mqtt/connect_return_code.hpp>
+#include <mqtt/publish.hpp>
 
 namespace MQTT_NS {
 
@@ -662,6 +663,14 @@ public:
      */
     typename packet_id_type<PacketIdBytes>::type packet_id() const {
         return make_packet_id<PacketIdBytes>::apply(packet_id_.begin(), packet_id_.end());
+    }
+
+    /**
+     * @brief Get publish_options
+     * @return publish_options.
+     */
+    constexpr publish_options get_options() const {
+        return publish_options(fixed_header_);
     }
 
     /**
