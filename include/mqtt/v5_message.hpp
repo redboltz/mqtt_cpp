@@ -882,29 +882,38 @@ struct basic_puback_message {
               1 +                   // fixed header
               1 +                   // remaining length
               1 +                   // packet id
-              (
-                  // TODO: This is wrong. The reason code MUST be provided
-                  // if there are properties. Not the other way around.
-                  // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901124
-                  // 3.4.2.1 PUBACK Reason Code
-                  // The Reason Code and Property Length can be omitted if
-                  // the Reason Code is 0x00 (Success) and there are no Properties.
-                  // In this case the PUBACK has a Remaining Length of 2.
-                  (reason_code_ != v5::puback_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE ?
-                  (
-                      1 +                   // reason code
-                      1 +                   // property length
-                      std::accumulate(
-                          props_.begin(),
-                          props_.end(),
-                          std::size_t(0U),
-                          [](std::size_t total, property_variant const& pv) {
-                              return total + v5::num_of_const_buffer_sequence(pv);
-                          }
-                      )
-                  )
-                  : 0
-              )
+              // TODO: This is wrong. The reason code MUST be provided
+              // if there are properties. Not the other way around.
+              // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901124
+              // 3.4.2.1 PUBACK Reason Code
+              // The Reason Code and Property Length can be omitted if
+              // the Reason Code is 0x00 (Success) and there are no Properties.
+              // In this case the PUBACK has a Remaining Length of 2.
+              [&] () -> std::size_t {
+                  if ((reason_code_ != v5::puback_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE) {
+                      // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901126
+                      // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+                      if (props_.empty()) {
+                          return 1;                 // reason code
+                      }
+                      else {
+                          return
+                              1 +                   // reason code
+                              1 +                   // property length
+                              std::accumulate(      // properties
+                                  props_.begin(),
+                                  props_.end(),
+                                  std::size_t(0U),
+                                  [](std::size_t total, property_variant const& pv) {
+                                      return total + v5::num_of_const_buffer_sequence(pv);
+                                  }
+                              );
+                      }
+                  }
+                  else {
+                      return 0;
+                  }
+              } ()
           )
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
@@ -915,22 +924,31 @@ struct basic_puback_message {
 
         remaining_length_ =
             PacketIdBytes +       // packet id
-            (
-                // TODO: This is wrong. The reason code MUST be provided
-                // if there are properties. Not the other way around.
-                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901124
-                // 3.4.2.1 PUBACK Reason Code
-                // The Reason Code and Property Length can be omitted if
-                // the Reason Code is 0x00 (Success) and there are no Properties.
-                // In this case the PUBACK has a Remaining Length of 2.
-                (reason_code_ != v5::puback_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE ?
-                (
-                    1 +                   // reason code
-                    property_length_buf_.size() +
-                    property_length_
-                )
-                : 0
-            );
+            // TODO: This is wrong. The reason code MUST be provided
+            // if there are properties. Not the other way around.
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901124
+            // 3.4.2.1 PUBACK Reason Code
+            // The Reason Code and Property Length can be omitted if
+            // the Reason Code is 0x00 (Success) and there are no Properties.
+            // In this case the PUBACK has a Remaining Length of 2.
+            [&] () -> std::size_t {
+                if ((reason_code_ != v5::puback_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE) {
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901126
+                    // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+                    if (props_.empty()) {
+                        return 1;                 // reason code
+                    }
+                    else {
+                        return
+                            1 +                   // reason code
+                            property_length_buf_.size() +
+                            property_length_;
+                    }
+                }
+                else {
+                    return 0;
+                }
+            } ();
 
         auto rb = remaining_bytes(remaining_length_);
         for (auto e : rb) {
@@ -960,10 +978,13 @@ struct basic_puback_message {
         // In this case the PUBACK has a Remaining Length of 2.
         if (reason_code_ != v5::puback_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE) {
             ret.emplace_back(as::buffer(&reason_code_, 1));
-            ret.emplace_back(as::buffer(property_length_buf_.data(), property_length_buf_.size()));
-
-            for (auto const& p : props_) {
-                v5::add_const_buffer_sequence(ret, p);
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901126
+            // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+            if (!props_.empty()) {
+                ret.emplace_back(as::buffer(property_length_buf_.data(), property_length_buf_.size()));
+                for (auto const& p : props_) {
+                    v5::add_const_buffer_sequence(ret, p);
+                }
             }
         }
         return ret;
@@ -1012,14 +1033,18 @@ struct basic_puback_message {
         if (reason_code_ != v5::puback_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE) {
             ret.push_back(static_cast<char>(reason_code_));
 
-            ret.append(property_length_buf_.data(), property_length_buf_.size());
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901126
+            // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+            if (!props_.empty()) {
+                ret.append(property_length_buf_.data(), property_length_buf_.size());
 
-            auto it = ret.end();
-            ret.resize(sz);
-            auto end = ret.end();
-            for (auto const& p : props_) {
-                v5::fill(p, it, end);
-                it += static_cast<std::string::difference_type>(v5::size(p));
+                auto it = ret.end();
+                ret.resize(sz);
+                auto end = ret.end();
+                for (auto const& p : props_) {
+                    v5::fill(p, it, end);
+                    it += static_cast<std::string::difference_type>(v5::size(p));
+                }
             }
         }
         return ret;
@@ -1061,29 +1086,38 @@ struct basic_pubrec_message {
               1 +                   // fixed header
               1 +                   // remaining length
               1 +                   // packet id
-              (
-                  // TODO: This is wrong. The reason code MUST be provided
-                  // if there are properties. Not the other way around.
-                  // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901134
-                  // 3.5.2.1 PUBREC Reason Code
-                  // The Reason Code and Property Length can be omitted if
-                  // the Reason Code is 0x00 (Success) and there are no Properties.
-                  // In this case the PUBREC has a Remaining Length of 2.
-                  (reason_code_ != v5::pubrec_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE ?
-                  (
-                      1 +                   // reason code
-                      1 +                   // property length
-                      std::accumulate(
-                          props_.begin(),
-                          props_.end(),
-                          std::size_t(0U),
-                          [](std::size_t total, property_variant const& pv) {
-                              return total + v5::num_of_const_buffer_sequence(pv);
-                          }
-                      )
-                  )
-                  : 0
-              )
+              // TODO: This is wrong. The reason code MUST be provided
+              // if there are properties. Not the other way around.
+              // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901134
+              // 3.5.2.1 PUBREC Reason Code
+              // The Reason Code and Property Length can be omitted if
+              // the Reason Code is 0x00 (Success) and there are no Properties.
+              // In this case the PUBREC has a Remaining Length of 2.
+              [&] () -> std::size_t {
+                  if ((reason_code_ != v5::pubrec_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE) {
+                      // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901136
+                      // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+                      if (props_.empty()) {
+                          return 1;                 // reason code
+                      }
+                      else {
+                          return
+                              1 +                   // reason code
+                              1 +                   // property length
+                              std::accumulate(      // properties
+                                  props_.begin(),
+                                  props_.end(),
+                                  std::size_t(0U),
+                                  [](std::size_t total, property_variant const& pv) {
+                                      return total + v5::num_of_const_buffer_sequence(pv);
+                                  }
+                              );
+                      }
+                  }
+                  else {
+                      return 0;
+                  }
+              } ()
           )
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
@@ -1094,22 +1128,31 @@ struct basic_pubrec_message {
 
         remaining_length_ =
             PacketIdBytes +       // packet id
-            (
-                // TODO: This is wrong. The reason code MUST be provided
-                // if there are properties. Not the other way around.
-                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901134
-                // 3.5.2.1 PUBREC Reason Code
-                // The Reason Code and Property Length can be omitted if
-                // the Reason Code is 0x00 (Success) and there are no Properties.
-                // In this case the PUBREC has a Remaining Length of 2.
-                (reason_code_ != v5::pubrec_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE ?
-                (
-                    1 +                   // reason code
-                    property_length_buf_.size() +
-                    property_length_
-                )
-                : 0
-            );
+            // TODO: This is wrong. The reason code MUST be provided
+            // if there are properties. Not the other way around.
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901134
+            // 3.5.2.1 PUBREC Reason Code
+            // The Reason Code and Property Length can be omitted if
+            // the Reason Code is 0x00 (Success) and there are no Properties.
+            // In this case the PUBREC has a Remaining Length of 2.
+            [&] () -> std::size_t {
+                if ((reason_code_ != v5::pubrec_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE) {
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901136
+                    // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+                    if (props_.empty()) {
+                        return 1;                 // reason code
+                    }
+                    else {
+                        return
+                            1 +                   // reason code
+                            property_length_buf_.size() +
+                            property_length_;
+                    }
+                }
+                else {
+                    return 0;
+                }
+            } ();
 
         auto rb = remaining_bytes(remaining_length_);
         for (auto e : rb) {
@@ -1139,10 +1182,13 @@ struct basic_pubrec_message {
         // In this case the PUBREC has a Remaining Length of 2.
         if (reason_code_ != v5::pubrec_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE) {
             ret.emplace_back(as::buffer(&reason_code_, 1));
-            ret.emplace_back(as::buffer(property_length_buf_.data(), property_length_buf_.size()));
-
-            for (auto const& p : props_) {
-                v5::add_const_buffer_sequence(ret, p);
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901136
+            // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+            if (!props_.empty()) {
+                ret.emplace_back(as::buffer(property_length_buf_.data(), property_length_buf_.size()));
+                for (auto const& p : props_) {
+                    v5::add_const_buffer_sequence(ret, p);
+                }
             }
         }
         return ret;
@@ -1191,14 +1237,18 @@ struct basic_pubrec_message {
         if (reason_code_ != v5::pubrec_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE) {
             ret.push_back(static_cast<char>(reason_code_));
 
-            ret.append(property_length_buf_.data(), property_length_buf_.size());
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901136
+            // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+            if (!props_.empty()) {
+                ret.append(property_length_buf_.data(), property_length_buf_.size());
 
-            auto it = ret.end();
-            ret.resize(sz);
-            auto end = ret.end();
-            for (auto const& p : props_) {
-                v5::fill(p, it, end);
-                it += static_cast<std::string::difference_type>(v5::size(p));
+                auto it = ret.end();
+                ret.resize(sz);
+                auto end = ret.end();
+                for (auto const& p : props_) {
+                    v5::fill(p, it, end);
+                    it += static_cast<std::string::difference_type>(v5::size(p));
+                }
             }
         }
         return ret;
@@ -1241,29 +1291,38 @@ struct basic_pubrel_message {
               1 +                   // fixed header
               1 +                   // remaining length
               1 +                   // packet id
-              (
-                  // TODO: This is wrong. The reason code MUST be provided
-                  // if there are properties. Not the other way around.
-                  // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901144
-                  // 3.6.2.1 PUBREL Reason Code
-                  // The Reason Code and Property Length can be omitted if
-                  // the Reason Code is 0x00 (Success) and there are no Properties.
-                  // In this case the PUBREL has a Remaining Length of 2.
-                  (reason_code_ != v5::pubrel_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE) ?
-                  (
-                      1 +                   // reason code
-                      1 +                   // property length
-                      std::accumulate(
-                          props_.begin(),
-                          props_.end(),
-                          std::size_t(0U),
-                          [](std::size_t total, property_variant const& pv) {
-                              return total + v5::num_of_const_buffer_sequence(pv);
-                          }
-                      )
-                  )
-                  : 0
-              )
+              // TODO: This is wrong. The reason code MUST be provided
+              // if there are properties. Not the other way around.
+              // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901144
+              // 3.6.2.1 PUBREL Reason Code
+              // The Reason Code and Property Length can be omitted if
+              // the Reason Code is 0x00 (Success) and there are no Properties.
+              // In this case the PUBREL has a Remaining Length of 2.
+              [&] () -> std::size_t {
+                  if ((reason_code_ != v5::pubrel_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE) {
+                      // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901146
+                      // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+                      if (props_.empty()) {
+                          return 1;                 // reason code
+                      }
+                      else {
+                          return
+                              1 +                   // reason code
+                              1 +                   // property length
+                              std::accumulate(      // properties
+                                  props_.begin(),
+                                  props_.end(),
+                                  std::size_t(0U),
+                                  [](std::size_t total, property_variant const& pv) {
+                                      return total + v5::num_of_const_buffer_sequence(pv);
+                                  }
+                              );
+                      }
+                  }
+                  else {
+                      return 0;
+                  }
+              } ()
           )
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
@@ -1274,22 +1333,31 @@ struct basic_pubrel_message {
 
         remaining_length_ =
             PacketIdBytes +       // packet id
-            (
-                // TODO: This is wrong. The reason code MUST be provided
-                // if there are properties. Not the other way around.
-                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901144
-                // 3.6.2.1 PUBREL Reason Code
-                // The Reason Code and Property Length can be omitted if
-                // the Reason Code is 0x00 (Success) and there are no Properties.
-                // In this case the PUBREL has a Remaining Length of 2.
-                (reason_code_ != v5::pubrel_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE)?
-                (
-                    1 +                   // reason code
-                    property_length_buf_.size() +
-                    property_length_
-                )
-                : 0
-            );
+            // TODO: This is wrong. The reason code MUST be provided
+            // if there are properties. Not the other way around.
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901144
+            // 3.6.2.1 PUBREL Reason Code
+            // The Reason Code and Property Length can be omitted if
+            // the Reason Code is 0x00 (Success) and there are no Properties.
+            // In this case the PUBREL has a Remaining Length of 2.
+            [&] () -> std::size_t {
+                if ((reason_code_ != v5::pubrel_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE) {
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901146
+                    // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+                    if (props_.empty()) {
+                        return 1;                 // reason code
+                    }
+                    else {
+                        return
+                            1 +                   // reason code
+                            property_length_buf_.size() +
+                            property_length_;
+                    }
+                }
+                else {
+                    return 0;
+                }
+            } ();
 
         auto rb = remaining_bytes(remaining_length_);
         for (auto e : rb) {
@@ -1328,50 +1396,65 @@ struct basic_pubrel_message {
         reason_code_ = static_cast<v5::pubrel_reason_code>(buf.front());
         buf.remove_prefix(1);
 
-        auto len_consume = variable_length(
-            buf.begin(),
-            buf.end()
-        );
-        property_length_ = std::get<0>(len_consume);
-        auto consume = std::get<1>(len_consume);
-        if (consume == 0) throw property_length_error();
-        std::copy(
-            buf.begin(),
-            std::next(buf.begin(), static_cast<buffer::difference_type>(consume)),
-            std::back_inserter(property_length_buf_)
-        );
-        buf.remove_prefix(consume);
-        if (buf.size() != property_length_) throw property_length_error();
+        if (buf.empty()) {
+            property_length_ = 0;
+        }
+        else {
+            auto len_consume = variable_length(
+                buf.begin(),
+                buf.end()
+            );
+            property_length_ = std::get<0>(len_consume);
+            auto consume = std::get<1>(len_consume);
+            if (consume == 0) throw property_length_error();
+            std::copy(
+                buf.begin(),
+                std::next(buf.begin(), static_cast<buffer::difference_type>(consume)),
+                std::back_inserter(property_length_buf_)
+            );
+            buf.remove_prefix(consume);
+            if (buf.size() != property_length_) throw property_length_error();
 
-        props_ = property::parse(buf);
-        buf.remove_prefix(property_length_);
+            props_ = property::parse(buf);
+            buf.remove_prefix(property_length_);
+        }
+
         num_of_const_buffer_sequence_ =
             1 +                   // fixed header
             1 +                   // remaining length
             1 +                   // packet id
-            (
-                // TODO: This is wrong. The reason code MUST be provided
-                // if there are properties. Not the other way around.
-                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901144
-                // 3.6.2.1 PUBREL Reason Code
-                // The Reason Code and Property Length can be omitted if
-                // the Reason Code is 0x00 (Success) and there are no Properties.
-                // In this case the PUBREL has a Remaining Length of 2.
-                (reason_code_ != v5::pubrel_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE) ?
-                (
-                    1 +                   // reason code
-                    1 +                   // property length
-                    std::accumulate(
-                        props_.begin(),
-                        props_.end(),
-                        std::size_t(0U),
-                        [](std::size_t total, property_variant const& pv) {
-                            return total + v5::num_of_const_buffer_sequence(pv);
-                        }
-                    )
-                )
-                : 0
-            );
+            // TODO: This is wrong. The reason code MUST be provided
+            // if there are properties. Not the other way around.
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901144
+            // 3.6.2.1 PUBREL Reason Code
+            // The Reason Code and Property Length can be omitted if
+            // the Reason Code is 0x00 (Success) and there are no Properties.
+            // In this case the PUBREL has a Remaining Length of 2.
+            [&] () -> std::size_t {
+                if ((reason_code_ != v5::pubrel_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE) {
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901146
+                    // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+                    if (props_.empty()) {
+                        return 1;                 // reason code
+                    }
+                    else {
+                        return
+                            1 +                   // reason code
+                            1 +                   // property length
+                            std::accumulate(      // properties
+                                props_.begin(),
+                                props_.end(),
+                                std::size_t(0U),
+                                [](std::size_t total, property_variant const& pv) {
+                                    return total + v5::num_of_const_buffer_sequence(pv);
+                                }
+                            );
+                    }
+                }
+                else {
+                    return 0;
+                }
+            } ();
     }
 
     /**
@@ -1396,10 +1479,14 @@ struct basic_pubrel_message {
         // In this case the PUBREL has a Remaining Length of 2.
         if(reason_code_ != v5::pubrel_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE) {
             ret.emplace_back(as::buffer(&reason_code_, 1));
-            ret.emplace_back(as::buffer(property_length_buf_.data(), property_length_buf_.size()));
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901146
+            // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+            if (!props_.empty()) {
+                ret.emplace_back(as::buffer(property_length_buf_.data(), property_length_buf_.size()));
 
-            for (auto const& p : props_) {
-                v5::add_const_buffer_sequence(ret, p);
+                for (auto const& p : props_) {
+                    v5::add_const_buffer_sequence(ret, p);
+                }
             }
         }
         return ret;
@@ -1449,14 +1536,18 @@ struct basic_pubrel_message {
         if (reason_code_ != v5::pubrel_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE) {
             ret.push_back(static_cast<char>(reason_code_));
 
-            ret.append(property_length_buf_.data(), property_length_buf_.size());
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901146
+            // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+            if (!props_.empty()) {
+                ret.append(property_length_buf_.data(), property_length_buf_.size());
 
-            auto it = ret.end();
-            ret.resize(sz);
-            auto end = ret.end();
-            for (auto const& p : props_) {
-                v5::fill(p, it, end);
-                it += static_cast<std::string::difference_type>(v5::size(p));
+                auto it = ret.end();
+                ret.resize(sz);
+                auto end = ret.end();
+                for (auto const& p : props_) {
+                    v5::fill(p, it, end);
+                    it += static_cast<std::string::difference_type>(v5::size(p));
+                }
             }
         }
         return ret;
@@ -1523,29 +1614,38 @@ struct basic_pubcomp_message {
               1 +                   // fixed header
               1 +                   // remaining length
               1 +                   // packet id
-              (
-                  // TODO: This is wrong. The reason code MUST be provided
-                  // if there are properties. Not the other way around.
-                  // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901154
-                  // 3.7.2.1 PUBCOMP Reason Code
-                  // The Reason Code and Property Length can be omitted if
-                  // the Reason Code is 0x00 (Success) and there are no Properties.
-                  // In this case the PUBCOMP has a Remaining Length of 2.
-                  (reason_code_ != v5::pubcomp_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE) ?
-                  (
-                      1 +                   // reason code
-                      1 +                   // property length
-                      std::accumulate(
-                          props_.begin(),
-                          props_.end(),
-                          std::size_t(0U),
-                          [](std::size_t total, property_variant const& pv) {
-                              return total + v5::num_of_const_buffer_sequence(pv);
-                          }
-                      )
-                  )
-                  : 0
-              )
+              // TODO: This is wrong. The reason code MUST be provided
+              // if there are properties. Not the other way around.
+              // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901154
+              // 3.7.2.1 PUBCOMP Reason Code
+              // The Reason Code and Property Length can be omitted if
+              // the Reason Code is 0x00 (Success) and there are no Properties.
+              // In this case the PUBCOMP has a Remaining Length of 2.
+              [&] () -> std::size_t {
+                  if ((reason_code_ != v5::pubcomp_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE) {
+                      // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901156
+                      // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+                      if (props_.empty()) {
+                          return 1;                 // reason code
+                      }
+                      else {
+                          return
+                              1 +                   // reason code
+                              1 +                   // property length
+                              std::accumulate(      // properties
+                                  props_.begin(),
+                                  props_.end(),
+                                  std::size_t(0U),
+                                  [](std::size_t total, property_variant const& pv) {
+                                      return total + v5::num_of_const_buffer_sequence(pv);
+                                  }
+                              );
+                      }
+                  }
+                  else {
+                      return 0;
+                  }
+              } ()
           )
     {
         add_packet_id_to_buf<PacketIdBytes>::apply(packet_id_, packet_id);
@@ -1556,22 +1656,31 @@ struct basic_pubcomp_message {
 
         remaining_length_ =
             PacketIdBytes +       // packet id
-            (
-                // TODO: This is wrong. The reason code MUST be provided
-                // if there are properties. Not the other way around.
-                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901154
-                // 3.7.2.1 PUBCOMP Reason Code
-                // The Reason Code and Property Length can be omitted if
-                // the Reason Code is 0x00 (Success) and there are no Properties.
-                // In this case the PUBCOMP has a Remaining Length of 2.
-                (reason_code_ != v5::pubcomp_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE) ?
-                (
-                    1 +                   // reason code
-                    property_length_buf_.size() +
-                    property_length_
-                )
-                : 0
-            );
+            // TODO: This is wrong. The reason code MUST be provided
+            // if there are properties. Not the other way around.
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901154
+            // 3.7.2.1 PUBCOMP Reason Code
+            // The Reason Code and Property Length can be omitted if
+            // the Reason Code is 0x00 (Success) and there are no Properties.
+            // In this case the PUBCOMP has a Remaining Length of 2.
+            [&] () -> std::size_t {
+                if ((reason_code_ != v5::pubcomp_reason_code::success) || MQTT_ALWAYS_SEND_REASON_CODE) {
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901156
+                    // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+                    if (props_.empty()) {
+                        return 1;                 // reason code
+                    }
+                    else {
+                        return
+                            1 +                   // reason code
+                            property_length_buf_.size() +
+                            property_length_;
+                    }
+                }
+                else {
+                    return 0;
+                }
+            } ();
 
         auto rb = remaining_bytes(remaining_length_);
         for (auto e : rb) {
@@ -1601,10 +1710,14 @@ struct basic_pubcomp_message {
         // In this case the PUBCOMP has a Remaining Length of 2.
         if (reason_code_ != v5::pubcomp_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE) {
             ret.emplace_back(as::buffer(&reason_code_, 1));
-            ret.emplace_back(as::buffer(property_length_buf_.data(), property_length_buf_.size()));
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901156
+            // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+            if (!props_.empty()) {
+                ret.emplace_back(as::buffer(property_length_buf_.data(), property_length_buf_.size()));
 
-            for (auto const& p : props_) {
-                v5::add_const_buffer_sequence(ret, p);
+                for (auto const& p : props_) {
+                    v5::add_const_buffer_sequence(ret, p);
+                }
             }
         }
        return ret;
@@ -1653,14 +1766,18 @@ struct basic_pubcomp_message {
         if (reason_code_ != v5::pubcomp_reason_code::success || MQTT_ALWAYS_SEND_REASON_CODE) {
             ret.push_back(static_cast<char>(reason_code_));
 
-            ret.append(property_length_buf_.data(), property_length_buf_.size());
+            // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901156
+            // If the Remaining Length is less than 4 there is no Property Length and the value of 0 is used.
+            if (!props_.empty()) {
+                ret.append(property_length_buf_.data(), property_length_buf_.size());
 
-            auto it = ret.end();
-            ret.resize(sz);
-            auto end = ret.end();
-            for (auto const& p : props_) {
-                v5::fill(p, it, end);
-                it += static_cast<std::string::difference_type>(v5::size(p));
+                auto it = ret.end();
+                ret.resize(sz);
+                auto end = ret.end();
+                for (auto const& p : props_) {
+                    v5::fill(p, it, end);
+                    it += static_cast<std::string::difference_type>(v5::size(p));
+                }
             }
         }
         return ret;
