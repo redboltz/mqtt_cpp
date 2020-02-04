@@ -3518,7 +3518,7 @@ public:
      * @brief Apply f to stored messages.
      * @param f applying function. f should be void(message_variant)
      */
-    void for_each_store(std::function<void(message_variant)> const& f) {
+    void for_each_store(std::function<void(basic_message_variant<PacketIdBytes>)> const& f) {
         LockGuard<Mutex> lck (store_mtx_);
         auto const& idx = store_.template get<tag_seq>();
         for (auto const & e : idx) {
@@ -6552,7 +6552,7 @@ private:
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901126
-                    // If the Remaining Length is 0, there is no reason code & property length 
+                    // If the Remaining Length is 0, there is no reason code & property length
                     // the value of success is used for reason code, the value of 0 is used for property length
                     if (remaining_length_ == 0) {
                         info.reason_code = v5::puback_reason_code::success;
@@ -6712,7 +6712,7 @@ private:
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901136
-                    // If the Remaining Length is 0, there is no reason code & property length 
+                    // If the Remaining Length is 0, there is no reason code & property length
                     // the value of success is used for reason code, the value of 0 is used for property length
                     if(remaining_length_ == 0) {
                         info.reason_code = v5::pubrec_reason_code::success;
@@ -6910,7 +6910,7 @@ private:
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901146
-                    // If the Remaining Length is 0, there is no reason code & property length 
+                    // If the Remaining Length is 0, there is no reason code & property length
                     // the value of success is used for reason code, the value of 0 is used for property length
                     if (remaining_length_ == 0) {
                         info.reason_code = v5::pubrel_reason_code::success;
@@ -7087,7 +7087,7 @@ private:
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901156
-                    // If the Remaining Length is 0, there is no reason code & property length 
+                    // If the Remaining Length is 0, there is no reason code & property length
                     // the value of success is used for reason code, the value of 0 is used for property length
                     if (remaining_length_ == 0) {
                         info.reason_code = v5::pubcomp_reason_code::success;
