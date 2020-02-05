@@ -1390,6 +1390,7 @@ struct basic_pubrel_message {
                 1 +                   // fixed header
                 1 +                   // remaining length
                 1;                    // packet id
+            reason_code_ = v5::pubrel_reason_code::success;
             return;
         }
 
