@@ -4220,59 +4220,37 @@ private:
             process_connack(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::publish:
-            if (mqtt_connected_) {
-                process_publish(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
-            }
+            process_publish(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::puback:
-            if (mqtt_connected_) {
-                process_puback(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
-            }
+            process_puback(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::pubrec:
-            if (mqtt_connected_) {
-                process_pubrec(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
-            }
+            process_pubrec(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::pubrel:
-            if (mqtt_connected_) {
-                process_pubrel(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
-            }
+            process_pubrel(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::pubcomp:
-            if (mqtt_connected_) {
-                process_pubcomp(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
-            }
+            process_pubcomp(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::subscribe:
-            if (mqtt_connected_) {
-                process_subscribe(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
-            }
+            process_subscribe(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::suback:
-            if (mqtt_connected_) {
-                process_suback(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
-            }
+            process_suback(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::unsubscribe:
-            if (mqtt_connected_) {
-                process_unsubscribe(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
-            }
+            process_unsubscribe(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::unsuback:
-            if (mqtt_connected_) {
-                process_unsuback(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
-            }
+            process_unsuback(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             break;
         case control_packet_type::pingreq:
-            if (mqtt_connected_) {
-                process_pingreq(force_move(session_life_keeper));
-            }
+            process_pingreq(force_move(session_life_keeper));
             break;
         case control_packet_type::pingresp:
-            if (mqtt_connected_) {
-                process_pingresp(force_move(session_life_keeper));
-            }
+            process_pingresp(force_move(session_life_keeper));
             break;
         case control_packet_type::disconnect:
             process_disconnect(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
