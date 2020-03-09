@@ -3970,13 +3970,14 @@ protected:
             if (disconnect_requested_) {
                 disconnect_requested_ = false;
                 connect_requested_ = false;
+                clean_sub_unsub_inflight();
                 on_close();
                 return true;
             }
         }
         disconnect_requested_ = false;
         connect_requested_ = false;
-        on_error(ec);
+        clean_sub_unsub_inflight_on_error(ec);
         return true;
     }
 
@@ -4010,11 +4011,11 @@ private:
     }
 
     void call_message_size_error_handlers() {
-        on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+        clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
     }
 
     void call_protocol_error_handlers() {
-        on_error(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
+        clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
     }
 
     template <typename T>
@@ -4127,7 +4128,7 @@ private:
 
     void handle_remaining_length(any session_life_keeper, this_type_sp self) {
         if (!calc_variable_length(remaining_length_, remaining_length_multiplier_, buf_.front())) {
-            on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+            clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
             return;
         }
         if (buf_.front() & variable_length_continue_flag) {
@@ -4140,7 +4141,7 @@ private:
                         return;
                     }
                     if (bytes_transferred != 1) {
-                        on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                        clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         return;
                     }
                     handle_remaining_length(force_move(session_life_keeper), force_move(self));
@@ -4202,7 +4203,7 @@ private:
                     }
                 };
             if (!check()) {
-                on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
                 return;
             }
 
@@ -7494,8 +7495,10 @@ private:
                 ]
                 (buffer body, buffer /*buf*/, any session_life_keeper, this_type_sp /*self*/) mutable {
                     {
-                        LockGuard<Mutex> lck (store_mtx_);
+                        LockGuard<Mutex> lck_store (store_mtx_);
+                        LockGuard<Mutex> lck_sub_unsub (sub_unsub_inflight_mtx_);
                         packet_id_.erase(info.packet_id);
+                        sub_unsub_inflight_.erase(info.packet_id);
                     }
                     switch (version_) {
                     case protocol_version::v3_1_1:
@@ -7761,8 +7764,10 @@ private:
                 (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.packet_id = packet_id;
                     {
-                        LockGuard<Mutex> lck (store_mtx_);
+                        LockGuard<Mutex> lck_store (store_mtx_);
+                        LockGuard<Mutex> lck_sub_unsub (sub_unsub_inflight_mtx_);
                         packet_id_.erase(info.packet_id);
+                        sub_unsub_inflight_.erase(info.packet_id);
                     }
                     switch (version_) {
                     case protocol_version::v3_1_1:
@@ -7817,8 +7822,10 @@ private:
                 (buffer body, buffer /*buf*/, any session_life_keeper, this_type_sp /*self*/) mutable {
                     BOOST_ASSERT(version_ == protocol_version::v5);
                     {
-                        LockGuard<Mutex> lck (store_mtx_);
+                        LockGuard<Mutex> lck_store (store_mtx_);
+                        LockGuard<Mutex> lck_sub_unsub (sub_unsub_inflight_mtx_);
                         packet_id_.erase(info.packet_id);
+                        sub_unsub_inflight_.erase(info.packet_id);
                     }
 
                     std::vector<v5::unsuback_reason_code> reasons;
@@ -8392,6 +8399,10 @@ private:
         packet_id_t packet_id,
         v5::properties props
     ) {
+        {
+            LockGuard<Mutex> lck (sub_unsub_inflight_mtx_);
+            sub_unsub_inflight_.insert(packet_id);
+        }
         for(auto const& p : params)
         {
             (void)p;
@@ -8437,6 +8448,10 @@ private:
         packet_id_t packet_id,
         v5::properties props
     ) {
+        {
+            LockGuard<Mutex> lck (sub_unsub_inflight_mtx_);
+            sub_unsub_inflight_.insert(packet_id);
+        }
         switch (version_) {
         case protocol_version::v3_1_1:
             do_sync_write(v3_1_1::basic_unsubscribe_message<PacketIdBytes>(force_move(params), packet_id));
@@ -8880,7 +8895,10 @@ private:
         v5::properties props,
         async_handler_t func
     ) {
-
+        {
+            LockGuard<Mutex> lck (sub_unsub_inflight_mtx_);
+            sub_unsub_inflight_.insert(packet_id);
+        }
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
@@ -8941,7 +8959,10 @@ private:
         v5::properties props,
         async_handler_t func
     ) {
-
+        {
+            LockGuard<Mutex> lck (sub_unsub_inflight_mtx_);
+            sub_unsub_inflight_.insert(packet_id);
+        }
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
@@ -9274,6 +9295,19 @@ private:
             );
     }
 
+    void clean_sub_unsub_inflight() {
+        LockGuard<Mutex> lck_store (store_mtx_);
+        LockGuard<Mutex> lck_sub_unsub (sub_unsub_inflight_mtx_);
+        for (auto packet_id : sub_unsub_inflight_) {
+            packet_id_.erase(packet_id);
+        }
+    }
+
+    void clean_sub_unsub_inflight_on_error(error_code ec) {
+        clean_sub_unsub_inflight();
+        on_error(ec);
+    }
+
 protected:
     // Ensure that only code that knows the *exact* type of an object
     // inheriting from this abstract base class can destruct it.
@@ -9302,6 +9336,8 @@ private:
     std::deque<async_packet> queue_;
     packet_id_t packet_id_master_{0};
     std::set<packet_id_t> packet_id_;
+    Mutex sub_unsub_inflight_mtx_;
+    std::set<packet_id_t> sub_unsub_inflight_;
     bool auto_pub_response_{true};
     bool auto_pub_response_async_{false};
     bool async_send_store_ { false };
