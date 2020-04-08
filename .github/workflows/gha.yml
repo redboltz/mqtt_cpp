@@ -27,7 +27,6 @@ jobs:
     - name: cmake
       env:
         OPENSSL_ROOT_DIR: /usr/local/opt/openssl
-        CXX: clang++
       shell: bash
       run: |
         if [ ${{ matrix.pattern }} == 0 ]; then
@@ -45,13 +44,10 @@ jobs:
         if [ ${{ matrix.pattern }} == 4 ]; then
           FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=ON  -DMQTT_TEST_7=ON  -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON";
         fi
-        mkdir build
-        cd build
-        cmake ${FLAGS} ..
+        cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${FLAGS} -DCMAKE_CXX_COMPILER=clang++
     - name: make check_deps
       run: |
-        cd build
-        make check_deps
+        cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first --target check_deps
     - name: make
       shell: bash
       run: |
@@ -71,11 +67,10 @@ jobs:
           CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion";
         fi
         CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
-        cd build
-        make -j2 VERBOSE=1
+        cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first
     - name: ctest
+      working-directory: ${{ runner.temp }}
       run: |
-        cd build
         ctest -VV
   linux:
     runs-on: ubuntu-latest
@@ -117,13 +112,10 @@ jobs:
           FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_TLS=ON -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=OFF -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF";
         fi
 
-        mkdir build
-        cd build
-        cmake ${FLAGS} -DBOOSTROOT=/usr ..
+        cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${FLAGS} -DBOOSTROOT=/usr
     - name: make check_deps
       run: |
-        cd build
-        make check_deps
+        cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first --target check_deps
     - name: make
       shell: bash
       run: |
@@ -160,18 +152,17 @@ jobs:
 
         CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
 
-        cd build
-        make -j2 VERBOSE=1
+        cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first
     - name: ctest
+      working-directory: ${{ runner.temp }}
       run: |
-        cd build
         ctest -VV
     - name: codecov
       run: |
         if [ ${{ matrix.pattern }} == 4 ] || [ ${{ matrix.pattern }} == 5 ] || [ ${{ matrix.pattern }} == 6 ] || [ ${{ matrix.pattern }} == 7 ]; then
            sudo apt-get install lcov
            # Create lcov report
-           lcov --capture --directory . --output-file coverage.info
+           lcov --capture --directory ${{ runner.temp }} --output-file coverage.info
            lcov --remove coverage.info '/usr/*' --output-file coverage.info # filter system-files
            lcov --list coverage.info # debug info
            # Uploading report to CodeCov
