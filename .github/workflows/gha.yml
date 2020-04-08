@@ -21,30 +21,27 @@ jobs:
           - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=ON  -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON'
           - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=ON  -DMQTT_TEST_7=ON  -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON'
     steps:
-    - uses: actions/checkout@v1
-    - name: install boost
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install Dependencies
       run: |
-        brew install boost
-    - name: install openssl
-      if: matrix.os == 'macos-latest'
-      run: |
-        brew install openssl
-    - name: cmake
+        brew install boost openssl
+    - name: Configure
       env:
         OPENSSL_ROOT_DIR: /usr/local/opt/openssl
       shell: bash
       run: |
         cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${{ matrix.pattern }} -DCMAKE_CXX_COMPILER=clang++
-    - name: make check_deps
+    - name: Check Header Dependencies
       run: |
         cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first --target check_deps
-    - name: make
+    - name: Compile
       shell: bash
       env:
         CXXFLAGS: -Werror -g -pedantic -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING
       run: |
         cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first
-    - name: ctest
+    - name: Test
       working-directory: ${{ runner.temp }}
       run: |
         ctest -VV
@@ -54,13 +51,14 @@ jobs:
       matrix:
         pattern: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
-    - uses: actions/checkout@v1
-    - name: install boost
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install Dependencies
       run: |
         sudo add-apt-repository ppa:mhier/libboost-latest
         sudo apt-get update
         sudo apt-get install boost1.67
-    - name: cmake
+    - name: Configure
       shell: bash
       run: |
         if [ ${{ matrix.pattern }} == 0 ]; then
@@ -89,10 +87,10 @@ jobs:
         fi
 
         cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${FLAGS} -DBOOSTROOT=/usr
-    - name: make check_deps
+    - name: Check Header Dependencies
       run: |
         cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first --target check_deps
-    - name: make
+    - name: Compile
       shell: bash
       run: |
         if [ ${{ matrix.pattern }} == 0 ]; then
@@ -129,11 +127,11 @@ jobs:
         CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
 
         cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first
-    - name: ctest
+    - name: Test
       working-directory: ${{ runner.temp }}
       run: |
         ctest -VV
-    - name: codecov
+    - name: Code Coverage
       run: |
         if [ ${{ matrix.pattern }} == 4 ] || [ ${{ matrix.pattern }} == 5 ] || [ ${{ matrix.pattern }} == 6 ] || [ ${{ matrix.pattern }} == 7 ]; then
            sudo apt-get install lcov
