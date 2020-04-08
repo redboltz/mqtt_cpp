@@ -56,12 +56,15 @@ FOREACH (HDR ${ALL_HPP})
     FILE (RENAME "${HDR_DEPS_CHK_FOLDER}/${HDR_NAME}" "${HDR_DEPS_CHK_FOLDER}/${HDR_NAME}.cpp")
     LIST (APPEND CHK_MQTT "${HDR_DEPS_CHK_FOLDER}/${HDR_NAME}.cpp")
 ENDFOREACH ()
+
 # The EXCLUDE_FROM_ALL property prevents check_deps from being included in the default target
-ADD_LIBRARY (check_deps EXCLUDE_FROM_ALL ${CHK_MQTT})
+ADD_LIBRARY(check_deps OBJECT EXCLUDE_FROM_ALL ${CHK_MQTT})
+
 # We don't need to actually run the whole compiler. We're just checking that all the includes are valid
-# So here we ask for only the preprocessor to run.
+# So here we ask for only the syntax checking mode to be used.
 # We also don't mind that there might be unused constant variables when doing deps checking.
-TARGET_COMPILE_OPTIONS(check_deps PUBLIC -Wno-unused-const-variable $<$<CXX_COMPILER_ID:MSVC>:/P,--preprocess>)
+TARGET_COMPILE_OPTIONS(check_deps PUBLIC -Wno-unused-const-variable $<IF:$<CXX_COMPILER_ID:MSVC>,/Zs,-fsyntax-only>)
+
 TARGET_LINK_LIBRARIES (check_deps PUBLIC mqtt_cpp_iface)
 
 INSTALL(FILES ${HDR_ROOT} DESTINATION ${ROOT_INCLUDE_TARGET})
