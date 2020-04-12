@@ -14,68 +14,34 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        pattern: [0, 1, 2, 3, 4]
+        pattern:
+          - '-DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=ON  -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=OFF'
+          - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=ON  -DMQTT_TEST_5=ON  -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=OFF'
+          - '-DMQTT_TEST_1=ON  -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON'
+          - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=ON  -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON'
+          - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=ON  -DMQTT_TEST_7=ON  -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON'
     steps:
-    - uses: actions/checkout@v1
-    - name: install boost
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install Dependencies
       run: |
-        brew install boost
-    - name: install openssl
-      if: matrix.os == 'macos-latest'
-      run: |
-        brew install openssl
-    - name: cmake
+        brew install boost openssl
+    - name: Configure
       env:
         OPENSSL_ROOT_DIR: /usr/local/opt/openssl
-        CXX: clang++
-      shell: bash
       run: |
-        if [ ${{ matrix.pattern }} == 0 ]; then
-          FLAGS="-DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=ON  -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=OFF";
-        fi
-        if [ ${{ matrix.pattern }} == 1 ]; then
-          FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=ON  -DMQTT_TEST_5=ON  -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=OFF";
-        fi
-        if [ ${{ matrix.pattern }} == 2 ]; then
-          FLAGS="-DMQTT_TEST_1=ON  -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON";
-        fi
-        if [ ${{ matrix.pattern }} == 3 ]; then
-          FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=ON  -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON";
-        fi
-        if [ ${{ matrix.pattern }} == 4 ]; then
-          FLAGS="-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=ON  -DMQTT_TEST_7=ON  -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON";
-        fi
-        mkdir build
-        cd build
-        cmake ${FLAGS} ..
-    - name: make check_deps
+        cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${{ matrix.pattern }} -DCMAKE_CXX_COMPILER=clang++
+    - name: Check Header Dependencies
       run: |
-        cd build
-        make check_deps
-    - name: make
-      shell: bash
+        cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first --target check_deps
+    - name: Compile
+      env:
+        CXXFLAGS: -Werror -g -pedantic -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING
       run: |
-        if [ ${{ matrix.pattern }} == 0 ]; then
-          CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED";
-        fi
-        if [ ${{ matrix.pattern }} == 1 ]; then
-          CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion";
-        fi
-        if [ ${{ matrix.pattern }} == 2 ]; then
-          CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED";
-        fi
-        if [ ${{ matrix.pattern }} == 3 ]; then
-          CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion";
-        fi
-        if [ ${{ matrix.pattern }} == 4 ]; then
-          CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion";
-        fi
-        CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
-        cd build
-        make -j2 VERBOSE=1
-    - name: ctest
+        cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first
+    - name: Test
+      working-directory: ${{ runner.temp }}
       run: |
-        cd build
         ctest -VV
   linux:
     runs-on: ubuntu-latest
@@ -83,97 +49,57 @@ jobs:
       matrix:
         pattern: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
-    - uses: actions/checkout@v1
-    - name: install boost
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install Dependencies
       run: |
         sudo add-apt-repository ppa:mhier/libboost-latest
         sudo apt-get update
         sudo apt-get install boost1.67
-    - name: cmake
-      shell: bash
+    - name: Configure
       run: |
-        if [ ${{ matrix.pattern }} == 0 ]; then
-          FLAGS="-DCMAKE_CXX_COMPILER=clang++ -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF";
-        fi
-        if [ ${{ matrix.pattern }} == 1 ]; then
-          FLAGS="-DCMAKE_CXX_COMPILER=clang++ -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF";
-        fi
-        if [ ${{ matrix.pattern }} == 2 ]; then
-          FLAGS="-DCMAKE_CXX_COMPILER=clang++ -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=ON  -DMQTT_TEST_5=ON  -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON  -DMQTT_STD_OPTIONAL=ON  -DMQTT_STD_VARIANT=ON  -DMQTT_STD_STRING_VIEW=ON";
-        fi
-        if [ ${{ matrix.pattern }} == 3 ]; then
-          FLAGS="-DCMAKE_CXX_COMPILER=clang++ -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON  -DMQTT_STD_OPTIONAL=ON  -DMQTT_STD_VARIANT=ON  -DMQTT_STD_STRING_VIEW=ON";
-        fi
-        if [ ${{ matrix.pattern }} == 4 ]; then
-          FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON -DMQTT_STD_OPTIONAL=ON -DMQTT_STD_VARIANT=ON -DMQTT_STD_STRING_VIEW=ON -DMQTT_STD_SHARED_PTR_ARRAY=ON";
-        fi
-        if [ ${{ matrix.pattern }} == 5 ]; then
-          FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=ON  -DMQTT_TEST_4=ON  -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON -DMQTT_STD_OPTIONAL=ON -DMQTT_STD_VARIANT=ON -DMQTT_STD_STRING_VIEW=ON -DMQTT_STD_SHARED_PTR_ARRAY=OFF";
-        fi
-        if [ ${{ matrix.pattern }} == 6 ]; then
-          FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=ON  -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=ON -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_STD_ANY=ON -DMQTT_STD_OPTIONAL=ON -DMQTT_STD_VARIANT=ON -DMQTT_STD_STRING_VIEW=ON -DMQTT_STD_SHARED_PTR_ARRAY=OFF";
-        fi
-        if [ ${{ matrix.pattern }} == 7 ]; then
-          FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_TLS=ON -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=OFF -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF";
-        fi
+        [ ${{ matrix.pattern }} == 0 ] && FLAGS="-DCMAKE_CXX_COMPILER=clang++               -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
+        [ ${{ matrix.pattern }} == 1 ] && FLAGS="-DCMAKE_CXX_COMPILER=clang++               -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
+        [ ${{ matrix.pattern }} == 2 ] && FLAGS="-DCMAKE_CXX_COMPILER=clang++               -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=ON  -DMQTT_TEST_5=ON  -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_STD_ANY=ON  -DMQTT_STD_OPTIONAL=ON  -DMQTT_STD_VARIANT=ON  -DMQTT_STD_STRING_VIEW=ON  -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
+        [ ${{ matrix.pattern }} == 3 ] && FLAGS="-DCMAKE_CXX_COMPILER=clang++               -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_TLS=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_STD_ANY=ON  -DMQTT_STD_OPTIONAL=ON  -DMQTT_STD_VARIANT=ON  -DMQTT_STD_STRING_VIEW=ON  -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
+        [ ${{ matrix.pattern }} == 4 ] && FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_STD_ANY=ON  -DMQTT_STD_OPTIONAL=ON  -DMQTT_STD_VARIANT=ON  -DMQTT_STD_STRING_VIEW=ON  -DMQTT_STD_SHARED_PTR_ARRAY=ON"
+        [ ${{ matrix.pattern }} == 5 ] && FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=ON  -DMQTT_TEST_4=ON  -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_STD_ANY=ON  -DMQTT_STD_OPTIONAL=ON  -DMQTT_STD_VARIANT=ON  -DMQTT_STD_STRING_VIEW=ON  -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
+        [ ${{ matrix.pattern }} == 6 ] && FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=ON  -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_STD_ANY=ON  -DMQTT_STD_OPTIONAL=ON  -DMQTT_STD_VARIANT=ON  -DMQTT_STD_STRING_VIEW=ON  -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
+        [ ${{ matrix.pattern }} == 7 ] && FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_TLS=ON  -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=OFF -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
 
-        mkdir build
-        cd build
-        cmake ${FLAGS} -DBOOSTROOT=/usr ..
-    - name: make check_deps
+        cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${FLAGS} -DBOOSTROOT=/usr
+    - name: Check Header Dependencies
       run: |
-        cd build
-        make check_deps
-    - name: make
-      shell: bash
+        cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first --target check_deps
+    - name: Compile with Sanitizer
+      if: (matrix.pattern == 1) || (matrix.pattern == 2) || (matrix.pattern == 3)
+      env:
+        CFLAGS:   -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED -fsanitize=address
+        CXXFLAGS: -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED -fsanitize=address
+        LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED -fsanitize=address
       run: |
-        if [ ${{ matrix.pattern }} == 0 ]; then
-          CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion";
-        fi
-        if [ ${{ matrix.pattern }} == 1 ]; then
-          CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fsanitize=address -fno-omit-frame-pointer";
-          CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer";
-          LDFLAGS="-Wno-ignored-qualifiers -fsanitize=address";
-        fi
-        if [ ${{ matrix.pattern }} == 2 ]; then
-          CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fsanitize=address -fno-omit-frame-pointer";
-          CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer";
-          LDFLAGS="-Wno-ignored-qualifiers -fsanitize=address";
-        fi
-        if [ ${{ matrix.pattern }} == 3 ]; then
-          CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fsanitize=address -fno-omit-frame-pointer";
-          CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=address -fno-omit-frame-pointer";
-          LDFLAGS="-Wno-ignored-qualifiers -fsanitize=address";
-        fi
-        if [ ${{ matrix.pattern }} == 4 ]; then
-          CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion";
-        fi
-        if [ ${{ matrix.pattern }} == 5 ]; then
-          CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED";
-        fi
-        if [ ${{ matrix.pattern }} == 6 ]; then
-          CXXFLAGS="-std=c++17 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion";
-        fi
-        if [ ${{ matrix.pattern }} == 7 ]; then
-          CXXFLAGS="-std=c++14 -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED";
-        fi
-
         CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
-
-        cd build
-        make -j2 VERBOSE=1
-    - name: ctest
+        cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first
+    - name: Compile without Sanitizer
+      if: (matrix.pattern == 0) || (matrix.pattern == 4) || (matrix.pattern == 5) || (matrix.pattern == 6) || (matrix.pattern == 7)
+      env:
+        CFLAGS:   -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED
+        CXXFLAGS: -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED
+        LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED
       run: |
-        cd build
+        CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
+        cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first
+    - name: Test
+      working-directory: ${{ runner.temp }}
+      run: |
         ctest -VV
-    - name: codecov
+    - name: Code Coverage
+      if: (matrix.pattern == 4) || (matrix.pattern == 5) || (matrix.pattern  == 6) || (matrix.pattern == 7)
       run: |
-        if [ ${{ matrix.pattern }} == 4 ] || [ ${{ matrix.pattern }} == 5 ] || [ ${{ matrix.pattern }} == 6 ] || [ ${{ matrix.pattern }} == 7 ]; then
-           sudo apt-get install lcov
-           # Create lcov report
-           lcov --capture --directory . --output-file coverage.info
-           lcov --remove coverage.info '/usr/*' --output-file coverage.info # filter system-files
-           lcov --list coverage.info # debug info
-           # Uploading report to CodeCov
-           bash <(curl -s https://codecov.io/bash) -f coverage.info || echo "Codecov did not collect coverage reports"
-        fi
+        sudo apt-get install lcov
+        # Create lcov report
+        lcov --capture --directory ${{ runner.temp }} --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' --output-file coverage.info # filter system-files
+        lcov --list coverage.info # debug info
+        # Uploading report to CodeCov
+        bash <(curl -s https://codecov.io/bash) -f coverage.info || echo "Codecov did not collect coverage reports"
