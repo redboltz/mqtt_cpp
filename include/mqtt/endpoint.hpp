@@ -3985,7 +3985,7 @@ protected:
         connected_ = true;
     }
 
-    void set_protocol_version(std::size_t version) {
+    void set_protocol_version(protocol_version version) {
         version_ = version;
     }
 
