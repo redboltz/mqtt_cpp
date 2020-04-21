@@ -49,8 +49,8 @@ public:
      *
      * @param delay - the amount to delay by
      */
-    void set_disconnect_delay(boost::posix_time::time_duration const& delay) {
-        delay_disconnect_ = delay;
+    void set_disconnect_delay(std::chrono::steady_clock::duration delay) {
+        delay_disconnect_ = MQTT_NS::force_move(delay);
     }
     // [end] for test setting
 
@@ -434,7 +434,7 @@ private:
     ) {
         auto& ep = *spep;
 
-        MQTT_NS::optional<boost::posix_time::time_duration> session_expiry_interval;
+        MQTT_NS::optional<std::chrono::steady_clock::duration> session_expiry_interval;
 
         if (ep.get_protocol_version() == MQTT_NS::protocol_version::v5) {
             for (auto const& p : props) {
@@ -442,7 +442,7 @@ private:
                     MQTT_NS::make_lambda_visitor(
                         [&session_expiry_interval](MQTT_NS::v5::property::session_expiry_interval const& t) {
                             if (t.val() != 0) {
-                                session_expiry_interval.emplace(boost::posix_time::seconds(t.val()));
+                                session_expiry_interval.emplace(std::chrono::seconds(t.val()));
                             }
                         },
                         [](auto&& ...) {
@@ -619,7 +619,7 @@ private:
         con_sp_t spep
     ) {
         if (delay_disconnect_) {
-            tim_disconnect_.expires_from_now(delay_disconnect_.value());
+            tim_disconnect_.expires_after(delay_disconnect_.value());
             tim_disconnect_.async_wait(
                 [&, wp = con_wp_t(MQTT_NS::force_move(spep))](MQTT_NS::error_code ec) {
                     if (!ec) {
@@ -1060,7 +1060,7 @@ private:
             con_sp_t con,
             MQTT_NS::buffer client_id,
             MQTT_NS::optional<MQTT_NS::will> will,
-            MQTT_NS::optional<boost::posix_time::time_duration> session_expiry_interval = MQTT_NS::nullopt)
+            MQTT_NS::optional<std::chrono::steady_clock::duration> session_expiry_interval = MQTT_NS::nullopt)
             :con(MQTT_NS::force_move(con)),
              client_id(MQTT_NS::force_move(client_id)),
              will(MQTT_NS::force_move(will)),
@@ -1081,8 +1081,8 @@ private:
         // Messages pending transmission to client
         // messages received from client, but not acknowledged
         MQTT_NS::optional<MQTT_NS::will> will;
-        MQTT_NS::optional<boost::posix_time::time_duration> will_delay;
-        MQTT_NS::optional<boost::posix_time::time_duration> session_expiry_interval;
+        MQTT_NS::optional<std::chrono::steady_clock::duration> will_delay;
+        MQTT_NS::optional<std::chrono::steady_clock::duration> session_expiry_interval;
     };
 
     // The mi_active_sessions container holds the relevant data about an active connection with the broker.
@@ -1238,8 +1238,8 @@ private:
     >;
 
     as::io_context& ioc_; ///< The boost asio context to run this broker on.
-    as::deadline_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
-    MQTT_NS::optional<boost::posix_time::time_duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
+    as::steady_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
+    MQTT_NS::optional<std::chrono::steady_clock::duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
 
     mi_active_sessions active_sessions_; ///< Map of active client id and connections
     mi_non_active_sessions non_active_sessions_; ///< Storage for sessions not currently active. Indexed by client id.

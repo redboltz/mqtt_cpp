@@ -308,7 +308,7 @@ public:
      * The default timeout value is 10 seconds.
      * @param timeout timeout value
      */
-    void set_underlying_connect_timeout(boost::posix_time::time_duration timeout) {
+    void set_underlying_connect_timeout(std::chrono::steady_clock::duration timeout) {
         underlying_connect_timeout_ = force_move(timeout);
     }
 
@@ -343,8 +343,8 @@ private:
                     return;
                 }
                 auto underlying_finished = std::make_shared<bool>(false);
-                auto tim = std::make_shared<as::deadline_timer>(ioc_con_);
-                tim->expires_from_now(underlying_connect_timeout_);
+                auto tim = std::make_shared<as::steady_timer>(ioc_con_);
+                tim->expires_after(underlying_connect_timeout_);
                 tim->async_wait(
                     [socket, tim, underlying_finished]
                     (error_code ec) {
@@ -384,7 +384,7 @@ private:
     error_handler h_error_;
     as::ssl::context ctx_;
     protocol_version version_ = protocol_version::undetermined;
-    boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
+    std::chrono::steady_clock::duration underlying_connect_timeout_ = std::chrono::seconds(10);
 };
 
 #endif // defined(MQTT_USE_TLS)
@@ -507,7 +507,7 @@ public:
      * The default timeout value is 10 seconds.
      * @param timeout timeout value
      */
-    void set_underlying_connect_timeout(boost::posix_time::time_duration timeout) {
+    void set_underlying_connect_timeout(std::chrono::steady_clock::duration timeout) {
         underlying_connect_timeout_ = force_move(timeout);
     }
 
@@ -526,8 +526,8 @@ private:
                     return;
                 }
                 auto underlying_finished = std::make_shared<bool>(false);
-                auto tim = std::make_shared<as::deadline_timer>(ioc_con_);
-                tim->expires_from_now(underlying_connect_timeout_);
+                auto tim = std::make_shared<as::steady_timer>(ioc_con_);
+                tim->expires_after(underlying_connect_timeout_);
                 tim->async_wait(
                     [socket, tim, underlying_finished]
                     (error_code ec) {
@@ -630,7 +630,7 @@ private:
     accept_handler h_accept_;
     error_handler h_error_;
     protocol_version version_ = protocol_version::undetermined;
-    boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
+    std::chrono::steady_clock::duration underlying_connect_timeout_ = std::chrono::seconds(10);
 };
 
 
@@ -757,7 +757,7 @@ public:
      * The default timeout value is 10 seconds.
      * @param timeout timeout value
      */
-    void set_underlying_connect_timeout(boost::posix_time::time_duration timeout) {
+    void set_underlying_connect_timeout(std::chrono::steady_clock::duration timeout) {
         underlying_connect_timeout_ = force_move(timeout);
     }
 
@@ -792,8 +792,8 @@ private:
                     return;
                 }
                 auto underlying_finished = std::make_shared<bool>(false);
-                auto tim = std::make_shared<as::deadline_timer>(ioc_con_);
-                tim->expires_from_now(underlying_connect_timeout_);
+                auto tim = std::make_shared<as::steady_timer>(ioc_con_);
+                tim->expires_after(underlying_connect_timeout_);
                 tim->async_wait(
                     [socket, tim, underlying_finished]
                     (error_code ec) {
@@ -807,7 +807,7 @@ private:
                 auto ps = socket.get();
                 ps->next_layer().async_handshake(
                     as::ssl::stream_base::server,
-                    [this, socket = std::move(socket), tim, underlying_finished]
+                    [this, socket = force_move(socket), tim, underlying_finished]
                     (error_code ec) mutable {
                         if (ec) {
                             *underlying_finished = true;
@@ -912,7 +912,7 @@ private:
     error_handler h_error_;
     as::ssl::context ctx_;
     protocol_version version_ = protocol_version::undetermined;
-    boost::posix_time::time_duration underlying_connect_timeout_ = boost::posix_time::seconds(10);
+    std::chrono::steady_clock::duration underlying_connect_timeout_ = std::chrono::seconds(10);
 };
 
 #endif // defined(MQTT_USE_TLS)
