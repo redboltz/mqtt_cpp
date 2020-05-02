@@ -813,7 +813,7 @@ public:
      * @brief get_total_bytes_sent
      * @return The total bytes sent on the socket.
      */
-    size_t get_total_bytes_sent() {
+    std::size_t get_total_bytes_sent() const {
         return total_bytes_sent_;
     }
 
