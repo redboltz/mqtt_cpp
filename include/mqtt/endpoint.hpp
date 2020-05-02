@@ -749,7 +749,6 @@ protected:
     virtual void on_pre_send() noexcept = 0;
 
 private:
-
     /**
      * @brief is valid length handler
      *        This handler is called when remaining length is received.
@@ -800,6 +799,22 @@ public:
      */
     bool clean_start() const {
         return clean_session();
+    }
+
+    /**
+     * @brief get_total_bytes_received
+     * @return The total bytes received on the socket.
+     */
+    std::size_t get_total_bytes_received() const {
+        return total_bytes_received_;
+    }
+
+    /**
+     * @brief get_total_bytes_sent
+     * @return The total bytes sent on the socket.
+     */
+    std::size_t get_total_bytes_sent() const {
+        return total_bytes_sent_;
     }
 
     /**
@@ -3938,6 +3953,7 @@ protected:
             [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper)](
                 error_code ec,
                 std::size_t bytes_transferred) mutable {
+                this->total_bytes_received_ = bytes_transferred;
                 if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                 handle_control_packet_type(force_move(session_life_keeper), force_move(self));
             }
@@ -4114,6 +4130,7 @@ private:
             [this, self = force_move(self), session_life_keeper = force_move(session_life_keeper)] (
                 error_code ec,
                 std::size_t bytes_transferred) mutable {
+                this->total_bytes_received_ = bytes_transferred;
                 if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                 handle_remaining_length(force_move(session_life_keeper), force_move(self));
             }
@@ -4137,6 +4154,7 @@ private:
                 [this, self = force_move(self), session_life_keeper = force_move(session_life_keeper)](
                     error_code ec,
                     std::size_t bytes_transferred) mutable {
+                    this->total_bytes_received_ = bytes_transferred;
                     if (handle_close_or_error(ec)) {
                         return;
                     }
@@ -4347,6 +4365,7 @@ private:
                 ]
                 (error_code ec,
                  std::size_t bytes_transferred) mutable {
+                    this->total_bytes_received_ = bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, buf.size())) return;
                     handler(
                         force_move(buf),
@@ -4407,6 +4426,7 @@ private:
                 ]
                 (error_code ec,
                  std::size_t bytes_transferred) mutable {
+                    this->total_bytes_received_ = bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, Bytes)) return;
                     handler(
                         make_packet_id<Bytes>::apply(
@@ -4531,6 +4551,7 @@ private:
                 ]
                 (error_code ec,
                  std::size_t bytes_transferred) mutable {
+                    this->total_bytes_received_ = bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                     proc(
                         force_move(session_life_keeper),
@@ -4706,6 +4727,7 @@ private:
                             result
                         ]
                         (error_code ec, std::size_t bytes_transferred) mutable {
+                            this->total_bytes_received_ = bytes_transferred;
                             if (!check_error_and_transferred_length(ec, bytes_transferred, result.len)) return;
                             process_property_id(
                                 force_move(session_life_keeper),
@@ -4773,6 +4795,7 @@ private:
                 ]
                 (error_code ec,
                  std::size_t bytes_transferred) mutable {
+                    this->total_bytes_received_ = bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                     process_property_body(
                         force_move(session_life_keeper),
@@ -5692,6 +5715,7 @@ private:
                     self = force_move(self)
                 ]
                 (error_code ec, std::size_t bytes_transferred) mutable {
+                    this->total_bytes_received_ = bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, remaining_length_)) return;
                     (this->*NextFunc)(
                         force_move(session_life_keeper),
@@ -5725,6 +5749,7 @@ private:
             ]
             (error_code ec,
              std::size_t bytes_transferred) mutable {
+                this->total_bytes_received_ = bytes_transferred;
                 if (!check_error_and_transferred_length(ec, bytes_transferred, header_len)) return;
                 (this->*NextFunc)(
                     force_move(session_life_keeper),
@@ -8575,7 +8600,7 @@ private:
         boost::system::error_code ec;
         if (!connected_) return;
         on_pre_send();
-        socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
+        total_bytes_sent_ += socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
         // If ec is set as error, the error will be handled by async_read.
         // If `handle_error(ec);` is called here, error_handler would be called twice.
     }
@@ -9178,6 +9203,7 @@ private:
             error_code ec,
             std::size_t bytes_transferred) const {
             func_(ec);
+            self_->total_bytes_sent_ += bytes_transferred;
             for (std::size_t i = 0; i != num_of_messages_; ++i) {
                 self_->queue_.pop_front();
             }
@@ -9349,6 +9375,8 @@ private:
     protocol_version version_{protocol_version::undetermined};
     std::size_t packet_bulk_read_limit_ = 256;
     std::size_t props_bulk_read_limit_ = packet_bulk_read_limit_;
+    std::size_t total_bytes_sent_ = 0;
+    std::size_t total_bytes_received_ = 0;
     static constexpr std::uint8_t variable_length_continue_flag = 0b10000000;
 };
 
