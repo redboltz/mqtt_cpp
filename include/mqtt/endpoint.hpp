@@ -805,7 +805,7 @@ public:
      * @brief get_total_bytes_received
      * @return The total bytes received on the socket.
      */
-    size_t get_total_bytes_received() {
+    std::size_t get_total_bytes_received() const {
         return total_bytes_received_;
     }
 
