@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
     std::uint16_t pid_pub;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::steady_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             // existing client id. And it is overwritten at broker.
             // Then error handler in the broker called, assertion failed due to
             // no corresponding connection exists
-            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.expires_after(std::chrono::milliseconds(100));
             tim.async_wait(
                 [&c2] (MQTT_NS::error_code ec) {
                     BOOST_ASSERT( ! ec);
@@ -300,7 +300,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 
     std::uint16_t pid_pub;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::steady_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -371,7 +371,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             // existing client id. And it is overwritten at broker.
             // Then error handler in the broker called, assertion failed due to
             // no corresponding connection exists
-            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.expires_after(std::chrono::milliseconds(100));
             tim.async_wait(
                 [&c2] (MQTT_NS::error_code ec) {
                     BOOST_ASSERT( ! ec);
@@ -465,7 +465,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 
     std::uint16_t pid_pub;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::steady_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -535,7 +535,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             // existing client id. And it is overwritten at broker.
             // Then error handler in the broker called, assertion failed due to
             // no corresponding connection exists
-            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.expires_after(std::chrono::milliseconds(100));
             tim.async_wait(
                 [&c2] (MQTT_NS::error_code ec) {
                     BOOST_ASSERT( ! ec);
@@ -631,7 +631,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     std::uint16_t pid_pub1;
     std::uint16_t pid_pub2;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::steady_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -704,7 +704,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             // existing client id. And it is overwritten at broker.
             // Then error handler in the broker called, assertion failed due to
             // no corresponding connection exists
-            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.expires_after(std::chrono::milliseconds(100));
             tim.async_wait(
                 [&c2] (MQTT_NS::error_code ec) {
                     BOOST_ASSERT( ! ec);
@@ -882,7 +882,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
 
     std::uint16_t pid_pub;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::steady_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -1024,7 +1024,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
             // existing client id. And it is overwritten at broker.
             // Then error handler in the broker called, assertion failed due to
             // no corresponding connection exists
-            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.expires_after(std::chrono::milliseconds(100));
             tim.async_wait(
                 [&c2] (MQTT_NS::error_code ec) {
                     BOOST_ASSERT( ! ec);
@@ -1112,7 +1112,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
 
     std::uint16_t pid_pub;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::steady_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -1185,7 +1185,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
             // existing client id. And it is overwritten at broker.
             // Then error handler in the broker called, assertion failed due to
             // no corresponding connection exists
-            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.expires_after(std::chrono::milliseconds(100));
             tim.async_wait(
                 [&c2] (MQTT_NS::error_code ec) {
                     BOOST_ASSERT( ! ec);
@@ -1280,7 +1280,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
 
     std::uint16_t pid_pub;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::steady_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -1401,7 +1401,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
             // existing client id. And it is overwritten at broker.
             // Then error handler in the broker called, assertion failed due to
             // no corresponding connection exists
-            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.expires_after(std::chrono::milliseconds(100));
             tim.async_wait(
                 [&c2] (MQTT_NS::error_code ec) {
                     BOOST_ASSERT( ! ec);
@@ -1498,7 +1498,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
     std::uint16_t pid_pub1;
     std::uint16_t pid_pub2;
 
-    boost::asio::deadline_timer tim(ioc);
+    boost::asio::steady_timer tim(ioc);
 
     checker chk = {
         cont("start"),
@@ -1573,7 +1573,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
             // existing client id. And it is overwritten at broker.
             // Then error handler in the broker called, assertion failed due to
             // no corresponding connection exists
-            tim.expires_from_now(boost::posix_time::milliseconds(100));
+            tim.expires_after(std::chrono::milliseconds(100));
             tim.async_wait(
                 [&c2] (MQTT_NS::error_code ec) {
                     BOOST_ASSERT( ! ec);

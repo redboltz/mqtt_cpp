@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
             cont("h_close"),
         };
 
-        boost::asio::deadline_timer tim(ioc);
+        boost::asio::steady_timer tim(ioc);
         switch (c->get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
@@ -228,13 +228,13 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    tim.expires_from_now(boost::posix_time::seconds(2));
+                    tim.expires_after(std::chrono::seconds(2));
                     tim.async_wait(
                         [&chk, &c, &tim](MQTT_NS::error_code ec) {
                             MQTT_CHK("2sec");
                             BOOST_CHECK(!ec);
                             c->publish("topic1", "timer_reset", MQTT_NS::qos::at_most_once);
-                            tim.expires_from_now(boost::posix_time::seconds(4));
+                            tim.expires_after(std::chrono::seconds(4));
                             tim.async_wait(
                                 [&chk](MQTT_NS::error_code ec) {
                                     MQTT_CHK("4sec_cancelled");
@@ -253,13 +253,13 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
-                    tim.expires_from_now(boost::posix_time::seconds(2));
+                    tim.expires_after(std::chrono::seconds(2));
                     tim.async_wait(
                         [&chk, &c, &tim](MQTT_NS::error_code ec) {
                             MQTT_CHK("2sec");
                             BOOST_CHECK(!ec);
                             c->publish("topic1", "timer_reset", MQTT_NS::qos::at_most_once);
-                            tim.expires_from_now(boost::posix_time::seconds(4));
+                            tim.expires_after(std::chrono::seconds(4));
                             tim.async_wait(
                                 [&chk](MQTT_NS::error_code ec) {
                                     MQTT_CHK("4sec_cancelled");
@@ -295,7 +295,7 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                 c->disconnect();
                 return true;
             });
-        c->set_keep_alive_sec_ping_ms(3, 3 * 1000);
+        c->set_keep_alive_sec_ping_ms(3, std::chrono::seconds(3));
         c->connect();
         ioc.run();
         BOOST_TEST(chk.all());
@@ -655,8 +655,8 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    b.set_disconnect_delay(boost::posix_time::seconds(2));
-                    c->disconnect(boost::posix_time::seconds(1));
+                    b.set_disconnect_delay(std::chrono::seconds(2));
+                    c->disconnect(std::chrono::seconds(1));
                     return true;
                 });
             break;
@@ -667,8 +667,8 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
-                    b.set_disconnect_delay(boost::posix_time::seconds(2));
-                    c->disconnect(boost::posix_time::seconds(1));
+                    b.set_disconnect_delay(std::chrono::seconds(2));
+                    c->disconnect(std::chrono::seconds(1));
                     return true;
                 });
             break;
@@ -715,8 +715,8 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    b.set_disconnect_delay(boost::posix_time::seconds(1));
-                    c->disconnect(boost::posix_time::seconds(2));
+                    b.set_disconnect_delay(std::chrono::seconds(1));
+                    c->disconnect(std::chrono::seconds(2));
                     return true;
                 });
             break;
@@ -727,8 +727,8 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
-                    b.set_disconnect_delay(boost::posix_time::seconds(1));
-                    c->disconnect(boost::posix_time::seconds(2));
+                    b.set_disconnect_delay(std::chrono::seconds(1));
+                    c->disconnect(std::chrono::seconds(2));
                     return true;
                 });
             break;
@@ -775,8 +775,8 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    b.set_disconnect_delay(boost::posix_time::seconds(2));
-                    c->async_disconnect(boost::posix_time::seconds(1));
+                    b.set_disconnect_delay(std::chrono::seconds(2));
+                    c->async_disconnect(std::chrono::seconds(1));
                     return true;
                 });
             break;
@@ -787,8 +787,8 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
-                    b.set_disconnect_delay(boost::posix_time::seconds(2));
-                    c->async_disconnect(boost::posix_time::seconds(1));
+                    b.set_disconnect_delay(std::chrono::seconds(2));
+                    c->async_disconnect(std::chrono::seconds(1));
                     return true;
                 });
             break;
@@ -846,8 +846,8 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    b.set_disconnect_delay(boost::posix_time::seconds(1));
-                    c->async_disconnect(boost::posix_time::seconds(2));
+                    b.set_disconnect_delay(std::chrono::seconds(1));
+                    c->async_disconnect(std::chrono::seconds(2));
                     return true;
                 });
             break;
@@ -858,8 +858,8 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
-                    b.set_disconnect_delay(boost::posix_time::seconds(1));
-                    c->async_disconnect(boost::posix_time::seconds(2));
+                    b.set_disconnect_delay(std::chrono::seconds(1));
+                    c->async_disconnect(std::chrono::seconds(2));
                     return true;
                 });
             break;

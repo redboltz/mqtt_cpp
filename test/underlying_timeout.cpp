@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
         }
     );
 
-    server.set_underlying_connect_timeout(boost::posix_time::seconds(1));
+    server.set_underlying_connect_timeout(std::chrono::seconds(1));
     server.listen();
 
     // client
@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
         }
     );
 
-    server.set_underlying_connect_timeout(boost::posix_time::seconds(1));
+    server.set_underlying_connect_timeout(std::chrono::seconds(1));
     server.listen();
 
     // client
@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
         }
     );
 
-    server.set_underlying_connect_timeout(boost::posix_time::seconds(1));
+    server.set_underlying_connect_timeout(std::chrono::seconds(1));
     server.listen();
 
     // client
@@ -249,7 +249,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
         }
     );
 
-    server.set_underlying_connect_timeout(boost::posix_time::seconds(1));
+    server.set_underlying_connect_timeout(std::chrono::seconds(1));
     server.listen();
 
     // client

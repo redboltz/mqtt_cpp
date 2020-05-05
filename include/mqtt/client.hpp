@@ -341,6 +341,30 @@ public:
     }
 #endif // defined(MQTT_USE_TLS)
 
+
+    /**
+     * @brief Set a keep alive second and a ping duration.
+     * @param keep_alive_sec keep alive seconds
+     * @param ping_ms ping sending interval
+     *
+     * When a endpoint connects to a broker, the endpoint notifies keep_alive_sec to
+     * the broker.
+     * After connecting, the broker starts counting a timeout, and the endpoint starts
+     * sending ping packets for each ping_ms.
+     * When the broker receives a ping packet, timeout timer is reset.
+     * If the broker doesn't receive a ping packet within keep_alive_sec, the endpoint
+     * is disconnected.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464635115<BR>
+     * 3.1.2.10 Keep Alive
+     */
+    void set_keep_alive_sec(std::uint16_t keep_alive_sec, std::chrono::steady_clock::duration ping) {
+        if ((ping_duration_ != std::chrono::steady_clock::duration::zero()) && base::connected() && (ping == std::chrono::steady_clock::duration::zero())) {
+            tim_ping_.cancel();
+        }
+        keep_alive_sec_ = keep_alive_sec;
+        ping_duration_ = force_move(ping);
+    }
+
     /**
      * @brief Set a keep alive second and a ping milli seconds.
      * @param keep_alive_sec keep alive seconds
@@ -357,24 +381,20 @@ public:
      * 3.1.2.10 Keep Alive
      */
     void set_keep_alive_sec_ping_ms(std::uint16_t keep_alive_sec, std::size_t ping_ms) {
-        if (ping_duration_ms_ != 0 && base::connected() && ping_ms == 0) {
-            tim_ping_.cancel();
-        }
-        keep_alive_sec_ = keep_alive_sec;
-        ping_duration_ms_ = ping_ms;
+            set_keep_alive_sec(keep_alive_sec, std::chrono::milliseconds(ping_ms));
     }
 
     /**
      * @brief Set a keep alive second and a ping milli seconds.
      * @param keep_alive_sec keep alive seconds
      *
-     * Call set_keep_alive_sec_ping_ms(keep_alive_sec, keep_alive_sec * 1000 / 2)<BR>
+     * Call set_keep_alive_sec_ping_ms(keep_alive_sec, std::chrono::seconds(keep_alive_sec / 2))<BR>
      * ping_ms is set to a half of keep_alive_sec.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464635115<BR>
      * 3.1.2.10 Keep Alive
      */
     void set_keep_alive_sec(std::uint16_t keep_alive_sec) {
-        set_keep_alive_sec_ping_ms(keep_alive_sec, keep_alive_sec * 1000 / 2);
+        set_keep_alive_sec_ping_ms(keep_alive_sec, std::chrono::seconds(keep_alive_sec / 2));
     }
 
 
@@ -762,14 +782,14 @@ public:
      *        3.14.2.2 DISCONNECT Properties
      */
     void disconnect(
-        boost::posix_time::time_duration const& timeout,
+        std::chrono::steady_clock::duration timeout,
         v5::disconnect_reason_code reason_code = v5::disconnect_reason_code::normal_disconnection,
         v5::properties props = {}
     ) {
-        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
         if (base::connected()) {
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-            tim_close_.expires_from_now(timeout);
+            tim_close_.expires_after(force_move(timeout));
             tim_close_.async_wait(
                 [wp = force_move(wp)](error_code ec) {
                     if (auto sp = wp.lock()) {
@@ -802,7 +822,7 @@ public:
         v5::disconnect_reason_code reason_code = v5::disconnect_reason_code::normal_disconnection,
         v5::properties props = {}
     ) {
-        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
         if (base::connected()) {
             base::disconnect(reason_code, force_move(props));
         }
@@ -818,12 +838,12 @@ public:
      * @param func A callback function that is called when async operation will finish.
      */
     void async_disconnect(
-        boost::posix_time::time_duration const& timeout,
+        std::chrono::steady_clock::duration timeout,
         async_handler_t func = async_handler_t()) {
-        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
         if (base::connected()) {
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-            tim_close_.expires_from_now(timeout);
+            tim_close_.expires_after(force_move(timeout));
             tim_close_.async_wait(
                 [wp = force_move(wp)](error_code ec) {
                     if (auto sp = wp.lock()) {
@@ -855,14 +875,14 @@ public:
      * @param func A callback function that is called when async operation will finish.
      */
     void async_disconnect(
-        boost::posix_time::time_duration const& timeout,
+        std::chrono::steady_clock::duration timeout,
         v5::disconnect_reason_code reason_code,
         v5::properties props,
         async_handler_t func = async_handler_t()) {
-        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
         if (base::connected()) {
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-            tim_close_.expires_from_now(timeout);
+            tim_close_.expires_after(force_move(timeout));
             tim_close_.async_wait(
                 [wp = force_move(wp)](error_code ec) {
                     if (auto sp = wp.lock()) {
@@ -886,7 +906,7 @@ public:
      */
     void async_disconnect(
         async_handler_t func = async_handler_t()) {
-        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
         if (base::connected()) {
             base::async_disconnect(force_move(func));
         }
@@ -912,7 +932,7 @@ public:
         v5::disconnect_reason_code reason_code,
         v5::properties props,
         async_handler_t func = async_handler_t()) {
-        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
         if (base::connected()) {
             base::async_disconnect(reason_code, force_move(props), force_move(func));
         }
@@ -924,7 +944,7 @@ public:
      * When the endpoint disconnects using force_disconnect(), a will will send.<BR>
      */
     void force_disconnect() {
-        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
         tim_close_.cancel();
         base::force_disconnect();
     }
@@ -1242,7 +1262,7 @@ private:
         any session_life_keeper) {
         as::connect(socket.lowest_layer(), it, end);
         base::set_connect();
-        if (ping_duration_ms_ != 0) {
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
             set_timer();
         }
         handshake_socket(socket, force_move(props), force_move(session_life_keeper));
@@ -1259,7 +1279,7 @@ private:
         as::connect(socket.lowest_layer(), it, end, ec);
         if (ec) return;
         base::set_connect();
-        if (ping_duration_ms_ != 0) {
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
             set_timer();
         }
         handshake_socket(socket, force_move(props), force_move(session_life_keeper), ec);
@@ -1289,7 +1309,7 @@ private:
                     return;
                 }
                 base::set_connect();
-                if (ping_duration_ms_ != 0) {
+                if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
                     set_timer();
                 }
                 async_handshake_socket(socket, force_move(props), force_move(session_life_keeper), force_move(func));
@@ -1297,9 +1317,8 @@ private:
     }
 
 protected:
-    void on_pre_send() noexcept override
-    {
-        if (ping_duration_ms_ != 0) {
+    void on_pre_send() noexcept override {
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
             reset_timer();
         }
     }
@@ -1317,7 +1336,7 @@ private:
     }
 
     void set_timer() {
-        tim_ping_.expires_from_now(boost::posix_time::milliseconds(ping_duration_ms_));
+        tim_ping_.expires_after(ping_duration_);
         std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
         tim_ping_.async_wait(
             [wp = force_move(wp)](error_code ec) {
@@ -1335,12 +1354,12 @@ private:
 
 protected:
     void on_close() noexcept override {
-        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
     }
 
     void on_error(error_code ec) noexcept override {
         (void)ec;
-        if (ping_duration_ms_ != 0) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
     }
 
     // Ensure that only code that knows the *exact* type of an object
@@ -1372,12 +1391,12 @@ private:
 
     std::shared_ptr<Socket> socket_;
     as::io_context& ioc_;
-    as::deadline_timer tim_ping_;
-    as::deadline_timer tim_close_;
+    as::steady_timer tim_ping_;
+    as::steady_timer tim_close_;
     std::string host_;
     std::string port_;
     std::uint16_t keep_alive_sec_{0};
-    std::size_t ping_duration_ms_{0};
+    std::chrono::steady_clock::duration ping_duration_{std::chrono::steady_clock::duration::zero()};
     std::string client_id_;
     optional<will> will_;
     optional<std::string> user_name_;

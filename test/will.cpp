@@ -748,7 +748,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
             "topic1"_mb,
             "will_contents"_mb,
             MQTT_NS::retain::yes,
-            std::move(ps)
+            MQTT_NS::force_move(ps)
         ));
 
     int c1fd_count = 0;
