@@ -295,7 +295,7 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                 c->disconnect();
                 return true;
             });
-        c->set_keep_alive_sec_ping_ms(3, std::chrono::seconds(3));
+        c->set_keep_alive_sec(3, std::chrono::seconds(3));
         c->connect();
         ioc.run();
         BOOST_TEST(chk.all());

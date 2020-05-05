@@ -388,13 +388,13 @@ public:
      * @brief Set a keep alive second and a ping milli seconds.
      * @param keep_alive_sec keep alive seconds
      *
-     * Call set_keep_alive_sec_ping_ms(keep_alive_sec, std::chrono::seconds(keep_alive_sec / 2))<BR>
+     * Call set_keep_alive_sec(keep_alive_sec, std::chrono::seconds(keep_alive_sec / 2))<BR>
      * ping_ms is set to a half of keep_alive_sec.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464635115<BR>
      * 3.1.2.10 Keep Alive
      */
     void set_keep_alive_sec(std::uint16_t keep_alive_sec) {
-        set_keep_alive_sec_ping_ms(keep_alive_sec, std::chrono::seconds(keep_alive_sec / 2));
+        set_keep_alive_sec(keep_alive_sec, std::chrono::seconds(keep_alive_sec / 2));
     }
 
 
