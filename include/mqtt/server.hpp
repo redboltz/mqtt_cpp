@@ -153,6 +153,22 @@ public:
         version_ = version;
     }
 
+    /**
+     * @brief Get reference of boost::asio::io_context for connections
+     * @return reference of boost::asio::io_context for connections
+     */
+    as::io_context& ioc_con() const {
+        return ioc_con_;
+    }
+
+    /**
+     * @brief Get reference of boost::asio::io_context for acceptor
+     * @return reference of boost::asio::io_context for acceptor
+     */
+    as::io_context& ioc_accept() const {
+        return ioc_accept_;
+    }
+
 private:
     void do_accept() {
         if (close_request_) return;
@@ -298,6 +314,22 @@ public:
      */
     void set_protocol_version(protocol_version version) {
         version_ = version;
+    }
+
+    /**
+     * @brief Get reference of boost::asio::io_context for connections
+     * @return reference of boost::asio::io_context for connections
+     */
+    as::io_context& ioc_con() const {
+        return ioc_con_;
+    }
+
+    /**
+     * @brief Get reference of boost::asio::io_context for acceptor
+     * @return reference of boost::asio::io_context for acceptor
+     */
+    as::io_context& ioc_accept() const {
+        return ioc_accept_;
     }
 
     /**
@@ -497,6 +529,22 @@ public:
      */
     void set_protocol_version(protocol_version version) {
         version_ = version;
+    }
+
+    /**
+     * @brief Get reference of boost::asio::io_context for connections
+     * @return reference of boost::asio::io_context for connections
+     */
+    as::io_context& ioc_con() const {
+        return ioc_con_;
+    }
+
+    /**
+     * @brief Get reference of boost::asio::io_context for acceptor
+     * @return reference of boost::asio::io_context for acceptor
+     */
+    as::io_context& ioc_accept() const {
+        return ioc_accept_;
     }
 
     /**
@@ -747,6 +795,22 @@ public:
      */
     void set_protocol_version(protocol_version version) {
         version_ = version;
+    }
+
+    /**
+     * @brief Get reference of boost::asio::io_context for connections
+     * @return reference of boost::asio::io_context for connections
+     */
+    as::io_context& ioc_con() const {
+        return ioc_con_;
+    }
+
+    /**
+     * @brief Get reference of boost::asio::io_context for acceptor
+     * @return reference of boost::asio::io_context for acceptor
+     */
+    as::io_context& ioc_accept() const {
+        return ioc_accept_;
     }
 
     /**
