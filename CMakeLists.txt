@@ -167,3 +167,5 @@ IF (DOXYGEN_FOUND)
         VERBATIM
     )
 ENDIF ()
+
+include(cmake/createcmakeconfig.cmake)
