@@ -25,15 +25,12 @@ jobs:
       uses: actions/checkout@v2
     - name: Install Dependencies
       run: |
-        brew install boost openssl iwyu llvm
-        ln -s "$(brew --prefix llvm)/bin/clang-tidy" "/usr/local/bin/clang-tidy"
-        ln -s "$(brew --prefix llvm)/bin/scan-build" "/usr/local/bin/scan-build"
+        brew install boost openssl
     - name: Configure
       env:
         OPENSSL_ROOT_DIR: /usr/local/opt/openssl
-        ANALYZE_FLAGS: -DCMAKE_CXX_CLANG_TIDY=clang-tidy -DCMAKE_INCLUDE_WHAT_YOU_USE=include-what-you-use
       run: |
-        cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${{ matrix.pattern }} ${ANALYZE_FLAGS} -DCMAKE_CXX_COMPILER=clang++
+        cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${{ matrix.pattern }} -DCMAKE_CXX_COMPILER=clang++
     - name: Check Header Dependencies
       run: |
         cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first --target check_deps
@@ -41,7 +38,7 @@ jobs:
       env:
         CXXFLAGS: -Werror -g -pedantic -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING
       run: |
-        scan-build -o scanlogs cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first
+        cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first
     - name: Test
       working-directory: ${{ runner.temp }}
       run: |
@@ -58,10 +55,8 @@ jobs:
       run: |
         sudo add-apt-repository ppa:mhier/libboost-latest
         sudo apt-get update
-        sudo apt-get install boost1.67 iwyu clang-tidy clang-tools
+        sudo apt-get install boost1.67
     - name: Configure
-      env:
-        ANALYZE_FLAGS: -DCMAKE_LINK_WHAT_YOU_USE=TRUE -DCMAKE_CXX_CLANG_TIDY=clang-tidy -DCMAKE_INCLUDE_WHAT_YOU_USE=include-what-you-use
       run: |
         [ ${{ matrix.pattern }} == 0 ] && FLAGS="-DCMAKE_CXX_COMPILER=clang++               -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
         [ ${{ matrix.pattern }} == 1 ] && FLAGS="-DCMAKE_CXX_COMPILER=clang++               -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=ON  -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
@@ -72,21 +67,21 @@ jobs:
         [ ${{ matrix.pattern }} == 6 ] && FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=ON  -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_STD_ANY=ON  -DMQTT_STD_OPTIONAL=ON  -DMQTT_STD_VARIANT=ON  -DMQTT_STD_STRING_VIEW=ON  -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
         [ ${{ matrix.pattern }} == 7 ] && FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_TLS=ON  -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=OFF -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
 
-        cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${ANALYZE_FLAGS} ${FLAGS} -DBOOSTROOT=/usr
+        cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${FLAGS} -DBOOSTROOT=/usr
     - name: Check Header Dependencies
       run: |
         cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first --target check_deps
     - name: Compile with Sanitizer
-      if: (matrix.pattern == 0) || (matrix.pattern == 1) || (matrix.pattern == 2) || (matrix.pattern == 3)
+      if: (matrix.pattern == 1) || (matrix.pattern == 2) || (matrix.pattern == 3)
       env:
         CFLAGS:   -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED -fsanitize=address
         CXXFLAGS: -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED -fsanitize=address
         LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED -fsanitize=address
       run: |
         CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
-        scan-build -o scanlogs cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first
+        cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first
     - name: Compile without Sanitizer
-      if: (matrix.pattern == 4) || (matrix.pattern == 5) || (matrix.pattern == 6) || (matrix.pattern == 7)
+      if: (matrix.pattern == 0) || (matrix.pattern == 4) || (matrix.pattern == 5) || (matrix.pattern == 6) || (matrix.pattern == 7)
       env:
         CFLAGS:   -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED
         CXXFLAGS: -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED
