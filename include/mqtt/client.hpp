@@ -255,6 +255,14 @@ public:
     }
 
     /**
+     * @brief Get the client id.
+     * @return The client id of this client.
+     */
+    std::string const& get_client_id() const {
+        return client_id_;
+    }
+
+    /**
      * @brief Set clean session.
      * @param cs clean session
      *
