@@ -3953,7 +3953,7 @@ protected:
             [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper)](
                 error_code ec,
                 std::size_t bytes_transferred) mutable {
-                this->total_bytes_received_ = bytes_transferred;
+                this->total_bytes_received_ += bytes_transferred;
                 if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                 handle_control_packet_type(force_move(session_life_keeper), force_move(self));
             }
@@ -4130,7 +4130,7 @@ private:
             [this, self = force_move(self), session_life_keeper = force_move(session_life_keeper)] (
                 error_code ec,
                 std::size_t bytes_transferred) mutable {
-                this->total_bytes_received_ = bytes_transferred;
+                this->total_bytes_received_ += bytes_transferred;
                 if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                 handle_remaining_length(force_move(session_life_keeper), force_move(self));
             }
@@ -4154,7 +4154,7 @@ private:
                 [this, self = force_move(self), session_life_keeper = force_move(session_life_keeper)](
                     error_code ec,
                     std::size_t bytes_transferred) mutable {
-                    this->total_bytes_received_ = bytes_transferred;
+                    this->total_bytes_received_ += bytes_transferred;
                     if (handle_close_or_error(ec)) {
                         return;
                     }
@@ -4365,7 +4365,7 @@ private:
                 ]
                 (error_code ec,
                  std::size_t bytes_transferred) mutable {
-                    this->total_bytes_received_ = bytes_transferred;
+                    this->total_bytes_received_ += bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, buf.size())) return;
                     handler(
                         force_move(buf),
@@ -4426,7 +4426,7 @@ private:
                 ]
                 (error_code ec,
                  std::size_t bytes_transferred) mutable {
-                    this->total_bytes_received_ = bytes_transferred;
+                    this->total_bytes_received_ += bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, Bytes)) return;
                     handler(
                         make_packet_id<Bytes>::apply(
@@ -4551,7 +4551,7 @@ private:
                 ]
                 (error_code ec,
                  std::size_t bytes_transferred) mutable {
-                    this->total_bytes_received_ = bytes_transferred;
+                    this->total_bytes_received_ += bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                     proc(
                         force_move(session_life_keeper),
@@ -4727,7 +4727,7 @@ private:
                             result
                         ]
                         (error_code ec, std::size_t bytes_transferred) mutable {
-                            this->total_bytes_received_ = bytes_transferred;
+                            this->total_bytes_received_ += bytes_transferred;
                             if (!check_error_and_transferred_length(ec, bytes_transferred, result.len)) return;
                             process_property_id(
                                 force_move(session_life_keeper),
@@ -4795,7 +4795,7 @@ private:
                 ]
                 (error_code ec,
                  std::size_t bytes_transferred) mutable {
-                    this->total_bytes_received_ = bytes_transferred;
+                    this->total_bytes_received_ += bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                     process_property_body(
                         force_move(session_life_keeper),
@@ -5715,7 +5715,7 @@ private:
                     self = force_move(self)
                 ]
                 (error_code ec, std::size_t bytes_transferred) mutable {
-                    this->total_bytes_received_ = bytes_transferred;
+                    this->total_bytes_received_ += bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, remaining_length_)) return;
                     (this->*NextFunc)(
                         force_move(session_life_keeper),
@@ -5749,7 +5749,7 @@ private:
             ]
             (error_code ec,
              std::size_t bytes_transferred) mutable {
-                this->total_bytes_received_ = bytes_transferred;
+                this->total_bytes_received_ += bytes_transferred;
                 if (!check_error_and_transferred_length(ec, bytes_transferred, header_len)) return;
                 (this->*NextFunc)(
                     force_move(session_life_keeper),
