@@ -1187,9 +1187,11 @@ private:
                 func = force_move(func)
             ]
             (error_code ec) mutable {
-                if (func) func(ec);
-                if (ec) return;
-                start_session(force_move(props), force_move(session_life_keeper));
+                if (ec) {
+                  if (func) func(ec);
+                  return;
+                }
+                async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
             });
     }
 #endif // defined(MQTT_USE_WS)
@@ -1212,9 +1214,11 @@ private:
                 func = force_move(func)
             ]
             (error_code ec) mutable {
-                if (func) func(ec);
-                if (ec) return;
-                start_session(force_move(props), force_move(session_life_keeper));
+                if (ec) {
+                  if (func) func(ec);
+                  return;
+                }
+                async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
             });
     }
 
@@ -1251,9 +1255,11 @@ private:
                         func = force_move(func)
                     ]
                     (error_code ec) mutable {
-                        if (func) func(ec);
-                        if (ec) return;
-                        start_session(force_move(props), force_move(session_life_keeper));
+                        if (ec) {
+                            if (func) func(ec);
+                            return;
+                        }
+                        async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
                     });
             });
     }
