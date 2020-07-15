@@ -123,13 +123,14 @@ public:
             }
         }
         do_accept([this](error_code ec, std::shared_ptr<endpoint_t> sp) {
-                    if(ec) {
-                        if (h_error_) h_error_(ec);
+                if(ec) {
+                    if (h_error_) h_error_(ec);
                         return;
-                    }
+                }
 
-                    if (h_accept_) h_accept_(force_move(sp));
-        });
+                if (h_accept_) h_accept_(force_move(sp));
+            }
+        );
     }
 
     unsigned short port() const { return acceptor_.value().local_endpoint().port(); }
@@ -179,10 +180,8 @@ public:
     }
 
 private:
-    template<BOOST_ASIO_COMPLETION_TOKEN_FOR(void(boost::system::error_code, std::shared_ptr<endpoint_t>))
-             CompletionHandler BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(as::io_context)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionHandler, void(boost::system::error_code, std::shared_ptr<endpoint_t>))
-    do_accept(BOOST_ASIO_MOVE_ARG(CompletionHandler) handler BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(as::io_context)) {
+    template<typename CompletionHandler>
+    auto do_accept(BOOST_ASIO_MOVE_ARG(CompletionHandler) handler) {
         return as::async_compose<CompletionHandler, void(boost::system::error_code, std::shared_ptr<endpoint_t>)> (
                    [this,
                     coro = as::coroutine(),
@@ -192,20 +191,18 @@ private:
                     BOOST_ASIO_CORO_REENTER(coro)
                     {
                         if (close_request_) return self.complete(ec, std::shared_ptr<endpoint_t>{});
+
+                        socket = std::make_shared<socket_t>(ioc_con_);
                         BOOST_ASIO_CORO_YIELD
-                        {
-                            socket = std::make_shared<socket_t>(ioc_con_);
                             acceptor_.value().async_accept(
-                                                socket->lowest_layer(),
-                                                force_move(self));
-                        }
+                                socket->lowest_layer(),
+                                force_move(self));
                         if (ec) {
                             this->acceptor_.reset();
                             return self.complete(ec, std::shared_ptr<endpoint_t>{});
                         }
-
-                        return self.complete(ec, std::make_shared<endpoint_t>(force_move(socket), version_));
                     }
+                    return self.complete(ec, std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_));
                 },
                 handler, ioc_con_);
     }
@@ -305,13 +302,14 @@ public:
             }
         }
         do_accept([this](error_code ec, std::shared_ptr<endpoint_t> sp) {
-                    if(ec) {
-                        if (h_error_) h_error_(ec);
-                        return;
-                    }
+                if(ec) {
+                    if (h_error_) h_error_(ec);
+                    return;
+                }
 
-                    if (h_accept_) h_accept_(force_move(sp));
-        });
+                if (h_accept_) h_accept_(force_move(sp));
+            }
+        );
     }
 
     unsigned short port() const { return acceptor_.value().local_endpoint().port(); }
@@ -389,10 +387,8 @@ public:
     }
 
 private:
-    template<BOOST_ASIO_COMPLETION_TOKEN_FOR(void(boost::system::error_code, std::shared_ptr<endpoint_t>))
-             CompletionHandler BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(as::io_context)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionHandler, void(boost::system::error_code, std::shared_ptr<endpoint_t>))
-    do_accept(BOOST_ASIO_MOVE_ARG(CompletionHandler) handler BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(as::io_context)) {
+    template<typename CompletionHandler>
+    auto do_accept(BOOST_ASIO_MOVE_ARG(CompletionHandler) handler) {
         return as::async_compose<CompletionHandler, void(boost::system::error_code, std::shared_ptr<endpoint_t>)> (
                    [this,
                     coro = as::coroutine(),
@@ -414,31 +410,28 @@ private:
                                 if (underlying_finished) return;
                                 boost::system::error_code close_ec;
                                 socket->lowest_layer().close(close_ec);
-                        });
+                            }
+                        );
+
+                        socket = std::make_shared<socket_t>(ioc_con_, ctx_);
 
                         BOOST_ASIO_CORO_YIELD
-                        {
-                            socket = std::make_shared<socket_t>(ioc_con_, ctx_);
                             acceptor_.value().async_accept(
-                                                socket->lowest_layer(),
-                                                force_move(self));
-                        }
+                                socket->lowest_layer(),
+                                force_move(self));
                         if (ec) {
                             return self.complete(ec, std::shared_ptr<endpoint_t>{});
                         }
 
                         BOOST_ASIO_CORO_YIELD
-                        {
                             socket->async_handshake(
                                 as::ssl::stream_base::server,
                                 force_move(self));
-                        }
                         if (ec) {
                             return self.complete(ec, std::shared_ptr<endpoint_t>{});
                         }
-
-                        return self.complete(ec, std::make_shared<endpoint_t>(force_move(socket), version_));
                     }
+                    return self.complete(ec, std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_));
                 },
                 handler, ioc_con_);
     }
@@ -537,13 +530,14 @@ public:
             }
         }
         do_accept([this](error_code ec, std::shared_ptr<endpoint_t> sp) {
-                    if(ec) {
-                        if (h_error_) h_error_(ec);
-                        return;
-                    }
+                if(ec) {
+                    if (h_error_) h_error_(ec);
+                    return;
+                }
 
-                    if (h_accept_) h_accept_(force_move(sp));
-        });
+                if (h_accept_) h_accept_(force_move(sp));
+            }
+        );
     }
 
     unsigned short port() const { return acceptor_.value().local_endpoint().port(); }
@@ -605,10 +599,8 @@ public:
     }
 
 private:
-    template<BOOST_ASIO_COMPLETION_TOKEN_FOR(void(boost::system::error_code, std::shared_ptr<endpoint_t>))
-             CompletionHandler BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(as::io_context)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionHandler, void(boost::system::error_code, std::shared_ptr<endpoint_t>))
-    do_accept(BOOST_ASIO_MOVE_ARG(CompletionHandler) handler BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(as::io_context)) {
+    template<typename CompletionHandler>
+    auto do_accept(BOOST_ASIO_MOVE_ARG(CompletionHandler) handler) {
         return as::async_compose<CompletionHandler, void(boost::system::error_code, std::shared_ptr<endpoint_t>)> (
                    [this,
                     coro = as::coroutine(),
@@ -619,11 +611,11 @@ private:
                     request = std::shared_ptr<boost::beast::http::request<boost::beast::http::string_body>>{}]
                    (auto &self, boost::system::error_code ec = {}, size_t = 0) mutable
                 {
-                    auto pGuard = shared_scope_guard([&](void)
-                    {
-                        underlying_finished = true;
-                        tim.cancel();
-                    });
+                    auto pGuard = shared_scope_guard([&](void) {
+                            underlying_finished = true;
+                            tim.cancel();
+                        }
+                    );
 
                     BOOST_ASIO_CORO_REENTER(coro)
                     {
@@ -633,29 +625,26 @@ private:
                                 if (underlying_finished) return;
                                 boost::system::error_code close_ec;
                                 socket->lowest_layer().close(close_ec);
-                        });
+                            }
+                        );
 
+                        socket = std::make_shared<socket_t>(ioc_con_);
                         BOOST_ASIO_CORO_YIELD
-                        {
-                            socket = std::make_shared<socket_t>(ioc_con_);
                             acceptor_.value().async_accept(
-                                                socket->lowest_layer(),
-                                                force_move(self));
-                        }
+                                socket->lowest_layer(),
+                                force_move(self));
                         if (ec) {
                             return self.complete(ec, std::shared_ptr<endpoint_t>{});
                         }
 
+                        sb = std::make_shared<boost::asio::streambuf>();
+                        request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
                         BOOST_ASIO_CORO_YIELD
-                        {
-                            sb = std::make_shared<boost::asio::streambuf>();
-                            request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
                             boost::beast::http::async_read(
                                 socket->next_layer(),
                                 *sb,
                                 *request,
                                 force_move(self));
-                        }
                         if(ec || ! boost::beast::websocket::is_upgrade(*request))
                         {
                             return self.complete(ec, std::shared_ptr<endpoint_t>{});
@@ -663,45 +652,41 @@ private:
 
 #if BOOST_BEAST_VERSION >= 248
 
-                        BOOST_ASIO_CORO_YIELD
-                        {
-                            auto it = request->find("Sec-WebSocket-Protocol");
-                            if (it != request->end()) {
-                                socket->set_option(
-                                        boost::beast::websocket::stream_base::decorator(
-                                            [name = it->name(), value = it->value()] // name is enum, value is boost::string_view
-                                            (boost::beast::websocket::response_type& res) {
-                                                res.set(name, value);
-                                            }
-                                        )
-                                );
-                            }
-                            socket->async_accept(*request, force_move(self));
+                        auto it = request->find("Sec-WebSocket-Protocol");
+                        if (it != request->end()) {
+                            socket->set_option(
+                                boost::beast::websocket::stream_base::decorator(
+                                    [name = it->name(), value = it->value()] // name is enum, value is boost::string_view
+                                    (boost::beast::websocket::response_type& res) {
+                                        res.set(name, value);
+                                    }
+                                )
+                            );
                         }
+                        BOOST_ASIO_CORO_YIELD
+                            socket->async_accept(*request, force_move(self));
 
 #else  // BOOST_BEAST_VERSION >= 248
 
                         BOOST_ASIO_CORO_YIELD
-                        {
                             socket->async_accept_ex(
-                                    *request,
-                                    [&]
-                                    (boost::beast::websocket::response_type& m) {
-                                        auto it = request->find("Sec-WebSocket-Protocol");
-                                        if (it != request->end()) {
-                                            m.insert(it->name(), it->value());
-                                        }
-                                    },
-                                    force_move(self));
-                         }
+                                *request,
+                                [&]
+                                (boost::beast::websocket::response_type& m) {
+                                    auto it = request->find("Sec-WebSocket-Protocol");
+                                    if (it != request->end()) {
+                                        m.insert(it->name(), it->value());
+                                    }
+                                },
+                                force_move(self));
 
 #endif // BOOST_BEAST_VERSION >= 248
 
                          if (ec) {
                              return self.complete(ec, std::shared_ptr<endpoint_t>{});
                          }
-                         return self.complete(ec, std::make_shared<endpoint_t>(force_move(socket), version_));
                     }
+                    return self.complete(ec, std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_));
                 },
                 handler, ioc_con_);
     }
@@ -803,12 +788,12 @@ public:
             }
         }
         do_accept([this](error_code ec, std::shared_ptr<endpoint_t> sp) {
-                    if(ec) {
-                        if (h_error_) h_error_(ec);
-                        return;
-                    }
+                if(ec) {
+                    if (h_error_) h_error_(ec);
+                    return;
+                }
 
-                    if (h_accept_) h_accept_(force_move(sp));
+                if (h_accept_) h_accept_(force_move(sp));
         });
     }
 
@@ -887,10 +872,8 @@ public:
     }
 
 private:
-    template<BOOST_ASIO_COMPLETION_TOKEN_FOR(void(boost::system::error_code, std::shared_ptr<endpoint_t>))
-             CompletionHandler BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(as::io_context)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionHandler, void(boost::system::error_code, std::shared_ptr<endpoint_t>))
-    do_accept(BOOST_ASIO_MOVE_ARG(CompletionHandler) handler BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(as::io_context)) {
+    template<typename CompletionHandler>
+    auto do_accept(BOOST_ASIO_MOVE_ARG(CompletionHandler) handler) {
         return as::async_compose<CompletionHandler, void(boost::system::error_code, std::shared_ptr<endpoint_t>)> (
                    [this,
                     coro = as::coroutine(),
@@ -901,11 +884,11 @@ private:
                     request = std::shared_ptr<boost::beast::http::request<boost::beast::http::string_body>>{}]
                    (auto &self, boost::system::error_code ec = {}, size_t = 0) mutable
                 {
-                    auto pGuard = shared_scope_guard([&](void)
-                    {
-                        underlying_finished = true;
-                        tim.cancel();
-                    });
+                    auto pGuard = shared_scope_guard([&](void) {
+                            underlying_finished = true;
+                            tim.cancel();
+                        }
+                    );
 
                     BOOST_ASIO_CORO_REENTER(coro)
                     {
@@ -915,39 +898,36 @@ private:
                                 if (ec) return;
                                 boost::system::error_code close_ec;
                                 socket->lowest_layer().close(close_ec);
-                        });
+                            }
+                        );
+
+                        socket = std::make_shared<socket_t>(ioc_con_, ctx_);
 
                         BOOST_ASIO_CORO_YIELD
-                        {
-                            socket = std::make_shared<socket_t>(ioc_con_, ctx_);
                             acceptor_.value().async_accept(
-                                                socket->lowest_layer(),
-                                                force_move(self));
-                        }
+                                socket->lowest_layer(),
+                                force_move(self));
                         if (ec) {
                             return self.complete(ec, std::shared_ptr<endpoint_t>{});
                         }
 
                         BOOST_ASIO_CORO_YIELD
-                        {
                             socket->next_layer().async_handshake(
                                 as::ssl::stream_base::server,
                                 force_move(self));
-                        }
                         if (ec) {
                             return self.complete(ec, std::shared_ptr<endpoint_t>{});
                         }
 
+                        sb = std::make_shared<boost::asio::streambuf>();
+                        request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
+
                         BOOST_ASIO_CORO_YIELD
-                        {
-                            sb = std::make_shared<boost::asio::streambuf>();
-                            request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
                             boost::beast::http::async_read(
                                 socket->next_layer(),
                                 *sb,
                                 *request,
                                 force_move(self));
-                        }
                         if(ec || ! boost::beast::websocket::is_upgrade(*request))
                         {
                             return self.complete(ec, std::shared_ptr<endpoint_t>{});
@@ -955,26 +935,24 @@ private:
 
 #if BOOST_BEAST_VERSION >= 248
 
-                        BOOST_ASIO_CORO_YIELD
-                        {
-                            auto it = request->find("Sec-WebSocket-Protocol");
-                            if (it != request->end()) {
-                                socket->set_option(
-                                        boost::beast::websocket::stream_base::decorator(
-                                            [name = it->name(), value = it->value()] // name is enum, value is boost::string_view
-                                            (boost::beast::websocket::response_type& res) {
-                                                res.set(name, value);
-                                            }
-                                        )
-                                );
-                            }
-                            socket->async_accept(*request, force_move(self));
+                        auto it = request->find("Sec-WebSocket-Protocol");
+                        if (it != request->end()) {
+                            socket->set_option(
+                                boost::beast::websocket::stream_base::decorator(
+                                    [name = it->name(), value = it->value()] // name is enum, value is boost::string_view
+                                    (boost::beast::websocket::response_type& res) {
+                                        res.set(name, value);
+                                    }
+                                )
+                            );
                         }
+
+                        BOOST_ASIO_CORO_YIELD
+                            socket->async_accept(*request, force_move(self));
 
 #else  // BOOST_BEAST_VERSION >= 248
 
                         BOOST_ASIO_CORO_YIELD
-                        {
                             socket->async_accept_ex(
                                     *request,
                                     [&]
@@ -985,16 +963,14 @@ private:
                                         }
                                     },
                                     force_move(self));
-                         }
 
 #endif // BOOST_BEAST_VERSION >= 248
 
                          if (ec) {
                              return self.complete(ec, std::shared_ptr<endpoint_t>{});
                          }
-
-                         return self.complete(ec, std::make_shared<endpoint_t>(force_move(socket), version_));
                     }
+                    return self.complete(ec, std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_));
                 },
                 handler, ioc_con_);
     }
