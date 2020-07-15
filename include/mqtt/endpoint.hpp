@@ -4191,10 +4191,13 @@ private:
                         case control_packet_type::pingresp:
                         case control_packet_type::disconnect:
                             return remaining_length_ == 0;
-                        default:
+                        // Even though there is no auth packet type in v3.1.1
+                        // it's included in the switch case to provide a warning
+                        // about missing enum values if any are missing.
+                        case control_packet_type::auth:
                             return false;
                         }
-                        break;
+                        return false;
                     case protocol_version::v5:
                     default:
                         switch (cpt) {
@@ -4210,14 +4213,13 @@ private:
                         case control_packet_type::pubcomp:
                         case control_packet_type::unsuback:
                         case control_packet_type::disconnect:
+                        case control_packet_type::auth:
                             return check_is_valid_length(cpt, remaining_length_);
                         case control_packet_type::pingreq:
                         case control_packet_type::pingresp:
                             return remaining_length_ == 0;
-                        default:
-                            return false;
                         }
-                        break;
+                        return false;
                     }
                 };
             if (!check()) {
