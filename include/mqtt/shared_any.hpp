@@ -12,6 +12,7 @@
 #include <boost/type_erasure/any.hpp>
 
 #include <mqtt/namespace.hpp>
+#include <mqtt/move.hpp>
 
 namespace MQTT_NS {
 
@@ -84,7 +85,7 @@ class shared_any : public detail::shared_any_base<Concept> {
 public:
     template <class U>
     shared_any(std::shared_ptr<U> p)
-        : base_type(*p), ownership_(p) {}
+        : base_type(*p), ownership_(force_move(p)) {}
 };
 
 } // namespace MQTT_NS
