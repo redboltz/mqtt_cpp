@@ -62,6 +62,7 @@
 #include <mqtt/deprecated.hpp>
 #include <mqtt/deprecated_msg.hpp>
 #include <mqtt/error_code.hpp>
+#include <mqtt/log.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -167,7 +168,13 @@ public:
         :async_send_store_{async_send_store},
          version_(version),
          tim_pingresp_(ioc)
-    {}
+    {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "create"
+            << " version:" << version
+            << " async_send_store:" << std::boolalpha << async_send_store;
+    }
 
     /**
      * @brief Constructor for server.
@@ -180,7 +187,13 @@ public:
          async_send_store_{async_send_store},
          version_(version),
          tim_pingresp_(ioc)
-    {}
+    {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "create"
+            << " version:" << version
+            << " async_send_store:" << std::boolalpha << async_send_store;
+    }
 
     // MQTT Common handlers
 
@@ -845,6 +858,9 @@ public:
      *
      */
     void start_session(any session_life_keeper = any()) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "start_session";
         async_read_control_packet_type(force_move(session_life_keeper));
     }
 
@@ -952,6 +968,11 @@ public:
         v5::disconnect_reason_code reason = v5::disconnect_reason_code::normal_disconnection,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "disconnect"
+            << " reason:" << reason;
+
         if (connected_ && mqtt_connected_) {
             disconnect_requested_ = true;
             send_disconnect(reason, force_move(props));
@@ -964,6 +985,10 @@ public:
      * When the endpoint disconnects using force_disconnect(), a will will send.<BR>
      */
     void force_disconnect() {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "force_disconnect";
+
         connected_ = false;
         mqtt_connected_ = false;
         shutdown_from_client(*socket_);
@@ -1002,7 +1027,16 @@ public:
         v5::properties props = {},
         any life_keeper = {}
     ) {
-        if(pubopts.get_qos() == qos::at_most_once) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "publish"
+            << " pid:" << packet_id
+            << " topic:" << topic_name
+            << " qos:" << pubopts.get_qos()
+            << " retain:" << pubopts.get_retain()
+            << " dup:" << pubopts.get_dup();
+
+        if (pubopts.get_qos() == qos::at_most_once) {
             // In the at_most_once case, we know a priori that send_publish won't track the lifetime.
             send_publish(packet_id,
                          as::buffer(topic_name),
@@ -1065,6 +1099,15 @@ public:
         v5::properties props,
         any life_keeper
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "publish"
+            << " pid:" << packet_id
+            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
+            << " qos:" << pubopts.get_qos()
+            << " retain:" << pubopts.get_retain()
+            << " dup:" << pubopts.get_dup();
+
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         send_publish(
@@ -1105,6 +1148,15 @@ public:
         publish_options pubopts,
         any life_keeper
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "publish"
+            << " pid:" << packet_id
+            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
+            << " qos:" << pubopts.get_qos()
+            << " retain:" << pubopts.get_retain()
+            << " dup:" << pubopts.get_dup();
+
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         send_publish(
@@ -1147,6 +1199,15 @@ public:
         publish_options pubopts = {},
         any life_keeper = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "publish"
+            << " pid:" << packet_id
+            << " topic:" << topic_name
+            << " qos:" << pubopts.get_qos()
+            << " retain:" << pubopts.get_retain()
+            << " dup:" << pubopts.get_dup();
+
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto topic_name_buf = as::buffer(topic_name);
@@ -1198,6 +1259,15 @@ public:
         v5::properties props,
         any life_keeper = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "publish"
+            << " pid:" << packet_id
+            << " topic:" << topic_name
+            << " qos:" << pubopts.get_qos()
+            << " retain:" << pubopts.get_retain()
+            << " dup:" << pubopts.get_dup();
+
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto topic_name_buf = as::buffer(topic_name);
@@ -1240,6 +1310,16 @@ public:
         subscribe_options option,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "subscribe"
+            << " pid:" << packet_id
+            << " topic:" << topic_name
+            << " qos:" << option.get_qos()
+            << " rh:" << option.get_retain_handling()
+            << " nl:" << option.get_nl()
+            << " rap:" << option.get_rap();
+
         send_subscribe(
             std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { as::buffer(topic_name.data(), topic_name.size()), option } },
             packet_id,
@@ -1271,6 +1351,16 @@ public:
         subscribe_options option,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "subscribe"
+            << " pid:" << packet_id
+            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
+            << " qos:" << option.get_qos()
+            << " rh:" << option.get_retain_handling()
+            << " nl:" << option.get_nl()
+            << " rap:" << option.get_rap();
+
         send_subscribe(
             std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_name, option } },
             packet_id,
@@ -1296,6 +1386,11 @@ public:
         std::vector<std::tuple<string_view, subscribe_options>> params,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "subscribe"
+            << " pid:" << packet_id;
+
         std::vector<std::tuple<as::const_buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
         for (auto const& e : params) {
@@ -1322,6 +1417,11 @@ public:
         std::vector<std::tuple<buffer, subscribe_options>> params,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "subscribe"
+            << " pid:" << packet_id;
+
         std::vector<std::tuple<as::const_buffer, subscribe_options>> buffers;
         buffers.reserve(params.size());
         for (auto const& tup : params) {
@@ -1349,6 +1449,12 @@ public:
         string_view topic_name,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "unsubscribe"
+            << " pid:" << packet_id
+            << " topic:" << topic_name;
+
         send_unsubscribe(std::vector<as::const_buffer>{ as::buffer(topic_name.data(), topic_name.size()) }, packet_id, force_move(props));
     }
 
@@ -1371,6 +1477,12 @@ public:
         as::const_buffer topic_name,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "unsubscribe"
+            << " pid:" << packet_id
+            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name));
+
         send_unsubscribe(std::vector<as::const_buffer>{ topic_name }, packet_id, force_move(props));
     }
 
@@ -1392,7 +1504,12 @@ public:
         std::vector<string_view> params,
         v5::properties props = {}
     ) {
-        std::vector<as::const_buffer> cb_params;
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "unsubscribe"
+            << " pid:" << packet_id;
+
+            std::vector<as::const_buffer> cb_params;
         cb_params.reserve(params.size());
 
         for (auto&& e : params) {
@@ -1419,6 +1536,11 @@ public:
         std::vector<as::const_buffer> params,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "unsubscribe"
+            << " pid:" << packet_id;
+
         std::vector<buffer> cb_params;
         cb_params.reserve(params.size());
 
@@ -1446,6 +1568,11 @@ public:
         std::vector<buffer> params,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "unsubscribe"
+            << " pid:" << packet_id;
+
         std::vector<as::const_buffer> cb_params;
         cb_params.reserve(params.size());
 
@@ -1460,6 +1587,11 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901195
      */
     void pingreq() {
+        // pingreq might frequently send, so SEV is set to trace
+        MQTT_LOG("api", trace)
+            << log::add_value(address, this)
+            << "pingreq";
+
         if (connected_ && mqtt_connected_) send_pingreq();
     }
 
@@ -1468,6 +1600,11 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901200
      */
     void pingresp() {
+        // pingresp might frequently send, so SEV is set to trace
+        MQTT_LOG("api", trace)
+            << log::add_value(address, this)
+            << "pingrsp";
+
         send_pingresp();
     }
 
@@ -1487,6 +1624,11 @@ public:
         v5::auth_reason_code reason_code = v5::auth_reason_code::success,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "auth"
+            << " reason:" << reason_code;
+
         send_auth(reason_code, force_move(props));
     }
 
@@ -1528,6 +1670,13 @@ public:
         std::uint16_t keep_alive_sec,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "connect"
+            << " client_id:" << client_id
+            << " user_name:" << (user_name ? user_name.value() : "none")
+            << " keep_alive:" << std::dec << keep_alive_sec;
+
         connect_requested_ = true;
         send_connect(
             buffer(string_view(client_id)),
@@ -1591,6 +1740,13 @@ public:
         std::uint16_t keep_alive_sec,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "connect"
+            << " client_id:" << client_id
+            << " user_name:" << (user_name ? string_view(user_name.value()) : string_view("none"))
+            << " keep_alive:" << std::dec << keep_alive_sec;
+
         connect_requested_ = true;
         send_connect(
             force_move(client_id),
@@ -1617,7 +1773,13 @@ public:
         variant<connect_return_code, v5::connect_reason_code> reason_code,
         v5::properties props = {}
     ) {
-        send_connack(session_present, reason_code, force_move(props));
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "connack"
+            << " session_present:" << std::boolalpha << session_present
+            << " reason:" << reason_code;
+
+            send_connack(session_present, reason_code, force_move(props));
     }
 
     /**
@@ -1637,6 +1799,12 @@ public:
         v5::puback_reason_code reason_code = v5::puback_reason_code::success,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "puback"
+            << " pid:" << packet_id
+            << " reason:" << reason_code;
+
         send_puback(packet_id, reason_code, force_move(props));
     }
 
@@ -1657,6 +1825,12 @@ public:
         v5::pubrec_reason_code reason_code = v5::pubrec_reason_code::success,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "pubrec"
+            << " pid:" << packet_id
+            << " reason:" << reason_code;
+
         send_pubrec(packet_id, reason_code, force_move(props));
     }
 
@@ -1685,6 +1859,12 @@ public:
         v5::properties props = {},
         any life_keeper = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "pubrel"
+            << " pid:" << packet_id
+            << " reason:" << reason_code;
+
         send_pubrel(packet_id, reason_code, force_move(props), force_move(life_keeper));
     }
 
@@ -1705,6 +1885,12 @@ public:
         v5::pubcomp_reason_code reason_code = v5::pubcomp_reason_code::success,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "pubcomp"
+            << " pid:" << packet_id
+            << " reason:" << reason_code;
+
         send_pubcomp(packet_id, reason_code, force_move(props));
     }
 
@@ -1725,6 +1911,12 @@ public:
         variant<suback_return_code, v5::suback_reason_code> reason,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "suback"
+            << " pid:" << packet_id
+            << " reason:" < reason;
+
         if (variant_idx(reason) == 0) {
             send_suback(std::vector<suback_return_code>{ variant_get<suback_return_code>(reason) }, packet_id, force_move(props));
         }
@@ -1750,6 +1942,11 @@ public:
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> reasons,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "suback"
+            << " pid:" << packet_id;
+
         send_suback(force_move(reasons), packet_id, force_move(props));
     }
 
@@ -1760,6 +1957,11 @@ public:
     void unsuback(
         packet_id_t packet_id
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "unsuback"
+            << " pid:" << packet_id;
+
         send_unsuback(packet_id);
     }
 
@@ -1780,6 +1982,12 @@ public:
         v5::unsuback_reason_code reason,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "unsuback"
+            << " pid:" << packet_id
+            << " reason:" << reason;
+
         send_unsuback(std::vector<v5::unsuback_reason_code>{ reason }, packet_id, force_move(props));
     }
 
@@ -1800,6 +2008,11 @@ public:
         std::vector<v5::unsuback_reason_code> reasons,
         v5::properties props = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "unsuback"
+            << " pid:" << packet_id;
+
         send_unsuback(force_move(reasons), packet_id, force_move(props));
     }
 
@@ -1850,6 +2063,10 @@ public:
     void async_disconnect(
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_disconnect";
+
         if (connected_ && mqtt_connected_) {
             disconnect_requested_ = true;
             // The reason code and property vector are only used if we're using mqttv5.
@@ -1880,6 +2097,11 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_disconnect"
+            << " reason:" << reason;
+
         if (connected_ && mqtt_connected_) {
             disconnect_requested_ = true;
             async_send_disconnect(reason, force_move(props), force_move(func));
@@ -1948,6 +2170,15 @@ public:
         publish_options pubopts = {},
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_publish"
+            << " pid:" << packet_id
+            << " topic:" << topic_name
+            << " qos:" << pubopts.get_qos()
+            << " retain:" << pubopts.get_retain()
+            << " dup:" << pubopts.get_dup();
+
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
@@ -2002,6 +2233,15 @@ public:
         any life_keeper = {},
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_publish"
+            << " pid:" << packet_id
+            << " topic:" << topic_name
+            << " qos:" << pubopts.get_qos()
+            << " retain:" << pubopts.get_retain()
+            << " dup:" << pubopts.get_dup();
+
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
@@ -2055,6 +2295,15 @@ public:
         any life_keeper = {},
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_publish"
+            << " pid:" << packet_id
+            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
+            << " qos:" << pubopts.get_qos()
+            << " retain:" << pubopts.get_retain()
+            << " dup:" << pubopts.get_dup();
+
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
@@ -2100,6 +2349,15 @@ public:
         any life_keeper = {},
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_publish"
+            << " pid:" << packet_id
+            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
+            << " qos:" << pubopts.get_qos()
+            << " retain:" << pubopts.get_retain()
+            << " dup:" << pubopts.get_dup();
+
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         async_send_publish(
@@ -2140,6 +2398,15 @@ public:
         any life_keeper = {},
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_publish"
+            << " pid:" << packet_id
+            << " topic:" << topic_name
+            << " qos:" << pubopts.get_qos()
+            << " retain:" << pubopts.get_retain()
+            << " dup:" << pubopts.get_dup();
+
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto topic_name_buf = as::buffer(topic_name);
@@ -2196,6 +2463,15 @@ public:
         any life_keeper = {},
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_publish"
+            << " pid:" << packet_id
+            << " topic:" << topic_name
+            << " qos:" << pubopts.get_qos()
+            << " retain:" << pubopts.get_retain()
+            << " dup:" << pubopts.get_dup();
+
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto topic_name_buf = as::buffer(topic_name);
@@ -2241,6 +2517,16 @@ public:
         subscribe_options option,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id
+            << " topic:" << topic_name
+            << " qos:" << option.get_qos()
+            << " rh:" << option.get_retain_handling()
+            << " nl:" << option.get_nl()
+            << " rap:" << option.get_rap();
+
         auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
         auto topic_name_buf = as::buffer(*sp_topic_name);
 
@@ -2282,6 +2568,16 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id
+            << " topic:" << topic_name
+            << " qos:" << option.get_qos()
+            << " rh:" << option.get_retain_handling()
+            << " nl:" << option.get_nl()
+            << " rap:" << option.get_rap();
+
         auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
         auto topic_name_buf = as::buffer(*sp_topic_name);
 
@@ -2319,6 +2615,16 @@ public:
         subscribe_options option,
         async_handler_t func
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id
+            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
+            << " qos:" << option.get_qos()
+            << " rh:" << option.get_retain_handling()
+            << " nl:" << option.get_nl()
+            << " rap:" << option.get_rap();
+
         async_send_subscribe(
             std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_name, option } },
             packet_id,
@@ -2355,6 +2661,16 @@ public:
         v5::properties props,
         async_handler_t func
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id
+            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
+            << " qos:" << option.get_qos()
+            << " rh:" << option.get_retain_handling()
+            << " nl:" << option.get_nl()
+            << " rap:" << option.get_rap();
+
         async_send_subscribe(
             std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_name, option } },
             packet_id,
@@ -2385,6 +2701,16 @@ public:
         subscribe_options option,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id
+            << " topic:" << topic_name
+            << " qos:" << option.get_qos()
+            << " rh:" << option.get_retain_handling()
+            << " nl:" << option.get_nl()
+            << " rap:" << option.get_rap();
+
         auto topic_name_buf = as::buffer(topic_name);
         async_send_subscribe(
             std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_name_buf, option } },
@@ -2424,6 +2750,16 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id
+            << " topic:" << topic_name
+            << " qos:" << option.get_qos()
+            << " rh:" << option.get_retain_handling()
+            << " nl:" << option.get_nl()
+            << " rap:" << option.get_rap();
+
         auto topic_name_buf = as::buffer(topic_name);
         async_send_subscribe(
             std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_name_buf, option } },
@@ -2455,6 +2791,11 @@ public:
         std::vector<std::tuple<std::string, subscribe_options>> params,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id;
+
         std::vector<std::tuple<as::const_buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
@@ -2502,6 +2843,11 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id;
+
         std::vector<std::tuple<as::const_buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
@@ -2541,6 +2887,11 @@ public:
         std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         async_handler_t func
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id;
+
         async_send_subscribe(
             force_move(params),
             packet_id,
@@ -2570,6 +2921,11 @@ public:
         v5::properties props,
         async_handler_t func
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id;
+
         async_send_subscribe(
             force_move(params),
             packet_id,
@@ -2594,6 +2950,11 @@ public:
         std::vector<std::tuple<buffer, subscribe_options>> params,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id;
+
         std::vector<std::tuple<as::const_buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
@@ -2635,6 +2996,11 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id;
+
         std::vector<std::tuple<as::const_buffer, subscribe_options>> cb_params;
         cb_params.reserve(params.size());
 
@@ -2672,6 +3038,12 @@ public:
         std::string topic_name,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsubscribe"
+            << " pid:" << packet_id
+            << " topic:" << topic_name;
+
         auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
         auto topic_name_buf = as::buffer(*sp_topic_name);
         async_send_unsubscribe(
@@ -2702,6 +3074,12 @@ public:
         as::const_buffer topic_name,
         async_handler_t func
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsubscribe"
+            << " pid:" << packet_id
+            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name));
+
         async_send_unsubscribe(std::vector<as::const_buffer>{ topic_name }, packet_id, v5::properties{}, force_move(func));
     }
 
@@ -2721,6 +3099,12 @@ public:
         buffer topic_name,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsubscribe"
+            << " pid:" << packet_id
+            << " topic:" << topic_name;
+
         auto topic_name_buf = as::buffer(topic_name);
         async_send_unsubscribe(std::vector<as::const_buffer>{ topic_name_buf },
                                packet_id,
@@ -2752,6 +3136,12 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsubscribe"
+            << " pid:" << packet_id
+            << " topic:" << topic_name;
+
         auto topic_name_buf = as::buffer(topic_name);
         async_send_unsubscribe(std::vector<as::const_buffer>{ topic_name_buf },
                                packet_id,
@@ -2779,6 +3169,11 @@ public:
         std::vector<std::string> params,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsubscribe"
+            << " pid:" << packet_id;
+
         std::vector<as::const_buffer> cb_params;
         cb_params.reserve(params.size());
 
@@ -2823,6 +3218,11 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsubscribe"
+            << " pid:" << packet_id;
+
         std::vector<as::const_buffer> cb_params;
         cb_params.reserve(params.size());
 
@@ -2868,6 +3268,11 @@ public:
         std::vector<as::const_buffer> params,
         async_handler_t func
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsubscribe"
+            << " pid:" << packet_id;
+
         async_send_unsubscribe(
             force_move(params),
             packet_id,
@@ -2899,6 +3304,11 @@ public:
         v5::properties props,
         async_handler_t func
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsubscribe"
+            << " pid:" << packet_id;
+
         async_send_unsubscribe(
             force_move(params),
             packet_id,
@@ -2924,6 +3334,11 @@ public:
         std::vector<buffer> params,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsubscribe"
+            << " pid:" << packet_id;
+
         std::vector<as::const_buffer> cb_params;
         cb_params.reserve(params.size());
         for (auto const& buf : params) {
@@ -2963,6 +3378,11 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsubscribe"
+            << " pid:" << packet_id;
+
         std::vector<as::const_buffer> cb_params;
         cb_params.reserve(params.size());
         for (auto const& buf : params) {
@@ -2987,6 +3407,10 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901195
      */
     void async_pingreq(async_handler_t func = {}) {
+        MQTT_LOG("api", trace)
+            << log::add_value(address, this)
+            << "async_pingreq";
+
         if (connected_ && mqtt_connected_) async_send_pingreq(force_move(func));
     }
 
@@ -2997,6 +3421,10 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901200
      */
     void async_pingresp(async_handler_t func = {}) {
+        MQTT_LOG("api", trace)
+            << log::add_value(address, this)
+            << "async_pingrsp";
+
         async_send_pingresp(force_move(func));
     }
 
@@ -3019,6 +3447,11 @@ public:
         v5::properties props = {},
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_auth"
+            << " reason:" << reason_code;
+
         async_send_auth(reason_code, force_move(props), force_move(func));
     }
 
@@ -3099,6 +3532,13 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_connect"
+            << " client_id:" << client_id
+            << " user_name:" << (user_name ? string_view(user_name.value()) : string_view("none"))
+            << " keep_alive:" << std::dec << keep_alive_sec;
+
         connect_requested_ = true;
         async_send_connect(
             force_move(client_id),
@@ -3123,6 +3563,12 @@ public:
         variant<connect_return_code, v5::connect_reason_code> reason_code,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_connack"
+            << " session_present:" << std::boolalpha << session_present
+            << " reason:" << reason_code;
+
         async_send_connack(session_present, force_move(reason_code), v5::properties{}, force_move(func));
     }
 
@@ -3144,6 +3590,12 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_connack"
+            << " session_present:" << std::boolalpha << session_present
+            << " reason:" << reason_code;
+
         async_send_connack(session_present, force_move(reason_code), force_move(props), force_move(func));
     }
 
@@ -3158,6 +3610,11 @@ public:
         packet_id_t packet_id,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_puback"
+            << " pid:" << packet_id;
+
         async_send_puback(packet_id, v5::puback_reason_code::success, v5::properties{}, force_move(func));
     }
 
@@ -3182,6 +3639,12 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_puback"
+            << " pid:" << packet_id
+            << " reason:" << reason_code;
+
         async_send_puback(packet_id, reason_code, force_move(props), force_move(func));
     }
 
@@ -3196,6 +3659,11 @@ public:
         packet_id_t packet_id,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_pubrec"
+            << " pid:" << packet_id;
+
         async_send_pubrec(packet_id, v5::pubrec_reason_code::success, v5::properties{}, force_move(func));
     }
 
@@ -3220,6 +3688,12 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_pubrec"
+            << " pid:" << packet_id
+            << " reason:" << reason_code;
+
         async_send_pubrec(packet_id, reason_code, force_move(props), force_move(func));
     }
 
@@ -3234,6 +3708,11 @@ public:
         packet_id_t packet_id,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_pubrel"
+            << " pid:" << packet_id;
+
         async_send_pubrel(packet_id, v5::pubrel_reason_code::success, v5::properties{}, any(), force_move(func));
     }
 
@@ -3267,6 +3746,12 @@ public:
         any life_keeper = {},
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_pubrel"
+            << " pid:" << packet_id
+            << " reason:" << reason_code;
+
         async_send_pubrel(packet_id, reason_code, force_move(props), force_move(life_keeper), force_move(func));
     }
 
@@ -3281,6 +3766,11 @@ public:
         packet_id_t packet_id,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_pubcomp"
+            << " pid:" << packet_id;
+
         async_send_pubcomp(packet_id, v5::pubcomp_reason_code::success, v5::properties{}, force_move(func));
     }
 
@@ -3305,6 +3795,12 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_pubcomp"
+            << " pid:" << packet_id
+            << " reason:" << reason_code;
+
         async_send_pubcomp(packet_id, reason_code, force_move(props), force_move(func));
     }
 
@@ -3324,6 +3820,12 @@ public:
         variant<suback_return_code, v5::suback_reason_code> reason,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_suback"
+            << " pid:" << packet_id
+            << " reason:" < reason;
+
         if (variant_idx(reason) == 0) {
             async_send_suback(std::vector<suback_return_code>{ variant_get<suback_return_code>(reason) }, packet_id, v5::properties{}, force_move(func));
         }
@@ -3353,6 +3855,12 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_suback"
+            << " pid:" << packet_id
+            << " reason:" < reason;
+
         if (variant_idx(reason) == 0) {
             async_send_suback(std::vector<suback_return_code>{ variant_get<suback_return_code>(reason) }, packet_id, force_move(props), force_move(func));
         }
@@ -3377,6 +3885,11 @@ public:
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> reasons,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_suback"
+            << " pid:" << packet_id;
+
         async_send_suback(force_move(reasons), packet_id, v5::properties{}, force_move(func));
     }
 
@@ -3401,6 +3914,11 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_suback"
+            << " pid:" << packet_id;
+
         async_send_suback(force_move(reasons), packet_id, force_move(props), force_move(func));
     }
 
@@ -3420,6 +3938,12 @@ public:
         v5::unsuback_reason_code reason,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsuback"
+            << " pid:" << packet_id
+            << " reason:" < reason;
+
         async_send_unsuback(std::vector<v5::unsuback_reason_code>{ reason }, packet_id, force_move(func));
     }
 
@@ -3444,6 +3968,12 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsuback"
+            << " pid:" << packet_id
+            << " reason:" < reason;
+
         async_send_unsuback(std::vector<v5::unsuback_reason_code>{ reason }, packet_id, force_move(props), force_move(func));
     }
 
@@ -3463,6 +3993,11 @@ public:
         std::vector<v5::unsuback_reason_code> reasons,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsuback"
+            << " pid:" << packet_id;
+
         async_send_unsuback(force_move(reasons), packet_id, v5::properties{}, force_move(func));
     }
 
@@ -3487,6 +4022,11 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsuback"
+            << " pid:" << packet_id;
+
         async_send_unsuback(force_move(reasons), packet_id, force_move(props), force_move(func));
     }
 
@@ -3502,6 +4042,11 @@ public:
         packet_id_t packet_id,
         async_handler_t func = {}
     ) {
+        MQTT_LOG("api", info)
+            << log::add_value(address, this)
+            << "async_unsuback"
+            << " pid:" << packet_id;
+
         async_send_unsuback(packet_id, force_move(func));
     }
 

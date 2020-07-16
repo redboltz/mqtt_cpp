@@ -9,6 +9,7 @@
 #include "test_settings.hpp"
 #include "test_ctx_init.hpp"
 #include "checker.hpp"
+#include "global_fixture.hpp"
 
 BOOST_AUTO_TEST_SUITE(test_underlying_timeout)
 

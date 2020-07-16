@@ -7,6 +7,7 @@
 #include "test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "global_fixture.hpp"
 
 BOOST_AUTO_TEST_SUITE(test_connect)
 

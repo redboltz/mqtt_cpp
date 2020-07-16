@@ -59,6 +59,9 @@ int main(int argc, char** argv) {
         std::cout << argv[0] << " port" << std::endl;
         return -1;
     }
+
+    MQTT_NS::setup_log();
+
     boost::asio::io_context ioc;
 
     auto s = MQTT_NS::server<>(

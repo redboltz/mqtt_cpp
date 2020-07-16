@@ -6,6 +6,7 @@
 
 #include "test_main.hpp"
 #include "combi_test.hpp"
+#include "global_fixture.hpp"
 
 namespace MQTT_NS {
 namespace utf8string {

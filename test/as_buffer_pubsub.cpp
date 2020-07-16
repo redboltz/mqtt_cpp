@@ -7,6 +7,7 @@
 #include "test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "global_fixture.hpp"
 
 #include <mqtt/optional.hpp>
 

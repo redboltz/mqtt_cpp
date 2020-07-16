@@ -16,6 +16,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    MQTT_NS::setup_log();
+
     boost::asio::io_context ioc;
 
     std::string host = argv[1];

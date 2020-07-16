@@ -90,7 +90,10 @@ FOREACH (source_file ${check_PROGRAMS})
     GET_FILENAME_COMPONENT (source_file_we ${source_file} NAME_WE)
     ADD_EXECUTABLE (${source_file_we} ${source_file})
     TARGET_COMPILE_DEFINITIONS (${source_file_we} PUBLIC $<IF:$<BOOL:${MQTT_USE_STATIC_BOOST}>,,BOOST_TEST_DYN_LINK>)
-    TARGET_LINK_LIBRARIES (${source_file_we} mqtt_cpp_iface Boost::unit_test_framework)
+    TARGET_COMPILE_DEFINITIONS (${source_file_we} PUBLIC $<IF:$<BOOL:${MQTT_USE_STATIC_BOOST}>,,BOOST_LOG_DYN_LINK>)
+    TARGET_LINK_LIBRARIES (
+        ${source_file_we} mqtt_cpp_iface Boost::unit_test_framework Boost::log
+    )
 
     IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         IF (MQTT_CODECOV)

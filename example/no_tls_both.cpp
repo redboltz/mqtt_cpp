@@ -330,6 +330,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    MQTT_NS::setup_log();
+
     boost::asio::io_context ioc;
     std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[1]);
 

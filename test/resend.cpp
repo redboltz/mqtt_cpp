@@ -8,6 +8,7 @@
 #include "combi_test.hpp"
 #include "checker.hpp"
 #include "test_util.hpp"
+#include "global_fixture.hpp"
 
 BOOST_AUTO_TEST_SUITE(test_resend)
 

@@ -59,6 +59,9 @@ int main(int argc, char** argv) {
         std::cout << argv[0] << " port server_crt server_key" << std::endl;
         return -1;
     }
+
+    MQTT_NS::setup_log();
+
     boost::asio::io_context ioc;
 
     std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[1]);
