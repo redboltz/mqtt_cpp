@@ -163,9 +163,10 @@ public:
     /**
      * @brief Constructor for client
      */
-    endpoint(protocol_version version = protocol_version::undetermined, bool async_send_store = false)
+    endpoint(as::io_context& ioc, protocol_version version = protocol_version::undetermined, bool async_send_store = false)
         :async_send_store_{async_send_store},
-         version_(version)
+         version_(version),
+         tim_pingresp_(ioc)
     {}
 
     /**
@@ -173,11 +174,12 @@ public:
      *        socket should have already been connected with another endpoint.
      */
     template <typename Socket>
-    explicit endpoint(std::shared_ptr<Socket> socket, protocol_version version = protocol_version::undetermined, bool async_send_store = false)
+    explicit endpoint(as::io_context& ioc, std::shared_ptr<Socket> socket, protocol_version version = protocol_version::undetermined, bool async_send_store = false)
         :socket_(force_move(socket)),
          connected_(true),
          async_send_store_{async_send_store},
-         version_(version)
+         version_(version),
+         tim_pingresp_(ioc)
     {}
 
     // MQTT Common handlers
@@ -3935,6 +3937,20 @@ public:
 
     auto get_executor() {
         return socket_.value().get_executor();
+    }
+
+    /**
+     * @brief Set pingresp timeout
+     * @param tim timeout value
+     *
+     * If tim is not zero, when the client sends PINGREQ, set a timer.
+     * The timer cancels when PINGRESP is received. If the timer is fired, then force_disconnect
+     * from the client side.<BR>
+     * https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
+     * 3.1.2.10 Keep Alive
+     */
+    void set_pingresp_timeout(std::chrono::steady_clock::duration tim) {
+        pingresp_timeout_ = mqtt::force_move(tim);
     }
 
 protected:
@@ -7905,6 +7921,7 @@ private:
         if (on_pingresp()) {
             on_mqtt_message_processed(force_move(session_life_keeper));
         }
+        if (pingresp_timeout_ != std::chrono::steady_clock::duration::zero()) tim_pingresp_.cancel();
     }
 
     // process disconnect
@@ -8530,9 +8547,11 @@ private:
         switch (version_) {
         case protocol_version::v3_1_1:
             do_sync_write(v3_1_1::pingreq_message());
+            set_pingresp_timer();
             break;
         case protocol_version::v5:
             do_sync_write(v5::pingreq_message());
+            set_pingresp_timer();
             break;
         default:
             BOOST_ASSERT(false);
@@ -9065,9 +9084,11 @@ private:
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(v3_1_1::pingreq_message(), force_move(func));
+            set_pingresp_timer();
             break;
         case protocol_version::v5:
             do_async_write(v5::pingreq_message(), force_move(func));
+            set_pingresp_timer();
             break;
         default:
             BOOST_ASSERT(false);
@@ -9336,6 +9357,24 @@ private:
         on_error(ec);
     }
 
+    void set_pingresp_timer() {
+        if (pingresp_timeout_ == std::chrono::steady_clock::duration::zero()) return;
+        if (tim_pingresp_set_) return;
+        tim_pingresp_set_ = true;
+        tim_pingresp_.expires_after(pingresp_timeout_);
+        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+        tim_pingresp_.async_wait(
+            [wp = force_move(wp)](error_code ec) {
+                if (auto sp = wp.lock()) {
+                    sp->tim_pingresp_set_ = false;
+                    if (!ec) {
+                        sp->force_disconnect();
+                    }
+                }
+            }
+        );
+    }
+
 protected:
     // Ensure that only code that knows the *exact* type of an object
     // inheriting from this abstract base class can destruct it.
@@ -9380,6 +9419,10 @@ private:
     std::size_t total_bytes_sent_ = 0;
     std::size_t total_bytes_received_ = 0;
     static constexpr std::uint8_t variable_length_continue_flag = 0b10000000;
+
+    std::chrono::steady_clock::duration pingresp_timeout_ = std::chrono::steady_clock::duration::zero();
+    as::steady_timer tim_pingresp_;
+    bool tim_pingresp_set_ = false;
 };
 
 } // namespace MQTT_NS
