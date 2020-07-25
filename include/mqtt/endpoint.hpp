@@ -9368,7 +9368,11 @@ private:
                 if (auto sp = wp.lock()) {
                     sp->tim_pingresp_set_ = false;
                     if (!ec) {
-                        sp->force_disconnect();
+                        sp->socket().post(
+                            [sp] {
+                                sp->force_disconnect();
+                            }
+                        );
                     }
                 }
             }

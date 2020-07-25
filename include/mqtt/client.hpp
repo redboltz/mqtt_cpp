@@ -802,7 +802,11 @@ public:
                 [wp = force_move(wp)](error_code ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
-                            sp->force_disconnect();
+                            sp->socket()->post(
+                                [sp] {
+                                    sp->force_disconnect();
+                                }
+                            );
                         }
                     }
                 }
@@ -856,7 +860,11 @@ public:
                 [wp = force_move(wp)](error_code ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
-                            sp->force_disconnect();
+                            sp->socket()->post(
+                                [sp] {
+                                    sp->force_disconnect();
+                                }
+                            );
                         }
                     }
                 }
@@ -895,7 +903,11 @@ public:
                 [wp = force_move(wp)](error_code ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
-                            sp->force_disconnect();
+                            sp->socket()->post(
+                                [sp] {
+                                    sp->force_disconnect();
+                                }
+                            );
                         }
                     }
                 }
