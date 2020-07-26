@@ -52,6 +52,16 @@ public:
     void set_disconnect_delay(std::chrono::steady_clock::duration delay) {
         delay_disconnect_ = MQTT_NS::force_move(delay);
     }
+
+    /**
+     * @brief set pingresp send operaton
+     *
+     * @param b - if true, send pingresp when pingreq is received.
+     *            if false, doesn't send pingrespp for test.
+     */
+    void set_pingresp(bool b) {
+        pingresp_ = b;
+    }
     // [end] for test setting
 
     /**
@@ -318,10 +328,10 @@ public:
             }
         );
         ep.set_pingreq_handler(
-            [wp] {
+            [this, wp] {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                sp->pingresp();
+                if (pingresp_) sp->pingresp();
                 return true;
             }
         );
@@ -1265,6 +1275,7 @@ private:
     std::function<void(MQTT_NS::v5::properties const&)> h_subscribe_props_;
     std::function<void(MQTT_NS::v5::properties const&)> h_unsubscribe_props_;
     std::function<void(MQTT_NS::v5::properties const&)> h_auth_props_;
+    bool pingresp_ = true;
 };
 
 #endif // MQTT_TEST_BROKER_HPP

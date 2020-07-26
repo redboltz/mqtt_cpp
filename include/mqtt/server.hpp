@@ -182,7 +182,7 @@ private:
                     if (h_error_) h_error_(ec);
                     return;
                 }
-                auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
+                auto sp = std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_);
                 if (h_accept_) h_accept_(force_move(sp));
                 do_accept();
             }
@@ -396,7 +396,7 @@ private:
                         if (ec) {
                             return;
                         }
-                        auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
+                        auto sp = std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_);
                         if (h_accept_) h_accept_(force_move(sp));
                     }
                 );
@@ -630,7 +630,7 @@ private:
                                 if (ec) {
                                     return;
                                 }
-                                auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
+                                auto sp = std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_);
                                 if (h_accept_) h_accept_(force_move(sp));
                             }
                         );
@@ -653,7 +653,7 @@ private:
                                 if (ec) {
                                     return;
                                 }
-                                auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
+                                auto sp = std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_);
                                 if (h_accept_) h_accept_(force_move(sp));
                             }
                         );
@@ -922,7 +922,7 @@ private:
                                         if (ec) {
                                             return;
                                         }
-                                        auto sp = std::make_shared<endpoint_t>(force_move(socket), version_);
+                                        auto sp = std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_);
                                         if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 );
@@ -948,7 +948,7 @@ private:
                                         // TODO: The use of force_move on this line of code causes
                                         // a static assertion that socket is a const object when
                                         // TLS is enabled, and WS is enabled, with Boost 1.70, and gcc 8.3.0
-                                        auto sp = std::make_shared<endpoint_t>(socket, version_);
+                                        auto sp = std::make_shared<endpoint_t>(ioc_con_, socket, version_);
                                         if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 );

@@ -802,7 +802,11 @@ public:
                 [wp = force_move(wp)](error_code ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
-                            sp->force_disconnect();
+                            sp->socket()->post(
+                                [sp] {
+                                    sp->force_disconnect();
+                                }
+                            );
                         }
                     }
                 }
@@ -856,7 +860,11 @@ public:
                 [wp = force_move(wp)](error_code ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
-                            sp->force_disconnect();
+                            sp->socket()->post(
+                                [sp] {
+                                    sp->force_disconnect();
+                                }
+                            );
                         }
                     }
                 }
@@ -895,7 +903,11 @@ public:
                 [wp = force_move(wp)](error_code ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
-                            sp->force_disconnect();
+                            sp->socket()->post(
+                                [sp] {
+                                    sp->force_disconnect();
+                                }
+                            );
                         }
                     }
                 }
@@ -986,7 +998,7 @@ protected:
            protocol_version version = protocol_version::v3_1_1,
            bool async_store_send = false
     )
-        :base(version, async_store_send),
+        :base(ioc, version, async_store_send),
          ioc_(ioc),
          tim_ping_(ioc_),
          tim_close_(ioc_),
