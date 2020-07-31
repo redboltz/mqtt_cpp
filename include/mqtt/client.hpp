@@ -1053,9 +1053,9 @@ private:
         base::connect(
             buffer(string_view(client_id_)),
             ( user_name_ ? buffer(string_view(user_name_.value()))
-                         : buffer() ),
+                         : optional<buffer>() ),
             ( password_  ? buffer(string_view(password_.value()))
-                         : buffer() ),
+                         : optional<buffer>() ),
             will_,
             keep_alive_sec_,
             force_move(props)
@@ -1069,9 +1069,9 @@ private:
         base::async_connect(
             buffer(string_view(client_id_)),
             ( user_name_ ? buffer(string_view(user_name_.value()))
-                         : buffer() ),
+                         : optional<buffer>() ),
             ( password_  ? buffer(string_view(password_.value()))
-                         : buffer() ),
+                         : optional<buffer>() ),
             will_,
             keep_alive_sec_,
             force_move(props),
