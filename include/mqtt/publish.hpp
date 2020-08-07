@@ -8,6 +8,7 @@
 #define MQTT_PUBLISH_HPP
 
 #include <cstdint>
+#include <ostream>
 
 #include <boost/assert.hpp>
 
@@ -107,8 +108,9 @@ constexpr char const* retain_to_str(retain v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, retain val)
+
+inline
+std::ostream& operator<<(std::ostream& os, retain val)
 {
     os << retain_to_str(val);
     return os;
@@ -122,8 +124,9 @@ constexpr char const* dup_to_str(dup v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, dup val)
+
+inline
+std::ostream& operator<<(std::ostream& os, dup val)
 {
     os << dup_to_str(val);
     return os;

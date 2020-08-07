@@ -8,6 +8,8 @@
 #define MQTT_CONNECT_RETURN_CODE_HPP
 
 #include <cstdint>
+#include <ostream>
+
 #include <mqtt/namespace.hpp>
 
 namespace MQTT_NS {
@@ -37,8 +39,8 @@ char const* connect_return_code_to_str(connect_return_code v) {
     return "unknown_connect_return_code";
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, connect_return_code val)
+inline
+std::ostream& operator<<(std::ostream& os, connect_return_code val)
 {
     os << connect_return_code_to_str(val);
     return os;

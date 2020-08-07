@@ -8,6 +8,7 @@
 #define MQTT_REASON_CODE_HPP
 
 #include <cstdint>
+#include <ostream>
 #include <mqtt/namespace.hpp>
 #include <mqtt/subscribe_options.hpp>
 
@@ -32,8 +33,8 @@ char const* suback_return_code_to_str(suback_return_code v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, suback_return_code val)
+inline
+std::ostream& operator<<(std::ostream& os, suback_return_code val)
 {
     os << suback_return_code_to_str(val);
     return os;
@@ -102,8 +103,8 @@ char const* connect_reason_code_to_str(connect_reason_code v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, connect_reason_code val)
+inline
+std::ostream& operator<<(std::ostream& os, connect_reason_code val)
 {
     os << connect_reason_code_to_str(val);
     return os;
@@ -178,8 +179,8 @@ char const* disconnect_reason_code_to_str(disconnect_reason_code v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, disconnect_reason_code val)
+inline
+std::ostream& operator<<(std::ostream& os, disconnect_reason_code val)
 {
     os << disconnect_reason_code_to_str(val);
     return os;
@@ -221,8 +222,8 @@ char const* suback_reason_code_to_str(suback_reason_code v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, suback_reason_code val)
+inline
+std::ostream& operator<<(std::ostream& os, suback_reason_code val)
 {
     os << suback_reason_code_to_str(val);
     return os;
@@ -257,8 +258,8 @@ char const* unsuback_reason_code_to_str(unsuback_reason_code v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, unsuback_reason_code val)
+inline
+std::ostream& operator<<(std::ostream& os, unsuback_reason_code val)
 {
     os << unsuback_reason_code_to_str(val);
     return os;
@@ -293,8 +294,8 @@ char const* puback_reason_code_to_str(puback_reason_code v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, puback_reason_code val)
+inline
+std::ostream& operator<<(std::ostream& os, puback_reason_code val)
 {
     os << puback_reason_code_to_str(val);
     return os;
@@ -329,8 +330,8 @@ char const* pubrec_reason_code_to_str(pubrec_reason_code v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, pubrec_reason_code val)
+inline
+std::ostream& operator<<(std::ostream& os, pubrec_reason_code val)
 {
     os << pubrec_reason_code_to_str(val);
     return os;
@@ -351,8 +352,8 @@ char const* pubrel_reason_code_to_str(pubrel_reason_code v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, pubrel_reason_code val)
+inline
+std::ostream& operator<<(std::ostream& os, pubrel_reason_code val)
 {
     os << pubrel_reason_code_to_str(val);
     return os;
@@ -373,8 +374,8 @@ char const* pubcomp_reason_code_to_str(pubcomp_reason_code v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, pubcomp_reason_code val)
+inline
+std::ostream& operator<<(std::ostream& os, pubcomp_reason_code val)
 {
     os << pubcomp_reason_code_to_str(val);
     return os;
@@ -397,8 +398,8 @@ char const* auth_reason_code_to_str(auth_reason_code v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, auth_reason_code val)
+inline
+std::ostream& operator<<(std::ostream& os, auth_reason_code val)
 {
     os << auth_reason_code_to_str(val);
     return os;

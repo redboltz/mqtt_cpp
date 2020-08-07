@@ -8,6 +8,7 @@
 #define MQTT_SUBSCRIBE_OPTIONS_HPP
 
 #include <cstdint>
+#include <ostream>
 #include <mqtt/namespace.hpp>
 
 namespace MQTT_NS {
@@ -101,8 +102,8 @@ constexpr char const* retain_handling_to_str(retain_handling v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, retain_handling val)
+inline
+std::ostream& operator<<(std::ostream& os, retain_handling val)
 {
     os << retain_handling_to_str(val);
     return os;
@@ -116,8 +117,8 @@ constexpr char const* rap_to_str(rap v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, rap val)
+inline
+std::ostream& operator<<(std::ostream& os, rap val)
 {
     os << rap_to_str(val);
     return os;
@@ -131,8 +132,8 @@ constexpr char const* nl_to_str(nl v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, nl val)
+inline
+std::ostream& operator<<(std::ostream& os, nl val)
 {
     os << nl_to_str(val);
     return os;
@@ -147,8 +148,8 @@ constexpr char const* qos_to_str(qos v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, qos val)
+inline
+std::ostream& operator<<(std::ostream& os, qos val)
 {
     os << qos_to_str(val);
     return os;
