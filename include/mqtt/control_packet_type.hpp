@@ -8,6 +8,8 @@
 #define MQTT_CONTROL_PACKET_TYPE_HPP
 
 #include <cstdint>
+#include <ostream>
+
 #include <mqtt/namespace.hpp>
 
 namespace MQTT_NS {
@@ -59,8 +61,8 @@ char const* control_packet_type_to_str(control_packet_type v) {
     }
 }
 
-template<typename Stream>
-Stream & operator<<(Stream & os, control_packet_type val)
+inline
+std::ostream& operator<<(std::ostream& os, control_packet_type val)
 {
     os << control_packet_type_to_str(val);
     return os;
