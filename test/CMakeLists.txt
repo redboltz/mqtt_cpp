@@ -65,7 +65,8 @@ IF (MQTT_TEST_6)
     LIST (APPEND check_PROGRAMS
         offline.cpp
         manual_publish.cpp
-        retain.cpp
+        retain_1.cpp
+        retain_2.cpp
         will.cpp
     )
 ENDIF ()
