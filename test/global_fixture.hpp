@@ -12,7 +12,7 @@
 
 struct global_fixture {
     void setup() {
-        MQTT_NS::setup_log();
+        MQTT_NS::setup_log(MQTT_NS::severity_level::warning);
     }
     void teardown() {
     }

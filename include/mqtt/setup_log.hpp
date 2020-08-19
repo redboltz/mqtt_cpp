@@ -16,6 +16,8 @@
 
 
 #include <mqtt/log.hpp>
+#include <mqtt/move.hpp>
+
 #include <boost/filesystem.hpp>
 #include <boost/date_time/posix_time/posix_time_io.hpp>
 
@@ -57,13 +59,10 @@ void setup_log(std::map<std::string, severity_level> threshold) {
                 strm << "TID[" << it->second << "] ";
             }
             // Adjust severity length example
-            if (auto v = boost::log::extract<MQTT_NS::severity_level>("MqttSeverity", rec)) {
+            if (auto v = boost::log::extract<MQTT_NS::severity_level>("Severity", rec)) {
                 strm << "SEV[" << std::setw(7) << std::left << v.get() << "] ";
             }
-            if (auto v = boost::log::extract<boost::log::trivial::severity_level>("Severity", rec)) {
-                strm << "SEV[" << v.get() << "] ";
-            }
-            if (auto v = boost::log::extract<std::string>("MqttChannel", rec)) {
+            if (auto v = boost::log::extract<channel>("Channel", rec)) {
                 strm << "CHANNEL[" << std::setw(5) << std::left << v.get() << "] ";
             }
             // Shorten file path example
@@ -76,7 +75,8 @@ void setup_log(std::map<std::string, severity_level> threshold) {
             if (auto v = boost::log::extract<void const*>("MqttAddress", rec)) {
                 strm << "ADDR[" << v.get() << "] ";
             }
-#if 0
+
+#if 0 // function is ofthen noisy
             if (auto v = boost::log::extract<std::string>("MqttFunction", rec)) {
                 strm << v << ":";
             }
@@ -97,20 +97,12 @@ void setup_log(std::map<std::string, severity_level> threshold) {
         (boost::log::attribute_value_set const& avs) {
             {
                 // For mqtt
-                auto channel = boost::log::extract<std::string>("MqttChannel", avs);
-                auto severity = boost::log::extract<MQTT_NS::severity_level>("MqttSeverity", avs);
-                if (channel) {
-                    if (severity) {
-                        auto it = threshold.find(channel.get());
-                        if (it == threshold.end()) return false;
-                        return severity.get() >= it->second;
-                    }
-                    else {
-                        std::cout << "no sev" << std::endl;
-                    }
-                }
-                else {
-                        std::cout << "no channel" << std::endl;
+                auto chan = boost::log::extract<channel>("Channel", avs);
+                auto sev = boost::log::extract<severity_level>("Severity", avs);
+                if (chan && sev) {
+                    auto it = threshold.find(chan.get());
+                    if (it == threshold.end()) return false;
+                    return sev.get() >= it->second;
                 }
             }
             return true;
@@ -132,8 +124,8 @@ inline
 void setup_log(severity_level threshold = severity_level::warning) {
     setup_log(
         {
-            { "api", threshold },
-            { "cb", threshold },
+            { "mqtt_api", threshold },
+            { "mqtt_cb", threshold },
         }
     );
 }

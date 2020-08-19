@@ -333,8 +333,8 @@ int main(int argc, char** argv) {
 
     MQTT_NS::setup_log(
         {
-            { "api", MQTT_NS::severity_level::trace },
-            { "cb", MQTT_NS::severity_level::debug },
+            { "mqtt_api", MQTT_NS::severity_level::trace },
+            { "mqtt_cb", MQTT_NS::severity_level::debug },
         }
     );
 

@@ -29,6 +29,10 @@ namespace MQTT_NS {
 
 namespace log = boost::log;
 
+struct channel : std::string {
+    using std::string::string;
+};
+
 enum class severity_level {
     trace,
     debug,
@@ -51,11 +55,10 @@ inline std::ostream& operator<<(std::ostream& o, severity_level sev) {
     return o;
 }
 
-BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(logger, log::sources::severity_channel_logger_mt<severity_level>);
-
-// Scoped attributes
-BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "MqttSeverity", severity_level)
-BOOST_LOG_ATTRIBUTE_KEYWORD(channel, "MqttChannel", std::string)
+// template arguments are defined in MQTT_NS
+// filter and formatter can distinguish mqtt_cpp's channel and severity by their types
+using global_logger_t = log::sources::severity_channel_logger_mt<severity_level, channel>;
+BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(logger, global_logger_t);
 
 // Normal attributes
 BOOST_LOG_ATTRIBUTE_KEYWORD(file, "MqttFile", std::string)
@@ -64,51 +67,12 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(function, "MqttFunction", std::string)
 BOOST_LOG_ATTRIBUTE_KEYWORD(address, "MqttAddress", void const*)
 
 
-template <typename Logger, typename Name, typename Attr, typename... Ts>
-struct scoped_attrs_cond : scoped_attrs_cond<Logger, Ts...> {
-    scoped_attrs_cond(Logger& l, Name&& n, Attr&& a, Ts&&... ts)
-        : scoped_attrs_cond<Logger, Ts...> { l, std::forward<Ts>(ts)... }
-        , sla { l, std::forward<Name>(n), log::attributes::make_constant(std::forward<Attr>(a)) }
-    {
-    }
-
-    log::aux::scoped_logger_attribute<Logger> sla;
-};
-
-template <typename Logger, typename Name, typename Attr>
-struct scoped_attrs_cond<Logger, Name, Attr> {
-    scoped_attrs_cond(Logger& l, Name&& n, Attr&& a)
-        : guard { mutex() }, sla { l, std::forward<Name>(n), log::attributes::make_constant(std::forward<Attr>(a)) }
-    {
-    }
-    operator bool() const {
-        return false;
-    }
-    static std::mutex& mutex() {
-        static std::mutex mtx;
-        return mtx;
-    }
-    std::unique_lock<std::mutex> guard;
-    log::aux::scoped_logger_attribute<Logger> sla;
-};
-
-template <typename Logger, typename... Ts>
-auto make_scoped_attrs_cond(Logger& l, Ts&&... ts) {
-    return scoped_attrs_cond<Logger, Ts...> { l, std::forward<Ts>(ts)... };
-}
-
 // Take any filterable parameters (FP)
-#define MQTT_LOG_FP(...) \
-    if (auto mqtt_scoped_attrs = make_scoped_attrs_cond(logger::get(), __VA_ARGS__) \
-    ) { \
-        (void)mqtt_scoped_attrs; \
-    } \
-    else \
-        BOOST_LOG(logger::get()) \
-            << log::add_value(file, __FILE__) \
-            << log::add_value(line, __LINE__) \
-            << log::add_value(function, BOOST_CURRENT_FUNCTION)
-
+#define MQTT_LOG_FP(chan, sev)                                          \
+    BOOST_LOG_STREAM_CHANNEL_SEV(logger::get(), channel(chan), sev)     \
+    << log::add_value(file, __FILE__)                                   \
+    << log::add_value(line, __LINE__)                                   \
+    << log::add_value(function, BOOST_CURRENT_FUNCTION)
 
 namespace detail {
 
@@ -154,8 +118,8 @@ inline constexpr null_log const& operator<<(null_log const& o, T const&) { retur
 #define MQTT_LOG(chan, sev)                                             \
     BOOST_PP_IF(                                                        \
         BOOST_PP_GREATER_EQUAL(MQTT_GET_LOG_SEV_NUM(sev), MQTT_GET_LOG_SEV_NUM(MQTT_LOG_SEV)), \
-        MQTT_LOG_FP("MqttChannel", chan, "MqttSeverity", severity_level::sev), \
-        MQTT_NS::detail::null_log(chan, severity_level::sev)            \
+        MQTT_LOG_FP(chan, severity_level::sev),                 \
+        MQTT_NS::detail::null_log(chan, severity_level::sev)    \
     )
 
 #endif // !defined(MQTT_LOG)
