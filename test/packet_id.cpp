@@ -6,6 +6,7 @@
 
 #include "test_main.hpp"
 #include "test_settings.hpp"
+#include "global_fixture.hpp"
 
 #include <mqtt/client.hpp>
 

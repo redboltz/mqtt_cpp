@@ -9,6 +9,7 @@
 #include "test_broker.hpp"
 #include "test_server_no_tls.hpp"
 #include "checker.hpp"
+#include "global_fixture.hpp"
 
 #include <mqtt/client.hpp>
 #include <mqtt/optional.hpp>

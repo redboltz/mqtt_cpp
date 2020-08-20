@@ -15,7 +15,9 @@
 #include <mqtt/exception.hpp>
 #include <mqtt/fixed_header.hpp>
 #include <mqtt/hexdump.hpp>
+#include <mqtt/log.hpp>
 #include <mqtt/publish.hpp>
+#include <mqtt/setup_log.hpp>
 #include <mqtt/subscribe_options.hpp>
 #include <mqtt/remaining_length.hpp>
 #include <mqtt/reason_code.hpp>

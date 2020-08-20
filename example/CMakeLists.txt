@@ -7,6 +7,7 @@ LIST (APPEND exec_PROGRAMS
     v5_no_tls_server.cpp
     v5_no_tls_both.cpp
     v5_no_tls_prop.cpp
+    logging.cpp
     redirect.cpp
     broker.cpp
 )
@@ -43,7 +44,8 @@ ENDIF ()
 FOREACH (source_file ${exec_PROGRAMS})
     GET_FILENAME_COMPONENT (source_file_we ${source_file} NAME_WE)
     ADD_EXECUTABLE (${source_file_we} ${source_file})
-    TARGET_LINK_LIBRARIES (${source_file_we} mqtt_cpp_iface)
+    TARGET_COMPILE_DEFINITIONS (${source_file_we} PUBLIC $<IF:$<BOOL:${MQTT_USE_STATIC_BOOST}>,,BOOST_LOG_DYN_LINK>)
+    TARGET_LINK_LIBRARIES (${source_file_we} mqtt_cpp_iface Boost::log)
 ENDFOREACH ()
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")

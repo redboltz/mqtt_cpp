@@ -7,6 +7,7 @@
 #include "test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "global_fixture.hpp"
 
 #include <mqtt/optional.hpp>
 
@@ -946,8 +947,7 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
                     c->async_subscribe(
                         pid_sub,
                         std::move(topic1),
-                        MQTT_NS::qos::at_most_once,
-                        [topic1](MQTT_NS::error_code) {}
+                        MQTT_NS::qos::at_most_once
                     );
                     return true;
                 });
@@ -1010,8 +1010,7 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
                     pid_unsub = c->acquire_unique_packet_id();
                     c->async_unsubscribe(
                         pid_unsub,
-                        std::move(topic1),
-                        [topic1](MQTT_NS::error_code) {}
+                        std::move(topic1)
                     );
                     return true;
                 });
@@ -1028,8 +1027,7 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
                     c->async_subscribe(
                         pid_sub,
                         std::move(topic1),
-                        MQTT_NS::qos::at_most_once,
-                        [topic1](MQTT_NS::error_code) {}
+                        MQTT_NS::qos::at_most_once
                     );
                     return true;
                 });
@@ -1095,8 +1093,7 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
                     pid_unsub = c->acquire_unique_packet_id();
                     c->async_unsubscribe(
                         pid_unsub,
-                        std::move(topic1),
-                        [topic1](MQTT_NS::error_code) {}
+                        std::move(topic1)
                     );
                     return true;
                 });

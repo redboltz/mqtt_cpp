@@ -1,4 +1,4 @@
-// Copyright Takatoshi Kondo 2017
+// Copyright Takatoshi Kondo 2020
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -11,6 +11,7 @@
 #include <map>
 
 #include <mqtt_client_cpp.hpp>
+#include <mqtt/setup_log.hpp>
 
 #include <boost/lexical_cast.hpp>
 
@@ -123,9 +124,8 @@ void client_proc(
 
 namespace mi = boost::multi_index;
 
-using con_t = MQTT_NS::server_tls_ws<>::endpoint_t;
+using con_t = MQTT_NS::server<>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
-using con_wp_t = std::weak_ptr<con_t>;
 
 struct sub_con {
     sub_con(MQTT_NS::buffer topic, con_sp_t con, MQTT_NS::qos qos_value)
@@ -182,6 +182,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     s.close();
                 }
             );
+
             // Pass spep to keep lifetime.
             // It makes sure wp.lock() never return nullptr in the handlers below
             // including close_handler and error_handler.
@@ -330,29 +331,23 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    MQTT_NS::setup_log();
+    MQTT_NS::setup_log(
+        {
+            { "mqtt_api", MQTT_NS::severity_level::trace },
+            { "mqtt_cb", MQTT_NS::severity_level::debug },
+        }
+    );
 
-    std::string path = argv[0];
-    std::size_t pos = path.find_last_of("/\\");
-    std::string base = (pos == std::string::npos) ? "./" : path.substr(0, pos + 1);
     boost::asio::io_context ioc;
     std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[1]);
 
     // server
-    boost::asio::ssl::context  ctx(boost::asio::ssl::context::tlsv12);
-    ctx.set_options(
-        boost::asio::ssl::context::default_workarounds |
-        boost::asio::ssl::context::single_dh_use);
-    ctx.use_certificate_file(base + "server.crt.pem", boost::asio::ssl::context::pem);
-    ctx.use_private_key_file(base + "server.key.pem", boost::asio::ssl::context::pem);
-
     boost::asio::io_context iocs;
-    auto s = MQTT_NS::server_tls_ws<>(
+    auto s = MQTT_NS::server<>(
         boost::asio::ip::tcp::endpoint(
             boost::asio::ip::tcp::v4(),
-            port
+            boost::lexical_cast<std::uint16_t>(argv[1])
         ),
-        std::move(ctx),
         iocs
     );
     std::set<con_sp_t> connections;
@@ -369,14 +364,14 @@ int main(int argc, char** argv) {
     std::uint16_t pid_sub1;
     std::uint16_t pid_sub2;
 
-    auto c = MQTT_NS::make_tls_sync_client_ws(ioc, "localhost", port);
-    c->get_ssl_context().load_verify_file(base + "cacert.pem");
+    auto c = MQTT_NS::make_sync_client(ioc, "localhost", port);
 
     int count = 0;
     auto disconnect = [&] {
         if (++count == 5) c->disconnect();
     };
     client_proc(c, pid_sub1, pid_sub2, disconnect);
+
 
     ioc.run();
     th.join();
