@@ -55,6 +55,20 @@ inline std::ostream& operator<<(std::ostream& o, severity_level sev) {
     return o;
 }
 
+namespace detail {
+
+struct null_log {
+    template <typename... Params>
+    constexpr null_log(Params&&...) {}
+};
+
+template <typename T>
+inline constexpr null_log const& operator<<(null_log const& o, T const&) { return o; }
+
+} // namespace detail
+
+#if defined(MQTT_USE_LOG)
+
 // template arguments are defined in MQTT_NS
 // filter and formatter can distinguish mqtt_cpp's channel and severity by their types
 using global_logger_t = log::sources::severity_channel_logger_mt<severity_level, channel>;
@@ -73,24 +87,6 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(address, "MqttAddress", void const*)
     << log::add_value(file, __FILE__)                                   \
     << log::add_value(line, __LINE__)                                   \
     << log::add_value(function, BOOST_CURRENT_FUNCTION)
-
-namespace detail {
-
-struct null_log {
-    template <typename... Params>
-    constexpr null_log(Params&&...) {}
-};
-
-template <typename T>
-inline constexpr null_log const& operator<<(null_log const& o, T const&) { return o; }
-
-} // namespace detail
-
-#if defined(MQTT_DISABLE_LOG)
-
-#define MQTT_LOG(chan, sev) detail::null_log(chan, severity_level::sev)
-
-#else  // defined(MQTT_DISABLE_LOG)
 
 #define MQTT_GET_LOG_SEV_NUM(lv) BOOST_PP_CAT(MQTT_, lv)
 
@@ -124,7 +120,18 @@ inline constexpr null_log const& operator<<(null_log const& o, T const&) { retur
 
 #endif // !defined(MQTT_LOG)
 
-#endif // defined(MQTT_DISABLE_LOG)
+#if !defined(MQTT_ADD_VALUE)
+
+#define MQTT_ADD_VALUE(name, val) log::add_value((name), (val))
+
+#endif // !defined(MQTT_ADD_VALUE)
+
+#else  // defined(MQTT_USE_LOG)
+
+#define MQTT_LOG(chan, sev) detail::null_log(chan, severity_level::sev)
+#define MQTT_ADD_VALUE(name, val) val
+
+#endif // defined(MQTT_USE_LOG)
 
 } // namespace MQTT_NS
 
