@@ -23,6 +23,7 @@
 
 namespace MQTT_NS {
 
+#if defined(MQTT_USE_LOG)
 
 /**
  * @brief Setup logging
@@ -129,6 +130,13 @@ void setup_log(severity_level threshold = severity_level::warning) {
         }
     );
 }
+
+#else  // defined(MQTT_USE_LOG)
+
+template <typename... Params>
+void setup_log(Params&&...) {}
+
+#endif // defined(MQTT_USE_LOG)
 
 } // namespace MQTT_NS
 

@@ -7,7 +7,6 @@ LIST (APPEND exec_PROGRAMS
     v5_no_tls_server.cpp
     v5_no_tls_both.cpp
     v5_no_tls_prop.cpp
-    logging.cpp
     redirect.cpp
     broker.cpp
 )
@@ -36,6 +35,12 @@ IF (MQTT_USE_WS AND MQTT_USE_TLS)
     )
 ENDIF ()
 
+IF (MQTT_USE_LOG)
+    LIST (APPEND exec_PROGRAMS
+        logging.cpp
+    )
+ENDIF ()
+
 # Without this setting added, azure pipelines completely fails to find the boost libraries. No idea why.
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
@@ -44,8 +49,11 @@ ENDIF ()
 FOREACH (source_file ${exec_PROGRAMS})
     GET_FILENAME_COMPONENT (source_file_we ${source_file} NAME_WE)
     ADD_EXECUTABLE (${source_file_we} ${source_file})
-    TARGET_COMPILE_DEFINITIONS (${source_file_we} PUBLIC $<IF:$<BOOL:${MQTT_USE_STATIC_BOOST}>,,BOOST_LOG_DYN_LINK>)
-    TARGET_LINK_LIBRARIES (${source_file_we} mqtt_cpp_iface Boost::log)
+    TARGET_LINK_LIBRARIES (${source_file_we} mqtt_cpp_iface)
+    IF (MQTT_USE_LOG)
+        TARGET_COMPILE_DEFINITIONS (${source_file_we} PUBLIC $<IF:$<BOOL:${MQTT_USE_STATIC_BOOST}>,,BOOST_LOG_DYN_LINK>)
+        TARGET_LINK_LIBRARIES (${source_file_we} Boost::log)
+    ENDIF ()
 ENDFOREACH ()
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")

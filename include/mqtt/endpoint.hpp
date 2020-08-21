@@ -171,7 +171,7 @@ public:
          tim_pingresp_(ioc)
     {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "create"
             << " version:" << version
             << " async_send_store:" << std::boolalpha << async_send_store;
@@ -190,7 +190,7 @@ public:
          tim_pingresp_(ioc)
     {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "create"
             << " version:" << version
             << " async_send_store:" << std::boolalpha << async_send_store;
@@ -860,7 +860,7 @@ public:
      */
     void start_session(any session_life_keeper = any()) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "start_session";
         async_read_control_packet_type(force_move(session_life_keeper));
     }
@@ -970,7 +970,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "disconnect"
             << " reason:" << reason;
 
@@ -987,7 +987,7 @@ public:
      */
     void force_disconnect() {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "force_disconnect";
 
         connected_ = false;
@@ -1029,7 +1029,7 @@ public:
         any life_keeper = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "publish"
             << " pid:" << packet_id
             << " topic:" << topic_name
@@ -1101,7 +1101,7 @@ public:
         any life_keeper
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "publish"
             << " pid:" << packet_id
             << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
@@ -1150,7 +1150,7 @@ public:
         any life_keeper
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "publish"
             << " pid:" << packet_id
             << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
@@ -1201,7 +1201,7 @@ public:
         any life_keeper = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "publish"
             << " pid:" << packet_id
             << " topic:" << topic_name
@@ -1261,7 +1261,7 @@ public:
         any life_keeper = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "publish"
             << " pid:" << packet_id
             << " topic:" << topic_name
@@ -1312,7 +1312,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "subscribe"
             << " pid:" << packet_id
             << " topic:" << topic_name
@@ -1353,7 +1353,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "subscribe"
             << " pid:" << packet_id
             << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
@@ -1388,7 +1388,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "subscribe"
             << " pid:" << packet_id;
 
@@ -1419,7 +1419,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "subscribe"
             << " pid:" << packet_id;
 
@@ -1451,7 +1451,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "unsubscribe"
             << " pid:" << packet_id
             << " topic:" << topic_name;
@@ -1479,7 +1479,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "unsubscribe"
             << " pid:" << packet_id
             << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name));
@@ -1506,7 +1506,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "unsubscribe"
             << " pid:" << packet_id;
 
@@ -1538,7 +1538,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "unsubscribe"
             << " pid:" << packet_id;
 
@@ -1570,7 +1570,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "unsubscribe"
             << " pid:" << packet_id;
 
@@ -1590,7 +1590,7 @@ public:
     void pingreq() {
         // pingreq might frequently send, so SEV is set to trace
         MQTT_LOG("mqtt_api", trace)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "pingreq";
 
         if (connected_ && mqtt_connected_) send_pingreq();
@@ -1603,7 +1603,7 @@ public:
     void pingresp() {
         // pingresp might frequently send, so SEV is set to trace
         MQTT_LOG("mqtt_api", trace)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "pingrsp";
 
         send_pingresp();
@@ -1626,7 +1626,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "auth"
             << " reason:" << reason_code;
 
@@ -1672,7 +1672,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "connect"
             << " client_id:" << client_id
             << " user_name:" << (user_name ? user_name.value() : "none")
@@ -1742,7 +1742,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "connect"
             << " client_id:" << client_id
             << " user_name:" << (user_name ? string_view(user_name.value()) : string_view("none"))
@@ -1775,7 +1775,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "connack"
             << " session_present:" << std::boolalpha << session_present
             << " reason:" << reason_code;
@@ -1801,7 +1801,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "puback"
             << " pid:" << packet_id
             << " reason:" << reason_code;
@@ -1827,7 +1827,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "pubrec"
             << " pid:" << packet_id
             << " reason:" << reason_code;
@@ -1861,7 +1861,7 @@ public:
         any life_keeper = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "pubrel"
             << " pid:" << packet_id
             << " reason:" << reason_code;
@@ -1887,7 +1887,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "pubcomp"
             << " pid:" << packet_id
             << " reason:" << reason_code;
@@ -1913,7 +1913,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "suback"
             << " pid:" << packet_id
             << " reason:" < reason;
@@ -1944,7 +1944,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "suback"
             << " pid:" << packet_id;
 
@@ -1959,7 +1959,7 @@ public:
         packet_id_t packet_id
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "unsuback"
             << " pid:" << packet_id;
 
@@ -1984,7 +1984,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "unsuback"
             << " pid:" << packet_id
             << " reason:" << reason;
@@ -2010,7 +2010,7 @@ public:
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "unsuback"
             << " pid:" << packet_id;
 
@@ -2065,7 +2065,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_disconnect";
 
         if (connected_ && mqtt_connected_) {
@@ -2099,7 +2099,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_disconnect"
             << " reason:" << reason;
 
@@ -2172,7 +2172,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_publish"
             << " pid:" << packet_id
             << " topic:" << topic_name
@@ -2235,7 +2235,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_publish"
             << " pid:" << packet_id
             << " topic:" << topic_name
@@ -2297,7 +2297,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_publish"
             << " pid:" << packet_id
             << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
@@ -2351,7 +2351,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_publish"
             << " pid:" << packet_id
             << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
@@ -2400,7 +2400,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_publish"
             << " pid:" << packet_id
             << " topic:" << topic_name
@@ -2465,7 +2465,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_publish"
             << " pid:" << packet_id
             << " topic:" << topic_name
@@ -2519,7 +2519,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id
             << " topic:" << topic_name
@@ -2570,7 +2570,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id
             << " topic:" << topic_name
@@ -2617,7 +2617,7 @@ public:
         async_handler_t func
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id
             << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
@@ -2663,7 +2663,7 @@ public:
         async_handler_t func
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id
             << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
@@ -2703,7 +2703,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id
             << " topic:" << topic_name
@@ -2752,7 +2752,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id
             << " topic:" << topic_name
@@ -2793,7 +2793,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id;
 
@@ -2845,7 +2845,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id;
 
@@ -2889,7 +2889,7 @@ public:
         async_handler_t func
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id;
 
@@ -2923,7 +2923,7 @@ public:
         async_handler_t func
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id;
 
@@ -2952,7 +2952,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id;
 
@@ -2998,7 +2998,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id;
 
@@ -3040,7 +3040,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id
             << " topic:" << topic_name;
@@ -3076,7 +3076,7 @@ public:
         async_handler_t func
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id
             << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name));
@@ -3101,7 +3101,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id
             << " topic:" << topic_name;
@@ -3138,7 +3138,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id
             << " topic:" << topic_name;
@@ -3171,7 +3171,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id;
 
@@ -3220,7 +3220,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id;
 
@@ -3270,7 +3270,7 @@ public:
         async_handler_t func
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id;
 
@@ -3306,7 +3306,7 @@ public:
         async_handler_t func
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id;
 
@@ -3336,7 +3336,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id;
 
@@ -3380,7 +3380,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id;
 
@@ -3409,7 +3409,7 @@ public:
      */
     void async_pingreq(async_handler_t func = {}) {
         MQTT_LOG("mqtt_api", trace)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_pingreq";
 
         if (connected_ && mqtt_connected_) async_send_pingreq(force_move(func));
@@ -3423,7 +3423,7 @@ public:
      */
     void async_pingresp(async_handler_t func = {}) {
         MQTT_LOG("mqtt_api", trace)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_pingrsp";
 
         async_send_pingresp(force_move(func));
@@ -3449,7 +3449,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_auth"
             << " reason:" << reason_code;
 
@@ -3534,7 +3534,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_connect"
             << " client_id:" << client_id
             << " user_name:" << (user_name ? string_view(user_name.value()) : string_view("none"))
@@ -3565,7 +3565,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_connack"
             << " session_present:" << std::boolalpha << session_present
             << " reason:" << reason_code;
@@ -3592,7 +3592,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_connack"
             << " session_present:" << std::boolalpha << session_present
             << " reason:" << reason_code;
@@ -3612,7 +3612,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_puback"
             << " pid:" << packet_id;
 
@@ -3641,7 +3641,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_puback"
             << " pid:" << packet_id
             << " reason:" << reason_code;
@@ -3661,7 +3661,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_pubrec"
             << " pid:" << packet_id;
 
@@ -3690,7 +3690,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_pubrec"
             << " pid:" << packet_id
             << " reason:" << reason_code;
@@ -3710,7 +3710,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_pubrel"
             << " pid:" << packet_id;
 
@@ -3748,7 +3748,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_pubrel"
             << " pid:" << packet_id
             << " reason:" << reason_code;
@@ -3768,7 +3768,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_pubcomp"
             << " pid:" << packet_id;
 
@@ -3797,7 +3797,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_pubcomp"
             << " pid:" << packet_id
             << " reason:" << reason_code;
@@ -3822,7 +3822,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_suback"
             << " pid:" << packet_id
             << " reason:" < reason;
@@ -3857,7 +3857,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_suback"
             << " pid:" << packet_id
             << " reason:" < reason;
@@ -3887,7 +3887,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_suback"
             << " pid:" << packet_id;
 
@@ -3916,7 +3916,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_suback"
             << " pid:" << packet_id;
 
@@ -3940,7 +3940,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsuback"
             << " pid:" << packet_id
             << " reason:" < reason;
@@ -3970,7 +3970,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsuback"
             << " pid:" << packet_id
             << " reason:" < reason;
@@ -3995,7 +3995,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsuback"
             << " pid:" << packet_id;
 
@@ -4024,7 +4024,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsuback"
             << " pid:" << packet_id;
 
@@ -4044,7 +4044,7 @@ public:
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
-            << log::add_value(address, this)
+            << MQTT_ADD_VALUE(address, this)
             << "async_unsuback"
             << " pid:" << packet_id;
 

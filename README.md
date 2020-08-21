@@ -15,25 +15,31 @@ Add mqtt_cpp/include to your include path. Then, include `mqtt_cpp.hpp` and/or `
 For clients:
 ```c++
 #include <mqtt_client_cpp.hpp>
+#include <mqtt/setup_log.hpp> // if you want to use typical logging setup
 ```
+
 For servers:
 ```c++
 #include <mqtt_server_cpp.hpp>
+#include <mqtt/setup_log.hpp> // if you want to use typical logging setup
 ```
 
-You can compile your program as follows:
+You can compile your code as follows:
 
 ```
-g++ -std=c++14 -Ipath_to_mqtt_cpp/include no_tls.cpp -lboost_system -lpthread
+g++ -std=c++14 -Ipath_to_mqtt_cpp/include your_program.cpp -pthread additional_options
 ```
 
-```
-g++ -std=c++14 -Ipath_to_mqtt_cpp/include tls.cpp -lboost_system -lssl -lcrypto -lpthread
-```
+**additional_options**
 
-## WebSocket support
+|what you want|required option|
+|---|---|
+|TLS support|`-DMQTT_USE_TLS -pthread -lssl -lcrypto`|
+|Logging support|`-DMQTT_USE_LOG -DBOOST_LOG_DYN_LINK -lboost_log -lboost_filesystem -lboost_thread`|
+|WebSocket support|`-DMQTT_USE_WS`|
 
-If you want to use MQTT on WebSocket, you need to define `MQTT_USE_WS` macro. mqtt_cpp uses https://github.com/boostorg/beast for WebSocket communication and it requires `boost::string_view`, so the boost library need to support `boost::string_view`.
+You can see more detail at https://github.com/redboltz/mqtt_cpp/wiki/Config
+
 
 ## Example
 
