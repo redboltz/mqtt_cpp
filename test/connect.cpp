@@ -619,7 +619,9 @@ BOOST_AUTO_TEST_CASE( noclean ) {
                         break;
                     case 1:
                         MQTT_CHK("h_connack2");
-                        BOOST_TEST(sp == true);
+                        // The previous connection is not set Session Expiry Interval.
+                        // That means session state is cleared on close.
+                        BOOST_TEST(sp == false);
                         break;
                     case 2:
                         MQTT_CHK("h_connack3");
