@@ -1017,4 +1017,260 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     do_combi_test_sync(test);
 }
 
+BOOST_AUTO_TEST_CASE( publish_session_before_expire ) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
+        }
+
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
+        c->set_clean_session(true);
+
+        std::uint16_t pid_pub;
+
+        boost::asio::steady_timer tim(ioc);
+
+        checker chk = {
+            cont("start"),
+            // connect
+            cont("h_connack1"),
+            // disconnect
+            cont("h_close1"),
+            // connect
+            cont("h_connack2"),
+            // publish topic1 QoS1
+            // force_disconnect
+            cont("h_error"),
+            // connect
+            cont("h_connack3"),
+            cont("h_puback"),
+            // disconnect
+            cont("h_close2"),
+        };
+
+        switch (c->get_protocol_version()) {
+        case MQTT_NS::protocol_version::v5:
+            c->set_v5_connack_handler(
+                [&chk, &c, &pid_pub]
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            // The previous connection is not set Session Expiry Interval.
+                            // That means session state is cleared on close.
+                            BOOST_TEST(sp == false);
+                            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once | MQTT_NS::retain::no);
+                            c->force_disconnect();
+                        },
+                        "h_error",
+                        [&] {
+                            MQTT_CHK("h_connack3");
+                            BOOST_TEST(sp == true);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_v5_puback_handler(
+                [&chk, &c, &pid_pub]
+                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_puback");
+                    BOOST_TEST(packet_id == pid_pub);
+                    c->disconnect();
+                    return true;
+                });
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+
+        c->set_close_handler(
+            [&chk, &c, &finish]
+            () {
+                auto ret = chk.match(
+                    "h_connack1",
+                    [&] {
+                        MQTT_CHK("h_close1");
+                        c->set_clean_start(false);
+                        c->connect(
+                            MQTT_NS::v5::properties {
+                                MQTT_NS::v5::property::session_expiry_interval(2)
+                            }
+                        );
+                    },
+                    "h_puback",
+                    [&] {
+                        MQTT_CHK("h_close2");
+                        finish();
+                    }
+                );
+                BOOST_TEST(ret);
+            });
+        c->set_error_handler(
+            [&chk, &c, &tim]
+            (MQTT_NS::error_code) {
+                MQTT_CHK("h_error");
+                // TCP level disconnection detecting timing is unpredictable.
+                // Sometimes broker first, sometimes the client (this test) first.
+                // This test assume that the broker detects first, so I set timer.
+                // If client detect the disconnection first, then reconnect with
+                // existing client id. And it is overwritten at broker.
+                // Then error handler in the broker called, assertion failed due to
+                // no corresponding connection exists
+                tim.expires_after(std::chrono::milliseconds(100));
+                tim.async_wait(
+                    [&c] (MQTT_NS::error_code ec) {
+                        BOOST_ASSERT( ! ec);
+                        c->set_clean_start(false);
+                        c->connect(
+                            MQTT_NS::v5::properties {
+                                MQTT_NS::v5::property::session_expiry_interval(0xffffffffUL)
+                            }
+                        );
+                    }
+                );
+            });
+        MQTT_CHK("start");
+        c->connect();
+        ioc.run();
+        BOOST_TEST(chk.all());
+    };
+    do_combi_test_sync(test);
+}
+
+BOOST_AUTO_TEST_CASE( publish_session_after_expire ) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
+        }
+
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
+        c->set_clean_session(true);
+
+        std::uint16_t pid_pub;
+
+        boost::asio::steady_timer tim(ioc);
+
+        checker chk = {
+            cont("start"),
+            // connect
+            cont("h_connack1"),
+            // disconnect
+            cont("h_close1"),
+            // connect
+            cont("h_connack2"),
+            // publish topic1 QoS1
+            // force_disconnect
+            cont("h_error"),
+            // connect
+            cont("h_connack3"),
+            // disconnect
+            cont("h_close2"),
+        };
+
+        switch (c->get_protocol_version()) {
+        case MQTT_NS::protocol_version::v5:
+            c->set_v5_connack_handler(
+                [&chk, &c, &pid_pub]
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            // The previous connection is not set Session Expiry Interval.
+                            // That means session state is cleared on close.
+                            BOOST_TEST(sp == false);
+                            pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once | MQTT_NS::retain::no);
+                            c->force_disconnect();
+                        },
+                        "h_error",
+                        [&] {
+                            MQTT_CHK("h_connack3");
+                            BOOST_TEST(sp == false); // session has been expired
+                            c->disconnect();
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_v5_puback_handler(
+                [&chk, &c, &pid_pub]
+                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    BOOST_TEST(false);
+                    return true;
+                });
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+
+        c->set_close_handler(
+            [&chk, &c, &finish]
+            () {
+                auto ret = chk.match(
+                    "h_connack1",
+                    [&] {
+                        MQTT_CHK("h_close1");
+                        c->set_clean_start(false);
+                        c->connect(
+                            MQTT_NS::v5::properties {
+                                MQTT_NS::v5::property::session_expiry_interval(2)
+                            }
+                        );
+                    },
+                    "h_connack3",
+                    [&] {
+                        MQTT_CHK("h_close2");
+                        finish();
+                    }
+                );
+                BOOST_TEST(ret);
+            });
+        c->set_error_handler(
+            [&chk, &c, &tim]
+            (MQTT_NS::error_code) {
+                MQTT_CHK("h_error");
+                tim.expires_after(std::chrono::seconds(3)); // after expired
+                tim.async_wait(
+                    [&c] (MQTT_NS::error_code ec) {
+                        BOOST_ASSERT( ! ec);
+                        c->set_clean_start(false);
+                        c->connect(
+                            MQTT_NS::v5::properties {
+                                MQTT_NS::v5::property::session_expiry_interval(0xffffffffUL)
+                            }
+                        );
+                    }
+                );
+            });
+        MQTT_CHK("start");
+        c->connect();
+        ioc.run();
+        BOOST_TEST(chk.all());
+    };
+    do_combi_test_sync(test);
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()
