@@ -1135,7 +1135,9 @@ BOOST_AUTO_TEST_CASE( publish_session_before_expire ) {
                         c->set_clean_start(false);
                         c->connect(
                             MQTT_NS::v5::properties {
-                                MQTT_NS::v5::property::session_expiry_interval(0xffffffffUL)
+                                MQTT_NS::v5::property::session_expiry_interval(
+                                    MQTT_NS::session_never_expire
+                                )
                             }
                         );
                     }
@@ -1258,7 +1260,9 @@ BOOST_AUTO_TEST_CASE( publish_session_after_expire ) {
                         c->set_clean_start(false);
                         c->connect(
                             MQTT_NS::v5::properties {
-                                MQTT_NS::v5::property::session_expiry_interval(0xffffffffUL)
+                                MQTT_NS::v5::property::session_expiry_interval(
+                                    MQTT_NS::session_never_expire
+                                )
                             }
                         );
                     }

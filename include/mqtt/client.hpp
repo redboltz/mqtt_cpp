@@ -33,6 +33,7 @@
 #include <mqtt/endpoint.hpp>
 #include <mqtt/null_strand.hpp>
 #include <mqtt/move.hpp>
+#include <mqtt/constant.hpp>
 
 #include <mqtt/callable_overlay.hpp>
 
@@ -1422,7 +1423,7 @@ private:
 
     void set_session_expiry_timer() {
         if (base::get_protocol_version() != protocol_version::v5) return;
-        if (session_expiry_interval_== 0xffffffff) return;
+        if (session_expiry_interval_== session_never_expire) return;
         if (session_expiry_interval_== 0) {
             base::clear_session_data();
             return;

@@ -1018,7 +1018,8 @@ private:
             BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().find(client_id) == non_active_sessions_.get<tag_client_id>().end());
 
             auto const& sei_opt = state->session_expiry_interval;
-            if (sei_opt && sei_opt.value() != std::chrono::seconds(0xffffffffUL)) {
+            if (sei_opt && sei_opt.value() !=
+                std::chrono::seconds(MQTT_NS::session_never_expire)) {
                 state->tim_session_expiry.expires_after(sei_opt.value());
                 state->tim_session_expiry.async_wait(
                     [&, wp = session_state_wp(state)]
