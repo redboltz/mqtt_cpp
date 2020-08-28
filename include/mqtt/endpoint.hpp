@@ -4567,8 +4567,13 @@ protected:
         version_ = version;
     }
 
-private:
+    void clear_session_data() {
+        LockGuard<Mutex> lck (store_mtx_);
+        store_.clear();
+        packet_id_.clear();
+    }
 
+private:
     bool check_transferred_length(
         std::size_t bytes_transferred,
         std::size_t bytes_expected) {
@@ -6841,9 +6846,7 @@ private:
                 || (   (1 == variant_idx(info.reason_code))
                     && (v5::connect_reason_code::success == variant_get<v5::connect_reason_code>(info.reason_code)))) {
                 if (clean_session_) {
-                    LockGuard<Mutex> lck (store_mtx_);
-                    store_.clear();
-                    packet_id_.clear();
+                    clear_session_data();
                 }
                 else {
                     if (async_send_store_) {

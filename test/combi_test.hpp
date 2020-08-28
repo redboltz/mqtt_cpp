@@ -66,6 +66,7 @@ inline void do_test(
                 iocb,
                 [&] {
                     s->close();
+                    b.clear_all_sessions();
                 }
             );
         },
@@ -116,6 +117,7 @@ inline void do_tls_test(
                 iocb,
                 [&] {
                     s->close();
+                    b.clear_all_sessions();
                 }
             );
         },
@@ -164,6 +166,7 @@ inline void do_ws_test(
                 iocb,
                 [&] {
                     s->close();
+                    b.clear_all_sessions();
                 }
             );
         },
@@ -214,6 +217,7 @@ inline void do_tls_ws_test(
                 iocb,
                 [&] {
                     s->close();
+                    b.clear_all_sessions();
                 }
             );
         },

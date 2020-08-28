@@ -33,6 +33,7 @@
 #include <mqtt/endpoint.hpp>
 #include <mqtt/null_strand.hpp>
 #include <mqtt/move.hpp>
+#include <mqtt/constant.hpp>
 
 #include <mqtt/callable_overlay.hpp>
 
@@ -811,6 +812,7 @@ public:
                     }
                 }
             );
+            set_session_expiry_interval_on_disconnect(props);
             base::disconnect(reason_code, force_move(props));
         }
     }
@@ -836,6 +838,7 @@ public:
     ) {
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
         if (base::connected()) {
+            set_session_expiry_interval_on_disconnect(props);
             base::disconnect(reason_code, force_move(props));
         }
     }
@@ -912,6 +915,7 @@ public:
                     }
                 }
             );
+            set_session_expiry_interval_on_disconnect(props);
             base::async_disconnect(reason_code, force_move(props), force_move(func));
         }
     }
@@ -954,6 +958,7 @@ public:
         async_handler_t func = async_handler_t()) {
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
         if (base::connected()) {
+            set_session_expiry_interval_on_disconnect(props);
             base::async_disconnect(reason_code, force_move(props), force_move(func));
         }
     }
@@ -1008,6 +1013,8 @@ protected:
          ,
          path_(force_move(path))
 #endif // defined(MQTT_USE_WS)
+         ,
+         tim_session_expiry_(ioc_)
     {
 #if defined(MQTT_USE_TLS)
         ctx_.set_verify_mode(as::ssl::verify_peer);
@@ -1291,6 +1298,7 @@ private:
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
             set_timer();
         }
+        session_expiry_interval_ = get_session_expiry_interval_by_props(props).value_or(0);
         handshake_socket(socket, force_move(props), force_move(session_life_keeper));
     }
 
@@ -1308,6 +1316,7 @@ private:
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
             set_timer();
         }
+        session_expiry_interval_ = get_session_expiry_interval_by_props(props).value_or(0);
         handshake_socket(socket, force_move(props), force_move(session_life_keeper), ec);
     }
 
@@ -1338,6 +1347,7 @@ private:
                 if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
                     set_timer();
                 }
+                session_expiry_interval_ = get_session_expiry_interval_by_props(props).value_or(0);
                 async_handshake_socket(socket, force_move(props), force_move(session_life_keeper), force_move(func));
             });
     }
@@ -1378,14 +1388,94 @@ private:
         set_timer();
     }
 
+    static optional<session_expiry_interval_t> get_session_expiry_interval_by_props(v5::properties const& props) {
+        bool finish = false;
+        optional<session_expiry_interval_t > val;
+        for (auto const& prop : props) {
+            MQTT_NS::visit(
+                make_lambda_visitor(
+                    [&finish, &val](v5::property::session_expiry_interval const& p) {
+                        val = p.val();
+                        finish = true;
+                    },
+                    [](auto&&) {
+                    }
+                ), prop
+            );
+            if (finish) break;
+        }
+        return val;
+    }
+
+    void set_session_expiry_interval_on_disconnect(v5::properties const& props) {
+        auto sei = get_session_expiry_interval_by_props(props);
+        if (!sei) return;
+
+        if (session_expiry_interval_ == 0 && sei.value() != 0) {
+            MQTT_LOG("mqtt_api", warning)
+                << MQTT_ADD_VALUE(address, this)
+                << "session_expiry_interval was 0 but at disconnect "
+                << sei.value()
+                << " is set.";
+        }
+        session_expiry_interval_ = sei.value();
+    }
+
+    void set_session_expiry_timer() {
+        if (base::get_protocol_version() != protocol_version::v5) return;
+        if (session_expiry_interval_== session_never_expire) return;
+        if (session_expiry_interval_== 0) {
+            base::clear_session_data();
+            return;
+        }
+        tim_session_expiry_.expires_after(std::chrono::seconds(session_expiry_interval_));
+        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+        tim_session_expiry_.async_wait(
+            [wp = force_move(wp)](error_code ec) {
+                if (auto sp = wp.lock()) {
+                    if (!ec) {
+                        sp->clear_session_data();
+                    }
+                }
+            }
+        );
+
+    }
+
+public:
+    void cancel_session_expiry_timer() {
+        tim_session_expiry_.cancel();
+    }
+
 protected:
+    bool on_v5_connack(bool session_present,
+                       v5::connect_reason_code reason_code,
+                       v5::properties props) noexcept override {
+        cancel_session_expiry_timer();
+
+        // The current implementation is simply
+        // overwrite by broker's session expiry interval
+        //
+        // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901082
+        // broker could return session expiry interval with CONNACK
+        // only when the client sent CONNECT withou session expiry interval.
+        // The spec doesn't say this rule violation case.
+        auto sei = get_session_expiry_interval_by_props(props);
+        if (sei) {
+            session_expiry_interval_ = sei.value();
+        }
+        return true;
+    }
+
     void on_close() noexcept override {
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        set_session_expiry_timer();
     }
 
     void on_error(error_code ec) noexcept override {
         (void)ec;
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        set_session_expiry_timer();
     }
 
     // Ensure that only code that knows the *exact* type of an object
@@ -1434,6 +1524,8 @@ private:
 #if defined(MQTT_USE_WS)
     std::string path_;
 #endif // defined(MQTT_USE_WS)
+    session_expiry_interval_t session_expiry_interval_ = 0;
+    as::steady_timer tim_session_expiry_;
 };
 
 inline std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ip::tcp::socket, as::io_context::strand>>>>

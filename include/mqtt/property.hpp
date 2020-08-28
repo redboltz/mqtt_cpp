@@ -30,6 +30,7 @@
 #include <mqtt/variable_length.hpp>
 #include <mqtt/buffer.hpp>
 #include <mqtt/move.hpp>
+#include <mqtt/type.hpp>
 
 namespace MQTT_NS {
 
@@ -304,14 +305,16 @@ class session_expiry_interval : public detail::n_bytes_property<4> {
 public:
     using recv = session_expiry_interval;
     using store = session_expiry_interval;
-    session_expiry_interval(std::uint32_t val)
-        : detail::n_bytes_property<4>(id::session_expiry_interval, { num_to_4bytes(val) } ) {}
+    session_expiry_interval(session_expiry_interval_t val)
+        : detail::n_bytes_property<4>(id::session_expiry_interval, { num_to_4bytes(val) } ) {
+        static_assert(sizeof(session_expiry_interval_t) == 4, "sizeof(sesion_expiry_interval) should be 4");
+    }
 
     template <typename It>
     session_expiry_interval(It b, It e)
         : detail::n_bytes_property<4>(id::session_expiry_interval, b, e) {}
 
-    std::uint32_t val() const {
+    session_expiry_interval_t val() const {
         return make_uint32_t(buf_.begin(), buf_.end());
     }
 };

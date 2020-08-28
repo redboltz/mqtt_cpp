@@ -15,8 +15,13 @@ template <typename Client>
 inline void connect_no_clean(Client& c) {
     c->set_clean_session(false);
     if (c->get_protocol_version() == MQTT_NS::protocol_version::v5) {
-        // set session_expiry_interval as infinity.
-        c->connect(MQTT_NS::v5::properties{MQTT_NS::v5::property::session_expiry_interval(0xFFFFFFFFUL)});
+        c->connect(
+            MQTT_NS::v5::properties{
+                MQTT_NS::v5::property::session_expiry_interval(
+                    MQTT_NS::session_never_expire
+                )
+            }
+        );
     }
     else {
         c->connect();
@@ -27,8 +32,13 @@ template <typename Client>
 inline void async_connect_no_clean(Client& c) {
     c->set_clean_session(false);
     if (c->get_protocol_version() == MQTT_NS::protocol_version::v5) {
-        // set session_expiry_interval as infinity.
-        c->async_connect(std::vector<MQTT_NS::v5::property_variant>{MQTT_NS::v5::property::session_expiry_interval(0xFFFFFFFFUL)});
+        c->async_connect(
+            std::vector<MQTT_NS::v5::property_variant>{
+                MQTT_NS::v5::property::session_expiry_interval(
+                    MQTT_NS::session_never_expire
+                )
+            }
+        );
     }
     else {
         c->async_connect();

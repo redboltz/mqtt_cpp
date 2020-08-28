@@ -414,6 +414,11 @@ public:
         h_auth_props_ = MQTT_NS::force_move(h);
     }
 
+    void clear_all_sessions() {
+        active_sessions_.clear();
+        non_active_sessions_.clear();
+    }
+
 private:
     /**
      * @brief connect_proc Process an incoming CONNECT packet
@@ -537,10 +542,12 @@ private:
             // If we have a saved session, we can transfer the state from it
             // to the active_session container.
             if(non_act_sess_it == non_act_sess_idx.end()) {
-                auto const& ret = active_sessions_.emplace(spep,
-                                                           client_id,
-                                                           MQTT_NS::force_move(will),
-                                                           MQTT_NS::force_move(session_expiry_interval));
+                auto const& ret = active_sessions_.emplace(
+                    spep,
+                    client_id,
+                    MQTT_NS::force_move(will),
+                    MQTT_NS::force_move(session_expiry_interval)
+                );
                 BOOST_ASSERT(ret.second);
                 act_sess_it = active_sessions_.project<tag_client_id>(ret.first);
                 BOOST_ASSERT(act_sess_it->client_id == client_id);
@@ -963,8 +970,18 @@ private:
 
         MQTT_NS::buffer client_id;
         MQTT_NS::optional<MQTT_NS::will> will;
-        bool session_clear = !act_sess_it->session_expiry_interval;
-        if (ep.clean_session() && session_clear) {
+        bool session_clear =
+            [&] {
+                if (ep.get_protocol_version() == MQTT_NS::protocol_version::v3_1_1) {
+                    return ep.clean_session();
+                }
+                else {
+                    BOOST_ASSERT(ep.get_protocol_version() == MQTT_NS::protocol_version::v5);
+                    auto const& sei_opt = act_sess_it->session_expiry_interval;
+                    return !sei_opt || sei_opt.value() == std::chrono::steady_clock::duration::zero();
+                }
+            } ();
+        if (session_clear) {
             client_id = std::move(act_sess_it->client_id);
             will = std::move(act_sess_it->will);
 
@@ -997,6 +1014,23 @@ private:
             BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().count(client_id) == 0);
             BOOST_ASSERT(non_active_sessions_.get<tag_client_id>().find(client_id) == non_active_sessions_.get<tag_client_id>().end());
 
+            auto const& sei_opt = state.session_expiry_interval;
+            if (sei_opt && sei_opt.value() !=
+                std::chrono::seconds(MQTT_NS::session_never_expire)) {
+                state.tim_session_expiry = std::make_shared<as::steady_timer>(ioc_);
+                state.tim_session_expiry->expires_after(sei_opt.value());
+                state.tim_session_expiry->async_wait(
+                    [&, wp = std::weak_ptr<as::steady_timer>(state.tim_session_expiry)]
+                    (MQTT_NS::error_code ec) {
+                        auto sp = wp.lock();
+                        if (!ec) {
+                            auto& idx = non_active_sessions_.get<tag_tim>();
+                            idx.erase(sp);
+                        }
+                    }
+                );
+            }
+
             auto const& ret = non_active_sessions_.insert(MQTT_NS::force_move(state));
             (void)ret;
             BOOST_ASSERT(ret.second);
@@ -1011,7 +1045,7 @@ private:
             auto& idx = subs_.get<tag_con>();
             auto const& range = boost::make_iterator_range(idx.equal_range(spep));
             // In v3_1_1, session_expiry_interval is not set. So clean on close.
-            if (ep.clean_session() && session_clear) {
+            if (session_clear) {
                 // Remove all subscriptions for this clientid
                 idx.erase(range.begin(), range.end());
             }
@@ -1046,6 +1080,7 @@ private:
     struct tag_con {};
     struct tag_topic {};
     struct tag_client_id {};
+    struct tag_tim {};
 
     /**
      * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Session_State
@@ -1093,6 +1128,7 @@ private:
         MQTT_NS::optional<MQTT_NS::will> will;
         MQTT_NS::optional<std::chrono::steady_clock::duration> will_delay;
         MQTT_NS::optional<std::chrono::steady_clock::duration> session_expiry_interval;
+        std::shared_ptr<as::steady_timer> tim_session_expiry;
     };
 
     // The mi_active_sessions container holds the relevant data about an active connection with the broker.
@@ -1119,6 +1155,10 @@ private:
             mi::ordered_unique<
                 mi::tag<tag_client_id>,
                 BOOST_MULTI_INDEX_MEMBER(session_state, MQTT_NS::buffer, client_id)
+            >,
+            mi::ordered_unique<
+                mi::tag<tag_tim>,
+                BOOST_MULTI_INDEX_MEMBER(session_state, std::shared_ptr<as::steady_timer>, tim_session_expiry)
             >
         >
     >;

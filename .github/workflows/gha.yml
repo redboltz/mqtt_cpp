@@ -79,7 +79,7 @@ jobs:
         LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED -fsanitize=address
       run: |
         CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
-        cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first
+        cmake --build ${{ runner.temp }} --clean-first
     - name: Compile without Sanitizer
       if: (matrix.pattern == 0) || (matrix.pattern == 4) || (matrix.pattern == 5) || (matrix.pattern == 6) || (matrix.pattern == 7)
       env:
@@ -88,7 +88,7 @@ jobs:
         LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED
       run: |
         CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
-        cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first
+        cmake --build ${{ runner.temp }} --clean-first
     - name: Test
       working-directory: ${{ runner.temp }}
       run: |
