@@ -1388,9 +1388,9 @@ private:
         set_timer();
     }
 
-    static optional<std::uint32_t> get_session_expiry_interval_by_props(v5::properties const& props) {
+    static optional<session_expiry_interval_t> get_session_expiry_interval_by_props(v5::properties const& props) {
         bool finish = false;
-        optional<std::uint32_t> val;
+        optional<session_expiry_interval_t > val;
         for (auto const& prop : props) {
             MQTT_NS::visit(
                 make_lambda_visitor(
@@ -1524,7 +1524,7 @@ private:
 #if defined(MQTT_USE_WS)
     std::string path_;
 #endif // defined(MQTT_USE_WS)
-    std::uint32_t session_expiry_interval_ = 0;
+    session_expiry_interval_t session_expiry_interval_ = 0;
     as::steady_timer tim_session_expiry_;
 };
 

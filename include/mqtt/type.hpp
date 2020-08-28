@@ -4,15 +4,15 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#if !defined(MQTT_CONSTANT_HPP)
-#define MQTT_CONSTANT_HPP
+#if !defined(MQTT_TYPE_HPP)
+#define MQTT_TYPE_HPP
 
-#include <mqtt/type.hpp>
+#include <cstdint>
 
 namespace MQTT_NS {
 
-static constexpr session_expiry_interval_t const session_never_expire = 0xffffffffUL;
+using session_expiry_interval_t = std::uint32_t;
 
 } // namespace MQTT_NS
 
-#endif // MQTT_CONSTANT_HPP
+#endif // MQTT_TYPE_HPP
