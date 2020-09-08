@@ -101,9 +101,20 @@ public:
             });
         ep.set_error_handler(
             [this, wp]
-            (MQTT_NS::error_code /*ec*/){
+            (MQTT_NS::error_code ec){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
+
+                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#S4_13_Errors
+                if (ec == boost::system::errc::protocol_error) {
+                    if (sp->connected()) {
+                        sp->disconnect(MQTT_NS::v5::disconnect_reason_code::protocol_error);
+                    }
+                    else { // connecting
+                        sp->connack(false, MQTT_NS::v5::connect_reason_code::protocol_error);
+                    }
+                }
+
                 close_proc(MQTT_NS::force_move(sp), true);
             });
 
