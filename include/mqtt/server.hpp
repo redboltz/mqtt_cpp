@@ -383,8 +383,12 @@ private:
                     (error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return;
-                        boost::system::error_code close_ec;
-                        socket->lowest_layer().close(close_ec);
+                        socket->post(
+                            [socket] {
+                                boost::system::error_code close_ec;
+                                socket->lowest_layer().close(close_ec);
+                            }
+                        );
                     }
                 );
                 auto ps = socket.get();
@@ -582,8 +586,12 @@ private:
                     (error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return;
-                        boost::system::error_code close_ec;
-                        socket->lowest_layer().close(close_ec);
+                        socket->post(
+                            [socket] {
+                                boost::system::error_code close_ec;
+                                socket->lowest_layer().close(close_ec);
+                            }
+                        );
                     }
                 );
 
@@ -864,8 +872,12 @@ private:
                     (error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return;
-                        boost::system::error_code close_ec;
-                        socket->lowest_layer().close(close_ec);
+                        socket->post(
+                            [socket] {
+                                boost::system::error_code close_ec;
+                                socket->lowest_layer().close(close_ec);
+                            }
+                        );
                     }
                 );
 
