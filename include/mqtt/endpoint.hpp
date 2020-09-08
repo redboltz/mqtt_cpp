@@ -4578,7 +4578,7 @@ private:
         std::size_t bytes_transferred,
         std::size_t bytes_expected) {
         if (bytes_transferred != bytes_expected) {
-            call_message_size_error_handlers();
+            call_bad_message_error_handlers();
             return false;
         }
         return true;
@@ -4593,8 +4593,8 @@ private:
         return true;
     }
 
-    void call_message_size_error_handlers() {
-        clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+    void call_bad_message_error_handlers() {
+        clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::bad_message));
     }
 
     void call_protocol_error_handlers() {
@@ -4712,7 +4712,7 @@ private:
 
     void handle_remaining_length(any session_life_keeper, this_type_sp self) {
         if (!calc_variable_length(remaining_length_, remaining_length_multiplier_, buf_.front())) {
-            clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+            call_protocol_error_handlers();
             return;
         }
         if (buf_.front() & variable_length_continue_flag) {
@@ -4726,7 +4726,7 @@ private:
                         return;
                     }
                     if (bytes_transferred != 1) {
-                        clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                        call_bad_message_error_handlers();
                         return;
                     }
                     handle_remaining_length(force_move(session_life_keeper), force_move(self));
@@ -4790,7 +4790,7 @@ private:
                     }
                 };
             if (!check()) {
-                clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                call_protocol_error_handlers();
                 return;
             }
 
@@ -4915,7 +4915,7 @@ private:
         this_type_sp self
     ) {
         if (remaining_length_ < size) {
-            call_message_size_error_handlers();
+            call_protocol_error_handlers();
             return;
         }
         remaining_length_ -= size;
@@ -4947,7 +4947,7 @@ private:
         }
         else {
             if (buf.size() < size) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             socket_->post(
@@ -4978,7 +4978,7 @@ private:
         this_type_sp self
     ) {
         if (remaining_length_ < Bytes) {
-            call_message_size_error_handlers();
+            call_protocol_error_handlers();
             return;
         }
 
@@ -5061,7 +5061,7 @@ private:
         this_type_sp self
     ) {
         if (remaining_length_ == 0) {
-            call_message_size_error_handlers();
+            call_protocol_error_handlers();
             return;
         }
         --remaining_length_;
@@ -5080,7 +5080,7 @@ private:
                 this_type_sp&& self
             ) mutable {
                 if (!calc_variable_length(size, multiplier, buf.front())) {
-                    call_message_size_error_handlers();
+                    call_protocol_error_handlers();
                     return;
                 }
                 if (buf.front() & variable_length_continue_flag) {
@@ -5184,7 +5184,7 @@ private:
         this_type_sp self
     ) {
         if (remaining_length_ < 2) {
-            call_message_size_error_handlers();
+            call_protocol_error_handlers();
             return;
         }
         process_fixed_length<2>(
@@ -5199,7 +5199,7 @@ private:
              any session_life_keeper,
              this_type_sp self) mutable {
                 if (remaining_length_ < size) {
-                    call_message_size_error_handlers();
+                    call_protocol_error_handlers();
                     return;
                 }
                 process_nbytes(
@@ -5252,7 +5252,7 @@ private:
             ]
             (std::size_t property_length, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                 if (property_length > remaining_length_) {
-                    call_message_size_error_handlers();
+                    call_protocol_error_handlers();
                     return;
                 }
                 if (property_length == 0) {
@@ -5419,7 +5419,7 @@ private:
         static constexpr std::size_t length_bytes = 2;
 
         if (property_length_rest == 0) {
-            call_message_size_error_handlers();
+            call_protocol_error_handlers();
             return;
         }
 
@@ -5427,7 +5427,7 @@ private:
         case v5::property::id::payload_format_indicator: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -5459,7 +5459,7 @@ private:
         case v5::property::id::message_expiry_interval: {
             static constexpr std::size_t len = 4;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -5601,7 +5601,7 @@ private:
         case v5::property::id::session_expiry_interval: {
             static constexpr std::size_t len = 4;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -5661,7 +5661,7 @@ private:
         case v5::property::id::server_keep_alive: {
             static constexpr std::size_t len = 2;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -5747,7 +5747,7 @@ private:
         case v5::property::id::request_problem_information: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -5779,7 +5779,7 @@ private:
         case v5::property::id::will_delay_interval: {
             static constexpr std::size_t len = 4;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -5811,7 +5811,7 @@ private:
         case v5::property::id::request_response_information: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -5924,7 +5924,7 @@ private:
         case v5::property::id::receive_maximum: {
             static constexpr std::size_t len = 2;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -5956,7 +5956,7 @@ private:
         case v5::property::id::topic_alias_maximum: {
             static constexpr std::size_t len = 2;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -5988,7 +5988,7 @@ private:
         case v5::property::id::topic_alias: {
             static constexpr std::size_t len = 2;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -6020,7 +6020,7 @@ private:
         case v5::property::id::maximum_qos: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -6052,7 +6052,7 @@ private:
         case v5::property::id::retain_available: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -6131,7 +6131,7 @@ private:
         case v5::property::id::maximum_packet_size: {
             static constexpr std::size_t len = 4;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -6163,7 +6163,7 @@ private:
         case v5::property::id::wildcard_subscription_available: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -6195,7 +6195,7 @@ private:
         case v5::property::id::subscription_identifier_available: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
@@ -6227,7 +6227,7 @@ private:
         case v5::property::id::shared_subscription_available: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                call_message_size_error_handlers();
+                call_protocol_error_handlers();
                 return;
             }
             process_nbytes(
