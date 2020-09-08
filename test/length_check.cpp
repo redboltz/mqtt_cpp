@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             [&chk, &c, &finish]
             (MQTT_NS::error_code ec) {
                 MQTT_CHK("h_error");
-                BOOST_TEST(ec == boost::system::errc::message_size);
+                BOOST_TEST(ec == boost::system::errc::protocol_error);
                 finish();
                 c->force_disconnect();
             });
