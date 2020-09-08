@@ -1198,10 +1198,11 @@ BOOST_AUTO_TEST_CASE( async_pingresp_timeout ) {
 
 BOOST_AUTO_TEST_CASE( connect_prop ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
-    if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
-        finish();
-        return;
-    }
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
+        }
+
         c->set_client_id("cid1");
         c->set_clean_session(true);
         BOOST_TEST(c->connected() == false);
@@ -1319,10 +1320,11 @@ BOOST_AUTO_TEST_CASE( connect_prop ) {
 
 BOOST_AUTO_TEST_CASE( disconnect_prop ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
-    if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
-        finish();
-        return;
-    }
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
+        }
+
         c->set_client_id("cid1");
         c->set_clean_session(true);
         BOOST_TEST(c->connected() == false);

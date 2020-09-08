@@ -23,6 +23,7 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
         }
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
         c->set_clean_session(true);
 
         std::uint16_t pid_sub;

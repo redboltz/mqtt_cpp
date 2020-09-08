@@ -20,7 +20,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::uint16_t pid_pub;
+        packet_id_t pid_pub;
 
         boost::asio::steady_timer tim(ioc);
 
@@ -244,7 +244,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::uint16_t pid_pub;
+        packet_id_t pid_pub;
 
         boost::asio::steady_timer tim(ioc);
 
@@ -413,7 +413,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::uint16_t pid_pub;
+        packet_id_t pid_pub;
 
         boost::asio::steady_timer tim(ioc);
 
@@ -633,7 +633,7 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::uint16_t pid_pub;
+        packet_id_t pid_pub;
 
         boost::asio::steady_timer tim(ioc);
 
@@ -842,8 +842,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::uint16_t pid_pub1;
-        std::uint16_t pid_pub2;
+        packet_id_t pid_pub1;
+        packet_id_t pid_pub2;
 
         boost::asio::steady_timer tim(ioc);
 
@@ -1028,7 +1028,7 @@ BOOST_AUTO_TEST_CASE( publish_session_before_expire ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::uint16_t pid_pub;
+        packet_id_t pid_pub;
 
         boost::asio::steady_timer tim(ioc);
 
@@ -1162,7 +1162,7 @@ BOOST_AUTO_TEST_CASE( publish_session_after_expire ) {
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
-        std::uint16_t pid_pub;
+        packet_id_t pid_pub;
 
         boost::asio::steady_timer tim(ioc);
 

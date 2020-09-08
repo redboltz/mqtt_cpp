@@ -64,6 +64,7 @@
 #include <mqtt/error_code.hpp>
 #include <mqtt/log.hpp>
 #include <mqtt/variant_visit.hpp>
+#include <mqtt/topic_alias_recv.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -990,9 +991,7 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "force_disconnect";
 
-        connected_ = false;
-        mqtt_connected_ = false;
-        shutdown_from_client(*socket_);
+        shutdown(socket());
     }
 
     /**
@@ -4499,6 +4498,28 @@ public:
         pingresp_timeout_ = mqtt::force_move(tim);
     }
 
+    /**
+     * @brief get topic alias recv container.
+     * @return a copy of topic alias recv container
+     *
+     * This function for dump/restore topic alias recv container.
+     */
+    topic_alias_recv_map_t get_topic_alias_recv_container() const {
+        LockGuard<Mutex> lck (topic_alias_recv_mtx_);
+        return topic_alias_recv_;
+    }
+
+    /**
+     * @brief restore topic alias recv container.
+     * @param con topic alias recv container to restore
+     *
+     * This function for dump/restore topic alias recv container.
+     */
+    void restore_topic_alias_recv_container(topic_alias_recv_map_t con) {
+        LockGuard<Mutex> lck (topic_alias_recv_mtx_);
+        topic_alias_recv_ = MQTT_NS::force_move(con);
+    }
+
 protected:
 
     /**
@@ -4568,9 +4589,15 @@ protected:
     }
 
     void clear_session_data() {
-        LockGuard<Mutex> lck (store_mtx_);
-        store_.clear();
-        packet_id_.clear();
+        {
+            LockGuard<Mutex> lck (store_mtx_);
+            store_.clear();
+            packet_id_.clear();
+        }
+        {
+            LockGuard<Mutex> lck (topic_alias_recv_mtx_);
+            clear_topic_alias(topic_alias_recv_);
+        }
     }
 
 private:
@@ -4602,7 +4629,10 @@ private:
     }
 
     template <typename T>
-    void shutdown_from_client(T& socket) {
+    void shutdown(T& socket) {
+        connected_ = false;
+        mqtt_connected_ = false;
+
         boost::system::error_code ec;
         socket.lowest_layer().close(ec);
     }
@@ -7045,6 +7075,31 @@ private:
                                 }
                                 break;
                             case protocol_version::v5:
+                                if (info.topic_name.empty()) {
+                                    if (auto topic_alias = get_topic_alias_by_props(info.props)) {
+                                        auto topic_name = [&] {
+                                            LockGuard<Mutex> lck (topic_alias_recv_mtx_);
+                                            return find_topic_by_alias(topic_alias_recv_, topic_alias.value());
+                                        }();
+                                        if (topic_name.empty()) {
+                                            MQTT_LOG("mqtt_cb", error)
+                                                << MQTT_ADD_VALUE(address, this)
+                                                << "no matching topic alias: "
+                                                << topic_alias.value();
+                                            call_protocol_error_handlers();
+                                            return false;
+                                        }
+                                        else {
+                                            info.topic_name = allocate_buffer(topic_name);
+                                        }
+                                    }
+                                }
+                                else {
+                                    if (auto topic_alias = get_topic_alias_by_props(info.props)) {
+                                        LockGuard<Mutex> lck (topic_alias_recv_mtx_);
+                                        register_topic_alias(topic_alias_recv_, info.topic_name, topic_alias.value());
+                                    }
+                                }
                                 if (on_v5_publish(
                                             info.packet_id,
                                             publish_options(fixed_header_),
@@ -8585,6 +8640,8 @@ private:
             default:
                 BOOST_ASSERT(false);
             }
+            shutdown(*socket_);
+            on_mqtt_message_processed(force_move(session_life_keeper));
             break;
         }
     }
@@ -9928,6 +9985,29 @@ private:
         );
     }
 
+    static optional<topic_alias_t> get_topic_alias_by_prop(v5::property_variant const& prop) {
+        optional<topic_alias_t> val;
+        MQTT_NS::visit(
+            make_lambda_visitor(
+                [&val](v5::property::topic_alias const& p) {
+                    val = p.val();
+                },
+                [](auto&&) {
+                }
+            ), prop
+        );
+        return val;
+    }
+
+    static optional<topic_alias_t> get_topic_alias_by_props(v5::properties const& props) {
+        for (auto const& prop : props) {
+            if (auto val = get_topic_alias_by_prop(prop)) {
+                return val;
+            }
+        }
+        return nullopt;
+    }
+
 protected:
     // Ensure that only code that knows the *exact* type of an object
     // inheriting from this abstract base class can destruct it.
@@ -9976,6 +10056,9 @@ private:
     std::chrono::steady_clock::duration pingresp_timeout_ = std::chrono::steady_clock::duration::zero();
     as::steady_timer tim_pingresp_;
     bool tim_pingresp_set_ = false;
+
+    mutable Mutex topic_alias_recv_mtx_;
+    topic_alias_recv_map_t topic_alias_recv_;
 };
 
 } // namespace MQTT_NS

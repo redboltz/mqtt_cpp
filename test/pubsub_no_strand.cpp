@@ -43,6 +43,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
     boost::asio::io_context ioc;
     auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_sub;
@@ -168,6 +169,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
     boost::asio::io_context ioc;
     auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -293,6 +295,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
     boost::asio::io_context ioc;
     auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -420,6 +423,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
     boost::asio::io_context ioc;
     auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_sub;
@@ -542,6 +546,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
     boost::asio::io_context ioc;
     auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -676,6 +681,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
     boost::asio::io_context ioc;
     auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -813,6 +819,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
     boost::asio::io_context ioc;
     auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_sub;
@@ -936,6 +943,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
     boost::asio::io_context ioc;
     auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -1071,6 +1079,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
     boost::asio::io_context ioc;
     auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_pub;
@@ -1208,6 +1217,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
     boost::asio::io_context ioc;
     auto c = MQTT_NS::make_client_no_strand(ioc, broker_url, broker_notls_port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+    c->set_client_id("cid1");
     c->set_clean_session(true);
 
     std::uint16_t pid_sub;
