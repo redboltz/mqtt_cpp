@@ -28,6 +28,8 @@ IF (POLICY CMP0074)
   CMAKE_POLICY(SET CMP0074 NEW)
 ENDIF ()
 
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake ${CMAKE_MODULE_PATH})
+
 IF (MQTT_USE_TLS)
     MESSAGE (STATUS "TLS enabled")
 ELSE ()
@@ -145,6 +147,7 @@ IF (MQTT_USE_TLS)
     ELSE ()
         find_package(GnuTLS REQUIRED)
         find_package(BoostAsioGnuTLS REQUIRED)
+    ENDIF ()
 ENDIF ()
 
 ADD_SUBDIRECTORY (include)
