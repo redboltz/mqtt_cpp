@@ -10,7 +10,13 @@
 #if defined(MQTT_USE_TLS)
 
 #include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
+
+#if !defined(MQTT_USE_GNU_TLS)
+    #include <boost/asio/ssl.hpp>
+#else
+    #include <boost/asio/gnutls.hpp>
+    #include <gnutls/gnutls.h>
+#endif // !defined(MQTT_USE_TLS)
 
 #include "test_settings.hpp"
 

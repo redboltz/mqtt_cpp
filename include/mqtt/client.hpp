@@ -21,7 +21,12 @@
 #include <boost/asio.hpp>
 
 #if defined(MQTT_USE_TLS)
-#include <boost/asio/ssl.hpp>
+#if !defined(MQTT_USE_GNU_TLS)
+    #include <boost/asio/ssl.hpp>
+#else
+    #include <boost/asio/gnutls.hpp>
+    #include <gnutls/gnutls.h>
+#endif // !defined(MQTT_USE_TLS)
 #endif // defined(MQTT_USE_TLS)
 
 #include <mqtt/tcp_endpoint.hpp>
