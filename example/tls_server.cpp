@@ -20,6 +20,16 @@ namespace mi = boost::multi_index;
 using con_t = MQTT_NS::server_tls<>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
 
+namespace as = boost::asio;
+
+#if defined(MQTT_USE_TLS)
+#if !defined(MQTT_USE_GNU_TLS)
+    namespace ssl = as::ssl;
+#else
+    namespace ssl = as::gnutls;
+#endif // !defined(MQTT_USE_TLS)
+#endif // defined(MQTT_USE_TLS)
+
 struct sub_con {
     sub_con(MQTT_NS::buffer topic, con_sp_t con, MQTT_NS::qos qos_value)
         :topic(std::move(topic)), con(std::move(con)), qos_value(qos_value) {}
@@ -68,12 +78,12 @@ int main(int argc, char** argv) {
     std::string cert = argv[2];
     std::string key = argv[3];
 
-    boost::asio::ssl::context  ctx(boost::asio::ssl::context::tlsv12);
+    ssl::context  ctx(ssl::context::tlsv12);
     ctx.set_options(
-        boost::asio::ssl::context::default_workarounds |
-        boost::asio::ssl::context::single_dh_use);
-    ctx.use_certificate_file(cert, boost::asio::ssl::context::pem);
-    ctx.use_private_key_file(key, boost::asio::ssl::context::pem);
+        ssl::context::default_workarounds |
+        ssl::context::single_dh_use);
+    ctx.use_certificate_file(cert, ssl::context::pem);
+    ctx.use_private_key_file(key, ssl::context::pem);
 
     auto s = MQTT_NS::server_tls<>(
         boost::asio::ip::tcp::endpoint(

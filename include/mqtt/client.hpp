@@ -47,6 +47,14 @@ namespace MQTT_NS {
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
+#if defined(MQTT_USE_TLS)
+#if !defined(MQTT_USE_GNU_TLS)
+    namespace ssl = as::ssl;
+#else
+    namespace ssl = as::gnutls;
+#endif // !defined(MQTT_USE_TLS)
+#endif // defined(MQTT_USE_TLS)
+
 template <typename Socket, std::size_t PacketIdBytes = 2>
 class client : public endpoint<std::mutex, std::lock_guard, PacketIdBytes> {
     using this_type = client<Socket, PacketIdBytes>;
@@ -117,7 +125,7 @@ public:
      * @param port port number
      * @return client object
      */
-    friend std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
+    friend std::shared_ptr<callable_overlay<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
     make_tls_client(as::io_context& ioc, std::string host, std::string port, protocol_version version);
 
     /**
@@ -127,7 +135,7 @@ public:
      * @param port port number
      * @return client object
      */
-    friend std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>>
+    friend std::shared_ptr<callable_overlay<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>>>>
     make_tls_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
@@ -140,7 +148,7 @@ public:
      * @return client object.
      *  strand is controlled by ws_endpoint, not endpoint, so client has null_strand template argument.
      */
-    friend std::shared_ptr<callable_overlay<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
+    friend std::shared_ptr<callable_overlay<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
     make_tls_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
@@ -151,7 +159,7 @@ public:
      * @param path path string
      * @return client object
      */
-    friend std::shared_ptr<callable_overlay<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>>
+    friend std::shared_ptr<callable_overlay<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>>>>
     make_tls_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_USE_TLS)
@@ -209,7 +217,7 @@ public:
      * @param port port number
      * @return client object
      */
-    friend std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
+    friend std::shared_ptr<callable_overlay<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
     make_tls_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
 
     /**
@@ -219,7 +227,7 @@ public:
      * @param port port number
      * @return client object
      */
-    friend std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>>
+    friend std::shared_ptr<callable_overlay<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>>
     make_tls_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
@@ -232,7 +240,7 @@ public:
      * @return client object.
      *  strand is controlled by ws_endpoint, not endpoint, so client has null_strand template argument.
      */
-    friend std::shared_ptr<callable_overlay<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
+    friend std::shared_ptr<callable_overlay<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
     make_tls_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
@@ -243,7 +251,7 @@ public:
      * @param path path string
      * @return client object
      */
-    friend std::shared_ptr<callable_overlay<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>>
+    friend std::shared_ptr<callable_overlay<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>>
     make_tls_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_USE_TLS)
@@ -340,7 +348,7 @@ public:
      * @brief Get boost asio ssl context.
      * @return ssl context
      */
-    as::ssl::context& get_ssl_context() {
+    ssl::context& get_ssl_context() {
         static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         return ctx_;
     }
@@ -349,7 +357,7 @@ public:
      * @brief Get boost asio ssl context.
      * @return ssl context
      */
-    as::ssl::context const& get_ssl_context() const {
+    ssl::context const& get_ssl_context() const {
         static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         return ctx_;
     }
@@ -1022,7 +1030,7 @@ protected:
          tim_session_expiry_(ioc_)
     {
 #if defined(MQTT_USE_TLS)
-        ctx_.set_verify_mode(as::ssl::verify_peer);
+        ctx_.set_verify_mode(ssl::verify_peer);
 #endif // defined(MQTT_USE_TLS)
     }
 
@@ -1043,14 +1051,14 @@ private:
 
 #if defined(MQTT_USE_TLS)
     template <typename Strand>
-    void setup_socket(std::shared_ptr<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
+    void setup_socket(std::shared_ptr<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
         socket = std::make_shared<Socket>(ioc_, ctx_);
         base::socket_optional().emplace(socket);
     }
 
 #if defined(MQTT_USE_WS)
     template <typename Strand>
-    void setup_socket(std::shared_ptr<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
+    void setup_socket(std::shared_ptr<ws_endpoint<ssl::stream<as::ip::tcp::socket>, Strand>>& socket) {
         socket = std::make_shared<Socket>(ioc_, ctx_);
         base::socket_optional().emplace(socket);
     }
@@ -1137,20 +1145,20 @@ private:
 
     template <typename Strand>
     void handshake_socket(
-        tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
+        tcp_endpoint<ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
         any session_life_keeper) {
-        socket.handshake(as::ssl::stream_base::client);
+        socket.handshake(ssl::stream_base::client);
         start_session(force_move(props), force_move(session_life_keeper));
     }
 
     template <typename Strand>
     void handshake_socket(
-        tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
+        tcp_endpoint<ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
         boost::system::error_code& ec) {
-        socket.handshake(as::ssl::stream_base::client, ec);
+        socket.handshake(ssl::stream_base::client, ec);
         if (ec) return;
         start_session(force_move(props), force_move(session_life_keeper));
     }
@@ -1159,21 +1167,21 @@ private:
 
     template <typename Strand>
     void handshake_socket(
-        ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
+        ws_endpoint<ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
         any session_life_keeper) {
-        socket.next_layer().handshake(as::ssl::stream_base::client);
+        socket.next_layer().handshake(ssl::stream_base::client);
         socket.handshake(host_, path_);
         start_session(force_move(props), force_move(session_life_keeper));
     }
 
     template <typename Strand>
     void handshake_socket(
-        ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
+        ws_endpoint<ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
         boost::system::error_code& ec) {
-        socket.next_layer().handshake(as::ssl::stream_base::client, ec);
+        socket.next_layer().handshake(ssl::stream_base::client, ec);
         if (ec) return;
         socket.handshake(host_, path_, ec);
         if (ec) return;
@@ -1224,12 +1232,12 @@ private:
 
     template <typename Strand>
     void async_handshake_socket(
-        tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
+        tcp_endpoint<ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
         async_handler_t func) {
         socket.async_handshake(
-            as::ssl::stream_base::client,
+            ssl::stream_base::client,
             [
                 this,
                 self = this->shared_from_this(),
@@ -1249,12 +1257,12 @@ private:
 #if defined(MQTT_USE_WS)
     template <typename Strand>
     void async_handshake_socket(
-        ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
+        ws_endpoint<ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
         async_handler_t func) {
         socket.next_layer().async_handshake(
-            as::ssl::stream_base::client,
+            ssl::stream_base::client,
             [
                 this,
                 self = this->shared_from_this(),
@@ -1499,12 +1507,12 @@ private:
     };
 
     template <typename U>
-    struct has_tls<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, U>>> : std::true_type {
+    struct has_tls<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, U>>> : std::true_type {
     };
 
 #if defined(MQTT_USE_WS)
     template <typename U>
-    struct has_tls<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, U>>> : std::true_type {
+    struct has_tls<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, U>>> : std::true_type {
     };
 #endif // defined(MQTT_USE_WS)
 
@@ -1524,7 +1532,7 @@ private:
     optional<std::string> password_;
     bool async_pingreq_ = false;
 #if defined(MQTT_USE_TLS)
-    as::ssl::context ctx_{as::ssl::context::tlsv12};
+    ssl::context ctx_{ssl::context::tlsv12};
 #endif // defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_WS)
     std::string path_;
@@ -1637,9 +1645,9 @@ make_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16_t po
 
 #if defined(MQTT_USE_TLS)
 
-inline std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
+inline std::shared_ptr<callable_overlay<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
 make_tls_client(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
-    using client_t = client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>;
+    using client_t = client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>;
     return std::make_shared<callable_overlay<client_t>>(
         client_t::constructor_access(),
         ioc,
@@ -1652,7 +1660,7 @@ make_tls_client(as::io_context& ioc, std::string host, std::string port, protoco
     );
 }
 
-inline std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
+inline std::shared_ptr<callable_overlay<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
 make_tls_client(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_client(
         ioc,
@@ -1662,9 +1670,9 @@ make_tls_client(as::io_context& ioc, std::string host, std::uint16_t port, proto
     );
 }
 
-inline std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>>
+inline std::shared_ptr<callable_overlay<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>>>>
 make_tls_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
-    using client_t = client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>;
+    using client_t = client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>>;
     return std::make_shared<callable_overlay<client_t>>(
         client_t::constructor_access(),
         ioc,
@@ -1677,7 +1685,7 @@ make_tls_client_no_strand(as::io_context& ioc, std::string host, std::string por
     );
 }
 
-inline std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>>
+inline std::shared_ptr<callable_overlay<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>>>>
 make_tls_client_no_strand(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_client_no_strand(
         ioc,
@@ -1689,9 +1697,9 @@ make_tls_client_no_strand(as::io_context& ioc, std::string host, std::uint16_t p
 
 #if defined(MQTT_USE_WS)
 
-inline std::shared_ptr<callable_overlay<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
+inline std::shared_ptr<callable_overlay<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
 make_tls_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
-    using client_t = client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>;
+    using client_t = client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>;
     return std::make_shared<callable_overlay<client_t>>(
         client_t::constructor_access(),
         ioc,
@@ -1702,7 +1710,7 @@ make_tls_client_ws(as::io_context& ioc, std::string host, std::string port, std:
     );
 }
 
-inline std::shared_ptr<callable_overlay<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
+inline std::shared_ptr<callable_overlay<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
 make_tls_client_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_client_ws(
         ioc,
@@ -1713,9 +1721,9 @@ make_tls_client_ws(as::io_context& ioc, std::string host, std::uint16_t port, st
     );
 }
 
-inline std::shared_ptr<callable_overlay<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>>
+inline std::shared_ptr<callable_overlay<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>>>>
 make_tls_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
-    using client_t = client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>;
+    using client_t = client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>>;
     return std::make_shared<callable_overlay<client_t>>(
         client_t::constructor_access(),
         ioc,
@@ -1726,7 +1734,7 @@ make_tls_client_no_strand_ws(as::io_context& ioc, std::string host, std::string 
     );
 }
 
-inline std::shared_ptr<callable_overlay<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>>>>
+inline std::shared_ptr<callable_overlay<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>>>>
 make_tls_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_client_no_strand_ws(
         ioc,
@@ -1848,9 +1856,9 @@ make_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::uint16_t
 
 #if defined(MQTT_USE_TLS)
 
-inline std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
+inline std::shared_ptr<callable_overlay<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
 make_tls_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
-    using client_t = client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>;
+    using client_t = client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>;
     return std::make_shared<callable_overlay<client_t>>(
         client_t::constructor_access(),
         ioc,
@@ -1863,7 +1871,7 @@ make_tls_client_32(as::io_context& ioc, std::string host, std::string port, prot
     );
 }
 
-inline std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
+inline std::shared_ptr<callable_overlay<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
 make_tls_client_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_client_32(
         ioc,
@@ -1873,9 +1881,9 @@ make_tls_client_32(as::io_context& ioc, std::string host, std::uint16_t port, pr
     );
 }
 
-inline std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>>
+inline std::shared_ptr<callable_overlay<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>>
 make_tls_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
-    using client_t = client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>;
+    using client_t = client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>, 4>;
     return std::make_shared<callable_overlay<client_t>>(
         client_t::constructor_access(),
         ioc,
@@ -1888,7 +1896,7 @@ make_tls_client_no_strand_32(as::io_context& ioc, std::string host, std::string 
     );
 }
 
-inline std::shared_ptr<callable_overlay<client<tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>>
+inline std::shared_ptr<callable_overlay<client<tcp_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>>
 make_tls_client_no_strand_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_client_no_strand_32(
         ioc,
@@ -1900,9 +1908,9 @@ make_tls_client_no_strand_32(as::io_context& ioc, std::string host, std::uint16_
 
 #if defined(MQTT_USE_WS)
 
-inline std::shared_ptr<callable_overlay<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
+inline std::shared_ptr<callable_overlay<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
 make_tls_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
-    using client_t = client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>;
+    using client_t = client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>;
     return std::make_shared<callable_overlay<client_t>>(
         client_t::constructor_access(),
         ioc,
@@ -1913,7 +1921,7 @@ make_tls_client_ws_32(as::io_context& ioc, std::string host, std::string port, s
     );
 }
 
-inline std::shared_ptr<callable_overlay<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
+inline std::shared_ptr<callable_overlay<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
 make_tls_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_client_ws_32(
         ioc,
@@ -1924,9 +1932,9 @@ make_tls_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t port,
     );
 }
 
-inline std::shared_ptr<callable_overlay<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>>
+inline std::shared_ptr<callable_overlay<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>>
 make_tls_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
-    using client_t = client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>;
+    using client_t = client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>, 4>;
     return std::make_shared<callable_overlay<client_t>>(
         client_t::constructor_access(),
         ioc,
@@ -1937,7 +1945,7 @@ make_tls_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::stri
     );
 }
 
-inline std::shared_ptr<callable_overlay<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>>
+inline std::shared_ptr<callable_overlay<client<ws_endpoint<ssl::stream<as::ip::tcp::socket>, null_strand>, 4>>>
 make_tls_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_client_no_strand_ws_32(
         ioc,
