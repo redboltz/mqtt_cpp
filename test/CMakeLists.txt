@@ -22,6 +22,7 @@ IF (MQTT_TEST_1)
     LIST (APPEND check_PROGRAMS
         connect.cpp
         underlying_timeout.cpp
+        topic_alias_recv.cpp
     )
 ENDIF ()
 

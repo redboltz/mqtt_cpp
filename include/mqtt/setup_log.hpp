@@ -127,6 +127,7 @@ void setup_log(severity_level threshold = severity_level::warning) {
         {
             { "mqtt_api", threshold },
             { "mqtt_cb", threshold },
+            { "mqtt_impl", threshold },
         }
     );
 }

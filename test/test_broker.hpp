@@ -104,7 +104,6 @@ public:
             (MQTT_NS::error_code ec){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-
                 // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#S4_13_Errors
                 if (ec == boost::system::errc::protocol_error) {
                     if (sp->connected()) {
@@ -114,7 +113,6 @@ public:
                         sp->connack(false, MQTT_NS::v5::connect_reason_code::protocol_error);
                     }
                 }
-
                 close_proc(MQTT_NS::force_move(sp), true);
             });
 
@@ -565,6 +563,22 @@ private:
                 BOOST_ASSERT(act_sess_it == act_sess_idx.find(client_id));
             }
             else {
+
+                if (non_act_sess_it->topic_alias_recv) {
+
+                    // TopicAlias lifetime is the same as Session lifetime
+                    // It is different from MQTT v5 spec but practical choice.
+                    // See
+                    // https://lists.oasis-open.org/archives/mqtt-comment/202009/msg00000.html
+                    //
+                    // When minimum boost requirement will update to 1.74.0,
+                    // the following code is updated to move semantics
+                    // using multi_index extract functionality.
+                    // See
+                    // https://github.com/boostorg/multi_index/commit/e69466039d64dd49ecf8fc8a181d9f24d5f82386
+                    ep.restore_topic_alias_recv_container(non_act_sess_it->topic_alias_recv.value());
+                }
+
                 session_state state;
                 non_act_sess_idx.modify(non_act_sess_it,
                                         [&](session_state & val) { state = val; },
@@ -648,19 +662,9 @@ private:
     ) {
         if (delay_disconnect_) {
             tim_disconnect_.expires_after(delay_disconnect_.value());
-            tim_disconnect_.async_wait(
-                [&, wp = con_wp_t(MQTT_NS::force_move(spep))](MQTT_NS::error_code ec) {
-                    if (!ec) {
-                        if (con_sp_t sp = wp.lock()) {
-                            close_proc(MQTT_NS::force_move(sp), false);
-                        }
-                    }
-                }
-            );
+            tim_disconnect_.wait();
         }
-        else {
-            close_proc(MQTT_NS::force_move(spep), false);
-        }
+        close_proc(MQTT_NS::force_move(spep), false);
     }
 
     bool publish_handler(
@@ -671,12 +675,31 @@ private:
         MQTT_NS::buffer contents,
         MQTT_NS::v5::properties props) {
 
+        MQTT_NS::v5::properties forward_props;
+
+        for (auto&& p : props) {
+            MQTT_NS::visit(
+                MQTT_NS::make_lambda_visitor(
+                    [](MQTT_NS::v5::property::topic_alias&&) {
+                        // TopicAlias is not forwarded
+                        // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901113
+                        // A receiver MUST NOT carry forward any Topic Alias mappings from
+                        // one Network Connection to another [MQTT-3.3.2-7].
+                    },
+                    [&forward_props](auto&& p) {
+                        forward_props.push_back(MQTT_NS::force_move(p));
+                    }
+                ),
+                MQTT_NS::force_move(p)
+            );
+        }
+
         auto& ep = *spep;
         do_publish(
             MQTT_NS::force_move(topic_name),
             MQTT_NS::force_move(contents),
             pubopts.get_qos() | pubopts.get_retain(), // remove dup flag
-            MQTT_NS::force_move(props));
+            MQTT_NS::force_move(forward_props));
 
         switch (ep.get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
@@ -1042,6 +1065,12 @@ private:
                 );
             }
 
+            // TopicAlias lifetime is the same as Session lifetime
+            // It is different from MQTT v5 spec but practical choice.
+            // See
+            // https://lists.oasis-open.org/archives/mqtt-comment/202009/msg00000.html
+            state.topic_alias_recv = ep.get_topic_alias_recv_container();
+
             auto const& ret = non_active_sessions_.insert(MQTT_NS::force_move(state));
             (void)ret;
             BOOST_ASSERT(ret.second);
@@ -1140,6 +1169,7 @@ private:
         MQTT_NS::optional<std::chrono::steady_clock::duration> will_delay;
         MQTT_NS::optional<std::chrono::steady_clock::duration> session_expiry_interval;
         std::shared_ptr<as::steady_timer> tim_session_expiry;
+        MQTT_NS::optional<MQTT_NS::topic_alias_recv_map_t> topic_alias_recv;
     };
 
     // The mi_active_sessions container holds the relevant data about an active connection with the broker.

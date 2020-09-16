@@ -18,6 +18,7 @@ using namespace MQTT_NS::literals;
 BOOST_AUTO_TEST_CASE( simple ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
         c->set_clean_session(true);
 
         std::uint16_t pid_sub;
@@ -196,6 +197,7 @@ BOOST_AUTO_TEST_CASE( simple ) {
 BOOST_AUTO_TEST_CASE( overwrite ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
         c->set_clean_session(true);
 
         std::uint16_t pid_sub;

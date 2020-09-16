@@ -26,6 +26,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
             test_contents.push_back(static_cast<char>(i));
         }
 
+        c->set_client_id("cid1");
         c->set_clean_session(true);
 
         std::uint16_t pid_sub;
@@ -136,6 +137,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
             test_contents.push_back(static_cast<char>(i & 0xff));
         }
 
+        c->set_client_id("cid1");
         c->set_clean_session(true);
 
         std::uint16_t pid_sub;
@@ -248,6 +250,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
             test_contents.push_back(static_cast<char>(i % 0xff));
         }
 
+        c->set_client_id("cid1");
         c->set_clean_session(true);
 
         std::uint16_t pid_sub;

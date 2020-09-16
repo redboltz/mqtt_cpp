@@ -18,6 +18,7 @@ using namespace MQTT_NS::literals;
 BOOST_AUTO_TEST_CASE( retain_and_publish ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
         c->set_clean_session(true);
 
         std::uint16_t pid_sub;
@@ -267,6 +268,7 @@ BOOST_AUTO_TEST_CASE( prop ) {
         }
 
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
         c->set_clean_session(true);
 
         std::uint16_t pid_sub;
@@ -363,7 +365,12 @@ BOOST_AUTO_TEST_CASE( prop ) {
                 BOOST_TEST(topic == "topic1");
                 BOOST_TEST(contents == "retained_contents");
 
-                BOOST_TEST(props.size() == prop_size);
+                // -1 means TopicAlias
+                // TopicAlias is not forwarded
+                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901113
+                // A receiver MUST NOT carry forward any Topic Alias mappings from
+                // one Network Connection to another [MQTT-3.3.2-7].
+                BOOST_TEST(props.size() == prop_size - 1);
 
                 for (auto const& p : props) {
                     MQTT_NS::visit(
@@ -373,9 +380,6 @@ BOOST_AUTO_TEST_CASE( prop ) {
                             },
                             [&](MQTT_NS::v5::property::message_expiry_interval const& t) {
                                 BOOST_TEST(t.val() == 0x12345678UL);
-                            },
-                            [&](MQTT_NS::v5::property::topic_alias const& t) {
-                                BOOST_TEST(t.val() == 0x1234U);
                             },
                             [&](MQTT_NS::v5::property::response_topic const& t) {
                                 BOOST_TEST(t.val() == "response topic");
