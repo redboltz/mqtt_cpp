@@ -16,15 +16,19 @@
 
 #include "locked_cout.hpp"
 
-namespace as = boost::asio;
-
 #if defined(MQTT_USE_TLS)
-#if !defined(MQTT_USE_GNU_TLS)
-    namespace ssl = as::ssl;
-#else
-    namespace ssl = as::gnutls;
-#endif // !defined(MQTT_USE_TLS)
+#if defined(MQTT_USE_GNU_TLS)
+    namespace boost
+    {
+        namespace asio
+        {
+            namespace ssl = boost::asio::gnutls;
+        }
+    }
+#endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
+
+namespace as = boost::asio;
 
 template <typename Client, typename Disconnect>
 void client_proc(
@@ -349,12 +353,12 @@ int main(int argc, char** argv) {
     std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[1]);
 
     // server
-    ssl::context  ctx(ssl::context::tlsv12);
+    as::ssl::context  ctx(as::ssl::context::tlsv12);
     ctx.set_options(
-        ssl::context::default_workarounds |
-        ssl::context::single_dh_use);
-    ctx.use_certificate_file(base + "server.crt.pem", ssl::context::pem);
-    ctx.use_private_key_file(base + "server.key.pem", ssl::context::pem);
+        as::ssl::context::default_workarounds |
+        as::ssl::context::single_dh_use);
+    ctx.use_certificate_file(base + "server.crt.pem", as::ssl::context::pem);
+    ctx.use_private_key_file(base + "server.key.pem", as::ssl::context::pem);
 
     boost::asio::io_context iocs;
     auto s = MQTT_NS::server_tls_ws<>(

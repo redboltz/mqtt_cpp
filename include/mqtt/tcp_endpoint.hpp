@@ -16,7 +16,7 @@
 #else
     #include <boost/asio/gnutls.hpp>
     #include <gnutls/gnutls.h>
-#endif // !defined(MQTT_USE_TLS)
+#endif // !defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
 
 #include <mqtt/namespace.hpp>

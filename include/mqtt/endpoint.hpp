@@ -150,16 +150,20 @@ constexpr bool should_generate_packet_id(Params const& ... params) {
 
 } // namespace detail
 
+// #if defined(MQTT_USE_TLS)
+// #if defined(MQTT_USE_GNU_TLS)
+//     namespace boost
+//     {
+//         namespace asio
+//         {
+//             namespace ssl = boost::asio::gnutls;
+//         }
+//     }
+// #endif // defined(MQTT_USE_GNU_TLS)
+// #endif // defined(MQTT_USE_TLS)
+
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
-
-#if defined(MQTT_USE_TLS)
-#if !defined(MQTT_USE_GNU_TLS)
-    namespace ssl = as::ssl;
-#else
-    namespace ssl = as::gnutls;
-#endif // !defined(MQTT_USE_TLS)
-#endif // defined(MQTT_USE_TLS)
 
 template <typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard, std::size_t PacketIdBytes = 2>
 class endpoint : public std::enable_shared_from_this<endpoint<Mutex, LockGuard, PacketIdBytes>> {
@@ -4552,7 +4556,7 @@ protected:
 #if defined(SSL_R_SHORT_READ)
             || (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ)
 #else  // defined(SSL_R_SHORT_READ)
-            || (ERR_GET_REASON(ec.value()) == ssl::error::stream_truncated)
+            || (ERR_GET_REASON(ec.value()) == as::ssl::error::stream_truncated)
 #endif // defined(SSL_R_SHORT_READ)
 #endif // defined(MQTT_USE_TLS)
         ) {
