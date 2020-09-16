@@ -21,12 +21,7 @@
 #include <boost/asio.hpp>
 
 #if defined(MQTT_USE_TLS)
-#if !defined(MQTT_USE_GNU_TLS)
-    #include <boost/asio/ssl.hpp>
-#else
-    #include <boost/asio/gnutls.hpp>
-    #include <gnutls/gnutls.h>
-#endif // !defined(MQTT_USE_GNU_TLS)
+#include <mqtt/ssl_implementation.hpp>
 #endif // defined(MQTT_USE_TLS)
 
 #include <mqtt/tcp_endpoint.hpp>
@@ -44,17 +39,17 @@
 
 namespace MQTT_NS {
 
-#if defined(MQTT_USE_TLS)
-#if defined(MQTT_USE_GNU_TLS)
-    namespace boost
-    {
-        namespace asio
-        {
-            namespace ssl = boost::asio::gnutls;
-        }
-    }
-#endif // defined(MQTT_USE_GNU_TLS)
-#endif // defined(MQTT_USE_TLS)
+// #if defined(MQTT_USE_TLS)
+// #if defined(MQTT_USE_GNU_TLS)
+//     namespace boost
+//     {
+//         namespace asio
+//         {
+//             namespace ssl = boost::asio::gnutls;
+//         }
+//     }
+// #endif // defined(MQTT_USE_GNU_TLS)
+// #endif // defined(MQTT_USE_TLS)
 
 namespace as = boost::asio;
 namespace mi = boost::multi_index;

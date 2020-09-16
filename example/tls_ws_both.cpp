@@ -16,17 +16,17 @@
 
 #include "locked_cout.hpp"
 
-#if defined(MQTT_USE_TLS)
-#if defined(MQTT_USE_GNU_TLS)
-    namespace boost
-    {
-        namespace asio
-        {
-            namespace ssl = boost::asio::gnutls;
-        }
-    }
-#endif // defined(MQTT_USE_GNU_TLS)
-#endif // defined(MQTT_USE_TLS)
+// #if defined(MQTT_USE_TLS)
+// #if defined(MQTT_USE_GNU_TLS)
+//     namespace boost
+//     {
+//         namespace asio
+//         {
+//             namespace ssl = boost::asio::gnutls;
+//         }
+//     }
+// #endif // defined(MQTT_USE_GNU_TLS)
+// #endif // defined(MQTT_USE_TLS)
 
 namespace as = boost::asio;
 
