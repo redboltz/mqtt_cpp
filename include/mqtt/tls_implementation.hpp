@@ -25,4 +25,23 @@ namespace tls = boost::asio::ssl;
 #endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
 
+namespace MQTT_NS {
+
+inline constexpr bool is_tls_short_read(int error_val)
+{
+#if defined(MQTT_USE_TLS)
+#if defined(MQTT_USE_GNU_TLS)
+    return error_val == tls::error::stream_truncated;
+#else
+#if defined(SSL_R_SHORT_READ)
+    return ERR_GET_REASON(error_val) == SSL_R_SHORT_READ;
+#else  // defined(SSL_R_SHORT_READ)
+    return ERR_GET_REASON(error_val) == tls::error::stream_truncated;
+#endif // defined(SSL_R_SHORT_READ)
+#endif // defined(MQTT_USE_GNU_TLS)
+#endif // defined(MQTT_USE_TLS)
+}
+
+} // namespace MQTT_NS
+
 #endif // MQTT_tls_implementation_HPP

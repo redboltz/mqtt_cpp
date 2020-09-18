@@ -266,8 +266,6 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
     ctx.set_verify_mode(tls::verify_peer);
     tls::stream<as::ip::tcp::socket> socket(ioc, ctx);
 
-    std::cout << "Set verify file" << std::endl;
-
     char buf;
 
     as::async_connect(

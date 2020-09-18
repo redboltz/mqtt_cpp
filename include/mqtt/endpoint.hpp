@@ -4537,13 +4537,7 @@ protected:
 #if defined(MQTT_USE_WS)
             || (ec == boost::beast::websocket::error::closed)
 #endif // defined(MQTT_USE_WS)
-#if defined(MQTT_USE_TLS)
-#if defined(SSL_R_SHORT_READ)
-            || (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ)
-#else  // defined(SSL_R_SHORT_READ)
-            || (ERR_GET_REASON(ec.value()) == tls::error::stream_truncated)
-#endif // defined(SSL_R_SHORT_READ)
-#endif // defined(MQTT_USE_TLS)
+            || is_tls_short_read(ec.value())
         ) {
             if (disconnect_requested_) {
                 disconnect_requested_ = false;
