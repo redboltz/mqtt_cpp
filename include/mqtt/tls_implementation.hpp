@@ -40,6 +40,7 @@ inline constexpr bool is_tls_short_read(int error_val)
 #endif // defined(SSL_R_SHORT_READ)
 #endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
+    return false;
 }
 
 } // namespace MQTT_NS
