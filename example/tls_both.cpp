@@ -375,11 +375,11 @@ int main(int argc, char** argv) {
     auto c = MQTT_NS::make_tls_sync_client(ioc, "localhost", port);
 
 #if defined(MQTT_USE_TLS)
-#if !defined(MQTT_USE_GNU_TLS)
-    c->get_ssl_context().load_verify_file(base + "cacert.pem");
-#else
+#if defined(MQTT_USE_GNU_TLS)
     c->get_ssl_context().use_verify_file(base + "cacert.pem", ssl::context::pem);
-#endif // !defined(MQTT_USE_GNU_TLS)
+#else
+    c->get_ssl_context().load_verify_file(base + "cacert.pem");
+#endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
 
     int count = 0;

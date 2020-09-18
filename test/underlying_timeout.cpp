@@ -113,12 +113,13 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
     std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
 
     ssl::context ctx {ssl::context::tlsv12};
+
 #if defined(MQTT_USE_TLS)
-#if !defined(MQTT_USE_GNU_TLS)
-    ctx.load_verify_file(base + "cacert.pem");
-#else
+#if defined(MQTT_USE_GNU_TLS)
     ctx.use_verify_file(base + "cacert.pem", ssl::context::pem);
-#endif // !defined(MQTT_USE_GNU_TLS)
+#else
+    ctx.load_verify_file(base + "cacert.pem");
+#endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
 
     ctx.set_verify_mode(ssl::verify_peer);
@@ -186,14 +187,15 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
     std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
 
     ssl::context ctx {ssl::context::tlsv12};
-    // ctx.load_verify_file(base + "cacert.pem");
+
 #if defined(MQTT_USE_TLS)
-#if !defined(MQTT_USE_GNU_TLS)
-    ctx.load_verify_file(base + "cacert.pem");
-#else
+#if defined(MQTT_USE_GNU_TLS)
     ctx.use_verify_file(base + "cacert.pem", ssl::context::pem);
-#endif // !defined(MQTT_USE_GNU_TLS)
+#else
+    ctx.load_verify_file(base + "cacert.pem");
+#endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
+
     ctx.set_verify_mode(ssl::verify_peer);
     boost::beast::websocket::stream<ssl::stream<as::ip::tcp::socket>> socket(ioc, ctx);
 
@@ -280,14 +282,15 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
     std::cout << "Setting verify file" << std::endl;
 
     std::cout << base << std::endl;
-    // ctx.load_verify_file(base + "cacert.pem");
+
 #if defined(MQTT_USE_TLS)
-#if !defined(MQTT_USE_GNU_TLS)
-    ctx.load_verify_file(base + "cacert.pem");
-#else
+#if defined(MQTT_USE_GNU_TLS)
     ctx.use_verify_file(base + "cacert.pem", ssl::context::pem);
-#endif // !defined(MQTT_USE_GNU_TLS)
+#else
+    ctx.load_verify_file(base + "cacert.pem");
+#endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
+
     ctx.set_verify_mode(ssl::verify_peer);
     ssl::stream<as::ip::tcp::socket> socket(ioc, ctx);
 

@@ -41,11 +41,19 @@ int main(int argc, char** argv) {
     c->set_clean_session(true);
 
 #if defined(MQTT_USE_TLS)
-#if !defined(MQTT_USE_GNU_TLS)
-    c->get_ssl_context().load_verify_file(cacert);
-#else
+#if defined(MQTT_USE_GNU_TLS)
     c->get_ssl_context().use_verify_file(cacert, ssl::context::pem);
-#endif // !defined(MQTT_USE_GNU_TLS)
+#else
+    c->get_ssl_context().load_verify_file(cacert);
+#endif // defined(MQTT_USE_GNU_TLS)
+#endif // defined(MQTT_USE_TLS)
+
+#if defined(MQTT_USE_TLS)
+#if defined(MQTT_USE_GNU_TLS)
+    c->get_ssl_context().use_verify_file(cacert, ssl::context::pem);
+#else
+    c->get_ssl_context().load_verify_file(cacert);
+#endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
 
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L

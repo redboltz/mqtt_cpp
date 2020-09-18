@@ -110,11 +110,11 @@ inline void do_tls_test(
     std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
 
 #if defined(MQTT_USE_TLS)
-#if !defined(MQTT_USE_GNU_TLS)
-    c->get_ssl_context().load_verify_file(base + "cacert.pem");
-#else
+#if defined(MQTT_USE_GNU_TLS)
     c->get_ssl_context().use_verify_file(base + "cacert.pem", ssl::context::pem);
-#endif // !defined(MQTT_USE_GNU_TLS)
+#else
+    c->get_ssl_context().load_verify_file(base + "cacert.pem");
+#endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
 
     test(
