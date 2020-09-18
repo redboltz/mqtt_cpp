@@ -1,2 +1,7 @@
 CMakeLists.txt.user*
+
+# Build artifacts
 build/
+
+# VS code settings
+.vscode/
