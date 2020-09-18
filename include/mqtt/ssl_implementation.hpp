@@ -8,25 +8,21 @@
 #define MQTT_SSL_IMPLEMENTATION_HPP
 
 #if defined(MQTT_USE_TLS)
-#if !defined(MQTT_USE_GNU_TLS)
-#include <boost/asio/ssl.hpp>
-#else
+#if defined(MQTT_USE_GNU_TLS)
 #include <boost/asio/gnutls.hpp>
 #include <gnutls/gnutls.h>
 # define ERR_GET_REASON(l)       (int)( (l)         & 0xFFFL)
-#endif // !defined(MQTT_USE_GNU_TLS)
+#else
+#include <boost/asio/ssl.hpp>
+#endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
-
-// namespace MQTT_NS {
 
 #if defined(MQTT_USE_TLS)
-#if !defined(MQTT_USE_GNU_TLS)
-namespace ssl = boost::asio::ssl;
-#else
+#if defined(MQTT_USE_GNU_TLS)
 namespace ssl = boost::asio::gnutls;
-#endif // !defined(MQTT_USE_GNU_TLS)
+#else
+namespace ssl = boost::asio::ssl;
+#endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
-
-// } // namespace MQTT_NS
 
 #endif // MQTT_SSL_IMPLEMENTATION_HPP
