@@ -31,9 +31,11 @@ jobs:
       run: |
         brew install boost openssl gnutls
 
+        locate boost
+
         git clone https://github.com/paullouisageneau/boost-asio-gnutls.git
         cd boost-asio-gnutls
-        sudo cp -R include/boost/asio/* /usr/include/boost/asio
+        sudo cp -R include/boost/asio/ /usr/local/include/boost/asio
         cd ..
     - name: Configure
       env:
