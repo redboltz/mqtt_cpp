@@ -279,10 +279,6 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
 
     tls::context ctx {tls::context::tlsv12};
 
-    std::cout << "Setting verify file" << std::endl;
-
-    std::cout << base << std::endl;
-
 #if defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_GNU_TLS)
     ctx.use_verify_file(base + "cacert.pem", tls::context::pem);

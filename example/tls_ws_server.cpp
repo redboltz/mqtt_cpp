@@ -20,8 +20,6 @@ namespace mi = boost::multi_index;
 using con_t = MQTT_NS::server_tls_ws<>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
 
-namespace as = boost::asio;
-
 struct sub_con {
     sub_con(MQTT_NS::buffer topic, con_sp_t con, MQTT_NS::qos qos_value)
         :topic(std::move(topic)), con(std::move(con)), qos_value(qos_value) {}

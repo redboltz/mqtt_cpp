@@ -14,8 +14,6 @@
 #include "test_settings.hpp"
 #include <mqtt/tls_implementation.hpp>
 
-// namespace ssl = boost::asio::gnutls;
-
 struct ctx_init {
     ctx_init() : ctx(tls::context::tlsv12) {
         ctx.set_options(

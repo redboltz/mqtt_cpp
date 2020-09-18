@@ -10,6 +10,7 @@
 #if defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_GNU_TLS)
 #include <boost/asio/gnutls.hpp>
+// The following is used in 'endpoint.hpp' and is not defined by default for Gnu TLS.
 # define ERR_GET_REASON(l)       (int)( (l)         & 0xFFFL)
 #else
 #include <boost/asio/ssl.hpp>

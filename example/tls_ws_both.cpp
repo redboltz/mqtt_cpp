@@ -16,8 +16,6 @@
 
 #include "locked_cout.hpp"
 
-namespace as = boost::asio;
-
 template <typename Client, typename Disconnect>
 void client_proc(
     Client& c,
