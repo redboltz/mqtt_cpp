@@ -30,6 +30,12 @@ jobs:
     - name: Install Dependencies
       run: |
         brew install boost openssl gnutls
+
+        git clone https://github.com/paullouisageneau/boost-asio-gnutls.git
+        cd boost-asio-gnutls
+        git checkout 22ec973
+        cp -r include/boost/asio/* /usr/local/include/boost/asio
+        cd ..
     - name: Configure
       env:
         OPENSSL_ROOT_DIR: /usr/local/opt/openssl
@@ -61,6 +67,12 @@ jobs:
         sudo apt-get update
         sudo apt-get install boost1.67
         sudo apt-get install libgnutls28-dev
+
+        git clone https://github.com/paullouisageneau/boost-asio-gnutls.git
+        cd boost-asio-gnutls
+        git checkout 22ec973
+        cp -r include/boost/asio/* /usr/local/include/boost/asio
+        cd ..
     - name: Configure
       run: |
         [ ${{ matrix.pattern }} == 0 ] && FLAGS="-DCMAKE_CXX_COMPILER=clang++                -DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_USE_LOG=ON  -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
