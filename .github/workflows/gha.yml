@@ -34,7 +34,7 @@ jobs:
         git clone https://github.com/paullouisageneau/boost-asio-gnutls.git
         cd boost-asio-gnutls
         git checkout 259ec02
-        cp -r include/boost/asio/* /usr/include/boost/asio
+        sudo cp -r include/boost/asio/* /usr/include/boost/asio
         cd ..
     - name: Configure
       env:
@@ -71,7 +71,7 @@ jobs:
         git clone https://github.com/paullouisageneau/boost-asio-gnutls.git
         cd boost-asio-gnutls
         git checkout 259ec02
-        cp -r include/boost/asio/* /usr/include/boost/asio
+        sudo cp -r include/boost/asio/* /usr/include/boost/asio
         cd ..
     - name: Configure
       run: |
