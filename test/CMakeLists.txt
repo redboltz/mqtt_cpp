@@ -11,12 +11,12 @@ IF (POLICY CMP0074)
 ENDIF ()
 
 OPTION(MQTT_TEST_1 "Build test part1" ON)
-OPTION(MQTT_TEST_2 "Build test part2" OFF)
-OPTION(MQTT_TEST_3 "Build test part3" OFF)
-OPTION(MQTT_TEST_4 "Build test part4" OFF)
-OPTION(MQTT_TEST_5 "Build test part5" OFF)
-OPTION(MQTT_TEST_6 "Build test part6" OFF)
-OPTION(MQTT_TEST_7 "Build test part7" OFF)
+OPTION(MQTT_TEST_2 "Build test part2" ON)
+OPTION(MQTT_TEST_3 "Build test part3" ON)
+OPTION(MQTT_TEST_4 "Build test part4" ON)
+OPTION(MQTT_TEST_5 "Build test part5" ON)
+OPTION(MQTT_TEST_6 "Build test part6" ON)
+OPTION(MQTT_TEST_7 "Build test part7" ON)
 
 IF (MQTT_TEST_1)
     LIST (APPEND check_PROGRAMS
