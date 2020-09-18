@@ -17,17 +17,17 @@
 // namespace ssl = boost::asio::gnutls;
 
 struct ctx_init {
-    ctx_init() : ctx(ssl::context::tlsv12) {
+    ctx_init() : ctx(tls::context::tlsv12) {
         ctx.set_options(
-            ssl::context::default_workarounds |
-            ssl::context::single_dh_use);
+            tls::context::default_workarounds |
+            tls::context::single_dh_use);
         std::string path = boost::unit_test::framework::master_test_suite().argv[0];
         std::size_t pos = path.find_last_of("/\\");
         std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-        ctx.use_certificate_file(base + "server.crt.pem", ssl::context::pem);
-        ctx.use_private_key_file(base + "server.key.pem", ssl::context::pem);
+        ctx.use_certificate_file(base + "server.crt.pem", tls::context::pem);
+        ctx.use_private_key_file(base + "server.key.pem", tls::context::pem);
     }
-    ssl::context ctx;
+    tls::context ctx;
 };
 
 #endif // defined(MQTT_USE_TLS)

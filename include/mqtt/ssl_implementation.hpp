@@ -19,9 +19,9 @@
 
 #if defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_GNU_TLS)
-namespace ssl = boost::asio::gnutls;
+namespace tls = boost::asio::gnutls;
 #else
-namespace ssl = boost::asio::ssl;
+namespace tls = boost::asio::ssl;
 #endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
 

@@ -111,7 +111,7 @@ inline void do_tls_test(
 
 #if defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_GNU_TLS)
-    c->get_ssl_context().use_verify_file(base + "cacert.pem", ssl::context::pem);
+    c->get_ssl_context().use_verify_file(base + "cacert.pem", tls::context::pem);
 #else
     c->get_ssl_context().load_verify_file(base + "cacert.pem");
 #endif // defined(MQTT_USE_GNU_TLS)

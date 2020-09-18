@@ -4544,7 +4544,7 @@ protected:
 #if defined(SSL_R_SHORT_READ)
             || (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ)
 #else  // defined(SSL_R_SHORT_READ)
-            || (ERR_GET_REASON(ec.value()) == ssl::error::stream_truncated)
+            || (ERR_GET_REASON(ec.value()) == tls::error::stream_truncated)
 #endif // defined(SSL_R_SHORT_READ)
 #endif // defined(MQTT_USE_TLS)
         ) {

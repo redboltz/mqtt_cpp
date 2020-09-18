@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
 
 #if defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_GNU_TLS)
-    c->get_ssl_context().use_verify_file(cacert, ssl::context::pem);
+    c->get_ssl_context().use_verify_file(cacert, tls::context::pem);
 #else
     c->get_ssl_context().load_verify_file(cacert);
 #endif // defined(MQTT_USE_GNU_TLS)

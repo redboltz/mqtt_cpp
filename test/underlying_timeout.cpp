@@ -112,18 +112,18 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
     std::size_t pos = path.find_last_of("/\\");
     std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
 
-    ssl::context ctx {ssl::context::tlsv12};
+    tls::context ctx {tls::context::tlsv12};
 
 #if defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_GNU_TLS)
-    ctx.use_verify_file(base + "cacert.pem", ssl::context::pem);
+    ctx.use_verify_file(base + "cacert.pem", tls::context::pem);
 #else
     ctx.load_verify_file(base + "cacert.pem");
 #endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
 
-    ctx.set_verify_mode(ssl::verify_peer);
-    boost::beast::websocket::stream<ssl::stream<as::ip::tcp::socket>> socket(ioc, ctx);
+    ctx.set_verify_mode(tls::verify_peer);
+    boost::beast::websocket::stream<tls::stream<as::ip::tcp::socket>> socket(ioc, ctx);
 
     char buf;
 
@@ -186,18 +186,18 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
     std::size_t pos = path.find_last_of("/\\");
     std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
 
-    ssl::context ctx {ssl::context::tlsv12};
+    tls::context ctx {tls::context::tlsv12};
 
 #if defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_GNU_TLS)
-    ctx.use_verify_file(base + "cacert.pem", ssl::context::pem);
+    ctx.use_verify_file(base + "cacert.pem", tls::context::pem);
 #else
     ctx.load_verify_file(base + "cacert.pem");
 #endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
 
-    ctx.set_verify_mode(ssl::verify_peer);
-    boost::beast::websocket::stream<ssl::stream<as::ip::tcp::socket>> socket(ioc, ctx);
+    ctx.set_verify_mode(tls::verify_peer);
+    boost::beast::websocket::stream<tls::stream<as::ip::tcp::socket>> socket(ioc, ctx);
 
     char buf;
 
@@ -216,7 +216,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
             BOOST_TEST(!ec);
 
             socket.next_layer().async_handshake(
-                ssl::stream_base::client,
+                tls::stream_base::client,
                 [&]
                 (MQTT_NS::error_code ec) {
                     if (ec) {
@@ -277,7 +277,7 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
     std::size_t pos = path.find_last_of("/\\");
     std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
 
-    ssl::context ctx {ssl::context::tlsv12};
+    tls::context ctx {tls::context::tlsv12};
 
     std::cout << "Setting verify file" << std::endl;
 
@@ -285,14 +285,14 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
 
 #if defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_GNU_TLS)
-    ctx.use_verify_file(base + "cacert.pem", ssl::context::pem);
+    ctx.use_verify_file(base + "cacert.pem", tls::context::pem);
 #else
     ctx.load_verify_file(base + "cacert.pem");
 #endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
 
-    ctx.set_verify_mode(ssl::verify_peer);
-    ssl::stream<as::ip::tcp::socket> socket(ioc, ctx);
+    ctx.set_verify_mode(tls::verify_peer);
+    tls::stream<as::ip::tcp::socket> socket(ioc, ctx);
 
     std::cout << "Set verify file" << std::endl;
 

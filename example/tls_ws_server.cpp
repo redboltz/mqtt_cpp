@@ -70,12 +70,12 @@ int main(int argc, char** argv) {
     std::string cert = argv[2];
     std::string key = argv[3];
 
-    ssl::context  ctx(ssl::context::tlsv12);
+    tls::context  ctx(tls::context::tlsv12);
     ctx.set_options(
-        ssl::context::default_workarounds |
-        ssl::context::single_dh_use);
-    ctx.use_certificate_file(cert, ssl::context::pem);
-    ctx.use_private_key_file(key, ssl::context::pem);
+        tls::context::default_workarounds |
+        tls::context::single_dh_use);
+    ctx.use_certificate_file(cert, tls::context::pem);
+    ctx.use_private_key_file(key, tls::context::pem);
 
     auto s = MQTT_NS::server_tls_ws<>(
         boost::asio::ip::tcp::endpoint(
