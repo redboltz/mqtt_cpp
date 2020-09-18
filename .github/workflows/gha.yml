@@ -94,7 +94,7 @@ jobs:
       run: |
         cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first --target check_deps
     - name: Compile with Sanitizer
-      if: (matrix.pattern == 1) || (matrix.pattern == 2) || (matrix.pattern == 3)
+      if: (matrix.pattern == 1) || (matrix.pattern == 2) || (matrix.pattern == 3) || (matrix.pattern == 8) || (matrix.pattern == 9) || (matrix.pattern == 10)
       env:
         CFLAGS:   -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED -fsanitize=address
         CXXFLAGS: -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED -fsanitize=address
@@ -103,7 +103,7 @@ jobs:
         CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
         cmake --build ${{ runner.temp }} --clean-first
     - name: Compile without Sanitizer
-      if: (matrix.pattern == 0) || (matrix.pattern == 4) || (matrix.pattern == 5) || (matrix.pattern == 6) || (matrix.pattern == 7)
+      if: (matrix.pattern == 0) || (matrix.pattern == 4) || (matrix.pattern == 5) || (matrix.pattern == 6) || (matrix.pattern == 7) || (matrix.pattern == 11) || (matrix.pattern == 12)
       env:
         CFLAGS:   -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED
         CXXFLAGS: -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -DBOOST_ASIO_NO_DEPRECATED
@@ -116,7 +116,7 @@ jobs:
       run: |
         ctest -VV
     - name: Code Coverage
-      if: (matrix.pattern == 4) || (matrix.pattern == 5) || (matrix.pattern  == 6) || (matrix.pattern == 7)
+      if: (matrix.pattern == 4) || (matrix.pattern == 5) || (matrix.pattern  == 6) || (matrix.pattern == 7) || (matrix.pattern == 11) || (matrix.pattern == 12)
       run: |
         sudo apt-get install lcov
         # Create lcov report
