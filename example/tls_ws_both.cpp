@@ -16,18 +16,6 @@
 
 #include "locked_cout.hpp"
 
-// #if defined(MQTT_USE_TLS)
-// #if defined(MQTT_USE_GNU_TLS)
-//     namespace boost
-//     {
-//         namespace asio
-//         {
-//             namespace ssl = boost::asio::gnutls;
-//         }
-//     }
-// #endif // defined(MQTT_USE_GNU_TLS)
-// #endif // defined(MQTT_USE_TLS)
-
 namespace as = boost::asio;
 
 template <typename Client, typename Disconnect>
@@ -353,12 +341,12 @@ int main(int argc, char** argv) {
     std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[1]);
 
     // server
-    as::ssl::context  ctx(as::ssl::context::tlsv12);
+    ssl::context  ctx(ssl::context::tlsv12);
     ctx.set_options(
-        as::ssl::context::default_workarounds |
-        as::ssl::context::single_dh_use);
-    ctx.use_certificate_file(base + "server.crt.pem", as::ssl::context::pem);
-    ctx.use_private_key_file(base + "server.key.pem", as::ssl::context::pem);
+        ssl::context::default_workarounds |
+        ssl::context::single_dh_use);
+    ctx.use_certificate_file(base + "server.crt.pem", ssl::context::pem);
+    ctx.use_private_key_file(base + "server.key.pem", ssl::context::pem);
 
     boost::asio::io_context iocs;
     auto s = MQTT_NS::server_tls_ws<>(
@@ -384,7 +372,14 @@ int main(int argc, char** argv) {
     std::uint16_t pid_sub2;
 
     auto c = MQTT_NS::make_tls_sync_client_ws(ioc, "localhost", port);
+
+#if defined(MQTT_USE_TLS)
+#if !defined(MQTT_USE_GNU_TLS)
     c->get_ssl_context().load_verify_file(base + "cacert.pem");
+#else
+    c->get_ssl_context().use_verify_file(base + "cacert.pem", ssl::context::pem);
+#endif // !defined(MQTT_USE_GNU_TLS)
+#endif // defined(MQTT_USE_TLS)
 
     int count = 0;
     auto disconnect = [&] {

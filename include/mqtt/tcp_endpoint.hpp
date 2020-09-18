@@ -10,19 +10,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/bind_executor.hpp>
 
-// #if defined(MQTT_USE_TLS)
-// #if !defined(MQTT_USE_GNU_TLS)
-//     #include <boost/asio/ssl.hpp>
-// #else
-//     #include <boost/asio/gnutls.hpp>
-//     #include <gnutls/gnutls.h>
-// #endif // !defined(MQTT_USE_GNU_TLS)
-// #endif // defined(MQTT_USE_TLS)
-
-#if defined(MQTT_USE_TLS)
 #include <mqtt/ssl_implementation.hpp>
-#endif // defined(MQTT_USE_TLS)
-
 #include <mqtt/namespace.hpp>
 
 namespace MQTT_NS {

@@ -150,18 +150,6 @@ constexpr bool should_generate_packet_id(Params const& ... params) {
 
 } // namespace detail
 
-// #if defined(MQTT_USE_TLS)
-// #if defined(MQTT_USE_GNU_TLS)
-//     namespace boost
-//     {
-//         namespace asio
-//         {
-//             namespace ssl = boost::asio::gnutls;
-//         }
-//     }
-// #endif // defined(MQTT_USE_GNU_TLS)
-// #endif // defined(MQTT_USE_TLS)
-
 namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
@@ -4536,6 +4524,9 @@ protected:
 
     bool handle_close_or_error(error_code ec) {
         if (!ec) return false;
+        std::cout << "Error: " << ec.value() << std::endl;
+        
+        std::cout << "Error 1: " << ERR_GET_REASON(ec.value()) << std::endl;
         if (connected_) {
             connected_ = false;
             mqtt_connected_ = false;
@@ -4550,13 +4541,10 @@ protected:
             || (ec == boost::beast::websocket::error::closed)
 #endif // defined(MQTT_USE_WS)
 #if defined(MQTT_USE_TLS)
-#if defined(MQTT_USE_GNU_TLS)
-# define ERR_GET_REASON(l)       (int)( (l)         & 0xFFFL)
-#endif  // defined(MQTT_USE_GNU_TLS)
 #if defined(SSL_R_SHORT_READ)
             || (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ)
 #else  // defined(SSL_R_SHORT_READ)
-            || (ERR_GET_REASON(ec.value()) == as::ssl::error::stream_truncated)
+            || (ERR_GET_REASON(ec.value()) == ssl::error::stream_truncated)
 #endif // defined(SSL_R_SHORT_READ)
 #endif // defined(MQTT_USE_TLS)
         ) {
@@ -4619,6 +4607,7 @@ private:
     template <typename T>
     void shutdown_from_client(T& socket) {
         boost::system::error_code ec;
+        // socket.shutdown();
         socket.lowest_layer().close(ec);
     }
 

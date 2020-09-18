@@ -40,7 +40,14 @@ int main(int argc, char** argv) {
     // Setup client
     c->set_client_id("cid1");
     c->set_clean_session(true);
+
+#if defined(MQTT_USE_TLS)
+#if !defined(MQTT_USE_GNU_TLS)
     c->get_ssl_context().load_verify_file(cacert);
+#else
+    c->get_ssl_context().use_verify_file(cacert, ssl::context::pem);
+#endif // !defined(MQTT_USE_GNU_TLS)
+#endif // defined(MQTT_USE_TLS)
 
     // Setup handlers
     c->set_connack_handler(

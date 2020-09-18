@@ -13,20 +13,7 @@
 #include <boost/asio.hpp>
 
 #include <mqtt/namespace.hpp>
-
-// #if defined(MQTT_USE_TLS)
-// #if !defined(MQTT_USE_GNU_TLS)
-//     #include <boost/asio/ssl.hpp>
-// #else
-//     #include <boost/asio/gnutls.hpp>
-//     #include <gnutls/gnutls.h>
-// #endif // !defined(MQTT_USE_GNU_TLS)
-// #endif // defined(MQTT_USE_TLS)
-
-#if defined(MQTT_USE_TLS)
 #include <mqtt/ssl_implementation.hpp>
-#endif // defined(MQTT_USE_TLS)
-
 #include <mqtt/tcp_endpoint.hpp>
 
 #if defined(MQTT_USE_WS)
@@ -39,18 +26,6 @@
 #include <mqtt/callable_overlay.hpp>
 
 namespace MQTT_NS {
-
-// #if defined(MQTT_USE_TLS)
-// #if defined(MQTT_USE_GNU_TLS)
-//     namespace boost
-//     {
-//         namespace asio
-//         {
-//             namespace ssl = boost::asio::gnutls;
-//         }
-//     }
-// #endif // defined(MQTT_USE_GNU_TLS)
-// #endif // defined(MQTT_USE_TLS)
 
 namespace as = boost::asio;
 
@@ -233,7 +208,7 @@ template <
 >
 class server_tls {
 public:
-    using socket_t = tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
+    using socket_t = tcp_endpoint<ssl::stream<as::ip::tcp::socket>, Strand>;
     using endpoint_t = callable_overlay<server_endpoint<Mutex, LockGuard, PacketIdBytes>>;
 
     /**
@@ -251,7 +226,7 @@ public:
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls(
         AsioEndpoint&& ep,
-        as::ssl::context&& ctx,
+        ssl::context&& ctx,
         as::io_context& ioc_accept,
         as::io_context& ioc_con,
         AcceptorConfig&& config)
@@ -267,7 +242,7 @@ public:
     template <typename AsioEndpoint>
     server_tls(
         AsioEndpoint&& ep,
-        as::ssl::context&& ctx,
+        ssl::context&& ctx,
         as::io_context& ioc_accept,
         as::io_context& ioc_con)
         : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc_accept, ioc_con, [](as::ip::tcp::acceptor&) {}) {}
@@ -275,7 +250,7 @@ public:
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls(
         AsioEndpoint&& ep,
-        as::ssl::context&& ctx,
+        ssl::context&& ctx,
         as::io_context& ioc,
         AcceptorConfig&& config)
         : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc, ioc, std::forward<AcceptorConfig>(config)) {}
@@ -283,7 +258,7 @@ public:
     template <typename AsioEndpoint>
     server_tls(
         AsioEndpoint&& ep,
-        as::ssl::context&& ctx,
+        ssl::context&& ctx,
         as::io_context& ioc)
         : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc, ioc, [](as::ip::tcp::acceptor&) {}) {}
 
@@ -370,7 +345,7 @@ public:
      * @brief Get boost asio ssl context.
      * @return ssl context
      */
-    as::ssl::context& get_ssl_context() {
+    ssl::context& get_ssl_context() {
         return ctx_;
     }
 
@@ -378,7 +353,7 @@ public:
      * @brief Get boost asio ssl context.
      * @return ssl context
      */
-    as::ssl::context const& get_ssl_context() const {
+    ssl::context const& get_ssl_context() const {
         return ctx_;
     }
 
@@ -414,7 +389,7 @@ private:
                 );
                 auto ps = socket.get();
                 ps->async_handshake(
-                    as::ssl::stream_base::server,
+                    ssl::stream_base::server,
                     [this, socket = force_move(socket), tim, underlying_finished]
                     (error_code ec) mutable {
                         *underlying_finished = true;
@@ -440,7 +415,7 @@ private:
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
-    as::ssl::context ctx_;
+    ssl::context ctx_;
     protocol_version version_ = protocol_version::undetermined;
     std::chrono::steady_clock::duration underlying_connect_timeout_ = std::chrono::seconds(10);
 };
@@ -722,7 +697,7 @@ template <
 >
 class server_tls_ws {
 public:
-    using socket_t = ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>;
+    using socket_t = ws_endpoint<ssl::stream<as::ip::tcp::socket>, Strand>;
     using endpoint_t = callable_overlay<server_endpoint<Mutex, LockGuard, PacketIdBytes>>;
 
     /**
@@ -740,7 +715,7 @@ public:
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls_ws(
         AsioEndpoint&& ep,
-        as::ssl::context&& ctx,
+        ssl::context&& ctx,
         as::io_context& ioc_accept,
         as::io_context& ioc_con,
         AcceptorConfig&& config)
@@ -756,7 +731,7 @@ public:
     template <typename AsioEndpoint>
     server_tls_ws(
         AsioEndpoint&& ep,
-        as::ssl::context&& ctx,
+        ssl::context&& ctx,
         as::io_context& ioc_accept,
         as::io_context& ioc_con)
         : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc_accept, ioc_con, [](as::ip::tcp::acceptor&) {}) {}
@@ -764,7 +739,7 @@ public:
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls_ws(
         AsioEndpoint&& ep,
-        as::ssl::context&& ctx,
+        ssl::context&& ctx,
         as::io_context& ioc,
         AcceptorConfig&& config)
         : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc, ioc, std::forward<AcceptorConfig>(config)) {}
@@ -772,7 +747,7 @@ public:
     template <typename AsioEndpoint>
     server_tls_ws(
         AsioEndpoint&& ep,
-        as::ssl::context&& ctx,
+        ssl::context&& ctx,
         as::io_context& ioc)
         : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc, ioc, [](as::ip::tcp::acceptor&) {}) {}
 
@@ -859,7 +834,7 @@ public:
      * @brief Get boost asio ssl context.
      * @return ssl context
      */
-    as::ssl::context& get_ssl_context() {
+    ssl::context& get_ssl_context() {
         return ctx_;
     }
 
@@ -867,7 +842,7 @@ public:
      * @brief Get boost asio ssl context.
      * @return ssl context
      */
-    as::ssl::context const& get_ssl_context() const {
+    ssl::context const& get_ssl_context() const {
         return ctx_;
     }
 
@@ -904,7 +879,7 @@ private:
 
                 auto ps = socket.get();
                 ps->next_layer().async_handshake(
-                    as::ssl::stream_base::server,
+                    ssl::stream_base::server,
                     [this, socket = force_move(socket), tim, underlying_finished]
                     (error_code ec) mutable {
                         if (ec) {
@@ -1008,7 +983,7 @@ private:
     bool close_request_{false};
     accept_handler h_accept_;
     error_handler h_error_;
-    as::ssl::context ctx_;
+    ssl::context ctx_;
     protocol_version version_ = protocol_version::undetermined;
     std::chrono::steady_clock::duration underlying_connect_timeout_ = std::chrono::seconds(10);
 };
