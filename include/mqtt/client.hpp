@@ -20,7 +20,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/asio.hpp>
 
-#include <mqtt/ssl_implementation.hpp>
+#include <mqtt/tls_implementation.hpp>
 #include <mqtt/tcp_endpoint.hpp>
 
 #if defined(MQTT_USE_WS)

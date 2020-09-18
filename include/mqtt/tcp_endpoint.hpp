@@ -10,7 +10,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/bind_executor.hpp>
 
-#include <mqtt/ssl_implementation.hpp>
+#include <mqtt/tls_implementation.hpp>
 #include <mqtt/namespace.hpp>
 
 namespace MQTT_NS {

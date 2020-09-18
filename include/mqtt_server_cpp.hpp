@@ -19,7 +19,7 @@
 #include <mqtt/subscribe_options.hpp>
 #include <mqtt/remaining_length.hpp>
 #include <mqtt/session_present.hpp>
-#include <mqtt/ssl_implementation.hpp>
+#include <mqtt/tls_implementation.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
 #include <mqtt/visitor_util.hpp>
 #include <mqtt/will.hpp>

@@ -4,8 +4,8 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#if !defined(MQTT_SSL_IMPLEMENTATION_HPP)
-#define MQTT_SSL_IMPLEMENTATION_HPP
+#if !defined(MQTT_TLS_IMPLEMENTATION_HPP)
+#define MQTT_TLS_IMPLEMENTATION_HPP
 
 #if defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_GNU_TLS)
@@ -25,4 +25,4 @@ namespace tls = boost::asio::ssl;
 #endif // defined(MQTT_USE_GNU_TLS)
 #endif // defined(MQTT_USE_TLS)
 
-#endif // MQTT_SSL_IMPLEMENTATION_HPP
+#endif // MQTT_tls_implementation_HPP

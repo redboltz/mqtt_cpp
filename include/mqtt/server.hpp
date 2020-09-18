@@ -13,7 +13,7 @@
 #include <boost/asio.hpp>
 
 #include <mqtt/namespace.hpp>
-#include <mqtt/ssl_implementation.hpp>
+#include <mqtt/tls_implementation.hpp>
 #include <mqtt/tcp_endpoint.hpp>
 
 #if defined(MQTT_USE_WS)

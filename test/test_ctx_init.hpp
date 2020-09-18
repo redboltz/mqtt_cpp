@@ -12,7 +12,7 @@
 #include <boost/asio.hpp>
 
 #include "test_settings.hpp"
-#include <mqtt/ssl_implementation.hpp>
+#include <mqtt/tls_implementation.hpp>
 
 // namespace ssl = boost::asio::gnutls;
 
