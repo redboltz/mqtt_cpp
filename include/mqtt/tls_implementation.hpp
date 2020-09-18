@@ -10,7 +10,6 @@
 #if defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_GNU_TLS)
 #include <boost/asio/gnutls.hpp>
-#include <gnutls/gnutls.h>
 # define ERR_GET_REASON(l)       (int)( (l)         & 0xFFFL)
 #else
 #include <boost/asio/ssl.hpp>
