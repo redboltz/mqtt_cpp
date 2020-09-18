@@ -370,14 +370,7 @@ int main(int argc, char** argv) {
     std::uint16_t pid_sub2;
 
     auto c = MQTT_NS::make_tls_sync_client_ws(ioc, "localhost", port);
-
-#if defined(MQTT_USE_TLS)
-#if defined(MQTT_USE_GNU_TLS)
-    c->get_ssl_context().use_verify_file(base + "cacert.pem", tls::context::pem);
-#else
     c->get_ssl_context().load_verify_file(base + "cacert.pem");
-#endif // defined(MQTT_USE_GNU_TLS)
-#endif // defined(MQTT_USE_TLS)
 
     int count = 0;
     auto disconnect = [&] {
