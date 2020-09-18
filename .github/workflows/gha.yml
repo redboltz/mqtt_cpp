@@ -31,7 +31,7 @@ jobs:
       run: |
         brew install boost openssl gnutls
 
-        ls /usr/include
+        ls /usr/local/Cellar/boost/1.73.0
 
         git clone https://github.com/paullouisageneau/boost-asio-gnutls.git
         cd boost-asio-gnutls
