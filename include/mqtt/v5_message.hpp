@@ -557,7 +557,7 @@ public:
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -583,7 +583,7 @@ public:
               std::accumulate(
                   props_.begin(),
                   props_.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
                   }
@@ -681,7 +681,7 @@ public:
             std::accumulate(
                 props_.begin(),
                 props_.end(),
-                0U,
+                std::size_t(0U),
                 [](std::size_t total, property_variant const& pv) {
                     return total + v5::num_of_const_buffer_sequence(pv);
                 }
@@ -1825,7 +1825,7 @@ public:
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -1840,7 +1840,7 @@ public:
               std::accumulate(
                   props_.begin(),
                   props_.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
                   }
@@ -1994,7 +1994,7 @@ public:
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -2009,7 +2009,7 @@ public:
               std::accumulate(
                   props_.begin(),
                   props_.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
                   }
@@ -2148,7 +2148,7 @@ public:
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -2163,7 +2163,7 @@ public:
               std::accumulate(
                   props_.begin(),
                   props_.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
                   }
@@ -2308,7 +2308,7 @@ public:
               std::accumulate(
                   props.begin(),
                   props.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::size(pv);
                   }
@@ -2323,7 +2323,7 @@ public:
               std::accumulate(
                   props_.begin(),
                   props_.end(),
-                  0U,
+                  std::size_t(0U),
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
                   }
