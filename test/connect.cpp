@@ -708,7 +708,7 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
             // connect
             cont("h_connack"),
             // disconnect
-            cont("h_error"),
+            cont("h_close"),
         };
 
         switch (c->get_protocol_version()) {
@@ -742,15 +742,15 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
         }
 
         c->set_close_handler(
-            []
+            [&chk, &finish]
             () {
-                BOOST_CHECK(false);
+                MQTT_CHK("h_close");
+                finish();
             });
         c->set_error_handler(
-            [&chk, &finish]
+            []
             (MQTT_NS::error_code) {
-                MQTT_CHK("h_error");
-                finish();
+                BOOST_CHECK(false);
             });
         c->connect();
         ioc.run();
@@ -828,7 +828,7 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
             // connect
             cont("h_connack"),
             // disconnect
-            cont("h_error"),
+            cont("h_close"),
         };
 
         switch (c->get_protocol_version()) {
@@ -862,15 +862,15 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
         }
 
         c->set_close_handler(
-            []
+            [&chk, &finish]
             () {
-                BOOST_CHECK(false);
+                MQTT_CHK("h_close");
+                finish();
             });
         c->set_error_handler(
-            [&chk, &finish]
+            []
             (MQTT_NS::error_code) {
-                MQTT_CHK("h_error");
-                finish();
+                BOOST_CHECK(false);
             });
 
         switch (c->get_protocol_version()) {
