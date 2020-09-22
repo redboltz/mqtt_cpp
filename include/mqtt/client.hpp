@@ -348,6 +348,7 @@ public:
         static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
         return ctx_;
     }
+
 #endif // defined(MQTT_USE_TLS)
 
 
@@ -435,10 +436,8 @@ public:
      * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
     void connect(v5::properties props, any session_life_keeper = any()) {
-        as::ip::tcp::resolver r(ioc_);
-        auto eps = r.resolve(host_, port_);
         setup_socket(socket_);
-        connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper));
+        connect_impl(force_move(props), force_move(session_life_keeper));
     }
 
     /**
@@ -454,11 +453,8 @@ public:
         v5::properties props,
         boost::system::error_code& ec,
         any session_life_keeper = any()) {
-        as::ip::tcp::resolver r(ioc_);
-        auto eps = r.resolve(host_, port_, ec);
-        if (ec) return;
         setup_socket(socket_);
-        connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper), ec);
+        connect_impl(force_move(props), force_move(session_life_keeper), ec);
     }
 
     /**
@@ -501,11 +497,9 @@ public:
         std::shared_ptr<Socket>&& socket,
         v5::properties props,
         any session_life_keeper = any()) {
-        as::ip::tcp::resolver r(ioc_);
-        auto eps = r.resolve(host_, port_);
         socket_ = force_move(socket);
         base::socket_optional().emplace(socket_);
-        connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper));
+        connect_impl(force_move(props), force_move(session_life_keeper));
     }
 
     /**
@@ -524,14 +518,10 @@ public:
         v5::properties props,
         boost::system::error_code& ec,
         any session_life_keeper = any()) {
-        as::ip::tcp::resolver r(ioc_);
-        auto eps = r.resolve(host_, port_, ec);
-        if (ec) return;
         socket_ = force_move(socket);
         base::socket_optional().emplace(socket_);
-        connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper), ec);
+        connect_impl(force_move(props), force_move(session_life_keeper), ec);
     }
-
 
     /**
      * @brief Connect to a broker
@@ -613,30 +603,8 @@ public:
      * @param func finish handler that is called when the underlying connection process is finished
      */
     void async_connect(v5::properties props, any session_life_keeper, async_handler_t func) {
-        auto r = std::make_shared<as::ip::tcp::resolver>(ioc_);
-        auto p = r.get();
-        p->async_resolve(
-            host_,
-            port_,
-            [
-                this,
-                props = force_move(props),
-                session_life_keeper = force_move(session_life_keeper),
-                func = force_move(func),
-                r = force_move(r)
-            ]
-            (
-                error_code ec,
-                as::ip::tcp::resolver::results_type eps
-            ) mutable {
-                if (ec) {
-                    if (func) func(ec);
-                    return;
-                }
-                setup_socket(socket_);
-                async_connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper), force_move(func));
-            }
-        );
+        setup_socket(socket_);
+        async_connect_impl(force_move(props), force_move(session_life_keeper), force_move(func));
     }
 
     /**
@@ -746,32 +714,9 @@ public:
      * @param func finish handler that is called when the underlying connection process is finished
      */
     void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, any session_life_keeper, async_handler_t func) {
-        auto r = std::make_shared<as::ip::tcp::resolver>(ioc_);
-        auto p = r.get();
-        p->async_resolve(
-            host_,
-            port_,
-            [
-                this,
-                socket = force_move(socket),
-                props = force_move(props),
-                session_life_keeper = force_move(session_life_keeper),
-                func = force_move(func),
-                r = force_move(r)
-            ]
-            (
-                error_code ec,
-                as::ip::tcp::resolver::results_type eps
-            ) mutable {
-                if (ec) {
-                    if (func) func(ec);
-                    return;
-                }
-                socket_ = force_move(socket);
-                base::socket_optional().emplace(socket_);
-                async_connect_impl(*socket_, eps.begin(), eps.end(), force_move(props), force_move(session_life_keeper), force_move(func));
-            }
-        );
+        socket_ = force_move(socket);
+        base::socket_optional().emplace(socket_);
+        async_connect_impl(force_move(props), force_move(session_life_keeper), force_move(func));
     }
 
     /**
@@ -973,7 +918,6 @@ public:
         tim_close_.cancel();
         base::force_disconnect();
     }
-
 
     /**
      * @brief Set pingreq message sending mode
@@ -1286,70 +1230,86 @@ private:
 
 #endif // defined(MQTT_USE_TLS)
 
-    template <typename Iterator>
     void connect_impl(
-        Socket& socket,
-        Iterator it,
-        Iterator end,
         v5::properties props,
         any session_life_keeper) {
-        as::connect(socket.lowest_layer(), it, end);
+        as::ip::tcp::resolver r(ioc_);
+        auto eps = r.resolve(host_, port_);
+        as::connect(socket_->lowest_layer(), eps.begin(), eps.end());
         base::set_connect();
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
             set_timer();
         }
         session_expiry_interval_ = get_session_expiry_interval_by_props(props).value_or(0);
-        handshake_socket(socket, force_move(props), force_move(session_life_keeper));
+        handshake_socket(*socket_, force_move(props), force_move(session_life_keeper));
     }
 
-    template <typename Iterator>
     void connect_impl(
-        Socket& socket,
-        Iterator it,
-        Iterator end,
         v5::properties props,
         any session_life_keeper,
         boost::system::error_code& ec) {
-        as::connect(socket.lowest_layer(), it, end, ec);
+        as::ip::tcp::resolver r(ioc_);
+        auto eps = r.resolve(host_, port_, ec);
+        if (ec) return;
+        as::connect(socket_->lowest_layer(), eps.begin(), eps.end(), ec);
         if (ec) return;
         base::set_connect();
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
             set_timer();
         }
         session_expiry_interval_ = get_session_expiry_interval_by_props(props).value_or(0);
-        handshake_socket(socket, force_move(props), force_move(session_life_keeper), ec);
+        handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), ec);
     }
 
-    template <typename Iterator>
     void async_connect_impl(
-        Socket& socket,
-        Iterator it,
-        Iterator end,
         v5::properties props,
         any session_life_keeper,
         async_handler_t func) {
-        as::async_connect(
-            socket.lowest_layer(), it, end,
+        auto r = std::make_shared<as::ip::tcp::resolver>(ioc_);
+        auto p = r.get();
+        p->async_resolve(
+            host_,
+            port_,
             [
                 this,
                 self = this->shared_from_this(),
-                &socket,
-                session_life_keeper = force_move(session_life_keeper),
                 props = force_move(props),
-                func = force_move(func)
+                session_life_keeper = force_move(session_life_keeper),
+                func = force_move(func),
+                r = force_move(r)
             ]
-            (error_code ec, Iterator) mutable {
+            (
+                error_code ec,
+                as::ip::tcp::resolver::results_type eps
+            ) mutable {
                 if (ec) {
                     if (func) func(ec);
                     return;
                 }
-                base::set_connect();
-                if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
-                    set_timer();
-                }
-                session_expiry_interval_ = get_session_expiry_interval_by_props(props).value_or(0);
-                async_handshake_socket(socket, force_move(props), force_move(session_life_keeper), force_move(func));
-            });
+                as::async_connect(
+                    socket_->lowest_layer(), eps.begin(), eps.end(),
+                    [
+                        this,
+                        self = force_move(self),
+                        props = force_move(props),
+                        session_life_keeper = force_move(session_life_keeper),
+                        func = force_move(func)
+                    ]
+                    (error_code ec, auto /* unused */) mutable {
+                        if (ec) {
+                            if (func) func(ec);
+                            return;
+                        }
+                        base::set_connect();
+                        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
+                            set_timer();
+                        }
+                        session_expiry_interval_ = get_session_expiry_interval_by_props(props).value_or(0);
+                        async_handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), force_move(func));
+                    }
+                );
+            }
+        );
     }
 
 protected:
@@ -1496,9 +1456,11 @@ private:
     };
 
 #if defined(MQTT_USE_WS)
+
     template <typename U>
     struct has_tls<client<ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, U>>> : std::true_type {
     };
+
 #endif // defined(MQTT_USE_WS)
 
 #endif // defined(MQTT_USE_TLS)
