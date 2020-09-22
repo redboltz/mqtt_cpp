@@ -4549,8 +4549,8 @@ protected:
             connected_ = false;
             mqtt_connected_ = false;
             {
-                boost::system::error_code ec;
-                socket_->close(ec);
+                boost::system::error_code ignored_ec;
+                socket_->close(ignored_ec);
             }
         }
         if (   (ec == as::error::eof)
