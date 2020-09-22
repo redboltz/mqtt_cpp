@@ -4555,6 +4555,7 @@ protected:
         }
         if (   (ec == as::error::eof)
             || (ec == as::error::connection_reset)
+            || (ec == as::error::operation_aborted)
 #if defined(MQTT_USE_WS)
             || (ec == boost::beast::websocket::error::closed)
 #endif // defined(MQTT_USE_WS)
