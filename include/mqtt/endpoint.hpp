@@ -4495,7 +4495,7 @@ public:
      * 3.1.2.10 Keep Alive
      */
     void set_pingresp_timeout(std::chrono::steady_clock::duration tim) {
-        pingresp_timeout_ = mqtt::force_move(tim);
+        pingresp_timeout_ = MQTT_NS::force_move(tim);
     }
 
     /**
