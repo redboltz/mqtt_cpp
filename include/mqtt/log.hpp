@@ -83,10 +83,10 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(address, "MqttAddress", void const*)
 
 // Take any filterable parameters (FP)
 #define MQTT_LOG_FP(chan, sev)                                          \
-    BOOST_LOG_STREAM_CHANNEL_SEV(logger::get(), channel(chan), sev)     \
-    << log::add_value(file, __FILE__)                                   \
-    << log::add_value(line, __LINE__)                                   \
-    << log::add_value(function, BOOST_CURRENT_FUNCTION)
+    BOOST_LOG_STREAM_CHANNEL_SEV(MQTT_NS::logger::get(), MQTT_NS::channel(chan), sev) \
+    << boost::log::add_value(MQTT_NS::file, __FILE__)                   \
+    << boost::log::add_value(MQTT_NS::line, __LINE__)                   \
+    << boost::log::add_value(MQTT_NS::function, BOOST_CURRENT_FUNCTION)
 
 #define MQTT_GET_LOG_SEV_NUM(lv) BOOST_PP_CAT(MQTT_, lv)
 
@@ -114,21 +114,21 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(address, "MqttAddress", void const*)
 #define MQTT_LOG(chan, sev)                                             \
     BOOST_PP_IF(                                                        \
         BOOST_PP_GREATER_EQUAL(MQTT_GET_LOG_SEV_NUM(sev), MQTT_GET_LOG_SEV_NUM(MQTT_LOG_SEV)), \
-        MQTT_LOG_FP(chan, severity_level::sev),                 \
-        MQTT_NS::detail::null_log(chan, severity_level::sev)    \
+        MQTT_LOG_FP(chan, MQTT_NS::severity_level::sev),                \
+        MQTT_NS::detail::null_log(chan, MQTT_NS::severity_level::sev)   \
     )
 
 #endif // !defined(MQTT_LOG)
 
 #if !defined(MQTT_ADD_VALUE)
 
-#define MQTT_ADD_VALUE(name, val) log::add_value((name), (val))
+#define MQTT_ADD_VALUE(name, val) boost::log::add_value((name), (val))
 
 #endif // !defined(MQTT_ADD_VALUE)
 
 #else  // defined(MQTT_USE_LOG)
 
-#define MQTT_LOG(chan, sev) detail::null_log(chan, severity_level::sev)
+#define MQTT_LOG(chan, sev) MQTT_NS::detail::null_log(chan, MQTT_NS::severity_level::sev)
 #define MQTT_ADD_VALUE(name, val) val
 
 #endif // defined(MQTT_USE_LOG)

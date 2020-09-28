@@ -63,7 +63,7 @@ void setup_log(std::map<std::string, severity_level> threshold) {
             if (auto v = boost::log::extract<MQTT_NS::severity_level>("Severity", rec)) {
                 strm << "SEV[" << std::setw(7) << std::left << v.get() << "] ";
             }
-            if (auto v = boost::log::extract<channel>("Channel", rec)) {
+            if (auto v = boost::log::extract<MQTT_NS::channel>("Channel", rec)) {
                 strm << "CHANNEL[" << std::setw(5) << std::left << v.get() << "] ";
             }
             // Shorten file path example
@@ -98,8 +98,8 @@ void setup_log(std::map<std::string, severity_level> threshold) {
         (boost::log::attribute_value_set const& avs) {
             {
                 // For mqtt
-                auto chan = boost::log::extract<channel>("Channel", avs);
-                auto sev = boost::log::extract<severity_level>("Severity", avs);
+                auto chan = boost::log::extract<MQTT_NS::channel>("Channel", avs);
+                auto sev = boost::log::extract<MQTT_NS::severity_level>("Severity", avs);
                 if (chan && sev) {
                     auto it = threshold.find(chan.get());
                     if (it == threshold.end()) return false;
