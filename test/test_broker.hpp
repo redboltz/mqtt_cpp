@@ -32,23 +32,43 @@ using con_sp_t = std::shared_ptr<endpoint_t>;
 using con_wp_t = std::weak_ptr<endpoint_t>;
 using packet_id_t = endpoint_t::packet_id_t;
 
-inline bool validate_topic_pattern(MQTT_NS::string_view topicPattern)
-{
+// TODO: Technically this function is simply wrong, since it's treating the
+// topic pattern as if it were an ASCII sequence.
+// To make this function correct per the standard, it would be necessary
+// to conduct the search for the wildcard characters using a proper
+// UTF-8 API to avoid problems of interpreting parts of multi-byte characters
+// as if they were individual ASCII characters
+#ifdef MQTT_STD_STRING_VIEW
+constexpr
+#endif // MQTT_STD_STRING_VIEW
+bool validate_topic_filter(MQTT_NS::string_view topicFilter) {
     /*
      * Confirm the topic pattern is valid before registering it.
      * Use rules from http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718106
      */
-    for(size_t idx = topicPattern.find_first_of("+#");
+
+    // All Topic Names and Topic Filters MUST be at least one character long
+    // Topic Names and Topic Filters are UTF-8 Encoded Strings; they MUST NOT encode to more than 65,535 bytes
+    if(topicFilter.empty() || (topicFilter.size() > std::numeric_limits<std::uint16_t>::max())) {
+        return false;
+    }
+
+    for(MQTT_NS::string_view::size_type idx = topicFilter.find_first_of(MQTT_NS::string_view("\0+#", 3));
         MQTT_NS::string_view::npos != idx;
-        idx = topicPattern.find_first_of("+#", idx+1)) {
-        BOOST_ASSERT(   ('+' == topicPattern[idx])
-                     || ('#' == topicPattern[idx]));
-        if('+' == topicPattern[idx]) {
+        idx = topicFilter.find_first_of(MQTT_NS::string_view("\0+#", 3), idx+1)) {
+        BOOST_ASSERT(   ('\0' == topicFilter[idx])
+                     || ('+'  == topicFilter[idx])
+                     || ('#'  == topicFilter[idx]));
+        if('\0' == topicFilter[idx]) {
+            // Topic Names and Topic Filters MUST NOT include the null character (Unicode U+0000)
+            return false;
+        }
+        else if('+' == topicFilter[idx]) {
             /*
              * Either must be the first character,
              * or be preceeded by a topic seperator.
              */
-            if((0 != idx) && ('/' != topicPattern[idx-1])) {
+            if((0 != idx) && ('/' != topicFilter[idx-1])) {
                 return false;
             }
 
@@ -56,17 +76,17 @@ inline bool validate_topic_pattern(MQTT_NS::string_view topicPattern)
              * Either must be the last character,
              * or be followed by a topic seperator.
              */
-            if((topicPattern.size()-1 != idx) && ('/' != topicPattern[idx+1])) {
+            if((topicFilter.size()-1 != idx) && ('/' != topicFilter[idx+1])) {
                 return false;
             }
         }
         // multilevel wildcard
-        else {
+        else if('#' == topicFilter[idx]) {
             /*
              * Must be absolute last character.
              * Must only be one multi level wild card.
              */
-            if(idx != topicPattern.size()-1) {
+            if(idx != topicFilter.size()-1) {
                 return false;
             }
 
@@ -75,27 +95,103 @@ inline bool validate_topic_pattern(MQTT_NS::string_view topicPattern)
              * immediately preceeding character must
              * be a topic level separator.
              */
-            if((0 != idx) && ('/' != topicPattern[idx-1])) {
+            if((0 != idx) && ('/' != topicFilter[idx-1])) {
                 return false;
             }
+        }
+        else {
+            return false;
         }
     }
     return true;
 }
 
-inline bool compare_topic_pattern(MQTT_NS::string_view topicPattern, MQTT_NS::string_view topic)
-{
-    BOOST_ASSERT(validate_topic_pattern(topicPattern));
-    for(size_t idx = topicPattern.find_first_of("+#");
+#ifdef MQTT_STD_STRING_VIEW
+// The following rules come from https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901247
+static_assert( ! validate_topic_filter(""), "All Topic Names and Topic Filters MUST be at least one character long");
+static_assert(validate_topic_filter("/"), "A Topic Name or Topic Filter consisting only of the ‘/’ character is valid");
+static_assert( ! validate_topic_filter(MQTT_NS::string_view("\0", 1)), "Topic Names and Topic Filters MUST NOT include the null character (Unicode U+0000)");
+static_assert(validate_topic_filter(" "), "Topic Names and Topic Filters can include the space character");
+static_assert(validate_topic_filter("/////"), "Topic level separators can appear anywhere in a Topic Filter or Topic Name. Adjacent Topic level separators indicate a zero-length topic level");
+static_assert(validate_topic_filter("#"), "The multi-level wildcard character MUST be specified either on its own or following a topic level separator");
+static_assert(validate_topic_filter("/#"), "The multi-level wildcard character MUST be specified either on its own or following a topic level separator");
+static_assert(validate_topic_filter("+/#"), "The multi-level wildcard character MUST be specified either on its own or following a topic level separator");
+static_assert( ! validate_topic_filter("+#"), "The multi-level wildcard character MUST be specified either on its own or following a topic level separator");
+static_assert( ! validate_topic_filter("++"), "The multi-level wildcard character MUST be specified either on its own or following a topic level separator");
+static_assert( ! validate_topic_filter("f#"), "The multi-level wildcard character MUST be specified either on its own or following a topic level separator");
+static_assert( ! validate_topic_filter("#/"), "In either case the multi-level wildcard character MUST be the last character specified in the Topic Filter");
+
+static_assert(validate_topic_filter("+"), "The single-level wildcard can be used at any level in the Topic Filter, including first and last levels");
+static_assert(validate_topic_filter("+/bob/alice/sue"), "The single-level wildcard can be used at any level in the Topic Filter, including first and last levels");
+static_assert(validate_topic_filter("bob/alice/sue/+"), "The single-level wildcard can be used at any level in the Topic Filter, including first and last levels");
+static_assert(validate_topic_filter("+/bob/alice/sue/+"), "The single-level wildcard can be used at any level in the Topic Filter, including first and last levels");
+static_assert(validate_topic_filter("+/bob/+/sue/+"), "The single-level wildcard can be used at any level in the Topic Filter, including first and last levels");
+static_assert(validate_topic_filter("+/bob/+/sue/#"), "The single-level wildcard can be used at more than one level in the Topic Filter and can be used in conjunction with the multi-level wildcard");
+static_assert( ! validate_topic_filter("+a"), "Where it is used, the single-level wildcard MUST occupy an entire level of the filter.");
+static_assert( ! validate_topic_filter("a+"), "Where it is used, the single-level wildcard MUST occupy an entire level of the filter.");
+static_assert( ! validate_topic_filter("/a+"), "Where it is used, the single-level wildcard MUST occupy an entire level of the filter.");
+static_assert( ! validate_topic_filter("a+/"), "Where it is used, the single-level wildcard MUST occupy an entire level of the filter.");
+static_assert( ! validate_topic_filter("/a+/"), "Where it is used, the single-level wildcard MUST occupy an entire level of the filter.");
+#endif // MQTT_STD_STRING_VIEW
+
+#ifdef MQTT_STD_STRING_VIEW
+constexpr
+#endif // MQTT_STD_STRING_VIEW
+bool validate_topic_name(MQTT_NS::string_view topicName) {
+    /*
+     * Confirm the topic name is valid
+     * Use rules from https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901247
+     */
+
+    // All Topic Names and Topic Filters MUST be at least one character long
+    // Topic Names and Topic Filters are UTF-8 Encoded Strings; they MUST NOT encode to more than 65,535 bytes
+    // The wildcard characters can be used in Topic Filters, but MUST NOT be used within a Topic Name
+    // Topic Names and Topic Filters MUST NOT include the null character (Unicode U+0000)
+    return    ! topicName.empty()
+           && (topicName.size() <= std::numeric_limits<std::uint16_t>::max())
+           && (MQTT_NS::string_view::npos == topicName.find_first_of(MQTT_NS::string_view("\0+#", 3)));
+}
+
+#ifdef MQTT_STD_STRING_VIEW
+// The following rules come from https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901247
+static_assert( ! validate_topic_name(""), "All Topic Names and Topic Filters MUST be at least one character long");
+static_assert(validate_topic_name("/"), "A Topic Name or Topic Filter consisting only of the ‘/’ character is valid");
+static_assert( ! validate_topic_name(MQTT_NS::string_view("\0", 1)), "Topic Names and Topic Filters MUST NOT include the null character (Unicode U+0000)");
+static_assert(validate_topic_name(" "), "Topic Names and Topic Filters can include the space character");
+static_assert(validate_topic_name("/////"), "Topic level separators can appear anywhere in a Topic Filter or Topic Name. Adjacent Topic level separators indicate a zero-length topic level");
+static_assert( ! validate_topic_name("#"), "The wildcard characters can be used in Topic Filters, but MUST NOT be used within a Topic Name");
+static_assert( ! validate_topic_name("+"), "The wildcard characters can be used in Topic Filters, but MUST NOT be used within a Topic Name");
+static_assert( ! validate_topic_name("/#"), "The wildcard characters can be used in Topic Filters, but MUST NOT be used within a Topic Name");
+static_assert( ! validate_topic_name("+/#"), "The wildcard characters can be used in Topic Filters, but MUST NOT be used within a Topic Name");
+static_assert( ! validate_topic_name("f#"), "The wildcard characters can be used in Topic Filters, but MUST NOT be used within a Topic Name");
+static_assert( ! validate_topic_name("#/"), "The wildcard characters can be used in Topic Filters, but MUST NOT be used within a Topic Name");
+#endif // MQTT_STD_STRING_VIEW
+
+#ifdef MQTT_STD_STRING_VIEW
+constexpr
+#endif // MQTT_STD_STRING_VIEW
+bool compare_topic_filter(MQTT_NS::string_view topicFilter, MQTT_NS::string_view topicName) {
+    if( ! validate_topic_filter(topicFilter)) {
+        BOOST_ASSERT(validate_topic_filter(topicFilter));
+        return false;
+    }
+
+    if( ! validate_topic_name(topicName)) {
+        BOOST_ASSERT(validate_topic_name(topicName));
+        return false;
+    }
+
+    // TODO: The Server MUST NOT match Topic Filters starting with a wildcard character (# or +) with Topic Names beginning with a $ character
+    for(MQTT_NS::string_view::size_type idx = topicFilter.find_first_of("+#");
         MQTT_NS::string_view::npos != idx;
-        idx = topicPattern.find_first_of("+#")) {
-        BOOST_ASSERT(   ('+' == topicPattern[idx])
-                     || ('#' == topicPattern[idx]));
-        if('+' == topicPattern[idx]) {
+        idx = topicFilter.find_first_of("+#")) {
+        BOOST_ASSERT(   ('+' == topicFilter[idx])
+                     || ('#' == topicFilter[idx]));
+        if('+' == topicFilter[idx]) {
             // Compare everything up to the first +
-            if(topicPattern.substr(0, idx) == topic.substr(0, idx)) {
+            if(topicFilter.substr(0, idx) == topicName.substr(0, idx)) {
                 /*
-                 * We already know thanks to the topic pattern being validated
+                 * We already know thanks to the topic filter being validated
                  * that the + symbol is directly touching '/'s on both sides
                  * (if not the first or last character), so we don't need to
                  * double check that.
@@ -104,12 +200,12 @@ inline bool compare_topic_pattern(MQTT_NS::string_view topicPattern, MQTT_NS::st
                  * the loop continue, we get the proper comparison of the '/'s
                  * automatically when the loop continues.
                  */
-                topicPattern.remove_prefix(idx+1);
+                topicFilter.remove_prefix(idx+1);
                 /*
                  * It's a bit more complicated for the incoming topic though
                  * as we need to remove everything up to the next seperator.
                  */
-                topic.remove_prefix(topic.find('/', idx));
+                topicName.remove_prefix(topicName.find('/', idx));
             }
             else {
                 return false;
@@ -121,12 +217,54 @@ inline bool compare_topic_pattern(MQTT_NS::string_view topicPattern, MQTT_NS::st
              * Compare up to where the multilevel wild card is found
              * and then anything after that matches the wildcard.
              */
-            return topicPattern.substr(0, idx) == topic.substr(0, idx);
+            return topicFilter.substr(0, idx) == topicName.substr(0, idx);
         }
     }
 
-    // No + or # found in the remaining topic pattern. Just do a string compare.
-    return topicPattern == topic;
+    // No + or # found in the remaining topic filter. Just do a string compare.
+    return topicFilter == topicName;
+}
+
+#ifdef MQTT_STD_STRING_VIEW
+static_assert(compare_topic_filter("bob", "bob"), "Topic Names and Topic Filters are case sensitive");
+static_assert( ! compare_topic_filter("Bob", "bob"), "Topic Names and Topic Filters are case sensitive");
+static_assert( ! compare_topic_filter("bob", "boB"), "Topic Names and Topic Filters are case sensitive");
+static_assert( ! compare_topic_filter("/bob", "bob"), "A leading or trailing ‘/’ creates a distinct Topic Name or Topic Filter");
+static_assert( ! compare_topic_filter("bob/", "bob"), "A leading or trailing ‘/’ creates a distinct Topic Name or Topic Filter");
+static_assert( ! compare_topic_filter("bob", "/bob"), "A leading or trailing ‘/’ creates a distinct Topic Name or Topic Filter");
+static_assert( ! compare_topic_filter("bob", "bob/"), "A leading or trailing ‘/’ creates a distinct Topic Name or Topic Filter");
+static_assert(compare_topic_filter("bob/alice", "bob/alice"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
+static_assert(compare_topic_filter("bob/alice/sue", "bob/alice/sue"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
+static_assert(compare_topic_filter("bob//////sue", "bob//////sue"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
+static_assert(compare_topic_filter("bob/#", "bob//////sue"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
+static_assert( ! compare_topic_filter("bob///#", "bob/sue"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
+static_assert(compare_topic_filter("bob/+/sue", "bob/alice/sue"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
+static_assert( ! compare_topic_filter("bob/+/sue", "bob/alice/mary/sue"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
+static_assert(compare_topic_filter("#", "bob/alice/mary/sue"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
+static_assert(compare_topic_filter("bob/#", "bob/alice/mary/sue"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
+static_assert(compare_topic_filter("bob/alice/#", "bob/alice/mary/sue"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
+static_assert(compare_topic_filter("bob/alice/mary/#", "bob/alice/mary/sue"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
+static_assert( ! compare_topic_filter("bob/alice/mary/sue/#", "bob/alice/mary/sue"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
+#endif // MQTT_STD_STRING_VIEW
+
+std::pair<MQTT_NS::buffer, MQTT_NS::buffer> parse_shared_subscription(MQTT_NS::buffer topic) {
+    auto const sharedPrefix = MQTT_NS::string_view("$share/");
+    if(topic.substr(0, sharedPrefix.size()) != sharedPrefix) {
+        return {MQTT_NS::buffer{}, MQTT_NS::force_move(topic)};
+    }
+
+    // Remove $share/
+    topic.remove_prefix(sharedPrefix.size());
+
+    // This is the '/' seperating the subscription group from the actual topic.
+    auto const idx = topic.find_first_of('/');
+
+    // We return the share and the topic as buffers that point to the same
+    // storage. So we grab the substr for "share", and then remove it from topic.
+    auto share = topic.substr(0, idx);
+    topic.remove_prefix(idx);
+
+    return {MQTT_NS::force_move(share), MQTT_NS::force_move(topic)};
 }
 
 class test_broker {
@@ -581,6 +719,7 @@ private:
         // If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1 [MQTT-3.1.3-7].
         // If it's a not a clean session, but no client id is provided, we would have no way to map this
         // connection's session to a new connection later. So the connection must be rejected.
+        // TODO: When the clientid is zero bytes, it is supposed to be assigned a unique id by the broker.
         switch (ep.get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
             if (client_id.empty() && !clean_session) {
@@ -723,7 +862,28 @@ private:
         }
 
         if (clean_session) {
-            saved_subs_.get<tag_client_id>().erase(client_id);
+            auto & idx = saved_subs_.get<tag_client_id>();
+            auto const& range = boost::make_iterator_range(idx.equal_range(client_id));
+            // For each to-be-erased saved-subscription object, check to see
+            // if there is a shared-subscription that is for a client other than this one.
+            // if not, delete the saved_shared_subs_ object for this topic/share.
+            // Note: We do not have to check the non-saved shared_subs_ map because
+            // if there are any entries in that map, they are already valid
+            for(auto const& item : range) {
+                if(!item.share.empty()) {
+                    auto const& otherRange = boost::make_iterator_range(saved_subs_.get<tag_topic>().equal_range(std::make_tuple(item.share, item.topic)));
+                    if(std::none_of(otherRange.begin(), otherRange.end(), [&](auto const& sub) {
+                        return sub.client_id != client_id;
+                    })) {
+                        auto & sharedSubsIdx = saved_shared_subs_.get<tag_combined>();
+                        auto const& it = sharedSubsIdx.find(std::make_tuple(item.share, item.topic));
+                        if(it != sharedSubsIdx.end()) {
+                            sharedSubsIdx.erase(it);
+                        }
+                    }
+                }
+            }
+            idx.erase(range.begin(), range.end());
             BOOST_ASSERT(saved_subs_.get<tag_client_id>().count(client_id) == 0);
         }
         else {
@@ -746,7 +906,38 @@ private:
                         std::make_tuple(item.topic, d.contents, *(d.props))
                         );
                 }
-                subs_.emplace(item.topic, spep, item.qos_value, item.rap_value);
+                subs_.emplace(item.share, item.topic, spep, item.qos_value, item.rap_value);
+                // Since we are re-activating this session, any shared-subscriptions
+                // that are in the saved_shared_subs_ list that this client_id belongs to
+                // should be sent to the list of subscribed clients (Which will be only this client)
+                // and should then be removed from the saved_shared_subs_ list, since now it's active.
+                // Note: Even if there are other deactivated sessions in the saved_subs_ list,
+                // because even one session subscribed to the shared subscriotion is active
+                // it should not be stored in the saved subs list.
+                if(!item.share.empty()) {
+                    auto & sharedSubsIdx = saved_shared_subs_.get<tag_combined>();
+                    auto const& it = sharedSubsIdx.find(std::make_tuple(item.share, item.topic));
+                    if(it != sharedSubsIdx.end()) {
+                        // Send the saved messages out on the wire.
+                        for (auto & d : it->messages) {
+                            // But *only* for this connection
+                            // Not every connection in the broker.
+                            ep.publish(
+                                as::buffer(item.topic),
+                                as::buffer(d.contents),
+                                // TODO: why is this 'retain'?
+                                std::min(item.qos_value, d.qos_value) | MQTT_NS::retain::yes,
+                                *(d.props),
+                                std::make_tuple(item.topic, d.contents, *(d.props))
+                                );
+                        }
+                        sharedSubsIdx.erase(it);
+                    }
+
+                    // This initializes the round-robin iterator storage for this shared subscription, if and only if, it is not already.
+                    // Notably, we do not check the return of the emplace call, since if the item already existed, we don't want a new one made.
+                    shared_subs_.emplace(item.share, item.topic, subs_.get<tag_topic>().find(std::make_tuple(item.share, item.topic)));
+                }
             }
             idx.erase(range.begin(), range.end());
             BOOST_ASSERT(idx.count(client_id) == 0);
@@ -855,7 +1046,7 @@ private:
                 res.emplace_back(MQTT_NS::qos_to_suback_return_code(qos_value)); // converts to granted_qos_x
                 // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
                 // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
-                subs_.emplace(MQTT_NS::force_move(topic), spep, qos_value);
+                subs_.emplace(MQTT_NS::buffer{}, MQTT_NS::force_move(topic), spep, qos_value);
             }
             // Acknowledge the subscriptions, and the registered QOS settings
             ep.suback(packet_id, MQTT_NS::force_move(res));
@@ -866,13 +1057,15 @@ private:
             std::vector<MQTT_NS::v5::suback_reason_code> res;
             res.reserve(entries.size());
             for (auto const& e : entries) {
-                MQTT_NS::buffer topic = std::get<0>(e);
+                MQTT_NS::buffer share;
+                MQTT_NS::buffer topic;
+                std::tie(share, topic) = parse_shared_subscription(std::get<0>(e));
                 MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
                 MQTT_NS::rap rap_value = std::get<1>(e).get_rap();
                 res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(qos_value)); // converts to granted_qos_x
                 // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
                 // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
-                subs_.emplace(MQTT_NS::force_move(topic), spep, qos_value, rap_value);
+                subs_.emplace(MQTT_NS::force_move(share), MQTT_NS::force_move(topic), spep, qos_value, rap_value);
             }
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
@@ -885,11 +1078,14 @@ private:
         }
 
         // Publish any retained messages that match the newly subscribed topic.
+        // Note, this code intentionally does not parse the shared subscription
+        // since retained messages are not published to shared subscriptions in
+        // the normal way, and thus the topic comparison will fail.
         for (auto const& e : entries) {
             for(auto const& retain : retains_) {
                 MQTT_NS::buffer const& topic = std::get<0>(e);
                 MQTT_NS::subscribe_options options = std::get<1>(e);
-                if(compare_topic_pattern(topic, retain.topic)) {
+                if(compare_topic_filter(topic, retain.topic)) {
                     ep.publish(
                         as::buffer(retain.topic),
                         as::buffer(retain.contents),
@@ -897,6 +1093,47 @@ private:
                         retain.props,
                         std::make_pair(retain.topic, retain.contents)
                     );
+                }
+            }
+        }
+
+        // Re-activate any saved "shared-subscriptions" that match the newly subscribed topics.
+        // if any match, publish any saved messages right away.
+        for (auto const& e : entries) {
+            MQTT_NS::buffer share;
+            MQTT_NS::buffer topic;
+            std::tie(share, topic) = parse_shared_subscription(std::get<0>(e));
+            MQTT_NS::subscribe_options options = std::get<1>(e);
+
+            // If any of the newly added subscriptions matches a shared subscription
+            // in the saved_shared_subs_ list, then we need to "re-activate" that
+            // shared subscription by removing it from the saved_shared_subs_ list.
+            // If there is one in the saved_shared_subs_ list, then this client is now
+            // the only active client subscribed to the shared subscription, and should
+            // be sent any saved messages that were queued for that subscription.
+            if(!share.empty()) {
+                auto & sharedSubsIdx = saved_shared_subs_.get<tag_combined>();
+                auto const& it = sharedSubsIdx.find(std::make_tuple(share, topic));
+                if(it != sharedSubsIdx.end()) {
+                    // Send the saved messages out on the wire.
+                    for (auto & d : it->messages) {
+                        // But *only* for this connection
+                        // Not every connection in the broker.
+                        ep.publish(
+                            as::buffer(topic),
+                            as::buffer(d.contents),
+                            // TODO: why is this 'retain'?
+                            std::min(options.get_qos(), d.qos_value) | MQTT_NS::retain::yes,
+                            *(d.props),
+                            std::make_tuple(topic, d.contents, *(d.props))
+                            );
+                    }
+
+                    // This initializes the round-robin iterator storage for this shared subscription, if and only if, it is not already.
+                    // Notably, we do not check the return of the emplace call, since if the item already existed, we don't want a new one made.
+                    shared_subs_.emplace(share, topic, subs_.get<tag_topic>().find(std::make_tuple(share, topic)));
+
+                    sharedSubsIdx.erase(it);
                 }
             }
         }
@@ -909,56 +1146,34 @@ private:
         std::vector<MQTT_NS::buffer> topics,
         MQTT_NS::v5::properties props) {
 
-        auto& ep = *spep;
-
-        // For each subscription that this connection has
-        // Compare against the list of topics, and remove
-        // the subscription if the topic is in the list.
         {
-            auto & idx = subs_.get<tag_con>();
-            auto const& range = boost::make_iterator_range(idx.equal_range(spep));
-            for(auto it = range.begin(); it != range.end(); ) {
-                bool match = false;
-                for(auto const& topic : topics) {
-                    if(it->topic == topic) {
-                        /*
-                         * Advance the iterator using the return from erase.
-                         * The returned it may be equal to the next topic in
-                         * the list, so we continue comparing. When the loop
-                         * finishes, however, we can't blindly advance the
-                         * iterator, because that might result in skipping
-                         * an iterator that hasn't been checked. Further, we
-                         * can't only rely on the inner loop to advance the
-                         * iterator because we might not have a match, and
-                         * thus would infinitely loop on the current iterator.
-                         */
-                        it = idx.erase(it);
-                        match = true;
-                        break;
-                    }
+            auto & idx = subs_.get<tag_combined>();
+            for(auto const& filter : topics) {
+                MQTT_NS::buffer share;
+                MQTT_NS::buffer topic;
+                std::tie(share, topic) = parse_shared_subscription(filter);
+                auto it = idx.find(std::make_tuple(spep, MQTT_NS::force_move(share), MQTT_NS::force_move(topic)));
+                if(it != idx.end()) {
+                    idx.erase(it);
                 }
-                if( ! match)
-                {
-                    std::advance(it, 1);
-                }
+                // TODO: If this was the last active subscription for this share and topic,
+                // then the shared_subs_ entry must be destroyed.
+
+                // TODO: If this was the last active subscription for this share and topic
+                // then it is necessary to add a saved_shared_subscription if and only if
+                // there is a saved_subscription for this share and topic.
+
+                // TODO: Before erasing, we must updated the shared_subs_ iterator to avoid iterator invalidation.
             }
         }
 
-        for(auto const& item : boost::make_iterator_range( subs_.get<tag_con>().equal_range(spep))) {
-            (void)item;
-            for(auto const& topic : topics) {
-                (void)topic;
-                BOOST_ASSERT(item.topic != topic);
-            }
-        }
-
-        switch (ep.get_protocol_version()) {
+        switch (spep->get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
-            ep.unsuback(packet_id);
+            spep->unsuback(packet_id);
             break;
         case MQTT_NS::protocol_version::v5:
             if (h_unsubscribe_props_) h_unsubscribe_props_(props);
-            ep.unsuback(packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code>(topics.size(), MQTT_NS::v5::unsuback_reason_code::success), unsuback_props_);
+            spep->unsuback(packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code>(topics.size(), MQTT_NS::v5::unsuback_reason_code::success), unsuback_props_);
             break;
         default:
             BOOST_ASSERT(false);
@@ -983,41 +1198,89 @@ private:
         MQTT_NS::v5::properties props) {
         // For each active subscription registered for this topic
         for(auto const& sub : subs_.get<tag_topic>()) {
-            if(compare_topic_pattern(sub.topic, topic)) {
-                // publish the message to subscribers.
-                // TODO: Probably this should be switched to async_publish?
-                //       Given the async_client / sync_client seperation
-                //       and the way they have different function names,
-                //       it wouldn't be possible for test_broker.hpp to be
-                //       used with some hypothetical "async_server" in the future.
+            if(compare_topic_filter(sub.topic, topic)) {
+                // If this subscription is shared, we want to publish the message to
+                // one and only one subscribed client, which is handled in the next block.
+                if(sub.share.empty()) {
+                    // publish the message to subscribers.
+                    // TODO: Probably this should be switched to async_publish?
+                    //       Given the async_client / sync_client seperation
+                    //       and the way they have different function names,
+                    //       it wouldn't be possible for test_broker.hpp to be
+                    //       used with some hypothetical "async_server" in the future.
 
-                // retain is delivered as the original only if rap_value is rap::retain.
-                // On MQTT v3.1.1, rap_value is always rap::dont.
-                auto retain =
-                    [&] {
-                        if (sub.rap_value == MQTT_NS::rap::retain) {
-                            return pubopts.get_retain();
-                        }
-                        return MQTT_NS::retain::no;
-                    } ();
-                sub.con->publish(
-                    topic,
-                    contents,
-                    std::min(sub.qos_value, pubopts.get_qos()) | retain,
-                    props // TODO: Copying the properties vector for each subscription.
-                );
+                    // retain is delivered as the original only if rap_value is rap::retain.
+                    // On MQTT v3.1.1, rap_value is always rap::dont.
+                    auto retain =
+                        [&] {
+                            if (sub.rap_value == MQTT_NS::rap::retain) {
+                                return pubopts.get_retain();
+                            }
+                            return MQTT_NS::retain::no;
+                        } ();
+                    sub.con->publish(
+                        topic,
+                        contents,
+                        std::min(sub.qos_value, pubopts.get_qos()) | retain,
+                        props // TODO: Copying the properties vector for each subscription.
+                    );
+                }
             }
         }
 
+        // publish to one client for any matching shared subscriptions.
+        // We have to compare each subscribed topic in the shared_subs_
+        // map, because each such subscription, regardless of overlap,
+        // can qualify to receive the message independently.
+        // additionally, even if multiple entries have identical topics
+        // they might be part of unique subscription groups. Each such
+        // subscription group receives the message independently of the
+        // other groups.
+        // So until a Trie based lookup algorithm is introduced,
+        // this really does need to be a comparison against every single
+        // shared subscription.
         {
-            // For each saved subscription, add this message to
-            // the list to be sent out when a connection resumes
-            // a lost session.
+            auto & idx = shared_subs_.get<tag_topic>();
+            for(auto const& sub : idx) {
+                if(compare_topic_filter(sub.topic, topic)) {
+                    // retain is delivered as the original only if rap_value is rap::retain.
+                    // On MQTT v3.1.1, rap_value is always rap::dont.
+                    auto retain =
+                        [&] {
+                            if (sub.it->rap_value == MQTT_NS::rap::retain) {
+                                return pubopts.get_retain();
+                            }
+                            return MQTT_NS::retain::no;
+                        } ();
+                    sub.it->con->publish(
+                        topic,
+                        contents,
+                        std::min(sub.it->qos_value, pubopts.get_qos()) | retain,
+                        props // TODO: Copying the properties vector for each subscription.
+                    );
+                    idx.modify(idx.iterator_to(sub),
+                               [&](shared_subscription_policy& val)
+                               {
+                                   std::advance(val.it, 1);
+                                   auto & subsIdx = subs_.get<tag_topic>();
+                                   if(val.it == subsIdx.end()) {
+                                       val.it = subsIdx.begin();
+                                   }
+                               },
+                               [](shared_subscription_policy&) { BOOST_ASSERT(false); });
+                }
+            }
+        }
+
+        // For each saved subscription, add this message to
+        // the list to be sent out when a connection resumes
+        // a lost session.
+        {
             auto & idx = saved_subs_.get<tag_topic>();
             // Note: Only allocated if used.
             std::shared_ptr<MQTT_NS::v5::properties> sp_props;
             for(auto const& item : idx) {
-                if(compare_topic_pattern(item.topic, topic)) {
+                if(compare_topic_filter(item.topic, topic)) {
                     if(!sp_props) {
                         sp_props = std::make_shared<MQTT_NS::v5::properties>(props);
                     }
@@ -1037,6 +1300,36 @@ private:
                                        std::min(val.qos_value, pubopts.get_qos()));
                                },
                                [](session_subscription&) { BOOST_ASSERT(false); });
+                }
+            }
+        }
+
+        // Store in any matching saved_shared_subscriptions
+        {
+            auto & idx = saved_shared_subs_.get<tag_topic>();
+            // Note: Only allocated if used.
+            std::shared_ptr<MQTT_NS::v5::properties> sp_props;
+            for(auto const& item : idx) {
+                if(compare_topic_filter(item.topic, topic)) {
+                    if(!sp_props) {
+                        sp_props = std::make_shared<MQTT_NS::v5::properties>(props);
+                    }
+
+                    idx.modify(idx.iterator_to(item),
+                               [&](shared_session_subscription & val)
+                               {
+                                   // Note: The description of session state here:
+                                   // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901230
+                                   // does not say that only one message is saved per topic in the state.
+                                   // That behavior is apparently only applicable to the 'retain' message
+                                   // storage, which is a global thing, and not a per-session thing.
+                                   // So it is correct that all messages should be stored in the session state.
+                                   val.messages.emplace_back(
+                                       contents,
+                                       sp_props,
+                                       pubopts.get_qos());
+                               },
+                               [](shared_session_subscription&) { BOOST_ASSERT(false); });
                 }
             }
         }
@@ -1193,23 +1486,73 @@ private:
             auto& idx = subs_.get<tag_con>();
             auto const& range = boost::make_iterator_range(idx.equal_range(spep));
             // In v3_1_1, session_expiry_interval is not set. So clean on close.
-            if (session_clear) {
-                // Remove all subscriptions for this clientid
-                idx.erase(range.begin(), range.end());
-            }
-            else if( ! range.empty()) {
+            if (!session_clear) {
                 // Save all the subscriptions for this clientid for later.
                 for(auto const& item : range) {
                     auto const& ret = saved_subs_.emplace(client_id,
+                                                          item.share,
                                                           item.topic,
                                                           item.qos_value,
                                                           item.rap_value);
                     (void)ret;
                     BOOST_ASSERT(ret.second);
                     BOOST_ASSERT(ret.first == saved_subs_.find(client_id));
+                    if(!item.share.empty()) {
+                        // If no other clients are subscribed to this shared subscription topic, then we
+                        // make a new saved_shared_subs_ entry to record that a disconnected session is
+                        // subscribed to a shared subscription.
+                        auto const& otherRange = boost::make_iterator_range(subs_.get<tag_topic>().equal_range(std::make_tuple(item.share, item.topic)));
+                        if(std::none_of(otherRange.begin(), otherRange.end(), [&](auto const& sub) {
+                            return sub.con != spep;
+                        })) {
+                            auto const& ret = saved_shared_subs_.emplace(item.share, item.topic);
+                            (void)ret;
+                            BOOST_ASSERT(ret.second);
+                            //BOOST_ASSERT(ret.first == saved_shared_subs_.get<tag_combined>().find(std::make_tuple(item.share, item.topic)));
+                        }
+                    }
                 }
-                idx.erase(range.begin(), range.end());
             }
+
+            // Regardless of whether we are saving any subscriptions, we need to adjust the
+            // entries in the active shared_subs_ map now that this client id is disconnected.
+            for(auto const& item : range) {
+                if(!item.share.empty()) {
+                    // If no other clients are subscribed to this shared subscription topic, then we
+                    // remove the shared_subs_ entry. Otherwise we update the iterator in the shared_subs_ entry.
+                    auto const& otherRange = boost::make_iterator_range(subs_.get<tag_topic>().equal_range(std::make_tuple(item.share, item.topic)));
+                    if(std::none_of(otherRange.begin(), otherRange.end(), [&](auto const& sub) {
+                        return sub.con != spep;
+                    })) {
+                        auto & sharedSubsIdx = shared_subs_.get<tag_combined>();
+                        auto const& it = sharedSubsIdx.find(std::make_tuple(item.share, item.topic));
+                        if(it != sharedSubsIdx.end()) {
+                            sharedSubsIdx.erase(it);
+                        }
+                    }
+                    else {
+                        auto & sharedSubsIdx = shared_subs_.get<tag_combined>();
+                        auto const& it = sharedSubsIdx.find(std::make_tuple(item.share, item.topic));
+                        sharedSubsIdx.modify(it,
+                                             [&](shared_subscription_policy& val)
+                                             {
+                                                 auto & subsIdx = subs_.get<tag_topic>();
+                                                 // Only make any modifications if the iterator
+                                                 // currently points to the client being disconnected.
+                                                 while(val.it->con == spep) {
+                                                     std::advance(val.it, 1);
+                                                     if(val.it == subsIdx.end()) {
+                                                     val.it = subsIdx.begin();
+                                                 }
+                                             }
+                                         },
+                                         [](shared_subscription_policy&) { BOOST_ASSERT(false); });
+                    }
+                }
+            }
+
+            // Remove all subscriptions for this clientid from the active subscriptions.
+            idx.erase(range.begin(), range.end());
             BOOST_ASSERT(idx.count(spep) == 0);
         }
 
@@ -1226,9 +1569,10 @@ private:
 
 private:
     struct tag_con {};
+    struct tag_tim {};
     struct tag_topic {};
     struct tag_client_id {};
-    struct tag_tim {};
+    struct tag_combined {};
 
     /**
      * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Session_State
@@ -1315,11 +1659,13 @@ private:
     // Mapping between connection object and subscription topics
     struct sub_con {
         sub_con(
+            MQTT_NS::buffer share,
             MQTT_NS::buffer topic,
             con_sp_t con,
             MQTT_NS::qos qos_value,
             MQTT_NS::rap rap_value = MQTT_NS::rap::dont)
-            :topic(MQTT_NS::force_move(topic)), con(MQTT_NS::force_move(con)), qos_value(qos_value), rap_value(rap_value) {}
+            :share(MQTT_NS::force_move(share)), topic(MQTT_NS::force_move(topic)), con(MQTT_NS::force_move(con)), qos_value(qos_value), rap_value(rap_value) {}
+        MQTT_NS::buffer share;
         MQTT_NS::buffer topic;
         con_sp_t con;
         MQTT_NS::qos qos_value;
@@ -1329,21 +1675,24 @@ private:
         sub_con,
         mi::indexed_by<
             mi::ordered_non_unique<
-                mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, topic)
-            >,
-            mi::ordered_non_unique<
                 mi::tag<tag_con>,
                 BOOST_MULTI_INDEX_MEMBER(sub_con, con_sp_t, con)
             >,
+            mi::ordered_non_unique<
+                mi::tag<tag_topic>,
+                mi::composite_key<
+                    sub_con,
+                    BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, share),
+                    BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, topic)
+                >
+            >,
             // Don't allow the same connection object to have the same topic multiple times.
-            // Note that this index does not get used by any code in the broker
-            // other than to enforce the uniqueness constraints.
-            // Potentially this can be enabled only in debug builds.
             mi::ordered_unique<
+                mi::tag<tag_combined>,
                 mi::composite_key<
                     sub_con,
                     BOOST_MULTI_INDEX_MEMBER(sub_con, con_sp_t, con),
+                    BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, share),
                     BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, topic)
                 >
             >
@@ -1398,11 +1747,13 @@ private:
     struct session_subscription {
         session_subscription(
             MQTT_NS::buffer client_id,
+            MQTT_NS::buffer share,
             MQTT_NS::buffer topic,
             MQTT_NS::qos qos_value,
             MQTT_NS::rap rap_value)
-            :client_id(MQTT_NS::force_move(client_id)), topic(MQTT_NS::force_move(topic)), qos_value(qos_value), rap_value(rap_value) {}
+            :client_id(MQTT_NS::force_move(client_id)), share(MQTT_NS::force_move(share)), topic(MQTT_NS::force_move(topic)), qos_value(qos_value), rap_value(rap_value) { }
         MQTT_NS::buffer client_id;
+        MQTT_NS::buffer share;
         MQTT_NS::buffer topic;
         std::vector<saved_message> messages;
         MQTT_NS::qos qos_value;
@@ -1420,17 +1771,85 @@ private:
             // Allow multiple topics for the same client id
             mi::ordered_non_unique<
                 mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, topic)
+                mi::composite_key<
+                    session_subscription,
+                    BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, share),
+                    BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, topic)
+                >
             >,
             // Don't allow the same client id to have the same topic multiple times.
             // Note that this index does not get used by any code in the broker
             // other than to enforce the uniqueness constraints.
             // Potentially this can be enabled only in debug builds.
             mi::ordered_unique<
+                mi::tag<tag_combined>,
                 mi::composite_key<
                     session_subscription,
+                    BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, share),
                     BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, topic),
                     BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, client_id)
+                >
+            >
+        >
+    >;
+
+    // Each instance of session_subscription describes a subscription that the associated client id has made
+    // and a collection of data associated with that subscription to be sent when the client reconnects.
+    struct shared_session_subscription {
+        shared_session_subscription(
+            MQTT_NS::buffer share,
+            MQTT_NS::buffer topic)
+            :share(MQTT_NS::force_move(share)), topic(MQTT_NS::force_move(topic)) { }
+        MQTT_NS::buffer share;
+        MQTT_NS::buffer topic;
+        std::vector<saved_message> messages;
+    };
+
+    using mi_shared_session_subscription = mi::multi_index_container<
+        shared_session_subscription,
+        mi::indexed_by<
+            // Allow multiple topics for the same client id
+            mi::ordered_non_unique<
+                mi::tag<tag_topic>,
+                BOOST_MULTI_INDEX_MEMBER(shared_session_subscription, MQTT_NS::buffer, topic)
+            >,
+            mi::ordered_unique<
+                mi::tag<tag_combined>,
+                mi::composite_key<
+                    shared_session_subscription,
+                    BOOST_MULTI_INDEX_MEMBER(shared_session_subscription, MQTT_NS::buffer, share),
+                    BOOST_MULTI_INDEX_MEMBER(shared_session_subscription, MQTT_NS::buffer, topic)
+                >
+            >
+        >
+    >;
+
+    // This stores the messages saved for disconnected sessions with shared subscription topics.
+    struct shared_subscription_policy {
+        shared_subscription_policy(
+            MQTT_NS::buffer share,
+            MQTT_NS::buffer topic,
+            mi_sub_con::index<tag_topic>::type::iterator it)
+            :share(MQTT_NS::force_move(share)), topic(MQTT_NS::force_move(topic)), it(MQTT_NS::force_move(it)) { }
+        MQTT_NS::buffer share;
+        MQTT_NS::buffer topic;
+        mi_sub_con::index<tag_topic>::type::iterator it;
+    };
+
+    using mi_shared_subscription_policy = mi::multi_index_container<
+        shared_subscription_policy,
+        mi::indexed_by<
+            // Allow multiple topics for the same client id
+            mi::ordered_non_unique<
+                mi::tag<tag_topic>,
+                BOOST_MULTI_INDEX_MEMBER(shared_subscription_policy, MQTT_NS::buffer, topic)
+            >,
+            mi::ordered_unique<
+                mi::tag<tag_combined>,
+                mi::composite_key<
+                    shared_subscription_policy,
+                    BOOST_MULTI_INDEX_MEMBER(shared_subscription_policy, MQTT_NS::buffer, share),
+                    BOOST_MULTI_INDEX_MEMBER(shared_subscription_policy, MQTT_NS::buffer, topic)
                 >
             >
         >
@@ -1444,7 +1863,9 @@ private:
     mi_non_active_sessions non_active_sessions_; ///< Storage for sessions not currently active. Indexed by client id.
     mi_sub_con subs_; ///< Map of topic subscriptions to client ids
     mi_session_subscription saved_subs_; ///< Topics and associated messages for clientids that are currently disconnected
+    mi_shared_session_subscription saved_shared_subs_; ///< Topics and associated messages for shared subscriptions that are currently disconnected
     mi_retain retains_; ///< A list of messages retained so they can be sent to newly subscribed clients.
+    mi_shared_subscription_policy shared_subs_; ///< Storage for the next client-id to send to.
 
     // MQTTv5 members
     MQTT_NS::v5::properties connack_props_;
