@@ -7,42 +7,45 @@
 #if !defined(MQTT_TLS_IMPLEMENTATION_HPP)
 #define MQTT_TLS_IMPLEMENTATION_HPP
 
-#if defined(MQTT_USE_TLS)
-#if defined(MQTT_USE_GNU_TLS)
-#include <boost/asio/gnutls.hpp>
-// The following is used in 'endpoint.hpp' and is not defined by default for Gnu TLS.
-# define ERR_GET_REASON(l)       (int)( (l)         & 0xFFFL)
-#else
-#include <boost/asio/ssl.hpp>
-#endif // defined(MQTT_USE_GNU_TLS)
-#endif // defined(MQTT_USE_TLS)
+#define MQTT_TLS_OPENSSL 1
+#define MQTT_TLS_GNUTLS  2
 
 #if defined(MQTT_USE_TLS)
-#if defined(MQTT_USE_GNU_TLS)
-namespace tls = boost::asio::gnutls;
-#else
-namespace tls = boost::asio::ssl;
-#endif // defined(MQTT_USE_GNU_TLS)
+#if MQTT_USE_TLS == 0
+#define MQTT_USE_TLS MQTT_TLS_OPENSSL
+#endif // MQTT_USE_TLS == 0
 #endif // defined(MQTT_USE_TLS)
+
+#if MQTT_USE_TLS == MQTT_TLS_OPENSSL
+#include <boost/asio/ssl.hpp>
+#elif MQTT_USE_TLS == MQTT_TLS_GNUTLS
+#include <boost/asio/gnutls.hpp>
+#endif // MQTT_USE_TLS == MQTT_TLS_OPENSSL
+
+#if MQTT_USE_TLS == MQTT_TLS_OPENSSL
+namespace tls = boost::asio::ssl;
+#elif MQTT_USE_TLS == MQTT_TLS_GNUTLS
+namespace tls = boost::asio::gnutls;
+#endif // MQTT_USE_TLS == MQTT_TLS_OPENSSL
 
 namespace MQTT_NS {
 
 inline constexpr bool is_tls_short_read(int error_val)
 {
-#if defined(MQTT_USE_TLS)
-#if defined(MQTT_USE_GNU_TLS)
-    return error_val == tls::error::stream_truncated;
-#else
+
+#if MQTT_USE_TLS == MQTT_TLS_OPENSSL
 #if defined(SSL_R_SHORT_READ)
     return ERR_GET_REASON(error_val) == SSL_R_SHORT_READ;
 #else  // defined(SSL_R_SHORT_READ)
     return ERR_GET_REASON(error_val) == tls::error::stream_truncated;
 #endif // defined(SSL_R_SHORT_READ)
-#endif // defined(MQTT_USE_GNU_TLS)
-#endif // defined(MQTT_USE_TLS)
+#elif MQTT_USE_TLS == MQTT_TLS_GNUTLS
+    return error_val == tls::error::stream_truncated;
+#endif // MQTT_USE_TLS == MQTT_TLS_OPENSSL
+
     return false;
 }
 
 } // namespace MQTT_NS
 
-#endif // MQTT_tls_implementation_HPP
+#endif // MQTT_TLS_IMPLEMENTATION_HPP
