@@ -32,6 +32,7 @@
 #include <boost/system/error_code.hpp>
 #include <boost/assert.hpp>
 
+#include <mqtt/tls.hpp>
 #include <mqtt/namespace.hpp>
 #include <mqtt/attributes.hpp>
 #include <mqtt/any.hpp>
