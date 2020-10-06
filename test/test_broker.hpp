@@ -32,6 +32,103 @@ using con_sp_t = std::shared_ptr<endpoint_t>;
 using con_wp_t = std::weak_ptr<endpoint_t>;
 using packet_id_t = endpoint_t::packet_id_t;
 
+inline bool validate_topic_pattern(MQTT_NS::string_view topicPattern)
+{
+    /*
+     * Confirm the topic pattern is valid before registering it.
+     * Use rules from http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718106
+     */
+    for(size_t idx = topicPattern.find_first_of("+#");
+        MQTT_NS::string_view::npos != idx;
+        idx = topicPattern.find_first_of("+#", idx+1)) {
+        BOOST_ASSERT(   ('+' == topicPattern[idx])
+                     || ('#' == topicPattern[idx]));
+        if('+' == topicPattern[idx]) {
+            /*
+             * Either must be the first character,
+             * or be preceeded by a topic seperator.
+             */
+            if((0 != idx) && ('/' != topicPattern[idx-1])) {
+                return false;
+            }
+
+            /*
+             * Either must be the last character,
+             * or be followed by a topic seperator.
+             */
+            if((topicPattern.size()-1 != idx) && ('/' != topicPattern[idx+1])) {
+                return false;
+            }
+        }
+        // multilevel wildcard
+        else {
+            /*
+             * Must be absolute last character.
+             * Must only be one multi level wild card.
+             */
+            if(idx != topicPattern.size()-1) {
+                return false;
+            }
+
+            /*
+             * If not the first character, then the
+             * immediately preceeding character must
+             * be a topic level separator.
+             */
+            if((0 != idx) && ('/' != topicPattern[idx-1])) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+inline bool compare_topic_pattern(MQTT_NS::string_view topicPattern, MQTT_NS::string_view topic)
+{
+    BOOST_ASSERT(validate_topic_pattern(topicPattern));
+    for(size_t idx = topicPattern.find_first_of("+#");
+        MQTT_NS::string_view::npos != idx;
+        idx = topicPattern.find_first_of("+#")) {
+        BOOST_ASSERT(   ('+' == topicPattern[idx])
+                     || ('#' == topicPattern[idx]));
+        if('+' == topicPattern[idx]) {
+            // Compare everything up to the first +
+            if(topicPattern.substr(0, idx) == topic.substr(0, idx)) {
+                /*
+                 * We already know thanks to the topic pattern being validated
+                 * that the + symbol is directly touching '/'s on both sides
+                 * (if not the first or last character), so we don't need to
+                 * double check that.
+                 *
+                 * By simply removing the prefix that we've compared and letting
+                 * the loop continue, we get the proper comparison of the '/'s
+                 * automatically when the loop continues.
+                 */
+                topicPattern.remove_prefix(idx+1);
+                /*
+                 * It's a bit more complicated for the incoming topic though
+                 * as we need to remove everything up to the next seperator.
+                 */
+                topic.remove_prefix(topic.find('/', idx));
+            }
+            else {
+                return false;
+            }
+        }
+        // multilevel wildcard
+        else {
+            /*
+             * Compare up to where the multilevel wild card is found
+             * and then anything after that matches the wildcard.
+             */
+            return topicPattern.substr(0, idx) == topic.substr(0, idx);
+        }
+    }
+
+    // No + or # found in the remaining topic pattern. Just do a string compare.
+    return topicPattern == topic;
+}
+
 class test_broker {
 public:
     test_broker(as::io_context& ioc)
@@ -787,19 +884,20 @@ private:
             break;
         }
 
+        // Publish any retained messages that match the newly subscribed topic.
         for (auto const& e : entries) {
-            MQTT_NS::buffer const& topic = std::get<0>(e);
-            MQTT_NS::subscribe_options options = std::get<1>(e);
-            // Publish any retained messages that match the newly subscribed topic.
-            auto it = retains_.find(topic);
-            if (it != retains_.end()) {
-                ep.publish(
-                    as::buffer(it->topic),
-                    as::buffer(it->contents),
-                    std::min(it->qos_value, options.get_qos()) | MQTT_NS::retain::yes,
-                    it->props,
-                    std::make_pair(it->topic, it->contents)
-                );
+            for(auto const& retain : retains_) {
+                MQTT_NS::buffer const& topic = std::get<0>(e);
+                MQTT_NS::subscribe_options options = std::get<1>(e);
+                if(compare_topic_pattern(topic, retain.topic)) {
+                    ep.publish(
+                        as::buffer(retain.topic),
+                        as::buffer(retain.contents),
+                        std::min(retain.qos_value, options.get_qos()) | MQTT_NS::retain::yes,
+                        retain.props,
+                        std::make_pair(retain.topic, retain.contents)
+                    );
+                }
             }
         }
         return true;
@@ -884,49 +982,59 @@ private:
         MQTT_NS::publish_options pubopts,
         MQTT_NS::v5::properties props) {
         // For each active subscription registered for this topic
-        for(auto const& sub : boost::make_iterator_range(subs_.get<tag_topic>().equal_range(topic))) {
-            // publish the message to subscribers.
-            // TODO: Probably this should be switched to async_publish?
-            //       Given the async_client / sync_client seperation
-            //       and the way they have different function names,
-            //       it wouldn't be possible for test_broker.hpp to be
-            //       used with some hypothetical "async_server" in the future.
+        for(auto const& sub : subs_.get<tag_topic>()) {
+            if(compare_topic_pattern(sub.topic, topic)) {
+                // publish the message to subscribers.
+                // TODO: Probably this should be switched to async_publish?
+                //       Given the async_client / sync_client seperation
+                //       and the way they have different function names,
+                //       it wouldn't be possible for test_broker.hpp to be
+                //       used with some hypothetical "async_server" in the future.
 
-            // retain is delivered as the original only if rap_value is rap::retain.
-            // On MQTT v3.1.1, rap_value is always rap::dont.
-            auto retain =
-                [&] {
-                    if (sub.rap_value == MQTT_NS::rap::retain) {
-                        return pubopts.get_retain();
-                    }
-                    return MQTT_NS::retain::no;
-                } ();
-            sub.con->publish(
-                topic,
-                contents,
-                std::min(sub.qos_value, pubopts.get_qos()) | retain,
-                props // TODO: Copying the properties vector for each subscription.
-            );
+                // retain is delivered as the original only if rap_value is rap::retain.
+                // On MQTT v3.1.1, rap_value is always rap::dont.
+                auto retain =
+                    [&] {
+                        if (sub.rap_value == MQTT_NS::rap::retain) {
+                            return pubopts.get_retain();
+                        }
+                        return MQTT_NS::retain::no;
+                    } ();
+                sub.con->publish(
+                    topic,
+                    contents,
+                    std::min(sub.qos_value, pubopts.get_qos()) | retain,
+                    props // TODO: Copying the properties vector for each subscription.
+                );
+            }
         }
 
         {
             // For each saved subscription, add this message to
             // the list to be sent out when a connection resumes
             // a lost session.
-            //
-            // TODO: This does not properly handle wildcards!
             auto & idx = saved_subs_.get<tag_topic>();
-            auto range = boost::make_iterator_range(idx.equal_range(topic));
-            if( ! range.empty()) {
-                auto sp_props = std::make_shared<MQTT_NS::v5::properties>(props);
-                for(auto it = range.begin(); it != range.end(); std::advance(it, 1)) {
-                    idx.modify(it,
+            // Note: Only allocated if used.
+            std::shared_ptr<MQTT_NS::v5::properties> sp_props;
+            for(auto const& item : idx) {
+                if(compare_topic_pattern(item.topic, topic)) {
+                    if(!sp_props) {
+                        sp_props = std::make_shared<MQTT_NS::v5::properties>(props);
+                    }
+
+                    idx.modify(idx.iterator_to(item),
                                [&](session_subscription & val)
                                {
+                                   // Note: The description of session state here:
+                                   // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901230
+                                   // does not say that only one message is saved per topic in the state.
+                                   // That behavior is apparently only applicable to the 'retain' message
+                                   // storage, which is a global thing, and not a per-session thing.
+                                   // So it is correct that all messages should be stored in the session state.
                                    val.messages.emplace_back(
                                        contents,
                                        sp_props,
-                                       std::min(it->qos_value, pubopts.get_qos()));
+                                       std::min(val.qos_value, pubopts.get_qos()));
                                },
                                [](session_subscription&) { BOOST_ASSERT(false); });
                 }
