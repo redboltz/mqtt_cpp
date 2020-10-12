@@ -1064,6 +1064,10 @@ private:
                 res.emplace_back(MQTT_NS::qos_to_suback_return_code(qos_value)); // converts to granted_qos_x
                 // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
                 // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
+
+                MQTT_LOG("mqtt_broker", trace)
+                    << MQTT_ADD_VALUE(address, spep.get())
+                    << "subs_.emplace() " << "topic:" << topic << " qos:" << qos_value;
                 subs_.emplace(MQTT_NS::buffer{}, MQTT_NS::force_move(topic), spep, qos_value);
             }
             // Acknowledge the subscriptions, and the registered QOS settings
@@ -1083,6 +1087,9 @@ private:
                 res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(qos_value)); // converts to granted_qos_x
                 // TODO: This doesn't handle situations where we receive a new subscription for the same topic.
                 // MQTT 3.1.1 - 3.8.4 Response - paragraph 3.
+                MQTT_LOG("mqtt_broker", trace)
+                    << MQTT_ADD_VALUE(address, spep.get())
+                    << "subs_.emplace() " << "topic:" << topic << " qos:" << qos_value << "rap:" << rap_value;
                 subs_.emplace(MQTT_NS::force_move(share), MQTT_NS::force_move(topic), spep, qos_value, rap_value);
             }
             if (h_subscribe_props_) h_subscribe_props_(props);
@@ -1150,6 +1157,10 @@ private:
                 }
                 // This initializes the round-robin iterator storage for this shared subscription, if and only if, it is not already.
                 // Notably, we do not check the return of the emplace call, since if the item already existed, we don't want a new one made.
+
+                MQTT_LOG("mqtt_broker", trace)
+                    << MQTT_ADD_VALUE(address, spep.get())
+                    << "shared_subs_.emplace() " << "share:" << share << " topic:" << topic;
                 shared_subs_.emplace(
                     share,
                     topic,
@@ -1172,8 +1183,14 @@ private:
                 MQTT_NS::buffer share;
                 MQTT_NS::buffer topic;
                 std::tie(share, topic) = parse_shared_subscription(filter);
+                MQTT_LOG("mqtt_broker", trace)
+                    << MQTT_ADD_VALUE(address, spep.get())
+                    << "unsub " << "share:" << share << " topic:" << topic;
                 auto it = idx.find(std::make_tuple(spep, MQTT_NS::force_move(share), MQTT_NS::force_move(topic)));
                 if(it != idx.end()) {
+                    MQTT_LOG("mqtt_broker", trace)
+                        << MQTT_ADD_VALUE(address, spep.get())
+                        << "subs_.erase()";
                     idx.erase(it);
                 }
                 // TODO: If this was the last active subscription for this share and topic,
@@ -1216,6 +1233,7 @@ private:
         MQTT_NS::buffer contents,
         MQTT_NS::publish_options pubopts,
         MQTT_NS::v5::properties props) {
+
         // For each active subscription registered for this topic
         for(auto const& sub : subs_.get<tag_share_topic>()) {
             if(compare_topic_filter(sub.topic, topic)) {
@@ -1238,6 +1256,10 @@ private:
                             }
                             return MQTT_NS::retain::no;
                         } ();
+
+                    MQTT_LOG("mqtt_broker", trace)
+                        << MQTT_ADD_VALUE(address, sub.con.get())
+                        << "deliver pub " << " topic:" << topic;
                     sub.con->publish(
                         topic,
                         contents,
@@ -1272,6 +1294,9 @@ private:
                             }
                             return MQTT_NS::retain::no;
                         } ();
+                    MQTT_LOG("mqtt_broker", trace)
+                        << MQTT_ADD_VALUE(address, sub.it->con.get())
+                        << "deliver pub " << " topic:" << topic;
                     sub.it->con->publish(
                         topic,
                         contents,

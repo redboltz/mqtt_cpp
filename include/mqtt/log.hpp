@@ -122,7 +122,7 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(address, "MqttAddress", void const*)
 
 #if !defined(MQTT_ADD_VALUE)
 
-#define MQTT_ADD_VALUE(name, val) boost::log::add_value((name), (val))
+#define MQTT_ADD_VALUE(name, val) boost::log::add_value((MQTT_NS::name), (val))
 
 #endif // !defined(MQTT_ADD_VALUE)
 
