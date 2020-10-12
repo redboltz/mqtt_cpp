@@ -873,11 +873,21 @@ private:
             // if there are any entries in that map, they are already valid
             for(auto const& item : range) {
                 if(!item.share.empty()) {
-                    auto const& other_range = boost::make_iterator_range(saved_subs_.get<tag_topic>().equal_range(std::make_tuple(item.share, item.topic)));
-                    if(std::none_of(other_range.begin(), other_range.end(), [&](auto const& sub) {
-                        return sub.client_id != client_id;
-                    })) {
-                        auto & shared_subs_idx = saved_shared_subs_.get<tag_combined>();
+                    auto const& other_range =
+                        boost::make_iterator_range(
+                            saved_subs_.get<tag_share_topic>().equal_range(
+                                std::make_tuple(item.share, item.topic)
+                            )
+                        );
+                    if(std::none_of(
+                           other_range.begin(),
+                           other_range.end(),
+                           [&](auto const& sub) {
+                               return sub.client_id != client_id;
+                           }
+                       )
+                    ) {
+                        auto & shared_subs_idx = saved_shared_subs_.get<tag_share_topic>();
                         auto const& it = shared_subs_idx.find(std::make_tuple(item.share, item.topic));
                         if(it != shared_subs_idx.end()) {
                             shared_subs_idx.erase(it);
@@ -917,7 +927,7 @@ private:
                 // because even one session subscribed to the shared subscriotion is active
                 // it should not be stored in the saved subs list.
                 if(!item.share.empty()) {
-                    auto & shared_subs_idx = saved_shared_subs_.get<tag_combined>();
+                    auto & shared_subs_idx = saved_shared_subs_.get<tag_share_topic>();
                     auto const& it = shared_subs_idx.find(std::make_tuple(item.share, item.topic));
                     if(it != shared_subs_idx.end()) {
                         // Send the saved messages out on the wire.
@@ -938,7 +948,13 @@ private:
 
                     // This initializes the round-robin iterator storage for this shared subscription, if and only if, it is not already.
                     // Notably, we do not check the return of the emplace call, since if the item already existed, we don't want a new one made.
-                    shared_subs_.emplace(item.share, item.topic, subs_.get<tag_topic>().find(std::make_tuple(item.share, item.topic)));
+                    shared_subs_.emplace(
+                        item.share,
+                        item.topic,
+                        // always found ?  [TBD]
+                        subs_.get<tag_share_topic>().find(std::make_tuple(item.share, item.topic)
+                        )
+                    );
                 }
             }
             idx.erase(range.begin(), range.end());
@@ -1114,7 +1130,7 @@ private:
             // the only active client subscribed to the shared subscription, and should
             // be sent any saved messages that were queued for that subscription.
             if(!share.empty()) {
-                auto & shared_subs_idx = saved_shared_subs_.get<tag_combined>();
+                auto & shared_subs_idx = saved_shared_subs_.get<tag_share_topic>();
                 auto const& it = shared_subs_idx.find(std::make_tuple(share, topic));
                 if(it != shared_subs_idx.end()) {
                     // Send the saved messages out on the wire.
@@ -1134,7 +1150,11 @@ private:
                 }
                 // This initializes the round-robin iterator storage for this shared subscription, if and only if, it is not already.
                 // Notably, we do not check the return of the emplace call, since if the item already existed, we don't want a new one made.
-                shared_subs_.emplace(share, topic, subs_.get<tag_topic>().find(std::make_tuple(share, topic)));
+                shared_subs_.emplace(
+                    share,
+                    topic,
+                    subs_.get<tag_share_topic>().find(std::make_tuple(share, topic))
+                );
             }
         }
         return true;
@@ -1147,7 +1167,7 @@ private:
         MQTT_NS::v5::properties props) {
 
         {
-            auto & idx = subs_.get<tag_combined>();
+            auto & idx = subs_.get<tag_con_share_topic>();
             for(auto const& filter : topics) {
                 MQTT_NS::buffer share;
                 MQTT_NS::buffer topic;
@@ -1197,7 +1217,7 @@ private:
         MQTT_NS::publish_options pubopts,
         MQTT_NS::v5::properties props) {
         // For each active subscription registered for this topic
-        for(auto const& sub : subs_.get<tag_topic>()) {
+        for(auto const& sub : subs_.get<tag_share_topic>()) {
             if(compare_topic_filter(sub.topic, topic)) {
                 // If this subscription is shared, we want to publish the message to
                 // one and only one subscribed client, which is handled in the next block.
@@ -1240,7 +1260,7 @@ private:
         // this really does need to be a comparison against every single
         // shared subscription.
         {
-            auto & idx = shared_subs_.get<tag_topic>();
+            auto& idx = shared_subs_.get<tag_topic>();
             for(auto const& sub : idx) {
                 if(compare_topic_filter(sub.topic, topic)) {
                     // retain is delivered as the original only if rap_value is rap::retain.
@@ -1262,9 +1282,9 @@ private:
                                [&](shared_subscription_policy& val)
                                {
                                    std::advance(val.it, 1);
-                                   auto & subsIdx = subs_.get<tag_topic>();
-                                   if(val.it == subsIdx.end()) {
-                                       val.it = subsIdx.begin();
+                                   auto & subs_idx = subs_.get<tag_share_topic>();
+                                   if(val.it == subs_idx.end()) {
+                                       val.it = subs_idx.begin();
                                    }
                                },
                                [](shared_subscription_policy&) { BOOST_ASSERT(false); });
@@ -1276,7 +1296,7 @@ private:
         // the list to be sent out when a connection resumes
         // a lost session.
         {
-            auto & idx = saved_subs_.get<tag_topic>();
+            auto & idx = saved_subs_.get<tag_share_topic>();
             // Note: Only allocated if used.
             std::shared_ptr<MQTT_NS::v5::properties> sp_props;
             for(auto const& item : idx) {
@@ -1501,14 +1521,19 @@ private:
                         // If no other clients are subscribed to this shared subscription topic, then we
                         // make a new saved_shared_subs_ entry to record that a disconnected session is
                         // subscribed to a shared subscription.
-                        auto const& other_range = boost::make_iterator_range(subs_.get<tag_topic>().equal_range(std::make_tuple(item.share, item.topic)));
+                        auto const& other_range =
+                            boost::make_iterator_range(
+                                subs_.get<tag_share_topic>().equal_range(
+                                    std::make_tuple(item.share, item.topic)
+                                )
+                            );
                         if(std::none_of(other_range.begin(), other_range.end(), [&](auto const& sub) {
                             return sub.con != spep;
                         })) {
                             auto const& ret = saved_shared_subs_.emplace(item.share, item.topic);
                             (void)ret;
                             BOOST_ASSERT(ret.second);
-                            //BOOST_ASSERT(ret.first == saved_shared_subs_.get<tag_combined>().find(std::make_tuple(item.share, item.topic)));
+                            //BOOST_ASSERT(ret.first == saved_shared_subs_.get<tag_share_topic>().find(std::make_tuple(item.share, item.topic)));
                         }
                     }
                 }
@@ -1520,29 +1545,34 @@ private:
                 if(!item.share.empty()) {
                     // If no other clients are subscribed to this shared subscription topic, then we
                     // remove the shared_subs_ entry. Otherwise we update the iterator in the shared_subs_ entry.
-                    auto const& other_range = boost::make_iterator_range(subs_.get<tag_topic>().equal_range(std::make_tuple(item.share, item.topic)));
+                    auto const& other_range =
+                        boost::make_iterator_range(
+                            subs_.get<tag_share_topic>().equal_range(
+                                std::make_tuple(item.share, item.topic)
+                            )
+                        );
                     if(std::none_of(other_range.begin(), other_range.end(), [&](auto const& sub) {
                         return sub.con != spep;
                     })) {
-                        auto & shared_subs_idx = shared_subs_.get<tag_combined>();
+                        auto & shared_subs_idx = shared_subs_.get<tag_share_topic>();
                         auto const& it = shared_subs_idx.find(std::make_tuple(item.share, item.topic));
                         if(it != shared_subs_idx.end()) {
                             shared_subs_idx.erase(it);
                         }
                     }
                     else {
-                        auto & shared_subs_idx = shared_subs_.get<tag_combined>();
+                        auto & shared_subs_idx = shared_subs_.get<tag_share_topic>();
                         auto const& it = shared_subs_idx.find(std::make_tuple(item.share, item.topic));
                         shared_subs_idx.modify(it,
                                              [&](shared_subscription_policy& val)
                                              {
-                                                 auto & subsIdx = subs_.get<tag_topic>();
+                                                 auto & subs_idx = subs_.get<tag_share_topic>();
                                                  // Only make any modifications if the iterator
                                                  // currently points to the client being disconnected.
                                                  while(val.it->con == spep) {
                                                      std::advance(val.it, 1);
-                                                     if(val.it == subsIdx.end()) {
-                                                     val.it = subsIdx.begin();
+                                                     if(val.it == subs_idx.end()) {
+                                                     val.it = subs_idx.begin();
                                                  }
                                              }
                                          },
@@ -1570,9 +1600,11 @@ private:
 private:
     struct tag_con {};
     struct tag_tim {};
-    struct tag_topic {};
     struct tag_client_id {};
-    struct tag_combined {};
+    struct tag_topic {};
+    struct tag_share_topic {};
+    struct tag_con_share_topic {};
+    struct tag_cid_share_topic {};
 
     /**
      * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Session_State
@@ -1679,7 +1711,7 @@ private:
                 BOOST_MULTI_INDEX_MEMBER(sub_con, con_sp_t, con)
             >,
             mi::ordered_non_unique<
-                mi::tag<tag_topic>,
+                mi::tag<tag_share_topic>,
                 mi::composite_key<
                     sub_con,
                     BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, share),
@@ -1688,7 +1720,7 @@ private:
             >,
             // Don't allow the same connection object to have the same topic multiple times.
             mi::ordered_unique<
-                mi::tag<tag_combined>,
+                mi::tag<tag_con_share_topic>,
                 mi::composite_key<
                     sub_con,
                     BOOST_MULTI_INDEX_MEMBER(sub_con, con_sp_t, con),
@@ -1751,7 +1783,12 @@ private:
             MQTT_NS::buffer topic,
             MQTT_NS::qos qos_value,
             MQTT_NS::rap rap_value)
-            :client_id(MQTT_NS::force_move(client_id)), share(MQTT_NS::force_move(share)), topic(MQTT_NS::force_move(topic)), qos_value(qos_value), rap_value(rap_value) { }
+            :client_id(MQTT_NS::force_move(client_id)),
+             share(MQTT_NS::force_move(share)),
+             topic(MQTT_NS::force_move(topic)),
+             qos_value(qos_value),
+             rap_value(rap_value) {}
+
         MQTT_NS::buffer client_id;
         MQTT_NS::buffer share;
         MQTT_NS::buffer topic;
@@ -1770,7 +1807,7 @@ private:
             >,
             // Allow multiple topics for the same client id
             mi::ordered_non_unique<
-                mi::tag<tag_topic>,
+                mi::tag<tag_share_topic>,
                 mi::composite_key<
                     session_subscription,
                     BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, share),
@@ -1782,12 +1819,12 @@ private:
             // other than to enforce the uniqueness constraints.
             // Potentially this can be enabled only in debug builds.
             mi::ordered_unique<
-                mi::tag<tag_combined>,
+                mi::tag<tag_cid_share_topic>,
                 mi::composite_key<
                     session_subscription,
+                    BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, client_id),
                     BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, share),
-                    BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, topic),
-                    BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, client_id)
+                    BOOST_MULTI_INDEX_MEMBER(session_subscription, MQTT_NS::buffer, topic)
                 >
             >
         >
@@ -1799,7 +1836,7 @@ private:
         shared_session_subscription(
             MQTT_NS::buffer share,
             MQTT_NS::buffer topic)
-            :share(MQTT_NS::force_move(share)), topic(MQTT_NS::force_move(topic)) { }
+            :share(MQTT_NS::force_move(share)), topic(MQTT_NS::force_move(topic)) {}
         MQTT_NS::buffer share;
         MQTT_NS::buffer topic;
         std::vector<saved_message> messages;
@@ -1814,7 +1851,7 @@ private:
                 BOOST_MULTI_INDEX_MEMBER(shared_session_subscription, MQTT_NS::buffer, topic)
             >,
             mi::ordered_unique<
-                mi::tag<tag_combined>,
+                mi::tag<tag_share_topic>,
                 mi::composite_key<
                     shared_session_subscription,
                     BOOST_MULTI_INDEX_MEMBER(shared_session_subscription, MQTT_NS::buffer, share),
@@ -1829,11 +1866,11 @@ private:
         shared_subscription_policy(
             MQTT_NS::buffer share,
             MQTT_NS::buffer topic,
-            mi_sub_con::index<tag_topic>::type::iterator it)
+            mi_sub_con::index<tag_share_topic>::type::iterator it)
             :share(MQTT_NS::force_move(share)), topic(MQTT_NS::force_move(topic)), it(MQTT_NS::force_move(it)) { }
         MQTT_NS::buffer share;
         MQTT_NS::buffer topic;
-        mi_sub_con::index<tag_topic>::type::iterator it;
+        mi_sub_con::index<tag_share_topic>::type::iterator it;
     };
 
     using mi_shared_subscription_policy = mi::multi_index_container<
@@ -1845,7 +1882,7 @@ private:
                 BOOST_MULTI_INDEX_MEMBER(shared_subscription_policy, MQTT_NS::buffer, topic)
             >,
             mi::ordered_unique<
-                mi::tag<tag_combined>,
+                mi::tag<tag_share_topic>,
                 mi::composite_key<
                     shared_subscription_policy,
                     BOOST_MULTI_INDEX_MEMBER(shared_subscription_policy, MQTT_NS::buffer, share),
