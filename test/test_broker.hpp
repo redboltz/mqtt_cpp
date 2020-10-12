@@ -22,7 +22,7 @@
 #include <mqtt/visitor_util.hpp>
 
 #include "test_settings.hpp"
-
+#include "subscription_map.hpp"
 
 namespace mi = boost::multi_index;
 namespace as = boost::asio;
