@@ -43,6 +43,7 @@ IF (MQTT_TEST_3)
         pubsub.cpp
         pubsub_no_strand.cpp
         multi_sub.cpp
+        shared_sub.cpp
     )
 ENDIF ()
 
