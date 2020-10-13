@@ -1406,8 +1406,8 @@ public:
     }
 
 protected:
-    bool on_v5_connack(bool session_present,
-                       v5::connect_reason_code reason_code,
+    bool on_v5_connack(bool /*session_present*/,
+                       v5::connect_reason_code /*reason_code*/,
                        v5::properties props) noexcept override {
         cancel_session_expiry_timer();
 
