@@ -1018,7 +1018,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_session_before_expire ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -1152,7 +1152,7 @@ BOOST_AUTO_TEST_CASE( publish_session_before_expire ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_session_after_expire ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -1216,8 +1216,8 @@ BOOST_AUTO_TEST_CASE( publish_session_after_expire ) {
                     return true;
                 });
             c->set_v5_puback_handler(
-                [&chk, &c, &pid_pub]
-                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
+                []
+                (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(false);
                     return true;
                 });
