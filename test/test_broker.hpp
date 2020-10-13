@@ -936,9 +936,6 @@ private:
                             std::make_pair(retain.topic, retain.contents)
                         );
                     }
-                    else {
-                        BOOST_ASSERT(rh == MQTT_NS::retain_handling::not_send);
-                    }
                 }
             }
             ++new_sub_it;
