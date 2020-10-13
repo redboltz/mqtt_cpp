@@ -57,14 +57,14 @@ void setup_log(std::map<std::string, severity_level> threshold) {
                     BOOST_ASSERT(r.second);
                     it = r.first;
                 }
-                strm << "TID[" << it->second << "] ";
+                strm << "T:" << it->second << " ";
             }
             // Adjust severity length example
             if (auto v = boost::log::extract<MQTT_NS::severity_level>("Severity", rec)) {
-                strm << "SEV[" << std::setw(7) << std::left << v.get() << "] ";
+                strm << "S:" << std::setw(7) << std::left << v.get() << " ";
             }
             if (auto v = boost::log::extract<MQTT_NS::channel>("Channel", rec)) {
-                strm << "CHANNEL[" << std::setw(5) << std::left << v.get() << "] ";
+                strm << "C:" << std::setw(5) << std::left << v.get() << " ";
             }
             // Shorten file path example
             if (auto v = boost::log::extract<std::string>("MqttFile", rec)) {
@@ -74,7 +74,7 @@ void setup_log(std::map<std::string, severity_level> threshold) {
                 strm << v.get() << " ";
             }
             if (auto v = boost::log::extract<void const*>("MqttAddress", rec)) {
-                strm << "ADDR[" << v.get() << "] ";
+                strm << "A:" << v.get() << " ";
             }
 
 #if 0 // function is ofthen noisy
@@ -128,6 +128,7 @@ void setup_log(severity_level threshold = severity_level::warning) {
             { "mqtt_api", threshold },
             { "mqtt_cb", threshold },
             { "mqtt_impl", threshold },
+            { "mqtt_broker", threshold },
         }
     );
 }
@@ -141,4 +142,4 @@ void setup_log(Params&&...) {}
 
 } // namespace MQTT_NS
 
-#endif // MQTT_LOG_HPP
+#endif // MQTT_SETUP_LOG_HPP

@@ -792,6 +792,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
     th.join();
 }
 
+#if 0
+
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
     boost::asio::io_context iocb;
     test_broker b(iocb);
@@ -1314,5 +1316,6 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
     th.join();
 }
 
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()
