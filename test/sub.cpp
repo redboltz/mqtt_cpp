@@ -17,7 +17,7 @@ BOOST_AUTO_TEST_SUITE(test_sub)
 using namespace MQTT_NS::literals;
 using namespace std::literals::string_literals;
 
-BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
+BOOST_AUTO_TEST_CASE( qos0_sub_string_single ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -48,8 +48,10 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
                 });
             c->set_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_return_code> /*results*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_return_code> results) {
                     MQTT_CHK("h_suback");
+                    BOOST_TEST(results.size() == 1);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
                     c->unsubscribe("topic1");
                     return true;
                 });
@@ -73,15 +75,155 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single ) {
                 });
             c->set_v5_suback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::suback_reason_code> /*reasons*/, MQTT_NS::v5::properties /*props*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
+                    BOOST_TEST(reasons.size() == 1);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
                     MQTT_CHK("h_suback");
                     c->unsubscribe("topic1");
                     return true;
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c]
-                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::unsuback_reason_code> /*reasons*/, MQTT_NS::v5::properties /*props*/) {
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_unsuback");
+                    BOOST_TEST(reasons.size() == 1);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
+                    c->disconnect();
+                    return true;
+                });
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+
+        c->set_close_handler(
+            [&chk, &finish]
+            () {
+                MQTT_CHK("h_close");
+                finish();
+            });
+        c->set_error_handler(
+            []
+            (MQTT_NS::error_code) {
+                BOOST_CHECK(false);
+            });
+        c->connect();
+        ioc.run();
+        BOOST_TEST(chk.all());
+    };
+    do_combi_test_sync(test);
+}
+
+BOOST_AUTO_TEST_CASE( sub_update ) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
+        c->set_clean_session(true);
+
+
+        checker chk = {
+            // connect
+            cont("h_connack"),
+            // subscribe topic1
+            cont("h_suback_1"), // QoS0
+            cont("h_suback_2"), // QoS1
+            cont("h_suback_3"), // QoS2
+            // unsubscribe topic1
+            cont("h_unsuback"),
+            // disconnect
+            cont("h_close"),
+        };
+
+        switch (c->get_protocol_version()) {
+        case MQTT_NS::protocol_version::v3_1_1:
+            c->set_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+                    MQTT_CHK("h_connack");
+                    BOOST_TEST(sp == false);
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                    c->subscribe("topic1", MQTT_NS::qos::at_least_once);
+                    c->subscribe("topic1", MQTT_NS::qos::exactly_once);
+                    return true;
+                });
+            c->set_suback_handler(
+                [&chk, &c]
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::suback_return_code> results) {
+                    BOOST_TEST(results.size() == 1);
+                    auto ret = chk.match(
+                        "h_connack",
+                        [&] {
+                            MQTT_CHK("h_suback_1");
+                            BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
+                        },
+                        "h_suback_1",
+                        [&] {
+                            MQTT_CHK("h_suback_2");
+                            BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_1);
+                        },
+                        "h_suback_2",
+                        [&] {
+                            MQTT_CHK("h_suback_3");
+                            BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
+                            c->unsubscribe("topic1");
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_unsuback_handler(
+                [&chk, &c]
+                (packet_id_t /*packet_id*/) {
+                    MQTT_CHK("h_unsuback");
+                    c->disconnect();
+                    return true;
+                });
+            break;
+        case MQTT_NS::protocol_version::v5:
+            c->set_v5_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_connack");
+                    BOOST_TEST(sp == false);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
+                    c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                    c->subscribe("topic1", MQTT_NS::qos::at_least_once);
+                    c->subscribe("topic1", MQTT_NS::qos::exactly_once);
+                    return true;
+                });
+            c->set_v5_suback_handler(
+                [&chk, &c]
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
+                    BOOST_TEST(reasons.size() == 1);
+                    auto ret = chk.match(
+                        "h_connack",
+                        [&] {
+                            MQTT_CHK("h_suback_1");
+                            BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
+                        },
+                        "h_suback_1",
+                        [&] {
+                            MQTT_CHK("h_suback_2");
+                            BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_1);
+                        },
+                        "h_suback_2",
+                        [&] {
+                            MQTT_CHK("h_suback_3");
+                            BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_2);
+                            c->unsubscribe("topic1");
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_v5_unsuback_handler(
+                [&chk, &c]
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_unsuback");
+                    BOOST_TEST(reasons.size() == 1);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
                     return true;
                 });
@@ -204,7 +346,7 @@ BOOST_AUTO_TEST_CASE( sub_v5_options ) {
     do_combi_test_sync(test);
 }
 
-BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
+BOOST_AUTO_TEST_CASE( qos0_sub_string_multi_arg ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -308,7 +450,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg ) {
     do_combi_test_sync(test);
 }
 
-BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
+BOOST_AUTO_TEST_CASE( qos0_sub_string_multi_vec ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -416,7 +558,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec ) {
     do_combi_test_sync(test);
 }
 
-BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
+BOOST_AUTO_TEST_CASE( qos0_sub_string_single_async ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -508,7 +650,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_single_async ) {
     do_combi_test_async(test);
 }
 
-BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
+BOOST_AUTO_TEST_CASE( qos0_sub_string_multi_arg_async ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -626,7 +768,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_arg_async ) {
     do_combi_test_async(test);
 }
 
-BOOST_AUTO_TEST_CASE( pub_qos0_sub_string_multi_vec_async ) {
+BOOST_AUTO_TEST_CASE( qos0_sub_string_multi_vec_async ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
