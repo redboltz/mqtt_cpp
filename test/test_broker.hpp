@@ -871,7 +871,7 @@ private:
                         d.props
                     );
                 }
-                subs_online_.emplace(item.topic, spep, item.qos_value, item.rap_value);
+                subs_online_.emplace(item.topic, spep, item.subopts);
             }
             // [TBD]
             // This is wrong.
@@ -925,10 +925,12 @@ private:
 
         auto& ep = *spep;
         do_publish(
+            ep,
             MQTT_NS::force_move(topic_name),
             MQTT_NS::force_move(contents),
             pubopts.get_qos() | pubopts.get_retain(), // remove dup flag
-            MQTT_NS::force_move(forward_props));
+            MQTT_NS::force_move(forward_props)
+        );
 
         switch (ep.get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
@@ -975,27 +977,26 @@ private:
         new_sub.reserve(entries.size());
 
         auto add_or_overwrite_sub =
-            [&](MQTT_NS::buffer topic, MQTT_NS::qos qos_value, MQTT_NS::rap rap_value = MQTT_NS::rap::dont) {
+            [&](MQTT_NS::buffer topic, MQTT_NS::subscribe_options subopts) {
                 auto& idx = subs_online_.get<tag_con_topic>();
                 auto r = idx.equal_range(std::make_tuple(spep, topic));
                 if (r.first == r.second) {
                     // add new subscription
                     MQTT_LOG("mqtt_broker", trace)
                         << MQTT_ADD_VALUE(address, spep.get())
-                        << "subs_online_.emplace() " << "topic:" << topic << " qos:" << qos_value;
-                    idx.emplace_hint(r.first, MQTT_NS::force_move(topic), spep, qos_value, rap_value);
+                        << "subs_online_.emplace() " << "topic:" << topic << " qos:" << subopts.get_qos();
+                    idx.emplace_hint(r.first, MQTT_NS::force_move(topic), spep, subopts);
                     new_sub.emplace_back(true);
                 }
                 else {
                     // update subscription
                     MQTT_LOG("mqtt_broker", trace)
                         << MQTT_ADD_VALUE(address, spep.get())
-                        << "subs_online_.update " << "topic:" << topic << " qos:" << qos_value;
+                        << "subs_online_.update " << "topic:" << topic << " qos:" << subopts.get_qos();
                     idx.modify(
                         r.first,
                         [&](sub_con_online& e) {
-                            e.qos_value = qos_value;
-                            e.rap_value = rap_value;
+                            e.subopts = subopts;
                         }
                     );
                     new_sub.emplace_back(false);
@@ -1014,9 +1015,9 @@ private:
             res.reserve(entries.size());
             for (auto const& e : entries) {
                 MQTT_NS::buffer topic = std::get<0>(e);
-                MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
-                res.emplace_back(MQTT_NS::qos_to_suback_return_code(qos_value)); // converts to granted_qos_x
-                add_or_overwrite_sub(MQTT_NS::force_move(topic), qos_value);
+                MQTT_NS::subscribe_options subopts = std::get<1>(e);
+                res.emplace_back(MQTT_NS::qos_to_suback_return_code(subopts.get_qos())); // converts to granted_qos_x
+                add_or_overwrite_sub(MQTT_NS::force_move(topic), subopts);
             }
             // Acknowledge the subscriptions, and the registered QOS settings
             ep.suback(packet_id, MQTT_NS::force_move(res));
@@ -1028,10 +1029,9 @@ private:
             res.reserve(entries.size());
             for (auto const& e : entries) {
                 MQTT_NS::buffer topic = std::get<0>(e);
-                MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
-                MQTT_NS::rap rap_value = std::get<1>(e).get_rap();
-                res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(qos_value)); // converts to granted_qos_x
-                add_or_overwrite_sub(MQTT_NS::force_move(topic), qos_value, rap_value);
+                MQTT_NS::subscribe_options subopts = std::get<1>(e);
+                res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(subopts.get_qos())); // converts to granted_qos_x
+                add_or_overwrite_sub(MQTT_NS::force_move(topic), subopts);
             }
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
@@ -1138,6 +1138,7 @@ private:
     /**
      * @brief do_publish Publish a message to any subscribed clients.
      *
+     * @param ep - endpoint.
      * @param topic - The topic to publish the message on.
      * @param contents - The contents of the message.
      * @param qos - The QOS setting to use for the published message.
@@ -1145,6 +1146,7 @@ private:
      *                    be sent to newly added subscriptions in the future.\
      */
     void do_publish(
+        endpoint_t& ep,
         MQTT_NS::buffer topic,
         MQTT_NS::buffer contents,
         MQTT_NS::publish_options pubopts,
@@ -1156,6 +1158,10 @@ private:
                 auto& idx = col.template get<tag_topic>();
                 for(auto& item : idx) {
                     if(compare_topic_filter(item.topic, topic)) {
+                        // If NL (no local) subscription option is set and
+                        // publisher is the same as subscriber, then skip it.
+                        if (item.subopts.get_nl() == MQTT_NS::nl::yes && item.from_me(ep)) continue;
+
                         // publish the message to subscribers.
                         // retain is delivered as the original only if rap_value is rap::retain.
                         // On MQTT v3.1.1, rap_value is always rap::dont.
@@ -1342,8 +1348,7 @@ private:
                         subs_offline_.emplace(
                             client_id,
                             item.topic,
-                            item.qos_value,
-                            item.rap_value
+                            item.subopts
                         );
                     (void)ret;
                     BOOST_ASSERT(ret.second);
@@ -1358,10 +1363,12 @@ private:
             // TODO: This should be triggered by the will delay
             // Not sent immediately.
             do_publish(
+                ep,
                 MQTT_NS::force_move(will.value().topic()),
                 MQTT_NS::force_move(will.value().message()),
                 will.value().get_qos() | will.value().get_retain(),
-                MQTT_NS::force_move(will.value().props()));
+                MQTT_NS::force_move(will.value().props())
+            );
         }
     }
 
@@ -1460,9 +1467,8 @@ private:
         sub_con_online(
             MQTT_NS::buffer topic,
             con_sp_t con,
-            MQTT_NS::qos qos_value,
-            MQTT_NS::rap rap_value = MQTT_NS::rap::dont)
-            :topic(MQTT_NS::force_move(topic)), con(MQTT_NS::force_move(con)), qos_value(qos_value), rap_value(rap_value) {}
+            MQTT_NS::subscribe_options subopts)
+            :topic(MQTT_NS::force_move(topic)), con(MQTT_NS::force_move(con)), subopts(subopts) {}
 
         void deliver(
             MQTT_NS::buffer pub_topic,
@@ -1471,8 +1477,8 @@ private:
             MQTT_NS::retain retain,
             MQTT_NS::v5::properties props) {
 
-            MQTT_NS::publish_options pubopts = std::min(qos_value, pub_qos_value);
-            if (rap_value == MQTT_NS::rap::retain && retain == MQTT_NS::retain::yes) {
+            MQTT_NS::publish_options pubopts = std::min(subopts.get_qos(), pub_qos_value);
+            if (subopts.get_rap() == MQTT_NS::rap::retain && retain == MQTT_NS::retain::yes) {
                 pubopts |= MQTT_NS::retain::yes;
             }
             // TODO: Probably this should be switched to async_publish?
@@ -1489,10 +1495,13 @@ private:
             );
         }
 
+        bool from_me(endpoint_t const& ep) const {
+            return con.get() == &ep;
+        }
+
         MQTT_NS::buffer topic;
         con_sp_t con;
-        MQTT_NS::qos qos_value;
-        MQTT_NS::rap rap_value;
+        MQTT_NS::subscribe_options subopts;
     };
     using mi_sub_con_online = mi::multi_index_container<
         sub_con_online,
@@ -1574,9 +1583,8 @@ private:
         sub_con_offline(
             MQTT_NS::buffer client_id,
             MQTT_NS::buffer topic,
-            MQTT_NS::qos qos_value,
-            MQTT_NS::rap rap_value)
-            :client_id(MQTT_NS::force_move(client_id)), topic(MQTT_NS::force_move(topic)), qos_value(qos_value), rap_value(rap_value) {}
+            MQTT_NS::subscribe_options subopts)
+            :client_id(MQTT_NS::force_move(client_id)), topic(MQTT_NS::force_move(topic)), subopts(subopts) {}
 
         void deliver(
             MQTT_NS::buffer pub_topic,
@@ -1585,8 +1593,8 @@ private:
             MQTT_NS::retain retain,
             MQTT_NS::v5::properties props) {
 
-            MQTT_NS::publish_options pubopts = std::min(qos_value, pub_qos_value);
-            if (rap_value == MQTT_NS::rap::retain && retain == MQTT_NS::retain::yes) {
+            MQTT_NS::publish_options pubopts = std::min(subopts.get_qos(), pub_qos_value);
+            if (subopts.get_rap() == MQTT_NS::rap::retain && retain == MQTT_NS::retain::yes) {
                 pubopts |= MQTT_NS::retain::yes;
             }
 
@@ -1598,11 +1606,14 @@ private:
             );
         }
 
+        bool from_me(endpoint_t const&) const {
+            return false;
+        }
+
         MQTT_NS::buffer client_id;
         MQTT_NS::buffer topic;
         std::vector<offline_message> messages;
-        MQTT_NS::qos qos_value;
-        MQTT_NS::rap rap_value;
+        MQTT_NS::subscribe_options subopts;
     };
 
     using mi_sub_con_offline = mi::multi_index_container<
