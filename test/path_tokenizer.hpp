@@ -38,59 +38,86 @@ inline void mqtt_path_tokenizer(MQTT_NS::string_view str, Output write) {
 // See if the topic is valid (does not contain # or +)
 inline bool mqtt_valid_topic(MQTT_NS::string_view topic) {
     /*
-     * Confirm the topic pattern is valid before using it.
+     * Confirm the topic name is valid
+     * Use rules from https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901247
+     */
+
+    // All Topic Names and Topic Filters MUST be at least one character long
+    // Topic Names and Topic Filters are UTF-8 Encoded Strings; they MUST NOT encode to more than 65,535 bytes
+    // The wildcard characters can be used in Topic Filters, but MUST NOT be used within a Topic Name
+    // Topic Names and Topic Filters MUST NOT include the null character (Unicode U+0000)
+    return
+        ! topic.empty()
+        && (topic.size() <= std::numeric_limits<std::uint16_t>::max())
+        && (MQTT_NS::string_view::npos == topic.find_first_of(MQTT_NS::string_view("\0+#", 3)));
+}
+
+// See if the subscription is valid
+inline bool mqtt_valid_subscription(MQTT_NS::string_view subscription) {
+    /*
+     * Confirm the topic pattern is valid before registering it.
      * Use rules from http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718106
      */
-    for (size_t idx = topic.find_first_of("+#");
+
+    // All Topic Names and Topic Filters MUST be at least one character long
+    // Topic Names and Topic Filters are UTF-8 Encoded Strings; they MUST NOT encode to more than 65,535 bytes
+    if (subscription.empty() || (subscription.size() > std::numeric_limits<std::uint16_t>::max())) {
+        return false;
+    }
+
+    for (MQTT_NS::string_view::size_type idx = subscription.find_first_of(MQTT_NS::string_view("\0+#", 3));
          MQTT_NS::string_view::npos != idx;
-         idx = topic.find_first_of("+#", idx+1)) {
-        if ('+' == topic[idx]) {
+         idx = subscription.find_first_of(MQTT_NS::string_view("\0+#", 3), idx+1)) {
+        BOOST_ASSERT(
+            ('\0' == subscription[idx])
+            || ('+'  == subscription[idx])
+            || ('#'  == subscription[idx])
+        );
+        if ('\0' == subscription[idx]) {
+            // Topic Names and Topic Filters MUST NOT include the null character (Unicode U+0000)
+            return false;
+        }
+        else if ('+' == subscription[idx]) {
             /*
              * Either must be the first character,
              * or be preceeded by a topic seperator.
              */
-            if ((0 != idx) && (mqtt_level_separator != topic[idx-1])) {
+            if ((0 != idx) && ('/' != subscription[idx-1])) {
                 return false;
             }
+
             /*
              * Either must be the last character,
              * or be followed by a topic seperator.
              */
-            if ((topic.size()-1 != idx) && (mqtt_level_separator != topic[idx+1])) {
+            if ((subscription.size()-1 != idx) && ('/' != subscription[idx+1])) {
                 return false;
             }
         }
-        else { // multilevel wildcard
+        // multilevel wildcard
+        else if ('#' == subscription[idx]) {
             /*
              * Must be absolute last character.
              * Must only be one multi level wild card.
              */
-            if (idx != topic.size()-1) {
+            if (idx != subscription.size()-1) {
                 return false;
             }
+
             /*
              * If not the first character, then the
              * immediately preceeding character must
              * be a topic level separator.
              */
-            if ((0 != idx) && (mqtt_level_separator != topic[idx-1])) {
+            if ((0 != idx) && ('/' != subscription[idx-1])) {
                 return false;
             }
         }
+        else {
+            return false;
+        }
     }
-
-    return !topic.empty();
-}
-
-// See if the subscription is valid
-inline bool mqtt_valid_subscription(MQTT_NS::string_view subscription) {
-    if (subscription.empty()) {
-        return false;
-    }
-
-    // If hash position is found, it should be the last character
-    const size_t hash_position = subscription.find('#');
-    return (hash_position == MQTT_NS::string_view::npos) || (hash_position == subscription.size() - 1);
+    return true;
 }
 
 #endif // !defined(MQTT_PATH_TOKENIZER_HPP)
