@@ -40,7 +40,8 @@ ENDIF ()
 IF (MQTT_TEST_3)
     LIST (APPEND check_PROGRAMS
         sub.cpp
-        pubsub.cpp
+        pubsub_1.cpp
+        pubsub_2.cpp
         pubsub_no_strand.cpp
         multi_sub.cpp
     )

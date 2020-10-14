@@ -1180,7 +1180,6 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
             MQTT_NS::v5::property::correlation_data("correlation data"_mb),
             MQTT_NS::v5::property::user_property("key1"_mb, "val1"_mb),
             MQTT_NS::v5::property::user_property("key2"_mb, "val2"_mb),
-            MQTT_NS::v5::property::subscription_identifier(123),
         };
 
         auto prop_size = ps.size();
@@ -1267,9 +1266,6 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
                                     BOOST_TEST(false);
                                     break;
                                 }
-                            },
-                            [&](MQTT_NS::v5::property::subscription_identifier const& t) {
-                                BOOST_TEST(t.val() == 123U);
                             },
                             [&](auto&& ...) {
                                 BOOST_TEST(false);
