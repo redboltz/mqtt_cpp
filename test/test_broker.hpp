@@ -871,7 +871,7 @@ private:
                         d.props
                     );
                 }
-                subs_online_.emplace(item.topic, spep, item.subopts);
+                subs_online_.emplace(item.topic, spep, item.subopts, item.sid);
             }
             // [TBD]
             // This is wrong.
@@ -914,6 +914,11 @@ private:
                         // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901113
                         // A receiver MUST NOT carry forward any Topic Alias mappings from
                         // one Network Connection to another [MQTT-3.3.2-7].
+                    },
+                    [&spep](MQTT_NS::v5::property::subscription_identifier&& p) {
+                        MQTT_LOG("mqtt_broker", warning)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << "Subscription Identifier from client not forwarded sid:" << p.val();
                     },
                     [&forward_props](auto&& p) {
                         forward_props.push_back(MQTT_NS::force_move(p));
@@ -977,7 +982,9 @@ private:
         new_sub.reserve(entries.size());
 
         auto add_or_overwrite_sub =
-            [&](MQTT_NS::buffer topic, MQTT_NS::subscribe_options subopts) {
+            [&](MQTT_NS::buffer topic,
+                MQTT_NS::subscribe_options subopts,
+                MQTT_NS::optional<std::size_t> sid = MQTT_NS::nullopt) {
                 auto& idx = subs_online_.get<tag_con_topic>();
                 auto r = idx.equal_range(std::make_tuple(spep, topic));
                 if (r.first == r.second) {
@@ -985,7 +992,7 @@ private:
                     MQTT_LOG("mqtt_broker", trace)
                         << MQTT_ADD_VALUE(address, spep.get())
                         << "subs_online_.emplace() " << "topic:" << topic << " qos:" << subopts.get_qos();
-                    idx.emplace_hint(r.first, MQTT_NS::force_move(topic), spep, subopts);
+                    idx.emplace_hint(r.first, MQTT_NS::force_move(topic), spep, subopts, sid);
                     new_sub.emplace_back(true);
                 }
                 else {
@@ -997,11 +1004,15 @@ private:
                         r.first,
                         [&](sub_con_online& e) {
                             e.subopts = subopts;
+                            e.sid = sid;
                         }
                     );
                     new_sub.emplace_back(false);
                 }
             };
+
+        // subscription identifier
+        MQTT_NS::optional<std::size_t> sid;
 
         // An in-order list of qos settings, used to send the reply.
         // The MQTT protocol 3.1.1 - 3.8.4 Response - paragraph 6
@@ -1025,13 +1036,29 @@ private:
         }
         case MQTT_NS::protocol_version::v5:
         {
+            // Get subscription identifier
+            for (auto const& p : props) {
+                MQTT_NS::visit(
+                    MQTT_NS::make_lambda_visitor(
+                        [&sid](MQTT_NS::v5::property::subscription_identifier const& p) {
+                            if (p.val() != 0) {
+                                sid.emplace(p.val());
+                            }
+                        },
+                        [](auto&& ...) {
+                        }
+                    ),
+                    p
+                );
+            }
+
             std::vector<MQTT_NS::v5::suback_reason_code> res;
             res.reserve(entries.size());
             for (auto const& e : entries) {
                 MQTT_NS::buffer topic = std::get<0>(e);
                 MQTT_NS::subscribe_options subopts = std::get<1>(e);
                 res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(subopts.get_qos())); // converts to granted_qos_x
-                add_or_overwrite_sub(MQTT_NS::force_move(topic), subopts);
+                add_or_overwrite_sub(MQTT_NS::force_move(topic), subopts, sid);
             }
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
@@ -1053,11 +1080,15 @@ private:
                     auto rh = options.get_retain_handling();
                     if (rh == MQTT_NS::retain_handling::send ||
                         (rh == MQTT_NS::retain_handling::send_only_new_subscription && *new_sub_it)) {
+                        auto props = retain.props;
+                        if (sid) {
+                            props.push_back(MQTT_NS::v5::property::subscription_identifier(*sid));
+                        }
                         ep.publish(
                             as::buffer(retain.topic),
                             as::buffer(retain.contents),
                             std::min(retain.qos_value, options.get_qos()) | MQTT_NS::retain::yes,
-                            retain.props,
+                            props,
                             std::make_pair(retain.topic, retain.contents)
                         );
                     }
@@ -1348,7 +1379,8 @@ private:
                         subs_offline_.emplace(
                             client_id,
                             item.topic,
-                            item.subopts
+                            item.subopts,
+                            item.sid
                         );
                     (void)ret;
                     BOOST_ASSERT(ret.second);
@@ -1467,8 +1499,12 @@ private:
         sub_con_online(
             MQTT_NS::buffer topic,
             con_sp_t con,
-            MQTT_NS::subscribe_options subopts)
-            :topic(MQTT_NS::force_move(topic)), con(MQTT_NS::force_move(con)), subopts(subopts) {}
+            MQTT_NS::subscribe_options subopts,
+            MQTT_NS::optional<std::size_t> sid)
+            :topic(MQTT_NS::force_move(topic)),
+             con(MQTT_NS::force_move(con)),
+             subopts(subopts),
+             sid(sid) {}
 
         void deliver(
             MQTT_NS::buffer pub_topic,
@@ -1480,6 +1516,10 @@ private:
             MQTT_NS::publish_options pubopts = std::min(subopts.get_qos(), pub_qos_value);
             if (subopts.get_rap() == MQTT_NS::rap::retain && retain == MQTT_NS::retain::yes) {
                 pubopts |= MQTT_NS::retain::yes;
+            }
+
+            if (sid) {
+                props.push_back(MQTT_NS::v5::property::subscription_identifier(*sid));
             }
             // TODO: Probably this should be switched to async_publish?
 
@@ -1502,6 +1542,7 @@ private:
         MQTT_NS::buffer topic;
         con_sp_t con;
         MQTT_NS::subscribe_options subopts;
+        MQTT_NS::optional<std::size_t> sid;
     };
     using mi_sub_con_online = mi::multi_index_container<
         sub_con_online,
@@ -1583,8 +1624,12 @@ private:
         sub_con_offline(
             MQTT_NS::buffer client_id,
             MQTT_NS::buffer topic,
-            MQTT_NS::subscribe_options subopts)
-            :client_id(MQTT_NS::force_move(client_id)), topic(MQTT_NS::force_move(topic)), subopts(subopts) {}
+            MQTT_NS::subscribe_options subopts,
+            MQTT_NS::optional<std::size_t> sid)
+            :client_id(MQTT_NS::force_move(client_id)),
+             topic(MQTT_NS::force_move(topic)),
+             subopts(subopts),
+             sid(sid) {}
 
         void deliver(
             MQTT_NS::buffer pub_topic,
@@ -1597,7 +1642,9 @@ private:
             if (subopts.get_rap() == MQTT_NS::rap::retain && retain == MQTT_NS::retain::yes) {
                 pubopts |= MQTT_NS::retain::yes;
             }
-
+            if (sid) {
+                props.push_back(MQTT_NS::v5::property::subscription_identifier(*sid));
+            }
             messages.emplace_back(
                 MQTT_NS::force_move(pub_topic),
                 MQTT_NS::force_move(contents),
@@ -1614,6 +1661,7 @@ private:
         MQTT_NS::buffer topic;
         std::vector<offline_message> messages;
         MQTT_NS::subscribe_options subopts;
+        MQTT_NS::optional<std::size_t> sid;
     };
 
     using mi_sub_con_offline = mi::multi_index_container<
