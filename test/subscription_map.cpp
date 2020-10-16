@@ -194,7 +194,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
 
         BOOST_TEST(elem.h.empty());
         // new insert or update (insert case)
-        auto h = m.insert_or_update(elem.topic_filter, elem);
+        auto h = m.insert(elem.topic_filter, elem);
         auto& idx = scos.get<tag_con_topic_filter>();
         idx.modify(
             it,
@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
 
         if (elem.h.empty()) {
             // new insert
-            auto h = m.insert_or_update(elem.topic_filter, elem);
+            auto h = m.insert(elem.topic_filter, elem);
             auto& idx = scos.get<tag_con_topic_filter>();
             idx.modify(
                 it,
@@ -354,7 +354,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
 
         BOOST_TEST(elem.h.empty());
         // new insert or update (insert case)
-        auto h = m.insert_or_update(elem.topic_filter, elem);
+        auto h = m.insert(elem.topic_filter, elem);
         auto& idx = scos.get<tag_con_topic_filter>();
         idx.modify(
             it,
@@ -372,7 +372,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
 
         if (elem.h.empty()) {
             // new insert
-            auto h = m.insert_or_update(elem.topic_filter, elem);
+            auto h = m.insert(elem.topic_filter, elem);
             auto& idx = scos.get<tag_con_topic_filter>();
             idx.modify(
                 it,
