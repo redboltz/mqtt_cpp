@@ -32,6 +32,7 @@ using std::basic_string_view;
 #define MQTT_NO_BOOST_STRING_VIEW 0
 
 #include <boost/utility/string_view.hpp>
+#include <boost/container_hash/hash_fwd.hpp>
 
 namespace MQTT_NS {
 
@@ -39,6 +40,14 @@ using string_view = boost::string_view;
 
 template<class CharT, class Traits = std::char_traits<CharT> >
 using basic_string_view = boost::basic_string_view<CharT, Traits>;
+
+#if BOOST_VERSION < 106900
+
+template <class charT, class traits>
+std::size_t hash_value(basic_string_view<charT, traits> s) {
+    return boost::hash_range(s.begin(), s.end());
+}
+#endif // BOOST_VERSION < 106900
 
 } // namespace MQTT_NS
 
