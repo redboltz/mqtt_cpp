@@ -3,7 +3,6 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
-
 #include "test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
@@ -199,7 +198,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         idx.modify(
             it,
             [&](sub_con_online& e) {
-                e.h = h; // update handle
+                e.h = h.first; // update handle
             }
         );
         BOOST_TEST(!elem.h.empty());
@@ -217,7 +216,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
             idx.modify(
                 it,
                 [&](sub_con_online& e) {
-                    e.h = h; // update handle
+                    e.h = h.first; // update handle
                 }
             );
             BOOST_TEST(!elem.h.empty());
@@ -256,7 +255,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         auto& idx = scos.get<tag_con_topic_filter>();
         auto it = idx.find(std::make_tuple(con1, "a/b/c"_mb));
         BOOST_TEST((it != idx.end()));
-        m.remove(it->h, *it);
+        m.erase(it->h, *it);
         idx.erase(it);
         m.find(
             "a/b/c",
@@ -293,7 +292,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
             auto const& elem = *it;
             // call remove for each handle - Value pairs
             // it is a little inefficient but still enough efficient
-            m.remove(elem.h, elem);
+            m.erase(elem.h, elem);
             ++it;
         }
         idx.erase(r.first, r.second);
@@ -359,7 +358,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         idx.modify(
             it,
             [&](sub_con_online& e) {
-                e.h = h; // update handle
+                e.h = h.first; // update handle
             }
         );
         BOOST_TEST(!elem.h.empty());
@@ -377,7 +376,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
             idx.modify(
                 it,
                 [&](sub_con_online& e) {
-                    e.h = h; // update handle
+                    e.h = h.first; // update handle
                 }
             );
             BOOST_TEST(!elem.h.empty());
@@ -436,7 +435,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         auto& idx = scos.get<tag_con_topic_filter>();
         auto it = idx.find(std::make_tuple(con1, "a/+/c"_mb));
         BOOST_TEST((it != idx.end()));
-        m.remove(it->h, *it);
+        m.erase(it->h, *it);
         idx.erase(it);
         m.find(
             "a/b/c",
@@ -472,7 +471,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
             auto const& elem = *it;
             // call remove for each handle - Value pairs
             // it is a little inefficient but still enough efficient
-            m.remove(elem.h, elem);
+            m.erase(elem.h, elem);
             ++it;
         }
         idx.erase(r.first, r.second);
