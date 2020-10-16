@@ -3,7 +3,6 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
-
 #include "test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
@@ -199,7 +198,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         idx.modify(
             it,
             [&](sub_con_online& e) {
-                e.h = h; // update handle
+                e.h = h.first; // update handle
             }
         );
         BOOST_TEST(!elem.h.empty());
@@ -217,7 +216,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
             idx.modify(
                 it,
                 [&](sub_con_online& e) {
-                    e.h = h; // update handle
+                    e.h = h.first; // update handle
                 }
             );
             BOOST_TEST(!elem.h.empty());
@@ -359,7 +358,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         idx.modify(
             it,
             [&](sub_con_online& e) {
-                e.h = h; // update handle
+                e.h = h.first; // update handle
             }
         );
         BOOST_TEST(!elem.h.empty());
@@ -377,7 +376,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
             idx.modify(
                 it,
                 [&](sub_con_online& e) {
-                    e.h = h; // update handle
+                    e.h = h.first; // update handle
                 }
             );
             BOOST_TEST(!elem.h.empty());

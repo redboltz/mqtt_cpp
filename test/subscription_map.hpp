@@ -309,9 +309,9 @@ public:
 
     // Insert a value at the specified subscription path
     handle insert(MQTT_NS::string_view subscription, Value value) {
-        if (!this->find_subscription(subscription).empty()) {
-            throw std::runtime_error(std::string("Subscription already exists in map: ").append(subscription.data(), subscription.size()));
-        }
+        auto existing_subscription = this->find_subscription(subscription);
+        if (!existing_subscription.empty())
+            throw std::runtime_error("Subscription already exists in map");
 
         auto new_subscription_path = this->create_subscription(subscription);
         new_subscription_path.back()->second.value = std::move(value);
@@ -371,29 +371,22 @@ public:
     // Handle of an entry
     using handle = typename subscription_map_base< Value >::handle;
 
-    // Insert or update a value at the specified subscription path
-    handle insert_or_update(MQTT_NS::string_view subscription, Value value) {
+    // Insert a value at the specified subscription path
+    std::pair<handle, bool> insert(MQTT_NS::string_view subscription, Value value) {
         auto path = this->find_subscription(subscription);
-        if (!path.empty()) {
-            auto &subscription_set = path.back()->second.value;
-            subscription_set.erase(value);
-            subscription_set.insert(std::move(value));
-            return this->path_to_handle(path);
-        }
-        else {
+        if (path.empty()) {
             auto new_subscription_path = this->create_subscription(subscription);
             new_subscription_path.back()->second.value.insert(std::move(value));
-            return this->path_to_handle(new_subscription_path);
+            return std::make_pair(this->path_to_handle(new_subscription_path), true);
         }
+
+        auto &subscription_set = path.back()->second.value;
+        bool insert_result = subscription_set.insert(std::move(value)).second;
+        return std::make_pair(this->path_to_handle(path), insert_result);
     }
 
-    // Insert a value at the specified subscription path
-    handle insert(MQTT_NS::string_view subscription, Value const& value) {
-        return insert_or_update(subscription, value);
-    }
-
-    // Update an existing entry using a handle
-    void update(handle h, Value value) {
+    // Insert a value with a handle to the subscription
+    std::pair<handle, bool> insert(handle h, Value value) {
         if (h.empty()) {
             throw std::runtime_error("Invalid handle was specified");
         }
@@ -405,15 +398,8 @@ public:
         }
 
         auto& subscription_set = h_iter->second.value;
-        auto subscription_iter = subscription_set.find(value);
-        if (subscription_iter != subscription_set.end()) {
-            auto hint = std::next(subscription_iter);
-            subscription_set.erase(subscription_iter);
-            subscription_set.insert(hint, std::move(value));
-        }
-        else{
-            subscription_set.insert(std::move(value));
-        }
+        bool insert_result = subscription_set.insert(std::move(value)).second;
+        return std::make_pair(this->path_to_handle(path), insert_result);
     }
 
     // Remove a value at the specified subscription path
