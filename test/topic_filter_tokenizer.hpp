@@ -30,7 +30,11 @@ inline void topic_filter_tokenizer(MQTT_NS::string_view str, Output write) {
         std::begin(str),
         std::end(str),
         [&write](MQTT_NS::string_view::const_iterator token_begin, MQTT_NS::string_view::const_iterator token_end) {
-            return write(MQTT_NS::string_view(token_begin, std::distance(token_begin, token_end)));
+            return write(
+                MQTT_NS::string_view(
+                    token_begin,
+                    static_cast<std::size_t>(std::distance(token_begin, token_end)))
+            );
         }
     );
 }
