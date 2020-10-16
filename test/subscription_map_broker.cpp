@@ -12,7 +12,7 @@
 
 #include <iostream>
 
-BOOST_AUTO_TEST_SUITE(test_sub_map)
+BOOST_AUTO_TEST_SUITE(test_subscription_map_broker)
 
 using namespace MQTT_NS::literals;
 

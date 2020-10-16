@@ -34,7 +34,6 @@ IF (MQTT_TEST_2)
         remaining_length.cpp
         message.cpp
         property.cpp
-        subscription_map.cpp
     )
 ENDIF ()
 
@@ -51,7 +50,6 @@ ENDIF ()
 IF (MQTT_TEST_4)
     LIST (APPEND check_PROGRAMS
         async_pubsub_1.cpp
-        async_pubsub_2.cpp
     )
 ENDIF ()
 
@@ -80,6 +78,8 @@ IF (MQTT_TEST_7)
         as_buffer_pubsub.cpp
         as_buffer_async_pubsub_1.cpp
         as_buffer_async_pubsub_2.cpp
+        subscription_map_broker.cpp
+        async_pubsub_2.cpp
     )
 ENDIF ()
 

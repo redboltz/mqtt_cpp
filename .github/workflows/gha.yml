@@ -38,7 +38,7 @@ jobs:
       env:
         CXXFLAGS: -Werror -pedantic -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED
       run: |
-        cmake --build ${{ runner.temp }} --clean-first
+        cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first
     - name: Test
       working-directory: ${{ runner.temp }}
       run: |
