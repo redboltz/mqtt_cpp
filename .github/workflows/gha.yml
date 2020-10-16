@@ -36,7 +36,7 @@ jobs:
         cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first --target check_deps
     - name: Compile
       env:
-        CXXFLAGS: -Werror -g -pedantic -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING
+        CXXFLAGS: -Werror -pedantic -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -DBOOST_ASIO_NO_DEPRECATED
       run: |
         cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first
     - name: Test
