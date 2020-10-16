@@ -337,7 +337,7 @@ public:
     }
 
     // Remove a value at the specified subscription path
-    void remove(MQTT_NS::string_view subscription) {
+    void erase(MQTT_NS::string_view subscription) {
         auto path = this->find_subscription(subscription);
         if (path.empty()) {
             return;
@@ -347,7 +347,7 @@ public:
     }
 
     // Remove a value using a handle
-    void remove(handle h) {
+    void erase(handle h) {
         auto path = this->handle_to_iterators(h);
         if (!path.empty()) {
             this->remove_subscription(path);
@@ -399,12 +399,12 @@ public:
 
         auto& subscription_set = h_iter->second.value;
         bool insert_result = subscription_set.insert(std::move(value)).second;
-        return std::make_pair(this->path_to_handle(path), insert_result);
+        return std::make_pair(h, insert_result);
     }
 
     // Remove a value at the specified subscription path
     // returns the value of the removed element (if found)
-    boost::optional<Value> remove(MQTT_NS::string_view subscription, Value const& value) {
+    size_t erase(MQTT_NS::string_view subscription, Value const& value) {
         // Find the subscription in the map
         auto path = this->find_subscription(subscription);
         if (path.empty()) {
@@ -413,25 +413,18 @@ public:
 
         // Remove the specified value
         auto& subscription_set = path.back()->second.value;
-        auto subscription_iter = subscription_set.find(value);
-        if (subscription_iter != subscription_set.end()) {
-            auto result = boost::make_optional(*subscription_iter);
-            subscription_set.erase(subscription_iter);
+        auto result = subscription_set.erase(value);
 
-            // Remove the subscription when all entries are removed
-            if (subscription_set.empty()) {
-                this->remove_subscription(path);
-            }
+        // If all values removed, remove the subscription
+        if(subscription_set.empty())
+            this->remove_subscription(path);
 
-            return result;
-        }
-
-        return boost::optional<Value>();
+        return result;
     }
 
     // Remove a value at the specified handle
     // returns the value of the removed element (if found)
-    boost::optional<Value> remove(handle h, Value const& value) {
+    size_t erase(handle h, Value const& value) {
         if (h.empty()) {
             throw std::runtime_error("Invalid handle was specified");
         }
@@ -442,21 +435,15 @@ public:
             throw std::runtime_error("Invalid handle was specified");
         }
 
+        // Remove the specified value
         auto& subscription_set = h_iter->second.value;
-        auto subscription_iter = subscription_set.find(value);
-        if (subscription_iter != subscription_set.end()) {
-            auto result = boost::make_optional(*subscription_iter);
-            subscription_set.erase(subscription_iter);
+        auto result = subscription_set.erase(value);
 
-            // Remove the subscription when all entries are removed
-            if (subscription_set.empty()) {
-                this->remove_subscription(this->handle_to_iterators(h));
-            }
+        // If all values removed, remove the subscription
+        if(subscription_set.empty())
+            this->remove_subscription(this->handle_to_iterators(h));
 
-            return result;
-        }
-
-        return boost::optional<Value>();
+        return result;
     }
 
         // Find all subscriptions that match the specified topic
