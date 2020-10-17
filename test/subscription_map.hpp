@@ -7,10 +7,12 @@
 #if !defined(MQTT_SUBSCRIPTION_MAP_HPP)
 #define MQTT_SUBSCRIPTION_MAP_HPP
 
-#include <mqtt/string_view.hpp>
-
 #include <unordered_map>
 #include <boost/functional/hash.hpp>
+
+#include <mqtt/string_view.hpp>
+#include <mqtt/optional.hpp>
+
 #include "topic_filter_tokenizer.hpp"
 
 #include <sstream>
@@ -43,7 +45,7 @@
 template<typename Value>
 class subscription_map_base {
 public:
-    using node_id_t = size_t;
+    using node_id_t = std::size_t;
     using path_entry_key = std::pair< node_id_t, MQTT_NS::buffer>;
     using handle = std::vector<path_entry_key>;
 
@@ -53,12 +55,12 @@ private:
     struct path_entry {
         node_id_t id;
 
-        size_t count = 1;
+        std::size_t count = 1;
 
         // the following flags and values are stored in count
-        static constexpr size_t has_hash_child_flag = (static_cast<size_t>(1) << (sizeof(size_t) * 8 - 1));
-        static constexpr size_t has_plus_child_flag = (static_cast<size_t>(1) << (sizeof(size_t) * 8 - 2));
-        static constexpr size_t max_count = (has_plus_child_flag - 1);
+        static constexpr std::size_t has_hash_child_flag = (static_cast<std::size_t>(1) << (sizeof(std::size_t) * 8 - 1));
+        static constexpr std::size_t has_plus_child_flag = (static_cast<std::size_t>(1) << (sizeof(std::size_t) * 8 - 2));
+        static constexpr std::size_t max_count = (has_plus_child_flag - 1);
 
         Value value;
 
@@ -92,7 +94,7 @@ protected:
         return result;
     }
 
-    std::vector< map_type_iterator> find_subscription(MQTT_NS::string_view const& subscription) {
+    std::vector< map_type_iterator> find_subscription(MQTT_NS::string_view subscription) {
         auto parent = root;
         std::vector< map_type_iterator > path;
 
@@ -263,6 +265,14 @@ protected:
         return result;
     }
 
+    // Increase the number of subscriptions for this handle
+    void increase_subscriptions(handle h) {
+        std::vector<map_type_iterator> iterators = handle_to_iterators(h);
+        for (auto i : iterators) {
+            ++(i->second.count);
+        }
+    }
+
     subscription_map_base()
         : next_node_id(root_node_id)
     {
@@ -273,7 +283,7 @@ protected:
 
 public:
     // Return the number of elements in the tree
-    size_t size() const { return map.size(); }
+    std::size_t size() const { return map.size(); }
 
     // Lookup a subscription
     handle lookup(MQTT_NS::string_view subscription) {
@@ -300,7 +310,7 @@ public:
 
 template<typename Value>
 class single_subscription_map
-    : public subscription_map_base<Value> {
+    : public subscription_map_base< MQTT_NS::optional<Value> > {
 
 public:
 
@@ -308,57 +318,84 @@ public:
     using handle = typename subscription_map_base< Value >::handle;
 
     // Insert a value at the specified subscription path
-    handle insert(MQTT_NS::string_view subscription, Value value) {
+    template <typename V>
+    handle insert(MQTT_NS::string_view subscription, V&& value) {
         auto existing_subscription = this->find_subscription(subscription);
-        if (!existing_subscription.empty())
-            throw std::runtime_error("Subscription already exists in map");
+        if (!existing_subscription.empty()) {
+            if(existing_subscription.back()->second.value)
+                throw std::runtime_error("Subscription already exists in map");
+            existing_subscription.back()->second.value.emplace(std::forward<V>(value));
+            return this->path_to_handle(existing_subscription);
+        }
 
         auto new_subscription_path = this->create_subscription(subscription);
-        new_subscription_path.back()->second.value = std::move(value);
+        new_subscription_path.back()->second.value = value;
         return this->path_to_handle(new_subscription_path);
     }
 
     // Update a value at the specified subscription path
-    void update(MQTT_NS::string_view subscription, Value value) {
+    template <typename V>
+    void update(MQTT_NS::string_view subscription, V&& value) {
         auto path = this->find_subscription(subscription);
         if (path.empty()) {
             throw std::runtime_error("Invalid subscription was specified");
         }
 
-        path.back()->second.value = std::move(value);
+        path.back()->second.value.emplace(std::forward<V>(value));
     }
 
-    void update(handle h, Value value) {
+    template <typename V>
+    void update(handle h, V&& value) {
         auto entry_iter = this->get_key(h.back());
         if (entry_iter == this->end()) {
             throw std::runtime_error("Invalid subscription was specified");
         }
-        entry_iter->second.value = std::move(value);
+        entry_iter->second.value.emplace(std::forward<V>(value));
     }
 
     // Remove a value at the specified subscription path
-    void erase(MQTT_NS::string_view subscription) {
+    std::size_t erase(MQTT_NS::string_view subscription) {
         auto path = this->find_subscription(subscription);
         if (path.empty()) {
-            return;
+            return 0;
+        }
+
+        if(!path.back()->second.value) {
+            return 0;
         }
 
         this->remove_subscription(path);
+        return 1;
     }
 
     // Remove a value using a handle
-    void erase(handle h) {
+    std::size_t erase(handle h) {
         auto path = this->handle_to_iterators(h);
-        if (!path.empty()) {
-            this->remove_subscription(path);
+        if (path.empty()) {
+            return 0;
         }
+
+        if(!path.back()->second.value) {
+            return 0;
+        }
+
+        this->remove_subscription(path);
+        return 1;
     }
 
     // Find all subscriptions that match the specified topic
     template<typename Output>
     void find(MQTT_NS::string_view topic, Output callback) const {
-        this->find_match(topic, std::move(callback));
+        this->find_match(
+            topic,
+            [&callback]( MQTT_NS::optional<Value> const& value ) {
+                if (value) {
+                    callback(value.value());
+                }
+            }
+        );
     }
+
 };
 
 
@@ -372,21 +409,24 @@ public:
     using handle = typename subscription_map_base< Value >::handle;
 
     // Insert a value at the specified subscription path
-    std::pair<handle, bool> insert(MQTT_NS::string_view subscription, Value value) {
+    template <typename V>
+    std::pair<handle, bool> insert(MQTT_NS::string_view subscription, V&& value) {
         auto path = this->find_subscription(subscription);
-        if (path.empty()) {
+        if(path.empty()) {
             auto new_subscription_path = this->create_subscription(subscription);
-            new_subscription_path.back()->second.value.insert(std::move(value));
+            new_subscription_path.back()->second.value.insert(std::forward<V>(value));
             return std::make_pair(this->path_to_handle(new_subscription_path), true);
+        } else {
+            auto result = path.back()->second.value.insert(std::forward<V>(value));
+            if(result.second)
+                this->create_subscription(subscription);
+            return std::make_pair(this->path_to_handle(path), result.second);
         }
-
-        auto &subscription_set = path.back()->second.value;
-        bool insert_result = subscription_set.insert(std::move(value)).second;
-        return std::make_pair(this->path_to_handle(path), insert_result);
     }
 
     // Insert a value with a handle to the subscription
-    std::pair<handle, bool> insert(handle h, Value value) {
+    template <typename V>
+    std::pair<handle, bool> insert(handle h, V&& value) {
         if (h.empty()) {
             throw std::runtime_error("Invalid handle was specified");
         }
@@ -398,25 +438,25 @@ public:
         }
 
         auto& subscription_set = h_iter->second.value;
-        bool insert_result = subscription_set.insert(std::move(value)).second;
-        return std::make_pair(h, insert_result);
+        auto insert_result = subscription_set.insert(std::forward<V>(value));
+        if (insert_result.second)
+            this->increase_subscriptions(h);
+        return std::make_pair(h, insert_result.second);
     }
 
     // Remove a value at the specified subscription path
     // returns the value of the removed element (if found)
-    size_t erase(MQTT_NS::string_view subscription, Value const& value) {
+    std::size_t erase(MQTT_NS::string_view subscription, Value const& value) {
         // Find the subscription in the map
         auto path = this->find_subscription(subscription);
         if (path.empty()) {
-            return boost::optional<Value>();
+            return 0;
         }
 
         // Remove the specified value
         auto& subscription_set = path.back()->second.value;
         auto result = subscription_set.erase(value);
-
-        // If all values removed, remove the subscription
-        if(subscription_set.empty())
+        if (result)
             this->remove_subscription(path);
 
         return result;
@@ -424,7 +464,7 @@ public:
 
     // Remove a value at the specified handle
     // returns the value of the removed element (if found)
-    size_t erase(handle h, Value const& value) {
+    std::size_t erase(handle h, Value const& value) {
         if (h.empty()) {
             throw std::runtime_error("Invalid handle was specified");
         }
@@ -438,15 +478,13 @@ public:
         // Remove the specified value
         auto& subscription_set = h_iter->second.value;
         auto result = subscription_set.erase(value);
-
-        // If all values removed, remove the subscription
-        if(subscription_set.empty())
+        if (result)
             this->remove_subscription(this->handle_to_iterators(h));
 
         return result;
     }
 
-        // Find all subscriptions that match the specified topic
+    // Find all subscriptions that match the specified topic
     template<typename Output>
     void find(MQTT_NS::string_view topic, Output callback) const {
         this->find_match(

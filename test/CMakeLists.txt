@@ -78,6 +78,8 @@ IF (MQTT_TEST_7)
         as_buffer_pubsub.cpp
         as_buffer_async_pubsub_1.cpp
         as_buffer_async_pubsub_2.cpp
+        subscription_map.cpp
+        retained_topic_map.cpp
         subscription_map_broker.cpp
         async_pubsub_2.cpp
     )
