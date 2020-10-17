@@ -14,16 +14,16 @@
 
 template<typename Value>
 class retained_topic_map {
-    using node_id_t = size_t;
+    using node_id_t = std::size_t;
     using path_entry_key = std::pair<node_id_t, MQTT_NS::buffer>;
 
     static constexpr node_id_t root_node_id = 0;
 
     struct path_entry {
         node_id_t id;
-        size_t count = 1;
+        std::size_t count = 1;
 
-        static constexpr size_t max_count = std::numeric_limits<size_t>::max();
+        static constexpr std::size_t max_count = std::numeric_limits<std::size_t>::max();
 
         boost::optional<Value> value;
 
@@ -60,7 +60,7 @@ class retained_topic_map {
 
                 if (entry == map.end()) {
                     entry = map.emplace(path_entry_key(parent_id, MQTT_NS::allocate_buffer(t)), path_entry(next_node_id++)).first;
-                    if (next_node_id == std::numeric_limits<typeof(next_node_id)>::max()) {
+                    if (next_node_id == std::numeric_limits<node_id_t>::max()) {
                         throw std::overflow_error("Maximum number of topics reached");
                     }
                 }
@@ -189,7 +189,7 @@ class retained_topic_map {
     }
 
     // Remove a value at the specified subscription path
-    bool remove_topic(MQTT_NS::string_view topic) {
+    bool erase_topic(MQTT_NS::string_view topic) {
         auto path = find_topic(topic);
         if (path.empty()) {
             return false;
@@ -230,13 +230,7 @@ public:
 
     // Insert a value at the specified subscription path
     void insert_or_update(MQTT_NS::string_view topic, Value const& value) {
-        auto path = find_topic(topic);
-        if (path.empty()) {
-            this->create_topic(topic)->second.value = value;
-        }
-        else {
-            path.back()->second.value = value;
-        }
+        this->create_topic(topic)->second.value = value;
     }
 
     // Find all stored topics that math the specified subscription
@@ -245,9 +239,13 @@ public:
     }
 
     // Remove a stored value at the specified topic
-    void remove(MQTT_NS::string_view topic) {
-        remove_topic(topic);
+    std::size_t erase(MQTT_NS::string_view topic) {
+        return (erase_topic(topic) ? 1 : 0);
     }
+
+    // Get the size of the map
+    std::size_t size() const { return map.size(); }
+
 };
 
 #endif // MQTT_RETAINED_TOPIC_MAP_HPP
