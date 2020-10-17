@@ -7,9 +7,11 @@
 #if !defined(MQTT_RETAINED_TOPIC_MAP_HPP)
 #define MQTT_RETAINED_TOPIC_MAP_HPP
 
-#include <mqtt/string_view.hpp>
 #include <map>
-#include <boost/optional.hpp>
+
+#include <mqtt/string_view.hpp>
+#include <mqtt/optional.hpp>
+
 #include "topic_filter_tokenizer.hpp"
 
 template<typename Value>
@@ -25,7 +27,7 @@ class retained_topic_map {
 
         static constexpr std::size_t max_count = std::numeric_limits<std::size_t>::max();
 
-        boost::optional<Value> value;
+        MQTT_NS::optional<Value> value;
 
         path_entry(node_id_t _id)
             : id(_id)
@@ -113,7 +115,7 @@ class retained_topic_map {
             for (auto root : entries) {
                 // Find all entries below this node
                 for (map_type_const_iterator i = map.lower_bound(path_entry_key(root, MQTT_NS::string_view(""))); i != map.end(); ++i) {
-                    if(i->first.first != root) {
+                    if (i->first.first != root) {
                         break;
                     }
 
@@ -232,7 +234,7 @@ public:
 
     template <typename V>
     void insert_or_update(MQTT_NS::string_view topic, V&& value) {
-        this->create_topic(topic)->second.value = value;
+        this->create_topic(topic)->second.value.emplace(std::forward<V>(value));
     }
 
     // Find all stored topics that math the specified subscription

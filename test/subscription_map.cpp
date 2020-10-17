@@ -33,12 +33,14 @@ BOOST_AUTO_TEST_CASE( failed_erase ) {
     BOOST_TEST(m.size() != 1);
 
     auto e1 = m.erase(it_success1.first, v1);
+    BOOST_TEST(e1 == 1);
     BOOST_TEST(m.size() != 1);
 
     auto e2 = m.erase(it_success2.first, v2); //  Invalid handle was specified is thrown here
+    BOOST_TEST(e2 == 1);
     BOOST_TEST(m.size() == 1);
 
-}	
+}
 
 BOOST_AUTO_TEST_CASE( test_single_subscription ) {
     std::string text = "example/test/A";
@@ -63,7 +65,7 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
         "example/test/A", "example/+/A", "example/#", "#"
     };
 
-    for(auto const &i: values) {
+    for (auto const& i : values) {
         map.insert(i, i);
     }
 
@@ -99,7 +101,7 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
 
     BOOST_TEST(map.erase("non-existent") == 0);
 
-    for(auto const &i: values) {
+    for (auto const& i : values) {
         BOOST_TEST(map.size() != 0);
         BOOST_TEST(map.erase(i) == 1);
     }
@@ -107,11 +109,11 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
     BOOST_TEST(map.size() == 1);
 
     std::vector< single_subscription_map< std::string >::handle > handles;
-    for(auto const &i: values) {
+    for (auto const& i : values) {
         handles.push_back(map.insert(i, i));
     }
 
-    for(auto const &i: handles) {
+    for (auto const& i : handles) {
         BOOST_TEST(map.size() != 0);
         BOOST_TEST(map.erase(i) == 1);
     }
@@ -160,7 +162,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     map.erase(map.lookup(values[0]), values[0]);
     BOOST_TEST(map.size() == 1);
 
-    for(auto const &i: values) {
+    for (auto const& i : values) {
         map.insert(i, i);
     }
 
@@ -199,7 +201,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
 
     BOOST_TEST(map.erase("non-existent", "non-existent") == 0);
 
-    for(auto const &i: values) {
+    for (auto const& i : values) {
         BOOST_TEST(map.size() != 0);
         BOOST_TEST(map.erase(i, i) == 1);
     }

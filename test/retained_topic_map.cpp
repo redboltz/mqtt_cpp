@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(test_retained_topic_map) {
 
     BOOST_TEST(map.erase("non-existent") == 0);
 
-    for(auto const &i: values) {
+    for (auto const& i : values) {
         BOOST_TEST(map.size() != 0);
         BOOST_TEST(map.erase(i) == 1);
     }
@@ -86,4 +86,3 @@ BOOST_AUTO_TEST_CASE(test_retained_topic_map) {
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-

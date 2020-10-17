@@ -7,10 +7,12 @@
 #if !defined(MQTT_SUBSCRIPTION_MAP_HPP)
 #define MQTT_SUBSCRIPTION_MAP_HPP
 
-#include <mqtt/string_view.hpp>
-
 #include <unordered_map>
 #include <boost/functional/hash.hpp>
+
+#include <mqtt/string_view.hpp>
+#include <mqtt/optional.hpp>
+
 #include "topic_filter_tokenizer.hpp"
 
 #include <sstream>
@@ -308,7 +310,7 @@ public:
 
 template<typename Value>
 class single_subscription_map
-    : public subscription_map_base< boost::optional<Value> > {
+    : public subscription_map_base< MQTT_NS::optional<Value> > {
 
 public:
 
@@ -322,7 +324,7 @@ public:
         if (!existing_subscription.empty()) {
             if(existing_subscription.back()->second.value)
                 throw std::runtime_error("Subscription already exists in map");
-            existing_subscription.back()->second.value = value;
+            existing_subscription.back()->second.value.emplace(std::forward<V>(value));
             return this->path_to_handle(existing_subscription);
         }
 
@@ -339,7 +341,7 @@ public:
             throw std::runtime_error("Invalid subscription was specified");
         }
 
-        path.back()->second.value = value;
+        path.back()->second.value.emplace(std::forward<V>(value));
     }
 
     template <typename V>
@@ -348,7 +350,7 @@ public:
         if (entry_iter == this->end()) {
             throw std::runtime_error("Invalid subscription was specified");
         }
-        entry_iter->second.value = value;
+        entry_iter->second.value.emplace(std::forward<V>(value));
     }
 
     // Remove a value at the specified subscription path
@@ -386,9 +388,9 @@ public:
     void find(MQTT_NS::string_view topic, Output callback) const {
         this->find_match(
             topic,
-            [&callback]( boost::optional<Value> value ) {
-                if(value) {
-                    callback(value.get());
+            [&callback]( MQTT_NS::optional<Value> const& value ) {
+                if (value) {
+                    callback(value.value());
                 }
             }
         );
@@ -437,7 +439,7 @@ public:
 
         auto& subscription_set = h_iter->second.value;
         auto insert_result = subscription_set.insert(std::forward<V>(value));
-        if(insert_result.second)
+        if (insert_result.second)
             this->increase_subscriptions(h);
         return std::make_pair(h, insert_result.second);
     }
@@ -454,7 +456,7 @@ public:
         // Remove the specified value
         auto& subscription_set = path.back()->second.value;
         auto result = subscription_set.erase(value);
-        if(result)
+        if (result)
             this->remove_subscription(path);
 
         return result;
@@ -476,7 +478,7 @@ public:
         // Remove the specified value
         auto& subscription_set = h_iter->second.value;
         auto result = subscription_set.erase(value);
-        if(result)
+        if (result)
             this->remove_subscription(this->handle_to_iterators(h));
 
         return result;
