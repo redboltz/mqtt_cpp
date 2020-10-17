@@ -911,7 +911,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
         MQTT_NS::v5::property::correlation_data("correlation data"_mb),
         MQTT_NS::v5::property::user_property("key1"_mb, "val1"_mb),
         MQTT_NS::v5::property::user_property("key2"_mb, "val2"_mb),
-        MQTT_NS::v5::property::subscription_identifier(123),
     };
 
     std::size_t user_prop_count = 0;
@@ -959,9 +958,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
                                 BOOST_TEST(false);
                                 break;
                             }
-                        },
-                        [&](MQTT_NS::v5::property::subscription_identifier const& t) {
-                            BOOST_TEST(t.val() == 123U);
                         },
                         [&](auto&& ...) {
                             BOOST_TEST(false);
