@@ -55,7 +55,7 @@ struct sub_con_online {
     MQTT_NS::buffer topic_filter;
     MQTT_NS::subscribe_options subopts;
     MQTT_NS::optional<std::size_t> sid;
-    sub_con_online_map::handle h; // to efficient remove
+    MQTT_NS::optional<sub_con_online_map::handle> h; // to efficient remove
 };
 
 struct sub_con_offline {
@@ -191,7 +191,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         auto it = it_success.first; // it is const_iterator due to multi_index
         auto& elem = *it;
 
-        BOOST_TEST(elem.h.empty());
+        BOOST_TEST(!elem.h);
         // new insert or update (insert case)
         auto h = m.insert(elem.topic_filter, elem);
         auto& idx = scos.get<tag_con_topic_filter>();
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
                 e.h = h.first; // update handle
             }
         );
-        BOOST_TEST(!elem.h.empty());
+        BOOST_TEST(!!elem.h);
     }
     {
         auto it_success = insert_or_update(con2, "a/b/c"_mb, MQTT_NS::qos::at_most_once, 5);
@@ -209,7 +209,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         auto it = it_success.first; // it is const_iterator due to multi_index
         auto& elem = *it;
 
-        if (elem.h.empty()) {
+        if (!elem.h) {
             // new insert
             auto h = m.insert(elem.topic_filter, elem);
             auto& idx = scos.get<tag_con_topic_filter>();
@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
                     e.h = h.first; // update handle
                 }
             );
-            BOOST_TEST(!elem.h.empty());
+            BOOST_TEST(!!elem.h);
         }
         else {
             // update
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         auto& idx = scos.get<tag_con_topic_filter>();
         auto it = idx.find(std::make_tuple(con1, "a/b/c"_mb));
         BOOST_TEST((it != idx.end()));
-        m.erase(it->h, *it);
+        m.erase(it->h.get(), *it);
         idx.erase(it);
         m.find(
             "a/b/c",
@@ -292,7 +292,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
             auto const& elem = *it;
             // call remove for each handle - Value pairs
             // it is a little inefficient but still enough efficient
-            m.erase(elem.h, elem);
+            m.erase(elem.h.get(), elem);
             ++it;
         }
         idx.erase(r.first, r.second);
@@ -351,7 +351,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         auto it = it_success.first; // it is const_iterator due to multi_index
         auto& elem = *it;
 
-        BOOST_TEST(elem.h.empty());
+        BOOST_TEST(!elem.h);
         // new insert or update (insert case)
         auto h = m.insert(elem.topic_filter, elem);
         auto& idx = scos.get<tag_con_topic_filter>();
@@ -361,7 +361,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
                 e.h = h.first; // update handle
             }
         );
-        BOOST_TEST(!elem.h.empty());
+        BOOST_TEST(!!elem.h);
     }
     {
         auto it_success = insert_or_update(con2, "a/#"_mb, MQTT_NS::qos::at_most_once, 5);
@@ -369,7 +369,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         auto it = it_success.first; // it is const_iterator due to multi_index
         auto& elem = *it;
 
-        if (elem.h.empty()) {
+        if (!elem.h) {
             // new insert
             auto h = m.insert(elem.topic_filter, elem);
             auto& idx = scos.get<tag_con_topic_filter>();
@@ -379,7 +379,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
                     e.h = h.first; // update handle
                 }
             );
-            BOOST_TEST(!elem.h.empty());
+            BOOST_TEST(!!elem.h);
         }
         else {
             // update
@@ -435,7 +435,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         auto& idx = scos.get<tag_con_topic_filter>();
         auto it = idx.find(std::make_tuple(con1, "a/+/c"_mb));
         BOOST_TEST((it != idx.end()));
-        m.erase(it->h, *it);
+        m.erase(it->h.get(), *it);
         idx.erase(it);
         m.find(
             "a/b/c",
@@ -471,7 +471,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
             auto const& elem = *it;
             // call remove for each handle - Value pairs
             // it is a little inefficient but still enough efficient
-            m.erase(elem.h, elem);
+            m.erase(elem.h.get(), elem);
             ++it;
         }
         idx.erase(r.first, r.second);
