@@ -229,7 +229,9 @@ public:
     }
 
     // Insert a value at the specified subscription path
-    void insert_or_update(MQTT_NS::string_view topic, Value const& value) {
+
+    template <typename V>
+    void insert_or_update(MQTT_NS::string_view topic, V&& value) {
         this->create_topic(topic)->second.value = value;
     }
 

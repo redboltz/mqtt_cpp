@@ -92,7 +92,7 @@ protected:
         return result;
     }
 
-    std::vector< map_type_iterator> find_subscription(MQTT_NS::string_view const& subscription) {
+    std::vector< map_type_iterator> find_subscription(MQTT_NS::string_view subscription) {
         auto parent = root;
         std::vector< map_type_iterator > path;
 
@@ -316,36 +316,39 @@ public:
     using handle = typename subscription_map_base< Value >::handle;
 
     // Insert a value at the specified subscription path
-    handle insert(MQTT_NS::string_view subscription, Value value) {
+    template <typename V>
+    handle insert(MQTT_NS::string_view subscription, V&& value) {
         auto existing_subscription = this->find_subscription(subscription);
         if (!existing_subscription.empty()) {
             if(existing_subscription.back()->second.value)
                 throw std::runtime_error("Subscription already exists in map");
-            existing_subscription.back()->second.value = std::move(value);
+            existing_subscription.back()->second.value = value;
             return this->path_to_handle(existing_subscription);
         }
 
         auto new_subscription_path = this->create_subscription(subscription);
-        new_subscription_path.back()->second.value = std::move(value);
+        new_subscription_path.back()->second.value = value;
         return this->path_to_handle(new_subscription_path);
     }
 
     // Update a value at the specified subscription path
-    void update(MQTT_NS::string_view subscription, Value value) {
+    template <typename V>
+    void update(MQTT_NS::string_view subscription, V&& value) {
         auto path = this->find_subscription(subscription);
         if (path.empty()) {
             throw std::runtime_error("Invalid subscription was specified");
         }
 
-        path.back()->second.value = std::move(value);
+        path.back()->second.value = value;
     }
 
-    void update(handle h, Value value) {
+    template <typename V>
+    void update(handle h, V&& value) {
         auto entry_iter = this->get_key(h.back());
         if (entry_iter == this->end()) {
             throw std::runtime_error("Invalid subscription was specified");
         }
-        entry_iter->second.value = std::move(value);
+        entry_iter->second.value = value;
     }
 
     // Remove a value at the specified subscription path
@@ -404,14 +407,15 @@ public:
     using handle = typename subscription_map_base< Value >::handle;
 
     // Insert a value at the specified subscription path
-    std::pair<handle, bool> insert(MQTT_NS::string_view subscription, Value value) {
+    template <typename V>
+    std::pair<handle, bool> insert(MQTT_NS::string_view subscription, V&& value) {
         auto path = this->find_subscription(subscription);
         if(path.empty()) {
             auto new_subscription_path = this->create_subscription(subscription);
-            new_subscription_path.back()->second.value.insert(std::move(value));
+            new_subscription_path.back()->second.value.insert(std::forward<V>(value));
             return std::make_pair(this->path_to_handle(new_subscription_path), true);
         } else {
-            auto result = path.back()->second.value.insert(std::move(value));
+            auto result = path.back()->second.value.insert(std::forward<V>(value));
             if(result.second)
                 this->create_subscription(subscription);
             return std::make_pair(this->path_to_handle(path), result.second);
@@ -419,7 +423,8 @@ public:
     }
 
     // Insert a value with a handle to the subscription
-    std::pair<handle, bool> insert(handle h, Value value) {
+    template <typename V>
+    std::pair<handle, bool> insert(handle h, V&& value) {
         if (h.empty()) {
             throw std::runtime_error("Invalid handle was specified");
         }
@@ -431,7 +436,7 @@ public:
         }
 
         auto& subscription_set = h_iter->second.value;
-        auto insert_result = subscription_set.insert(std::move(value));
+        auto insert_result = subscription_set.insert(std::forward<V>(value));
         if(insert_result.second)
             this->increase_subscriptions(h);
         return std::make_pair(h, insert_result.second);
