@@ -373,16 +373,9 @@ public:
 
     // Insert a value at the specified subscription path
     std::pair<handle, bool> insert(MQTT_NS::string_view subscription, Value value) {
-        auto path = this->find_subscription(subscription);
-        if (path.empty()) {
-            auto new_subscription_path = this->create_subscription(subscription);
-            new_subscription_path.back()->second.value.insert(std::move(value));
-            return std::make_pair(this->path_to_handle(new_subscription_path), true);
-        }
-
-        auto &subscription_set = path.back()->second.value;
-        bool insert_result = subscription_set.insert(std::move(value)).second;
-        return std::make_pair(this->path_to_handle(path), insert_result);
+        auto new_subscription_path = this->create_subscription(subscription);
+        new_subscription_path.back()->second.value.insert(std::move(value));
+        return std::make_pair(this->path_to_handle(new_subscription_path), true);
     }
 
     // Insert a value with a handle to the subscription
