@@ -10,6 +10,7 @@
 #include <mqtt/string_view.hpp>
 #include <map>
 #include <boost/optional.hpp>
+#include <boost/range/adaptor/reversed.hpp>
 #include "topic_filter_tokenizer.hpp"
 
 template<typename Value>
@@ -191,25 +192,15 @@ class retained_topic_map {
     // Remove a value at the specified subscription path
     bool erase_topic(MQTT_NS::string_view topic) {
         auto path = find_topic(topic);
-        if (path.empty()) {
-            return false;
-        }
 
-        std::vector<path_entry_key> remove_keys;
-        remove_keys.reserve(path.size());
-
-        for (auto entry : path) {
+        for (auto entry : boost::adaptors::reverse(path)) {
             --entry->second.count;
             if (entry->second.count == 0) {
-                remove_keys.push_back(entry->first);
+                map.erase(entry->first);
             }
         }
 
-        for(auto i : remove_keys) {
-            map.erase(i);
-        }
-
-        return true;
+        return !path.empty();
     }
 
 public:

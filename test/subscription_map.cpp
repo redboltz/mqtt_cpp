@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
 
     single_subscription_map< std::string > map;
     auto handle = map.insert(text, text);
-    BOOST_TEST(handle.size() == 3);
+    BOOST_TEST(handle.second == "A");
     BOOST_TEST(map.handle_to_subscription(handle) == text);
     BOOST_CHECK_THROW(map.insert(text, text), std::exception);
     map.update(handle, "new_value");
@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     BOOST_TEST(map.erase("example", "example") == 0);
     BOOST_TEST(map.erase(map.lookup("example"), "example") == 0);
 
-    BOOST_TEST(map.lookup(values[0]).size() == 3);
+    BOOST_TEST(map.lookup(values[0]).second == "A");
     BOOST_TEST(map.handle_to_subscription(map.lookup(values[0])) == values[0]);
 
     std::vector<std::string> matches;
