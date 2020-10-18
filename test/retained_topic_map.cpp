@@ -19,10 +19,13 @@ BOOST_AUTO_TEST_CASE(general) {
     map.insert_or_update("a/b/c", "123");
     map.insert_or_update("a/b", "123");
 
-    map.erase("a/b/c");
+    BOOST_TEST(map.erase("a") == 0);
+    BOOST_TEST(map.erase("a") == 0);
+
+    BOOST_TEST(map.erase("a/b/c") == 1);
     BOOST_TEST(map.size() != 1);
 
-    map.erase("a/b");
+    BOOST_TEST(map.erase("a/b") == 1);
     BOOST_TEST(map.size() == 1);
 
     std::vector<std::string> values = {
@@ -139,6 +142,7 @@ BOOST_AUTO_TEST_CASE(erase_upper_first) {
     map.insert_or_update("a/b", "2");
 
     auto e1 = map.erase("a/b"); // erase upper first
+
     BOOST_TEST(e1 == 1);
     {
         std::set<std::string> match {
