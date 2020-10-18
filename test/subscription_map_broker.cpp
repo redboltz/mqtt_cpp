@@ -10,8 +10,6 @@
 
 #include "subscription_map.hpp"
 
-#include <iostream>
-
 BOOST_AUTO_TEST_SUITE(test_subscription_map_broker)
 
 using namespace MQTT_NS::literals;
@@ -191,7 +189,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         auto it = it_success.first; // it is const_iterator due to multi_index
         auto& elem = *it;
 
-        BOOST_TEST(!elem.h);
+        BOOST_CHECK(!elem.h);
         // new insert or update (insert case)
         auto h = m.insert(elem.topic_filter, elem);
         auto& idx = scos.get<tag_con_topic_filter>();
@@ -201,7 +199,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
                 e.h = h.first; // update handle
             }
         );
-        BOOST_TEST(!!elem.h);
+        BOOST_CHECK(elem.h);
     }
     {
         auto it_success = insert_or_update(con2, "a/b/c"_mb, MQTT_NS::qos::at_most_once, 5);
@@ -209,7 +207,11 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         auto it = it_success.first; // it is const_iterator due to multi_index
         auto& elem = *it;
 
-        if (!elem.h) {
+        if (elem.h) {
+            // update
+            BOOST_TEST(false);
+        }
+        else {
             // new insert
             auto h = m.insert(elem.topic_filter, elem);
             auto& idx = scos.get<tag_con_topic_filter>();
@@ -219,11 +221,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
                     e.h = h.first; // update handle
                 }
             );
-            BOOST_TEST(!!elem.h);
-        }
-        else {
-            // update
-            BOOST_TEST(false);
+            BOOST_CHECK(elem.h);
         }
     }
 
@@ -257,14 +255,20 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         BOOST_TEST((it != idx.end()));
         m.erase(it->h.value(), *it);
         idx.erase(it);
+
+        std::set<int> entries {
+            2
+        };
         m.find(
             "a/b/c",
             [&](sub_con_online_cref sc) {
+                BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(sc.get().con == con2);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_most_once);
                 BOOST_TEST(*sc.get().sid == 5);
             }
         );
+        BOOST_TEST(entries.empty());
     }
 
     // update subscribe (con2 "a/b/c")
@@ -272,14 +276,19 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         auto it_success = insert_or_update(con2, "a/b/c"_mb, MQTT_NS::qos::at_least_once, 10);
         BOOST_TEST(!it_success.second);
 
+        std::set<int> entries {
+            2
+        };
         m.find(
             "a/b/c",
             [&](sub_con_online_cref sc) {
+                BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(sc.get().con == con2);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_least_once);
                 BOOST_TEST(*sc.get().sid == 10);
             }
         );
+        BOOST_TEST(entries.empty());
     }
 
     // unsubscribe or move to offline by disconnect (unsubscribe)
@@ -305,6 +314,178 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         );
 
         BOOST_TEST(scos.empty());
+    }
+}
+
+BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
+    sub_con_online_map m;
+    mi_sub_con_online scos;
+
+    auto con1 = std::make_shared<endpoint_t>(1);
+    auto con2 = std::make_shared<endpoint_t>(2);
+
+    auto insert_or_update =
+        [&](
+            con_sp_t const& con,
+            MQTT_NS::buffer topic_filter,
+            MQTT_NS::subscribe_options subopts,
+            MQTT_NS::optional<std::size_t> sid = MQTT_NS::nullopt
+        ) {
+            auto& idx = scos.get<tag_con_topic_filter>();
+            auto it = idx.lower_bound(std::make_tuple(con, topic_filter));
+            if ((it == idx.end()) || it->con != con || it->topic_filter != topic_filter) {
+                // insert
+                return std::make_pair(
+                    idx.emplace_hint(it, con, MQTT_NS::force_move(topic_filter), subopts, sid),
+                    true
+                );
+            }
+            else {
+                // update
+                idx.modify(
+                    it,
+                    [&](auto& e) {
+                        e.subopts = subopts;
+                        e.sid = sid;
+                    }
+                );
+                return std::make_pair(it, false);
+            }
+        };
+
+    // new subscribe
+    {
+        auto it_success = insert_or_update(con1, "a/b/c"_mb, MQTT_NS::qos::at_most_once, 1);
+        BOOST_TEST(it_success.second);
+        auto it = it_success.first; // it is const_iterator due to multi_index
+        auto& elem = *it;
+
+        BOOST_CHECK(!elem.h);
+        // new insert or update (insert case)
+        auto h = m.insert(elem.topic_filter, elem);
+        auto& idx = scos.get<tag_con_topic_filter>();
+        idx.modify(
+            it,
+            [&](sub_con_online& e) {
+                e.h.emplace(h.first); // update handle
+            }
+        );
+        BOOST_CHECK(elem.h);
+    }
+    {
+        auto it_success = insert_or_update(con2, "a/b"_mb, MQTT_NS::qos::at_most_once, 5);
+        BOOST_TEST(it_success.second);
+        auto it = it_success.first; // it is const_iterator due to multi_index
+        auto& elem = *it;
+
+        if (elem.h) {
+            // update
+            BOOST_TEST(false);
+        }
+        else {
+            // new insert
+            auto h = m.insert(elem.topic_filter, elem);
+            auto& idx = scos.get<tag_con_topic_filter>();
+            idx.modify(
+                it,
+                [&](sub_con_online& e) {
+                    e.h = h.first; // update handle
+                }
+            );
+            BOOST_CHECK(elem.h);
+        }
+    }
+
+    // publish handle
+    {
+        std::set<int> entries {
+            1,
+        };
+
+        m.find(
+            "a/b/c",
+            [&](sub_con_online_cref sc) {
+                BOOST_TEST(entries.erase(*sc.get().con) == 1);
+                sc.get().from_me(*sc.get().con); // call const member function
+                scos.modify(
+                    scos.iterator_to(sc.get()),
+                    [&](sub_con_online& e) {
+                        e.deliver(); // call non const member function
+                    }
+                );
+            }
+        );
+        BOOST_TEST(entries.empty());
+    }
+    {
+        std::set<int> entries {
+            2,
+        };
+
+        m.find(
+            "a/b",
+            [&](sub_con_online_cref sc) {
+                BOOST_TEST(entries.erase(*sc.get().con) == 1);
+                sc.get().from_me(*sc.get().con); // call const member function
+                scos.modify(
+                    scos.iterator_to(sc.get()),
+                    [&](sub_con_online& e) {
+                        e.deliver(); // call non const member function
+                    }
+                );
+            }
+        );
+        BOOST_TEST(entries.empty());
+    }
+
+    // unsubscribe (con2 "a/b")
+    {
+        auto& idx = scos.get<tag_con_topic_filter>();
+        auto it = idx.find(std::make_tuple(con2, "a/b"_mb));
+        BOOST_TEST((it != idx.end()));
+        m.erase(it->h.value(), *it);
+        idx.erase(it);
+
+        std::set<int> entries {
+            1
+        };
+
+        m.find(
+            "a/b",
+            [&](sub_con_online_cref) {
+                BOOST_TEST(false);
+            }
+        );
+        m.find(
+            "a/b/c",
+            [&](sub_con_online_cref sc) {
+                BOOST_TEST(entries.erase(*sc.get().con) == 1);
+                BOOST_TEST(sc.get().con == con1);
+                BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_most_once);
+                BOOST_TEST(*sc.get().sid == 1);
+            }
+        );
+        BOOST_TEST(entries.empty());
+    }
+    // unsubscribe (con1 "a/b/c")
+    {
+        auto& idx = scos.get<tag_con_topic_filter>();
+        auto it = idx.find(std::make_tuple(con1, "a/b/c"_mb));
+        BOOST_TEST((it != idx.end()));
+        m.erase(it->h.value(), *it);
+        idx.erase(it);
+        m.find(
+            "a/b",
+            [&](sub_con_online_cref) {
+                BOOST_TEST(false);
+            }
+        );
+        m.find(
+            "a/b/c",
+            [&](sub_con_online_cref) {
+                BOOST_TEST(false);
+            }
+        );
     }
 }
 
@@ -351,7 +532,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         auto it = it_success.first; // it is const_iterator due to multi_index
         auto& elem = *it;
 
-        BOOST_TEST(!elem.h);
+        BOOST_CHECK(!elem.h);
         // new insert or update (insert case)
         auto h = m.insert(elem.topic_filter, elem);
         auto& idx = scos.get<tag_con_topic_filter>();
@@ -361,7 +542,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
                 e.h = h.first; // update handle
             }
         );
-        BOOST_TEST(!!elem.h);
+        BOOST_CHECK(elem.h);
     }
     {
         auto it_success = insert_or_update(con2, "a/#"_mb, MQTT_NS::qos::at_most_once, 5);
@@ -369,7 +550,11 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         auto it = it_success.first; // it is const_iterator due to multi_index
         auto& elem = *it;
 
-        if (!elem.h) {
+        if (elem.h) {
+            // update
+            BOOST_TEST(false);
+        }
+        else {
             // new insert
             auto h = m.insert(elem.topic_filter, elem);
             auto& idx = scos.get<tag_con_topic_filter>();
@@ -379,11 +564,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
                     e.h = h.first; // update handle
                 }
             );
-            BOOST_TEST(!!elem.h);
-        }
-        else {
-            // update
-            BOOST_TEST(false);
+            BOOST_CHECK(elem.h);
         }
     }
 
@@ -437,13 +618,19 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         BOOST_TEST((it != idx.end()));
         m.erase(it->h.value(), *it);
         idx.erase(it);
+
+        std::set<int> entries {
+            2
+        };
         m.find(
             "a/b/c",
             [&](sub_con_online_cref sc) {
+                BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(sc.get().con == con2);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_most_once);
             }
         );
+        BOOST_TEST(entries.empty());
     }
 
     // update subscribe (con2 "a/#")
@@ -451,14 +638,19 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         auto it_success = insert_or_update(con2, "a/#"_mb, MQTT_NS::qos::at_least_once, 10);
         BOOST_TEST(!it_success.second);
 
+        std::set<int> entries {
+            2
+        };
         m.find(
             "a/b/c",
             [&](sub_con_online_cref sc) {
+                BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(*sc.get().con == 2);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_least_once);
                 BOOST_TEST(*sc.get().sid == 10);
             }
         );
+        BOOST_TEST(entries.empty());
     }
 
     // unsubscribe or move to offline by disconnect (unsubscribe)

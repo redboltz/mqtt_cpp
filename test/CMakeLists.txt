@@ -81,6 +81,7 @@ IF (MQTT_TEST_7)
         subscription_map.cpp
         retained_topic_map.cpp
         subscription_map_broker.cpp
+        retained_topic_map_broker.cpp
         async_pubsub_2.cpp
     )
 ENDIF ()
