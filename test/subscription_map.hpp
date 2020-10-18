@@ -83,13 +83,13 @@ protected:
     map_type_iterator end() { return map.end(); }
     map_type const& get_map() const { return map; }
 
-    handle path_to_handle(std::vector< map_type_iterator > const& path) const {        
+    handle path_to_handle(std::vector< map_type_iterator > const& path) const {
         return path.back()->first;
     }
 
     std::vector< map_type_iterator> find_subscription(MQTT_NS::string_view subscription) {
         auto parent = root;
-        std::vector< map_type_iterator > path;        
+        std::vector< map_type_iterator > path;
 
         topic_filter_tokenizer(
             subscription,
@@ -283,8 +283,8 @@ protected:
     }
 
     subscription_map_base()
-        : next_node_id(root_node_id)
-        , root_key(path_entry_key(std::numeric_limits<node_id_t>::max(), MQTT_NS::allocate_buffer("")))
+        : root_key(path_entry_key(std::numeric_limits<node_id_t>::max(), MQTT_NS::allocate_buffer("")))
+        , next_node_id(root_node_id)
     {
         // Create the root node
         root = map.emplace(root_key, path_entry(root_node_id, path_entry_key())).first;
@@ -448,7 +448,7 @@ public:
             return 0;
         }
 
-        // Remove the specified value        
+        // Remove the specified value
         auto result = path.back()->second.value.erase(value);
         if(result)
             this->remove_subscription(path);
