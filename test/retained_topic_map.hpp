@@ -194,17 +194,24 @@ class retained_topic_map {
     }
 
     // Remove a value at the specified subscription path
-    bool erase_topic(MQTT_NS::string_view topic) {
+    size_t erase_topic(MQTT_NS::string_view topic) {
         auto path = find_topic(topic);
 
-        for (auto entry : boost::adaptors::reverse(path)) {
-            --entry->second.count;
-            if (entry->second.count == 0) {
-                map.erase(entry->first);
+        // Reset the value if there is actually something stored
+        if(!path.empty() && path.back()->second.value) {
+            path.back()->second.value = MQTT_NS::nullopt;
+
+            for (auto entry : boost::adaptors::reverse(path)) {
+                --entry->second.count;
+                if (entry->second.count == 0) {
+                    map.erase(entry->first);
+                }
             }
+
+            return 1;
         }
 
-        return !path.empty();
+        return 0;
     }
 
 public:
@@ -242,6 +249,14 @@ public:
 
     // Get the size of the map
     std::size_t size() const { return map.size(); }
+
+    // Dump debug information
+    template<typename Output>
+    void dump(Output &out) {
+        for (auto const& i: map) {
+            out << i.first.first << " " << i.first.second << " " << (i.second.value ? "init" : "-") << " " << i.second.count << std::endl;
+        }
+    }
 
 };
 
