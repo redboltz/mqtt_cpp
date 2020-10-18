@@ -17,24 +17,35 @@ BOOST_AUTO_TEST_SUITE(test_retained_map)
 BOOST_AUTO_TEST_CASE(general) {
     retained_topic_map<std::string> map;
     map.insert_or_update("a/b/c", "123");
-    map.insert_or_update("a/b", "123");
+    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.internal_size() == 4);
+
+    BOOST_TEST(map.insert_or_update("a/b", "123") == 1);
+    BOOST_TEST(map.size() == 2);
+    BOOST_TEST(map.internal_size() == 4);
+
+    BOOST_TEST(map.insert_or_update("a/b", "123") == 0);
+    BOOST_TEST(map.size() == 2);
+    BOOST_TEST(map.internal_size() == 4);
 
     BOOST_TEST(map.erase("a") == 0);
     BOOST_TEST(map.erase("a") == 0);
 
     BOOST_TEST(map.erase("a/b/c") == 1);
-    BOOST_TEST(map.size() != 1);
+    BOOST_TEST(map.size() == 1);
 
     BOOST_TEST(map.erase("a/b") == 1);
-    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.size() == 0);
+    BOOST_TEST(map.internal_size() == 1);
 
     std::vector<std::string> values = {
         "example/test/A", "example/test/B", "example/A/test", "example/B/test"
     };
 
     for(auto const &i: values) {
-        map.insert_or_update(i, i);
+        map.insert_or_update(i, i);        
     }
+    BOOST_TEST(map.size() == 4);
 
     std::vector<std::string> matches;
     map.find(values[0], [&matches](std::string const &a) {
@@ -85,7 +96,8 @@ BOOST_AUTO_TEST_CASE(general) {
         BOOST_TEST(map.erase(i) == 1);
     }
 
-    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.size() == 0);
+    BOOST_TEST(map.internal_size() == 1);
 }
 
 BOOST_AUTO_TEST_CASE(erase_lower_first) {
