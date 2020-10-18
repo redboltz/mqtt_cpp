@@ -14,15 +14,18 @@
 
 BOOST_AUTO_TEST_SUITE(test_retained_map)
 
-BOOST_AUTO_TEST_CASE(test_retained_topic_map) {
+BOOST_AUTO_TEST_CASE(general) {
     retained_topic_map<std::string> map;
     map.insert_or_update("a/b/c", "123");
     map.insert_or_update("a/b", "123");
 
-    map.erase("a/b/c");
+    BOOST_TEST(map.erase("a") == 0);
+    BOOST_TEST(map.erase("a") == 0);
+
+    BOOST_TEST(map.erase("a/b/c") == 1);
     BOOST_TEST(map.size() != 1);
 
-    map.erase("a/b");
+    BOOST_TEST(map.erase("a/b") == 1);
     BOOST_TEST(map.size() == 1);
 
     std::vector<std::string> values = {
@@ -84,5 +87,103 @@ BOOST_AUTO_TEST_CASE(test_retained_topic_map) {
 
     BOOST_TEST(map.size() == 1);
 }
+
+BOOST_AUTO_TEST_CASE(erase_lower_first) {
+    retained_topic_map<std::string> map;
+    map.insert_or_update("a/b/c", "1");
+    map.insert_or_update("a/b", "2");
+
+    auto e1 = map.erase("a/b/c"); // erase lower first
+    BOOST_TEST(e1 == 1);
+    {
+        std::set<std::string> match {
+            "2",
+        };
+        map.find(
+            "a/b",
+            [&](std::string const &v) {
+                BOOST_TEST(match.erase(v) == 1);
+            }
+        );
+        BOOST_TEST(match.empty());
+    }
+    {
+        map.find(
+            "a/b/c",
+            [&](std::string const &) {
+                BOOST_TEST(false);
+            }
+        );
+    }
+
+    auto e2 = map.erase("a/b");
+    BOOST_TEST(e2 == 1);
+    {
+        map.find(
+            "a/b/c",
+            [&](std::string const &) {
+                BOOST_TEST(false);
+            }
+        );
+    }
+    {
+        map.find(
+            "a/b",
+            [&](std::string const &) {
+                BOOST_TEST(false);
+            }
+        );
+    }
+}
+
+BOOST_AUTO_TEST_CASE(erase_upper_first) {
+    retained_topic_map<std::string> map;
+    map.insert_or_update("a/b/c", "1");
+    map.insert_or_update("a/b", "2");
+
+    auto e1 = map.erase("a/b"); // erase upper first
+
+    BOOST_TEST(e1 == 1);
+    {
+        std::set<std::string> match {
+            "1",
+        };
+        map.find(
+            "a/b/c",
+            [&](std::string const &v) {
+                BOOST_TEST(match.erase(v) == 1);
+            }
+        );
+        BOOST_TEST(match.empty());
+    }
+    {
+        map.find(
+            "a/b",
+            [&](std::string const &) {
+                BOOST_TEST(false);
+            }
+        );
+    }
+
+    auto e2 = map.erase("a/b/c");
+    BOOST_TEST(e2 == 1);
+    {
+        map.find(
+            "a/b/c",
+            [&](std::string const &) {
+                BOOST_TEST(false);
+            }
+        );
+    }
+    {
+        map.find(
+            "a/b",
+            [&](std::string const &) {
+                BOOST_TEST(false);
+            }
+        );
+    }
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
