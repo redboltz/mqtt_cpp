@@ -1,4 +1,4 @@
-// Copyright wkl04 2019
+// Copyright Wouter van Kleunen 2019
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
