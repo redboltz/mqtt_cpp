@@ -42,8 +42,8 @@ BOOST_AUTO_TEST_CASE(general) {
         "example/test/A", "example/test/B", "example/A/test", "example/B/test"
     };
 
-    for(auto const &i: values) {
-        map.insert_or_update(i, i);        
+    for (auto const& i: values) {
+        map.insert_or_update(i, i);
     }
     BOOST_TEST(map.size() == 4);
 

@@ -199,7 +199,7 @@ class retained_topic_map {
         auto path = find_topic(topic);
 
         // Reset the value if there is actually something stored
-        if(!path.empty() && path.back()->second.value) {
+        if (!path.empty() && path.back()->second.value) {
             path.back()->second.value = MQTT_NS::nullopt;
 
             for (auto entry : boost::adaptors::reverse(path)) {
@@ -217,13 +217,13 @@ class retained_topic_map {
 
     // Increase the number of topics for this path
     void increate_topics(std::vector<map_type_iterator> const &path) {
-        for(auto i: path) {
+        for (auto i : path) {
             ++(i->second.count);
         }
     }
 
 public:
-    retained_topic_map()        
+    retained_topic_map()
     {
         // Create the root node
         root =
@@ -242,13 +242,13 @@ public:
     template <typename V>
     size_t insert_or_update(MQTT_NS::string_view topic, V&& value) {
         auto path = this->find_topic(topic);
-        if(path.empty()) {
+        if (path.empty()) {
             this->create_topic(topic)->second.value.emplace(std::forward<V>(value));
             ++map_size;
             return 1;
         }
 
-        if(!path.back()->second.value) {
+        if (!path.back()->second.value) {
             this->increate_topics(path);
             path.back()->second.value.emplace(std::forward<V>(value));
             ++map_size;
@@ -280,7 +280,7 @@ public:
     // Dump debug information
     template<typename Output>
     void dump(Output &out) {
-        for (auto const& i: map) {
+        for (auto const& i : map) {
             out << i.first.first << " " << i.first.second << " " << (i.second.value ? "init" : "-") << " " << i.second.count << std::endl;
         }
     }

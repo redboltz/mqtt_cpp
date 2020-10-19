@@ -72,7 +72,7 @@ private:
     using map_type_iterator = typename map_type::iterator;
     using map_type_const_iterator = typename map_type::const_iterator;
 
-    map_type map;    
+    map_type map;
     map_type_iterator root;
     path_entry_key root_key;
     node_id_t next_node_id = root_node_id;
@@ -128,7 +128,7 @@ protected:
                 auto parent_id = parent->second.id;
                 auto entry = map.find(path_entry_key(parent_id, t));
 
-                if (entry == map.end())  {
+                if (entry == map.end()) {
                     entry =
                         map.emplace(
                             path_entry_key(
@@ -250,7 +250,7 @@ protected:
     void handle_to_iterators(handle h, Output output) {
         auto i = h;
         while(true) {
-            if(i == root_key) {
+            if (i == root_key) {
                 return;
             }
 
@@ -279,7 +279,7 @@ protected:
 
     // Increase the number of subscriptions for this path
     void increase_subscriptions(std::vector<map_type_iterator> const &path) {
-        for(auto i: path) {
+        for (auto i : path) {
             ++(i->second.count);
         }
     }
@@ -309,7 +309,7 @@ public:
         std::string result;
 
         handle_to_iterators(h, [&result](map_type_iterator i) {
-            if(result.empty())
+            if (result.empty())
                 result = std::string(i->first.second);
             else
                 result = std::string(i->first.second) + "/" + result;
@@ -418,12 +418,13 @@ public:
     template <typename V>
     std::pair<handle, bool> insert(MQTT_NS::string_view subscription, V&& value) {
         auto path = this->find_subscription(subscription);
-        if(path.empty()) {
+        if (path.empty()) {
             auto new_subscription_path = this->create_subscription(subscription);
             new_subscription_path.back()->second.value.insert(std::forward<V>(value));
             ++this->map_size;
             return std::make_pair(this->path_to_handle(new_subscription_path), true);
-        } else {
+        }
+        else {
             auto result = path.back()->second.value.insert(std::forward<V>(value));
             if(result.second) {
                 this->increase_subscriptions(path);
@@ -463,7 +464,7 @@ public:
 
         // Remove the specified value
         auto result = path.back()->second.value.erase(value);
-        if(result) {
+        if (result) {
             --this->map_size;
             this->remove_subscription(path);
         }
