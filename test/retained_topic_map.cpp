@@ -10,8 +10,6 @@
 
 #include "retained_topic_map.hpp"
 
-#include <iostream>
-
 BOOST_AUTO_TEST_SUITE(test_retained_map)
 
 BOOST_AUTO_TEST_CASE(general) {

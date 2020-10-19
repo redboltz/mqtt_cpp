@@ -10,18 +10,16 @@
 
 #include "subscription_map.hpp"
 
-#include <iostream>
-
 BOOST_AUTO_TEST_SUITE(test_subscription_map)
 
 BOOST_AUTO_TEST_CASE( failed_erase ) {
-    using func_t = std::function<void()>;
-    using value_t = std::shared_ptr<func_t>; // shared_ptr for '<' and hash
+    using elem_t = int;
+    using value_t = std::shared_ptr<elem_t>; // shared_ptr for '<' and hash
     using sm_t = multiple_subscription_map<value_t>;
 
     sm_t m;
-    auto v1 = std::make_shared<func_t>([] { std::cout << "v1" << std::endl; });
-    auto v2 = std::make_shared<func_t>([] { std::cout << "v2" << std::endl; });
+    auto v1 = std::make_shared<elem_t>(1);
+    auto v2 = std::make_shared<elem_t>(2);
 
     BOOST_TEST(m.size() == 0);
     auto it_success1 = m.insert("a/b/c", v1);
