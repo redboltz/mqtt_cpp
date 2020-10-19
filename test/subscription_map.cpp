@@ -23,22 +23,22 @@ BOOST_AUTO_TEST_CASE( failed_erase ) {
     auto v1 = std::make_shared<func_t>([] { std::cout << "v1" << std::endl; });
     auto v2 = std::make_shared<func_t>([] { std::cout << "v2" << std::endl; });
 
-    BOOST_TEST(m.size() == 1);
+    BOOST_TEST(m.size() == 0);
     auto it_success1 = m.insert("a/b/c", v1);
     assert(it_success1.second);
-    BOOST_TEST(m.size() != 1);
+    BOOST_TEST(m.size() == 1);
 
     auto it_success2 = m.insert("a/b", v2);
     assert(it_success2.second);
-    BOOST_TEST(m.size() != 1);
+    BOOST_TEST(m.size() == 2);
 
     auto e1 = m.erase(it_success1.first, v1);
     BOOST_TEST(e1 == 1);
-    BOOST_TEST(m.size() != 1);
+    BOOST_TEST(m.size() == 1);
 
     auto e2 = m.erase(it_success2.first, v2); //  Invalid handle was specified is thrown here
     BOOST_TEST(e2 == 1);
-    BOOST_TEST(m.size() == 1);
+    BOOST_TEST(m.size() == 0);
 
 }
 
@@ -53,13 +53,16 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
     map.update(handle, "new_value");
     map.erase(handle);
 
-    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.size() == 0);
+    BOOST_TEST(map.internal_size() == 1);
 
     map.insert(text, text);
-    BOOST_TEST(map.size() != 1);
+    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.internal_size() > 1);
 
     map.erase(text);
-    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.size() == 0);
+    BOOST_TEST(map.internal_size() == 1);
 
     std::vector<std::string> values = {
         "example/test/A", "example/+/A", "example/#", "#"
@@ -106,7 +109,8 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
         BOOST_TEST(map.erase(i) == 1);
     }
 
-    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.size() == 0);
+    BOOST_TEST(map.internal_size() == 1);
 
     std::vector< single_subscription_map< std::string >::handle > handles;
     for (auto const& i : values) {
@@ -118,7 +122,8 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
         BOOST_TEST(map.erase(i) == 1);
     }
 
-    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.size() == 0);
+    BOOST_TEST(map.internal_size() == 1);
 
 }
 
@@ -128,13 +133,29 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     multiple_subscription_map<std::string> map;
 
     map.insert("a/b/c", "123");
-    map.insert("a/b", "123");
+    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.internal_size() == 4);
 
-    map.erase("a/b/c", "123");
-    BOOST_TEST(map.size() != 1);
+    map.insert("a/b/c", "123");
+    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.internal_size() == 4);
+
+    map.insert("a/b", "123");
+    BOOST_TEST(map.size() == 2);
+    BOOST_TEST(map.internal_size() == 4);
 
     map.erase("a/b", "123");
     BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.internal_size() == 4);
+
+    map.erase("a/b", "123");
+    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.internal_size() == 4);
+
+    map.erase("a/b/c", "123");
+    BOOST_TEST(map.size() == 0);
+    BOOST_TEST(map.internal_size() == 1);
+
 
     std::vector<std::string> values = {
         "example/test/A", "example/+/A", "example/#", "#"
@@ -146,10 +167,10 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     BOOST_TEST(map.insert(values[0], "blaat").second == true);
 
     map.erase(values[0], "blaat");
-    BOOST_TEST(map.size() != 1);
+    BOOST_TEST(map.size() == 1);
 
     map.erase(values[0], values[0]);
-    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.size() == 0);
 
     // Perform test again but this time using handles
     map.insert(values[0], values[0]);
@@ -157,14 +178,16 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     BOOST_TEST(map.insert(map.lookup(values[0]), "blaat").second == true);
 
     map.erase(map.lookup(values[0]), "blaat");
-    BOOST_TEST(map.size() != 1);
+    BOOST_TEST(map.size() == 1);
 
     map.erase(map.lookup(values[0]), values[0]);
-    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.size() == 0);
 
     for (auto const& i : values) {
         map.insert(i, i);
     }
+
+    BOOST_TEST(map.size() == 4);
 
     // Attempt to remove entry which has no value
     BOOST_TEST(map.erase("example", "example") == 0);
@@ -206,7 +229,8 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
         BOOST_TEST(map.erase(i, i) == 1);
     }
 
-    BOOST_TEST(map.size() == 1);
+    BOOST_TEST(map.size() == 0);
+    BOOST_TEST(map.internal_size() == 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -75,9 +75,11 @@ private:
     map_type map;
     map_type_iterator root;
     path_entry_key root_key;
-    node_id_t next_node_id;
+    node_id_t next_node_id = root_node_id;
 
 protected:
+    size_t map_size = 0;
+
     map_type_iterator get_key(path_entry_key key) { return map.find(key); }
     map_type_iterator begin() { return map.begin(); }
     map_type_iterator end() { return map.end(); }
@@ -126,7 +128,7 @@ protected:
                 auto parent_id = parent->second.id;
                 auto entry = map.find(path_entry_key(parent_id, t));
 
-                if (entry == map.end())  {
+                if (entry == map.end()) {
                     entry =
                         map.emplace(
                             path_entry_key(
@@ -248,7 +250,7 @@ protected:
     void handle_to_iterators(handle h, Output output) {
         auto i = h;
         while(true) {
-            if(i == root_key) {
+            if (i == root_key) {
                 return;
             }
 
@@ -277,14 +279,13 @@ protected:
 
     // Increase the number of subscriptions for this path
     void increase_subscriptions(std::vector<map_type_iterator> const &path) {
-        for(auto i: path) {
+        for (auto i : path) {
             ++(i->second.count);
         }
     }
 
     subscription_map_base()
         : root_key(path_entry_key(std::numeric_limits<node_id_t>::max(), MQTT_NS::allocate_buffer("")))
-        , next_node_id(root_node_id)
     {
         // Create the root node
         root = map.emplace(root_key, path_entry(root_node_id, path_entry_key())).first;
@@ -293,7 +294,10 @@ protected:
 
 public:
     // Return the number of elements in the tree
-    std::size_t size() const { return map.size(); }
+    std::size_t internal_size() const { return map.size(); }
+
+    // Return the number of registered topic filters
+    std::size_t size() const { return this->map_size; }
 
     // Lookup a subscription
     handle lookup(MQTT_NS::string_view subscription) {
@@ -305,7 +309,7 @@ public:
         std::string result;
 
         handle_to_iterators(h, [&result](map_type_iterator i) {
-            if(result.empty())
+            if (result.empty())
                 result = std::string(i->first.second);
             else
                 result = std::string(i->first.second) + "/" + result;
@@ -337,6 +341,7 @@ public:
 
         auto new_subscription_path = this->create_subscription(subscription);
         new_subscription_path.back()->second.value = value;
+        ++this->map_size;
         return this->path_to_handle(new_subscription_path);
     }
 
@@ -368,6 +373,7 @@ public:
         }
 
         this->remove_subscription(path);
+        --this->map_size;
         return 1;
     }
 
@@ -379,6 +385,7 @@ public:
         }
 
         this->remove_subscription(path);
+        --this->map_size;
         return 1;
     }
 
@@ -411,14 +418,18 @@ public:
     template <typename V>
     std::pair<handle, bool> insert(MQTT_NS::string_view subscription, V&& value) {
         auto path = this->find_subscription(subscription);
-        if(path.empty()) {
+        if (path.empty()) {
             auto new_subscription_path = this->create_subscription(subscription);
             new_subscription_path.back()->second.value.insert(std::forward<V>(value));
+            ++this->map_size;
             return std::make_pair(this->path_to_handle(new_subscription_path), true);
-        } else {
+        }
+        else {
             auto result = path.back()->second.value.insert(std::forward<V>(value));
-            if(result.second)
+            if(result.second) {
                 this->increase_subscriptions(path);
+                ++this->map_size;
+            }
             return std::make_pair(this->path_to_handle(path), result.second);
         }
     }
@@ -434,8 +445,11 @@ public:
 
         auto& subscription_set = h_iter->second.value;
         auto insert_result = subscription_set.insert(std::forward<V>(value));
-        if (insert_result.second)
+        if (insert_result.second) {
+            ++this->map_size;
             this->increase_subscriptions(h);
+        }
+
         return std::make_pair(h, insert_result.second);
     }
 
@@ -450,8 +464,10 @@ public:
 
         // Remove the specified value
         auto result = path.back()->second.value.erase(value);
-        if(result)
+        if (result) {
+            --this->map_size;
             this->remove_subscription(path);
+        }
 
         return result;
     }
@@ -468,8 +484,10 @@ public:
         // Remove the specified value
         auto& subscription_set = h_iter->second.value;
         auto result = subscription_set.erase(value);
-        if (result)
+        if (result) {
             this->remove_subscription(this->handle_to_iterators(h));
+            --this->map_size;
+        }
 
         return result;
     }

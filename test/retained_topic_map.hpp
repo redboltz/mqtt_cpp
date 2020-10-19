@@ -42,8 +42,9 @@ class retained_topic_map {
     using map_type_const_iterator = typename map_type::const_iterator;
 
     map_type map;
+    size_t map_size = 0;
     map_type_iterator root;
-    node_id_t next_node_id;
+    node_id_t next_node_id = root_node_id;
 
     map_type_iterator create_topic(MQTT_NS::string_view topic) {
         map_type_iterator parent = root;
@@ -198,7 +199,7 @@ class retained_topic_map {
         auto path = find_topic(topic);
 
         // Reset the value if there is actually something stored
-        if(!path.empty() && path.back()->second.value) {
+        if (!path.empty() && path.back()->second.value) {
             path.back()->second.value = MQTT_NS::nullopt;
 
             for (auto entry : boost::adaptors::reverse(path)) {
@@ -214,9 +215,15 @@ class retained_topic_map {
         return 0;
     }
 
+    // Increase the number of topics for this path
+    void increate_topics(std::vector<map_type_iterator> const &path) {
+        for (auto i : path) {
+            ++(i->second.count);
+        }
+    }
+
 public:
     retained_topic_map()
-        : next_node_id(root_node_id)
     {
         // Create the root node
         root =
@@ -233,8 +240,23 @@ public:
     // Insert a value at the specified subscription path
 
     template <typename V>
-    void insert_or_update(MQTT_NS::string_view topic, V&& value) {
-        this->create_topic(topic)->second.value.emplace(std::forward<V>(value));
+    size_t insert_or_update(MQTT_NS::string_view topic, V&& value) {
+        auto path = this->find_topic(topic);
+        if (path.empty()) {
+            this->create_topic(topic)->second.value.emplace(std::forward<V>(value));
+            ++map_size;
+            return 1;
+        }
+
+        if (!path.back()->second.value) {
+            this->increate_topics(path);
+            path.back()->second.value.emplace(std::forward<V>(value));
+            ++map_size;
+            return 1;
+        }
+
+        path.back()->second.value.emplace(std::forward<V>(value));
+        return 0;
     }
 
     // Find all stored topics that math the specified subscription
@@ -244,16 +266,21 @@ public:
 
     // Remove a stored value at the specified topic
     std::size_t erase(MQTT_NS::string_view topic) {
-        return (erase_topic(topic) ? 1 : 0);
+        auto result = erase_topic(topic);
+        map_size -= result;
+        return result;
     }
 
-    // Get the size of the map
-    std::size_t size() const { return map.size(); }
+    // Get the number of entries stored in the map
+    std::size_t size() const { return map_size; }
+
+    // Get the number of entries in the map (for debugging purpose only)
+    std::size_t internal_size() const { return map.size(); }
 
     // Dump debug information
     template<typename Output>
     void dump(Output &out) {
-        for (auto const& i: map) {
+        for (auto const& i : map) {
             out << i.first.first << " " << i.first.second << " " << (i.second.value ? "init" : "-") << " " << i.second.count << std::endl;
         }
     }
