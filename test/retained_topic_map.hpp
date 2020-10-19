@@ -1,4 +1,4 @@
-// Copyright wkl04 2019
+// Copyright Wouter van Kleunen 2019
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -7,52 +7,75 @@
 #if !defined(MQTT_RETAINED_TOPIC_MAP_HPP)
 #define MQTT_RETAINED_TOPIC_MAP_HPP
 
-#include <map>
-
-
+#include <boost/functional/hash.hpp>
 #include <mqtt/string_view.hpp>
 #include <mqtt/optional.hpp>
 
-#include <boost/optional.hpp>
-#include <boost/range/adaptor/reversed.hpp>
 #include "topic_filter_tokenizer.hpp"
+
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/composite_key.hpp>
+#include <boost/multi_index/member.hpp>
+
+namespace mi = boost::multi_index;
 
 template<typename Value>
 class retained_topic_map {
     using node_id_t = std::size_t;
-    using path_entry_key = std::pair<node_id_t, MQTT_NS::buffer>;
 
     static constexpr node_id_t root_node_id = 0;
 
     struct path_entry {
+        node_id_t parent_id;
+        MQTT_NS::buffer name_buffer;
+        MQTT_NS::string_view name;
+
         node_id_t id;
+
         std::size_t count = 1;
 
         static constexpr std::size_t max_count = std::numeric_limits<std::size_t>::max();
 
         MQTT_NS::optional<Value> value;
 
-        path_entry(node_id_t _id)
-            : id(_id)
+        path_entry(node_id_t parent_id, MQTT_NS::string_view name, node_id_t id)
+            : parent_id(parent_id), name_buffer(MQTT_NS::allocate_buffer(name)), name(name_buffer), id(id)
         { }
     };
 
-    using map_type = std::map< path_entry_key, path_entry >;
-    using map_type_iterator = typename map_type::iterator;
-    using map_type_const_iterator = typename map_type::const_iterator;
+    struct wildcard_index_tag { };
+    struct direct_index_tag { };
 
-    map_type map;
+    // allow for two indices on retained topics
+    using path_entry_set = mi::multi_index_container<
+      path_entry,
+      mi::indexed_by<
+        // index required for direct child access
+        mi::hashed_unique <
+            mi::tag<direct_index_tag>,
+            mi::composite_key<path_entry,
+                BOOST_MULTI_INDEX_MEMBER(path_entry, node_id_t, parent_id),
+                BOOST_MULTI_INDEX_MEMBER(path_entry, MQTT_NS::string_view, name) >
+            >,
+
+        // index required for wildcard processing
+        mi::ordered_non_unique< mi::tag<wildcard_index_tag>, BOOST_MULTI_INDEX_MEMBER(path_entry, node_id_t, parent_id) >
+      >
+    >;
+
+    using direct_const_iterator = typename path_entry_set::template index<direct_index_tag>::type::const_iterator;
+    using wildcard_const_iterator = typename path_entry_set::template index<wildcard_index_tag>::type::const_iterator;
+
+    path_entry_set map;
     size_t map_size = 0;
-    map_type_iterator root;
-    node_id_t next_node_id = root_node_id;
+    node_id_t next_node_id = root_node_id + 1;
 
-    map_type_iterator create_topic(MQTT_NS::string_view topic) {
-        map_type_iterator parent = root;
+    direct_const_iterator root;
 
-        // Check on root entry if we can still add an entry
-        if (parent->second.count == path_entry::max_count) {
-            throw std::overflow_error("Maximum number of topics reached");
-        }
+    direct_const_iterator create_topic(MQTT_NS::string_view topic) {
+         direct_const_iterator parent = root;
 
         topic_filter_tokenizer(
             topic,
@@ -61,17 +84,19 @@ class retained_topic_map {
                     throw std::runtime_error("No wildcards allowed in retained topic name");
                 }
 
-                node_id_t parent_id = parent->second.id;
-                map_type_iterator entry = map.find(path_entry_key(parent_id, t));
+                node_id_t parent_id = parent->id;
 
-                if (entry == map.end()) {
-                    entry = map.emplace(path_entry_key(parent_id, MQTT_NS::allocate_buffer(t)), path_entry(next_node_id++)).first;
+                auto& direct_index = map.template get<direct_index_tag>();
+                direct_const_iterator entry = direct_index.find(std::make_tuple(parent_id, t));
+
+                if (entry == direct_index.end()) {
+                    entry = map.insert(path_entry(parent->id, t, next_node_id++)).first;
                     if (next_node_id == std::numeric_limits<node_id_t>::max()) {
                         throw std::overflow_error("Maximum number of topics reached");
                     }
                 }
                 else {
-                    entry->second.count++;
+                    direct_index.modify(entry, [](path_entry &entry){ ++entry.count; });
                 }
 
                 parent = entry;
@@ -82,17 +107,18 @@ class retained_topic_map {
         return parent;
     }
 
-    std::vector<map_type_iterator> find_topic(MQTT_NS::string_view topic) {
-        std::vector<map_type_iterator> path;
-        map_type_iterator parent = root;
+    std::vector<direct_const_iterator> find_topic(MQTT_NS::string_view topic) {
+        std::vector<direct_const_iterator> path;
+        direct_const_iterator parent = root;
 
         topic_filter_tokenizer(
             topic,
             [this, &parent, &path](MQTT_NS::string_view t) {
-                map_type_iterator entry = map.find(path_entry_key(parent->second.id, t));
+                auto const& direct_index = map.template get<direct_index_tag>();
+                auto entry = direct_index.find(std::make_tuple(parent->id, t));
 
-                if (entry == map.end()) {
-                    path = std::vector<map_type_iterator>();
+                if (entry == direct_index.end()) {
+                    path = std::vector<direct_const_iterator>();
                     return false;
                 }
 
@@ -113,23 +139,22 @@ class retained_topic_map {
         entries.push_back(parent);
         std::deque<node_id_t> new_entries;
 
+        auto const& wildcard_index = map.template get<wildcard_index_tag>();
+
         while (!entries.empty()) {
             new_entries.resize(0);
 
             for (auto root : entries) {
                 // Find all entries below this node
-                for (map_type_const_iterator i = map.lower_bound(path_entry_key(root, MQTT_NS::string_view(""))); i != map.end(); ++i) {
-                    if (i->first.first != root) {
-                        break;
-                    }
+                for (auto i = wildcard_index.lower_bound(root); i != wildcard_index.end() && i->parent_id == root; ++i) {
 
                     // Should we ignore system matches
-                    if (!ignore_system || (i->first.second.empty() ? true : i->first.second[0] != '$')) {
-                        if (i->second.value) {
-                            callback(*i->second.value);
+                    if (!ignore_system || (i->name.empty() ? true : i->name[0] != '$')) {
+                        if (i->value) {
+                            callback(*i->value);
                         }
 
-                        new_entries.push_back(i->second.id);
+                        new_entries.push_back(i->id);
                     }
                 }
             }
@@ -144,26 +169,24 @@ class retained_topic_map {
     // Find all topics that match the specified subscription
     template<typename Output>
     void find_match(MQTT_NS::string_view subscription, Output callback) const {
-        std::deque<map_type_const_iterator> entries;
+        std::deque<direct_const_iterator> entries;
         entries.push_back(root);
 
-        std::deque<map_type_const_iterator> new_entries;
+        std::deque<direct_const_iterator> new_entries;
         topic_filter_tokenizer(
             subscription,
             [this, &entries, &new_entries, &callback](MQTT_NS::string_view t) {
+                auto const& direct_index = map.template get<direct_index_tag>();
+                auto const& wildcard_index = map.template get<wildcard_index_tag>();
                 new_entries.resize(0);
 
                 for (auto const& entry : entries) {
-                    node_id_t parent = entry->second.id;
+                    node_id_t parent = entry->id;
 
                     if (t == MQTT_NS::string_view("+")) {
-                        for (map_type_const_iterator i = map.lower_bound(path_entry_key(parent, MQTT_NS::string_view("")));
-                             i != map.end();
-                             ++i) {
-                            if (i->first.first == parent &&
-                                (parent != root_node_id || (i->first.second.empty() ? true : i->first.second[0] != '$'))
-                            ) {
-                                new_entries.push_back(i);
+                        for (auto i = wildcard_index.lower_bound(parent); i != wildcard_index.end() && i->parent_id == parent; ++i) {
+                            if (parent != root_node_id || (i->name.empty() ? true : i->name[0] != '$')) {
+                                new_entries.push_back(map.template project<direct_index_tag, wildcard_const_iterator>(i));
                             }
                             else {
                                 break;
@@ -175,8 +198,8 @@ class retained_topic_map {
                         return false;
                     }
                     else {
-                        map_type_const_iterator i = map.find(path_entry_key(parent, t));
-                        if (i != map.end()) {
+                        direct_const_iterator i = direct_index.find(std::make_tuple(parent, t));
+                        if (i != direct_index.end()) {
                             new_entries.push_back(i);
                         }
                     }
@@ -187,9 +210,9 @@ class retained_topic_map {
             }
         );
 
-        for (auto const& entry : entries) {
-            if (entry->second.value) {
-                callback(*entry->second.value);
+        for (auto entry : entries) {
+            if (entry->value) {
+                callback(*entry->value);
             }
         }
     }
@@ -199,13 +222,16 @@ class retained_topic_map {
         auto path = find_topic(topic);
 
         // Reset the value if there is actually something stored
-        if (!path.empty() && path.back()->second.value) {
-            path.back()->second.value = MQTT_NS::nullopt;
+        if (!path.empty() && path.back()->value) {
+            auto& direct_index = map.template get<direct_index_tag>();
+            direct_index.modify(path.back(), [](path_entry &entry){ entry.value = MQTT_NS::nullopt; });
 
-            for (auto entry : boost::adaptors::reverse(path)) {
-                --entry->second.count;
-                if (entry->second.count == 0) {
-                    map.erase(entry->first);
+            // Do iterators stay valid when erasing ? I think they do ?
+            for (auto entry : path) {
+                direct_index.modify(entry, [](path_entry &entry){ --entry.count; });
+
+                if (entry->count == 0) {
+                    map.erase(entry);
                 }
             }
 
@@ -216,9 +242,11 @@ class retained_topic_map {
     }
 
     // Increase the number of topics for this path
-    void increate_topics(std::vector<map_type_iterator> const &path) {
-        for (auto i : path) {
-            ++(i->second.count);
+    void increase_topics(std::vector<direct_const_iterator> const &path) {
+        auto& direct_index = map.template get<direct_index_tag>();
+
+        for(auto i : path) {
+            direct_index.modify(i, [](path_entry &entry){ ++entry.count; });
         }
     }
 
@@ -226,36 +254,30 @@ public:
     retained_topic_map()
     {
         // Create the root node
-        root =
-            map.emplace(
-                path_entry_key(
-                    std::numeric_limits<node_id_t>::max(),
-                    MQTT_NS::allocate_buffer("")
-                ),
-                path_entry(root_node_id)
-            ).first;
-        ++next_node_id;
+        root = map.insert(path_entry(root_node_id, "", root_node_id)).first;
     }
 
     // Insert a value at the specified subscription path
-
-    template <typename V>
-    size_t insert_or_update(MQTT_NS::string_view topic, V&& value) {
+    size_t insert_or_update(MQTT_NS::string_view topic, Value const &value) {
+        auto& direct_index = map.template get<direct_index_tag>();
         auto path = this->find_topic(topic);
+
         if (path.empty()) {
-            this->create_topic(topic)->second.value.emplace(std::forward<V>(value));
+            auto new_topic = this->create_topic(topic);
+            direct_index.modify(new_topic, [&value](path_entry &entry){ entry.value.emplace(std::move(value)); });
             ++map_size;
             return 1;
         }
 
-        if (!path.back()->second.value) {
-            this->increate_topics(path);
-            path.back()->second.value.emplace(std::forward<V>(value));
+        if (!path.back()->value) {
+            this->increase_topics(path);
+            direct_index.modify(path.back(), [&value](path_entry &entry){ entry.value.emplace(std::move(value)); });
             ++map_size;
             return 1;
         }
 
-        path.back()->second.value.emplace(std::forward<V>(value));
+        direct_index.modify(path.back(), [&value](path_entry &entry){ entry.value.emplace(std::move(value)); });
+
         return 0;
     }
 
@@ -280,8 +302,9 @@ public:
     // Dump debug information
     template<typename Output>
     void dump(Output &out) {
-        for (auto const& i : map) {
-            out << i.first.first << " " << i.first.second << " " << (i.second.value ? "init" : "-") << " " << i.second.count << std::endl;
+        auto const& direct_index = map.template get<direct_index_tag>();
+        for (auto const& i : direct_index) {
+            out << i.parent_id << " " << i.name << " " << (i.value ? "init" : "-") << " " << i.count << std::endl;
         }
     }
 

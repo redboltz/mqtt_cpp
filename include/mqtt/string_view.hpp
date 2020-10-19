@@ -41,14 +41,6 @@ using string_view = boost::string_view;
 template<class CharT, class Traits = std::char_traits<CharT> >
 using basic_string_view = boost::basic_string_view<CharT, Traits>;
 
-#if BOOST_VERSION < 106900
-
-template <class charT, class traits>
-std::size_t hash_value(basic_string_view<charT, traits> s) {
-    return boost::hash_range(s.begin(), s.end());
-}
-#endif // BOOST_VERSION < 106900
-
 } // namespace MQTT_NS
 
 #else  // BOOST_VERSION >= 106100
@@ -67,6 +59,16 @@ using basic_string_view = boost::basic_string_ref<CharT, Traits>;
 } // namespace MQTT_NS
 
 #endif // BOOST_VERSION >= 106100
+
+#if BOOST_VERSION < 106900
+namespace boost {
+template <class charT, class traits>
+std::size_t hash_value(basic_string_view<charT, traits> s) {
+    return boost::hash_range(s.begin(), s.end());
+}
+}
+
+#endif // BOOST_VERSION < 106900
 
 #endif // !defined(MQTT_NO_BOOST_STRING_VIEW)
 
