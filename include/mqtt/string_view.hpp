@@ -44,7 +44,7 @@ using basic_string_view = boost::basic_string_view<CharT, Traits>;
 #if BOOST_VERSION < 106900
 
 template <class charT, class traits>
-std::size_t hash_value(basic_string_view<charT, traits> s) {
+std::size_t hash_value(boost::basic_string_view<charT, traits> s) {
     return boost::hash_range(s.begin(), s.end());
 }
 #endif // BOOST_VERSION < 106900
