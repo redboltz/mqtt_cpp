@@ -7,7 +7,6 @@
 #if !defined(MQTT_TEST_SERVER_TLS_WS_HPP)
 #define MQTT_TEST_SERVER_TLS_WS_HPP
 
-#include <iostream>
 #include <set>
 
 #include <boost/lexical_cast.hpp>
