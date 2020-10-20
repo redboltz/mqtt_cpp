@@ -871,7 +871,7 @@ private:
                         d.props
                     );
                 }
-                subs_online_.emplace(item.topic_filter, spep, item.subopts, item.sid);
+                subs_online_.emplace(subs_map_online_, spep, item.topic_filter, item.subopts, item.sid);
             }
             // [TBD]
             // This is wrong.
@@ -1006,8 +1006,7 @@ private:
                     MQTT_LOG("mqtt_broker", trace)
                         << MQTT_ADD_VALUE(address, spep.get())
                         << "subs_online_.emplace() " << "topic_filter:" << topic_filter << " qos:" << subopts.get_qos();
-                    idx.emplace_hint(r.first, MQTT_NS::force_move(topic_filter), spep, subopts, sid);
-
+                    idx.emplace_hint(r.first, subs_map_online_, spep, topic_filter, subopts, sid);
                     auto rh = subopts.get_retain_handling();
                     if (rh == MQTT_NS::retain_handling::send ||
                         rh == MQTT_NS::retain_handling::send_only_new_subscription) {
@@ -1201,38 +1200,41 @@ private:
         MQTT_NS::publish_options pubopts,
         MQTT_NS::v5::properties props) {
 
-        auto deliver_proc =
-            [&](auto& col) {
-                // For each active subscription registered for this topic
-                auto& idx = col.template get<tag_topic_filter>();
-                for(auto& item : idx) {
-                    if(compare_topic_filter(item.topic_filter, topic)) {
-                        // If NL (no local) subscription option is set and
-                        // publisher is the same as subscriber, then skip it.
-                        if (item.subopts.get_nl() == MQTT_NS::nl::yes && item.from_me(ep)) continue;
-
-                        // publish the message to subscribers.
-                        // retain is delivered as the original only if rap_value is rap::retain.
-                        // On MQTT v3.1.1, rap_value is always rap::dont.
-                        idx.modify(
-                            idx.iterator_to(item),
-                            [&](auto& val) {
-                                val.deliver(
-                                    topic,
-                                    contents,
-                                    pubopts.get_qos(),
-                                    pubopts.get_retain(),
-                                    props // TODO: Copying the properties vector for each subscription.
-                                );
-                            },
-                            [](auto&) { BOOST_ASSERT(false); }
+        auto deliver =
+            [&](auto& subs, auto sc) {
+                // publish the message to subscribers.
+                // retain is delivered as the original only if rap_value is rap::retain.
+                // On MQTT v3.1.1, rap_value is always rap::dont.
+                subs.modify(
+                    subs.iterator_to(sc.get()),
+                    [&](auto& val) {
+                        val.deliver(
+                            topic,
+                            contents,
+                            pubopts.get_qos(),
+                            pubopts.get_retain(),
+                            props
                         );
-                    }
-                }
+                    },
+                    [](auto&) { BOOST_ASSERT(false); }
+                );
             };
 
-        deliver_proc(subs_online_);
-        deliver_proc(subs_offline_);
+        subs_map_online_.find(
+            topic,
+            [&](sub_con_online_cref sc) {
+                // If NL (no local) subscription option is set and
+                // publisher is the same as subscriber, then skip it.
+                if (sc.get().subopts.get_nl() == MQTT_NS::nl::yes && sc.get().from_me(ep)) return;
+                deliver(subs_online_, sc);
+            }
+        );
+        subs_map_offline_.find(
+            topic,
+            [&](sub_con_offline_cref sc) {
+                deliver(subs_offline_, sc);
+            }
+        );
 
         /*
          * If the message is marked as being retained, then we
@@ -1384,6 +1386,7 @@ private:
                 for(auto const& item : range) {
                     auto const& ret =
                         subs_offline_.emplace(
+                            subs_map_offline_,
                             client_id,
                             item.topic_filter,
                             item.subopts,
@@ -1527,14 +1530,22 @@ private:
     // Mapping between connection object and subscription topics
     struct sub_con_online {
         sub_con_online(
-            MQTT_NS::buffer topic_filter,
+            sub_con_online_map& sco_map,
             con_sp_t con,
+            MQTT_NS::buffer topic_filter,
             MQTT_NS::subscribe_options subopts,
             MQTT_NS::optional<std::size_t> sid)
-            :topic_filter(MQTT_NS::force_move(topic_filter)),
+            :sco_map(sco_map),
              con(MQTT_NS::force_move(con)),
+             topic_filter(MQTT_NS::force_move(topic_filter)),
              subopts(subopts),
-             sid(sid) {}
+             sid(sid),
+             handle(sco_map.insert(topic_filter, *this).first) {}
+
+        ~sub_con_online() {
+            BOOST_ASSERT(handle);
+            sco_map.erase(handle.value(), *this);
+        }
 
         void deliver(
             MQTT_NS::buffer pub_topic,
@@ -1569,11 +1580,12 @@ private:
             return con.get() == &ep;
         }
 
-        MQTT_NS::buffer topic_filter;
+        sub_con_online_map& sco_map;
         con_sp_t con;
+        MQTT_NS::buffer topic_filter;
         MQTT_NS::subscribe_options subopts;
         MQTT_NS::optional<std::size_t> sid;
-        sub_con_online_map::handle handle; // to efficient remove
+        MQTT_NS::optional<sub_con_online_map::handle> handle; // to efficient remove
     };
     using mi_sub_con_online = mi::multi_index_container<
         sub_con_online,
@@ -1625,14 +1637,22 @@ private:
     // and a collection of data associated with that subscription to be sent when the client reconnects.
     struct sub_con_offline {
         sub_con_offline(
+            sub_con_offline_map& sco_map,
             MQTT_NS::buffer client_id,
             MQTT_NS::buffer topic_filter,
             MQTT_NS::subscribe_options subopts,
             MQTT_NS::optional<std::size_t> sid)
-            :client_id(MQTT_NS::force_move(client_id)),
+            :sco_map(sco_map),
+             client_id(MQTT_NS::force_move(client_id)),
              topic_filter(MQTT_NS::force_move(topic_filter)),
              subopts(subopts),
-             sid(sid) {}
+             sid(sid),
+             handle(sco_map.insert(topic_filter, *this).first) {}
+
+        ~sub_con_offline() {
+            BOOST_ASSERT(handle);
+            sco_map.erase(handle.value(), *this);
+        }
 
         void deliver(
             MQTT_NS::buffer pub_topic,
@@ -1660,12 +1680,13 @@ private:
             return false;
         }
 
+        sub_con_offline_map& sco_map;
         MQTT_NS::buffer client_id;
         MQTT_NS::buffer topic_filter;
         std::vector<offline_message> messages;
         MQTT_NS::subscribe_options subopts;
         MQTT_NS::optional<std::size_t> sid;
-        sub_con_offline_map::handle handle; // to efficient remove
+        MQTT_NS::optional<sub_con_offline_map::handle> handle; // to efficient remove
     };
     using mi_sub_con_offline = mi::multi_index_container<
         sub_con_offline,
@@ -1721,6 +1742,10 @@ private:
 
     mi_session_online   sessions_online_; ///< Map of active client id and connections
     mi_session_offline  sessions_offline_; ///< Storage for sessions not currently active. Indexed by client id.
+
+    sub_con_online_map subs_map_online_;   /// should have longer lifetime than subs_online_
+    sub_con_offline_map subs_map_offline_; /// should have longer lifetime than subs_offline_
+
     mi_sub_con_online   subs_online_; ///< Map of topic subscriptions to client ids
     mi_sub_con_offline  subs_offline_; ///< Topics and associated messages for clientids that are currently disconnected
     retained_messages retains_; ///< A list of messages retained so they can be sent to newly subscribed clients.
@@ -1745,8 +1770,6 @@ private:
     std::function<void(MQTT_NS::v5::properties const&)> h_auth_props_;
     bool pingresp_ = true;
 
-    sub_con_online_map subs_map_online_;
-    sub_con_offline_map subs_map_offline_;
 
 };
 
