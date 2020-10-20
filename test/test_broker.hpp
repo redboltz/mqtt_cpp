@@ -1350,8 +1350,13 @@ private:
                     (MQTT_NS::error_code ec) {
                         auto sp = wp.lock();
                         if (!ec) {
-                            auto& idx = sessions_offline_.get<tag_tim>();
-                            idx.erase(sp);
+                            auto& idx_sess = sessions_offline_.get<tag_tim>();
+                            auto it = idx_sess.find(sp);
+                            if (it != idx_sess.end()) {
+                                auto& idx_sub = subs_offline_.get<tag_cid>();
+                                idx_sub.erase(it->client_id);
+                                idx_sess.erase(it);
+                            }
                         }
                     }
                 );
