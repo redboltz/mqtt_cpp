@@ -10,6 +10,8 @@
 
 #include "retained_topic_map.hpp"
 
+#include <boost/format.hpp>
+
 BOOST_AUTO_TEST_SUITE(test_retained_map)
 
 BOOST_AUTO_TEST_CASE(general) {
@@ -17,6 +19,7 @@ BOOST_AUTO_TEST_CASE(general) {
     map.insert_or_update("a/b/c", "123");
     BOOST_TEST(map.size() == 1);
     BOOST_TEST(map.internal_size() == 4);
+
 
     BOOST_TEST(map.insert_or_update("a/b", "123") == 1);
     BOOST_TEST(map.size() == 2);
@@ -40,7 +43,7 @@ BOOST_AUTO_TEST_CASE(general) {
         "example/test/A", "example/test/B", "example/A/test", "example/B/test"
     };
 
-    for (auto const& i: values) {
+    for (auto const& i : values) {
         map.insert_or_update(i, i);
     }
     BOOST_TEST(map.size() == 4);
@@ -80,6 +83,14 @@ BOOST_AUTO_TEST_CASE(general) {
     });
 
     BOOST_TEST(matches.size() == 4);
+
+    matches = { };
+    map.find("#", [&matches](std::string const &a) {
+        matches.push_back(a);
+    });
+
+    BOOST_TEST(matches.size() == 4);
+
 
     std::vector<std::string> diff;
     std::sort(matches.begin(), matches.end());
@@ -195,5 +206,30 @@ BOOST_AUTO_TEST_CASE(erase_upper_first) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(large_number_of_topics) {
+    retained_topic_map<size_t> map;
+
+    constexpr size_t num_topics = 10000;
+    for (size_t i = 0; i < num_topics; ++i) {
+        map.insert_or_update((boost::format("topic/%d") % i).str(), i);
+    }
+
+    BOOST_TEST(map.size() == num_topics);
+    for (size_t i = 0; i < num_topics; ++i) {
+        map.find(
+            (boost::format("topic/%d") % i).str(),
+            [&](size_t value) {
+                BOOST_TEST(value == i);
+            }
+        );
+   }
+
+    for (size_t i = 0; i < num_topics; ++i) {
+        map.erase((boost::format("topic/%d") % i).str());
+    }
+
+    BOOST_TEST(map.size() == 0);
+    BOOST_TEST(map.internal_size() == 1);
+}
 
 BOOST_AUTO_TEST_SUITE_END()
