@@ -1543,8 +1543,7 @@ private:
              handle(sco_map.insert(topic_filter, *this).first) {}
 
         ~sub_con_online() {
-            BOOST_ASSERT(handle);
-            sco_map.erase(handle.value(), *this);
+            sco_map.erase(handle, *this);
         }
 
         void deliver(
@@ -1585,7 +1584,7 @@ private:
         MQTT_NS::buffer topic_filter;
         MQTT_NS::subscribe_options subopts;
         MQTT_NS::optional<std::size_t> sid;
-        MQTT_NS::optional<sub_con_online_map::handle> handle; // to efficient remove
+        sub_con_online_map::handle handle; // to efficient remove
     };
     using mi_sub_con_online = mi::multi_index_container<
         sub_con_online,
@@ -1650,8 +1649,7 @@ private:
              handle(sco_map.insert(topic_filter, *this).first) {}
 
         ~sub_con_offline() {
-            BOOST_ASSERT(handle);
-            sco_map.erase(handle.value(), *this);
+            sco_map.erase(handle, *this);
         }
 
         void deliver(
@@ -1686,7 +1684,7 @@ private:
         std::vector<offline_message> messages;
         MQTT_NS::subscribe_options subopts;
         MQTT_NS::optional<std::size_t> sid;
-        MQTT_NS::optional<sub_con_offline_map::handle> handle; // to efficient remove
+        sub_con_offline_map::handle handle; // to efficient remove
     };
     using mi_sub_con_offline = mi::multi_index_container<
         sub_con_offline,
