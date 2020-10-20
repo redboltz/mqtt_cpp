@@ -22,6 +22,7 @@
 
 #include "test_settings.hpp"
 #include "subscription_map.hpp"
+#include "retained_topic_map.hpp"
 
 namespace mi = boost::multi_index;
 namespace as = boost::asio;
@@ -977,8 +978,22 @@ private:
 
         auto& ep = *spep;
 
-        std::vector<bool> new_sub;
-        new_sub.reserve(entries.size());
+        auto publish_proc =
+            [&ep](retain const& r, MQTT_NS::qos qos_value, MQTT_NS::optional<std::size_t> sid) {
+                auto props = r.props;
+                if (sid) {
+                    props.push_back(MQTT_NS::v5::property::subscription_identifier(*sid));
+                }
+                ep.publish(
+                    r.topic,
+                    r.contents,
+                    std::min(r.qos_value, qos_value) | MQTT_NS::retain::yes,
+                    props
+                );
+            };
+
+        std::vector<std::function<void()>> retain_deliver;
+        retain_deliver.reserve(entries.size());
 
         auto add_or_overwrite_sub =
             [&](MQTT_NS::buffer topic_filter,
@@ -992,7 +1007,21 @@ private:
                         << MQTT_ADD_VALUE(address, spep.get())
                         << "subs_online_.emplace() " << "topic_filter:" << topic_filter << " qos:" << subopts.get_qos();
                     idx.emplace_hint(r.first, MQTT_NS::force_move(topic_filter), spep, subopts, sid);
-                    new_sub.emplace_back(true);
+
+                    auto rh = subopts.get_retain_handling();
+                    if (rh == MQTT_NS::retain_handling::send ||
+                        rh == MQTT_NS::retain_handling::send_only_new_subscription) {
+                        retains_.find(
+                            topic_filter,
+                            [&](retain const& r) {
+                                retain_deliver.emplace_back(
+                                    [&publish_proc, &r, qos_value = subopts.get_qos(), sid] {
+                                        publish_proc(r, qos_value, sid);
+                                    }
+                                );
+                            }
+                        );
+                    }
                 }
                 else {
                     // update subscription
@@ -1006,7 +1035,20 @@ private:
                             e.sid = sid;
                         }
                     );
-                    new_sub.emplace_back(false);
+
+                    auto rh = subopts.get_retain_handling();
+                    if (rh == MQTT_NS::retain_handling::send) {
+                        retains_.find(
+                            topic_filter,
+                            [&](retain const& r) {
+                                retain_deliver.emplace_back(
+                                    [&publish_proc, &r, qos_value = subopts.get_qos(), sid] {
+                                        publish_proc(r, qos_value, sid);
+                                    }
+                                );
+                            }
+                        );
+                    }
                 }
             };
 
@@ -1069,31 +1111,8 @@ private:
             break;
         }
 
-        auto new_sub_it = new_sub.begin();
-        // Publish any retained messages that match the newly subscribed topic_filter.
-        for (auto const& e : entries) {
-            for( auto const& retain : retains_) {
-                MQTT_NS::buffer const& topic_filter = std::get<0>(e);
-                MQTT_NS::subscribe_options options = std::get<1>(e);
-                if (compare_topic_filter(topic_filter, retain.topic)) {
-                    auto rh = options.get_retain_handling();
-                    if (rh == MQTT_NS::retain_handling::send ||
-                        (rh == MQTT_NS::retain_handling::send_only_new_subscription && *new_sub_it)) {
-                        auto props = retain.props;
-                        if (sid) {
-                            props.push_back(MQTT_NS::v5::property::subscription_identifier(*sid));
-                        }
-                        ep.publish(
-                            as::buffer(retain.topic),
-                            as::buffer(retain.contents),
-                            std::min(retain.qos_value, options.get_qos()) | MQTT_NS::retain::yes,
-                            props,
-                            std::make_pair(retain.topic, retain.contents)
-                        );
-                    }
-                }
-            }
-            ++new_sub_it;
+        for (auto const& f : retain_deliver) {
+            f();
         }
         return true;
     }
@@ -1239,28 +1258,17 @@ private:
         if (pubopts.get_retain() == MQTT_NS::retain::yes) {
             if (contents.empty()) {
                 retains_.erase(topic);
-                BOOST_ASSERT(retains_.count(topic) == 0);
             }
             else {
-                auto const& it = retains_.find(topic);
-                if (it == retains_.end()) {
-                    auto const& ret = retains_.emplace(MQTT_NS::force_move(topic),
-                                                       MQTT_NS::force_move(contents),
-                                                       MQTT_NS::force_move(props),
-                                                       pubopts.get_qos());
-                    (void)ret;
-                    BOOST_ASSERT(ret.second);
-                }
-                else {
-                    retains_.modify(it,
-                                    [&](retain& val)
-                                    {
-                                        val.qos_value = pubopts.get_qos();
-                                        val.props = MQTT_NS::force_move(props);
-                                        val.contents = MQTT_NS::force_move(contents);
-                                    },
-                                    [](retain&) { BOOST_ASSERT(false); });
-                }
+                retains_.insert_or_update(
+                    topic,
+                    retain {
+                        MQTT_NS::force_move(topic),
+                        MQTT_NS::force_move(contents),
+                        MQTT_NS::force_move(props),
+                        pubopts.get_qos()
+                    }
+                );
             }
         }
     }
@@ -1705,16 +1713,7 @@ private:
         MQTT_NS::v5::properties props;
         MQTT_NS::qos qos_value;
     };
-    using mi_retain = mi::multi_index_container<
-        retain,
-        mi::indexed_by<
-            mi::ordered_unique<
-                mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_MEMBER(retain, MQTT_NS::buffer, topic)
-            >
-        >
-    >;
-
+    using retained_messages = retained_topic_map<retain>;
 
     as::io_context& ioc_; ///< The boost asio context to run this broker on.
     as::steady_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
@@ -1724,7 +1723,7 @@ private:
     mi_session_offline  sessions_offline_; ///< Storage for sessions not currently active. Indexed by client id.
     mi_sub_con_online   subs_online_; ///< Map of topic subscriptions to client ids
     mi_sub_con_offline  subs_offline_; ///< Topics and associated messages for clientids that are currently disconnected
-    mi_retain retains_; ///< A list of messages retained so they can be sent to newly subscribed clients.
+    retained_messages retains_; ///< A list of messages retained so they can be sent to newly subscribed clients.
 
     // MQTTv5 members
     MQTT_NS::v5::properties connack_props_;
