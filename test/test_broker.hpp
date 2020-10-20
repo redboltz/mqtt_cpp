@@ -870,7 +870,7 @@ private:
                         d.props
                     );
                 }
-                subs_online_.emplace(item.topic, spep, item.subopts, item.sid);
+                subs_online_.emplace(item.topic_filter, spep, item.subopts, item.sid);
             }
             // [TBD]
             // This is wrong.
@@ -981,24 +981,24 @@ private:
         new_sub.reserve(entries.size());
 
         auto add_or_overwrite_sub =
-            [&](MQTT_NS::buffer topic,
+            [&](MQTT_NS::buffer topic_filter,
                 MQTT_NS::subscribe_options subopts,
                 MQTT_NS::optional<std::size_t> sid = MQTT_NS::nullopt) {
-                auto& idx = subs_online_.get<tag_con_topic>();
-                auto r = idx.equal_range(std::make_tuple(spep, topic));
+                auto& idx = subs_online_.get<tag_con_topic_filter>();
+                auto r = idx.equal_range(std::make_tuple(spep, topic_filter));
                 if (r.first == r.second) {
                     // add new subscription
                     MQTT_LOG("mqtt_broker", trace)
                         << MQTT_ADD_VALUE(address, spep.get())
-                        << "subs_online_.emplace() " << "topic:" << topic << " qos:" << subopts.get_qos();
-                    idx.emplace_hint(r.first, MQTT_NS::force_move(topic), spep, subopts, sid);
+                        << "subs_online_.emplace() " << "topic_filter:" << topic_filter << " qos:" << subopts.get_qos();
+                    idx.emplace_hint(r.first, MQTT_NS::force_move(topic_filter), spep, subopts, sid);
                     new_sub.emplace_back(true);
                 }
                 else {
                     // update subscription
                     MQTT_LOG("mqtt_broker", trace)
                         << MQTT_ADD_VALUE(address, spep.get())
-                        << "subs_online_.update " << "topic:" << topic << " qos:" << subopts.get_qos();
+                        << "subs_online_.update " << "topic_filter:" << topic_filter << " qos:" << subopts.get_qos();
                     idx.modify(
                         r.first,
                         [&](sub_con_online& e) {
@@ -1024,10 +1024,10 @@ private:
             std::vector<MQTT_NS::suback_return_code> res;
             res.reserve(entries.size());
             for (auto const& e : entries) {
-                MQTT_NS::buffer topic = std::get<0>(e);
+                MQTT_NS::buffer topic_filter = std::get<0>(e);
                 MQTT_NS::subscribe_options subopts = std::get<1>(e);
                 res.emplace_back(MQTT_NS::qos_to_suback_return_code(subopts.get_qos())); // converts to granted_qos_x
-                add_or_overwrite_sub(MQTT_NS::force_move(topic), subopts);
+                add_or_overwrite_sub(MQTT_NS::force_move(topic_filter), subopts);
             }
             // Acknowledge the subscriptions, and the registered QOS settings
             ep.suback(packet_id, MQTT_NS::force_move(res));
@@ -1054,10 +1054,10 @@ private:
             std::vector<MQTT_NS::v5::suback_reason_code> res;
             res.reserve(entries.size());
             for (auto const& e : entries) {
-                MQTT_NS::buffer topic = std::get<0>(e);
+                MQTT_NS::buffer topic_filter = std::get<0>(e);
                 MQTT_NS::subscribe_options subopts = std::get<1>(e);
                 res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(subopts.get_qos())); // converts to granted_qos_x
-                add_or_overwrite_sub(MQTT_NS::force_move(topic), subopts, sid);
+                add_or_overwrite_sub(MQTT_NS::force_move(topic_filter), subopts, sid);
             }
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
@@ -1070,12 +1070,12 @@ private:
         }
 
         auto new_sub_it = new_sub.begin();
-        // Publish any retained messages that match the newly subscribed topic.
+        // Publish any retained messages that match the newly subscribed topic_filter.
         for (auto const& e : entries) {
             for( auto const& retain : retains_) {
-                MQTT_NS::buffer const& topic = std::get<0>(e);
+                MQTT_NS::buffer const& topic_filter = std::get<0>(e);
                 MQTT_NS::subscribe_options options = std::get<1>(e);
-                if (compare_topic_filter(topic, retain.topic)) {
+                if (compare_topic_filter(topic_filter, retain.topic)) {
                     auto rh = options.get_retain_handling();
                     if (rh == MQTT_NS::retain_handling::send ||
                         (rh == MQTT_NS::retain_handling::send_only_new_subscription && *new_sub_it)) {
@@ -1101,24 +1101,24 @@ private:
     bool unsubscribe_handler(
         con_sp_t spep,
         packet_id_t packet_id,
-        std::vector<MQTT_NS::buffer> topics,
+        std::vector<MQTT_NS::buffer> topic_filters,
         MQTT_NS::v5::properties props) {
 
         auto& ep = *spep;
 
         // For each subscription that this connection has
-        // Compare against the list of topics, and remove
-        // the subscription if the topic is in the list.
+        // Compare against the list of topic filters, and remove
+        // the subscription if the topic filter is in the list.
         {
             auto & idx = subs_online_.get<tag_con>();
             auto const& range = boost::make_iterator_range(idx.equal_range(spep));
             for(auto it = range.begin(); it != range.end(); ) {
                 bool match = false;
-                for(auto const& topic : topics) {
-                    if(it->topic == topic) {
+                for(auto const& topic_filter : topic_filters) {
+                    if(it->topic_filter == topic_filter) {
                         /*
                          * Advance the iterator using the return from erase.
-                         * The returned it may be equal to the next topic in
+                         * The returned it may be equal to the next topic filter in
                          * the list, so we continue comparing. When the loop
                          * finishes, however, we can't blindly advance the
                          * iterator, because that might result in skipping
@@ -1129,7 +1129,7 @@ private:
                          */
                         MQTT_LOG("mqtt_broker", trace)
                             << MQTT_ADD_VALUE(address, spep.get())
-                            << "subs_online_.erase() " << "topic:" << topic;
+                            << "subs_online_.erase() " << "topic_filter:" << topic_filter;
                         it = idx.erase(it);
                         match = true;
                         break;
@@ -1144,9 +1144,9 @@ private:
 
         for(auto const& item : boost::make_iterator_range( subs_online_.get<tag_con>().equal_range(spep))) {
             (void)item;
-            for(auto const& topic : topics) {
-                (void)topic;
-                BOOST_ASSERT(item.topic != topic);
+            for(auto const& topic_filter : topic_filters) {
+                (void)topic_filter;
+                BOOST_ASSERT(item.topic_filter != topic_filter);
             }
         }
 
@@ -1156,7 +1156,7 @@ private:
             break;
         case MQTT_NS::protocol_version::v5:
             if (h_unsubscribe_props_) h_unsubscribe_props_(props);
-            ep.unsuback(packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code>(topics.size(), MQTT_NS::v5::unsuback_reason_code::success), unsuback_props_);
+            ep.unsuback(packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code>(topic_filters.size(), MQTT_NS::v5::unsuback_reason_code::success), unsuback_props_);
             break;
         default:
             BOOST_ASSERT(false);
@@ -1185,9 +1185,9 @@ private:
         auto deliver_proc =
             [&](auto& col) {
                 // For each active subscription registered for this topic
-                auto& idx = col.template get<tag_topic>();
+                auto& idx = col.template get<tag_topic_filter>();
                 for(auto& item : idx) {
-                    if(compare_topic_filter(item.topic, topic)) {
+                    if(compare_topic_filter(item.topic_filter, topic)) {
                         // If NL (no local) subscription option is set and
                         // publisher is the same as subscriber, then skip it.
                         if (item.subopts.get_nl() == MQTT_NS::nl::yes && item.from_me(ep)) continue;
@@ -1377,7 +1377,7 @@ private:
                     auto const& ret =
                         subs_offline_.emplace(
                             client_id,
-                            item.topic,
+                            item.topic_filter,
                             item.subopts,
                             item.sid
                         );
@@ -1405,10 +1405,11 @@ private:
 
 private:
     struct tag_con {};
-    struct tag_topic {};
-    struct tag_con_topic {};
+    struct tag_topic{};
+    struct tag_topic_filter{};
+    struct tag_con_topic_filter {};
     struct tag_cid {};
-    struct tag_cid_topic {};
+    struct tag_cid_topic_filter {};
     struct tag_tim {};
 
     /**
@@ -1493,14 +1494,36 @@ private:
         >
     >;
 
+    struct sub_con_online;
+    struct sub_con_offline;
+
+    // subscription_map manage only a reference of sub_con.
+    // It is more efficient than using shared_ptr.
+    // However, managing lifetime is user's responsibility.
+    // I design that multi_index container of sub_con always has longer lifetime
+    // than subscription_map.
+    using sub_con_online_cref = std::reference_wrapper<sub_con_online const>;
+    using sub_con_offline_cref = std::reference_wrapper<sub_con_offline const>;
+
+    using sub_con_online_map = multiple_subscription_map<sub_con_online_cref>;
+    using sub_con_offline_map = multiple_subscription_map<sub_con_offline_cref>;
+
+    friend bool operator<(sub_con_online_cref lhs, sub_con_online_cref rhs) {
+        return &lhs.get() < &rhs.get();
+    }
+    friend bool operator<(sub_con_offline_cref lhs, sub_con_offline_cref rhs) {
+        return &lhs.get() < &rhs.get();
+    }
+
+
     // Mapping between connection object and subscription topics
     struct sub_con_online {
         sub_con_online(
-            MQTT_NS::buffer topic,
+            MQTT_NS::buffer topic_filter,
             con_sp_t con,
             MQTT_NS::subscribe_options subopts,
             MQTT_NS::optional<std::size_t> sid)
-            :topic(MQTT_NS::force_move(topic)),
+            :topic_filter(MQTT_NS::force_move(topic_filter)),
              con(MQTT_NS::force_move(con)),
              subopts(subopts),
              sid(sid) {}
@@ -1538,17 +1561,18 @@ private:
             return con.get() == &ep;
         }
 
-        MQTT_NS::buffer topic;
+        MQTT_NS::buffer topic_filter;
         con_sp_t con;
         MQTT_NS::subscribe_options subopts;
         MQTT_NS::optional<std::size_t> sid;
+        sub_con_online_map::handle handle; // to efficient remove
     };
     using mi_sub_con_online = mi::multi_index_container<
         sub_con_online,
         mi::indexed_by<
             mi::ordered_non_unique<
-                mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_MEMBER(sub_con_online, MQTT_NS::buffer, topic)
+                mi::tag<tag_topic_filter>,
+                BOOST_MULTI_INDEX_MEMBER(sub_con_online, MQTT_NS::buffer, topic_filter)
             >,
             mi::ordered_non_unique<
                 mi::tag<tag_con>,
@@ -1559,11 +1583,105 @@ private:
             // other than to enforce the uniqueness constraints.
             // Potentially this can be enabled only in debug builds.
             mi::ordered_unique<
-                mi::tag<tag_con_topic>,
+                mi::tag<tag_con_topic_filter>,
                 mi::composite_key<
                     sub_con_online,
                     BOOST_MULTI_INDEX_MEMBER(sub_con_online, con_sp_t, con),
-                    BOOST_MULTI_INDEX_MEMBER(sub_con_online, MQTT_NS::buffer, topic)
+                    BOOST_MULTI_INDEX_MEMBER(sub_con_online, MQTT_NS::buffer, topic_filter)
+                >
+            >
+        >
+    >;
+
+    // The offline_message structure holds messages that have been published on a
+    // topic that a not-currently-connected client is subscribed to.
+    // When a new connection is made with the client id for this saved data,
+    // these messages will be published to that client, and only that client.
+    struct offline_message {
+        offline_message(
+            MQTT_NS::buffer topic,
+            MQTT_NS::buffer contents,
+            MQTT_NS::v5::properties props,
+            MQTT_NS::publish_options pubopts)
+            : topic(MQTT_NS::force_move(topic)),
+              contents(MQTT_NS::force_move(contents)),
+              props(MQTT_NS::force_move(props)),
+              pubopts(pubopts) {}
+        MQTT_NS::buffer topic;
+        MQTT_NS::buffer contents;
+        MQTT_NS::v5::properties props;
+        MQTT_NS::publish_options pubopts;
+    };
+
+    // Each instance of sub_con_offline describes a subscription that the associated client id has made
+    // and a collection of data associated with that subscription to be sent when the client reconnects.
+    struct sub_con_offline {
+        sub_con_offline(
+            MQTT_NS::buffer client_id,
+            MQTT_NS::buffer topic_filter,
+            MQTT_NS::subscribe_options subopts,
+            MQTT_NS::optional<std::size_t> sid)
+            :client_id(MQTT_NS::force_move(client_id)),
+             topic_filter(MQTT_NS::force_move(topic_filter)),
+             subopts(subopts),
+             sid(sid) {}
+
+        void deliver(
+            MQTT_NS::buffer pub_topic,
+            MQTT_NS::buffer contents,
+            MQTT_NS::qos pub_qos_value,
+            MQTT_NS::retain retain,
+            MQTT_NS::v5::properties props) {
+
+            MQTT_NS::publish_options pubopts = std::min(subopts.get_qos(), pub_qos_value);
+            if (subopts.get_rap() == MQTT_NS::rap::retain && retain == MQTT_NS::retain::yes) {
+                pubopts |= MQTT_NS::retain::yes;
+            }
+            if (sid) {
+                props.push_back(MQTT_NS::v5::property::subscription_identifier(*sid));
+            }
+            messages.emplace_back(
+                MQTT_NS::force_move(pub_topic),
+                MQTT_NS::force_move(contents),
+                MQTT_NS::force_move(props),
+                pubopts
+            );
+        }
+
+        bool from_me(endpoint_t const&) const {
+            return false;
+        }
+
+        MQTT_NS::buffer client_id;
+        MQTT_NS::buffer topic_filter;
+        std::vector<offline_message> messages;
+        MQTT_NS::subscribe_options subopts;
+        MQTT_NS::optional<std::size_t> sid;
+        sub_con_offline_map::handle handle; // to efficient remove
+    };
+    using mi_sub_con_offline = mi::multi_index_container<
+        sub_con_offline,
+        mi::indexed_by<
+            // Allow multiple client id's for the same topic_filter
+            mi::ordered_non_unique<
+                mi::tag<tag_cid>,
+                BOOST_MULTI_INDEX_MEMBER(sub_con_offline, MQTT_NS::buffer, client_id)
+            >,
+            // Allow multiple topic_filters for the same client id
+            mi::ordered_non_unique<
+                mi::tag<tag_topic_filter>,
+                BOOST_MULTI_INDEX_MEMBER(sub_con_offline, MQTT_NS::buffer, topic_filter)
+            >,
+            // Don't allow the same client id to have the same topic_filter multiple times.
+            // Note that this index does not get used by any code in the broker
+            // other than to enforce the uniqueness constraints.
+            // Potentially this can be enabled only in debug builds.
+            mi::ordered_unique<
+                mi::tag<tag_cid_topic_filter>,
+                mi::composite_key<
+                    sub_con_offline,
+                    BOOST_MULTI_INDEX_MEMBER(sub_con_offline, MQTT_NS::buffer, client_id),
+                    BOOST_MULTI_INDEX_MEMBER(sub_con_offline, MQTT_NS::buffer, topic_filter)
                 >
             >
         >
@@ -1597,99 +1715,6 @@ private:
         >
     >;
 
-    // The offline_message structure holds messages that have been published on a
-    // topic that a not-currently-connected client is subscribed to.
-    // When a new connection is made with the client id for this saved data,
-    // these messages will be published to that client, and only that client.
-    struct offline_message {
-        offline_message(
-            MQTT_NS::buffer topic,
-            MQTT_NS::buffer contents,
-            MQTT_NS::v5::properties props,
-            MQTT_NS::publish_options pubopts)
-            : topic(MQTT_NS::force_move(topic)),
-              contents(MQTT_NS::force_move(contents)),
-              props(MQTT_NS::force_move(props)),
-              pubopts(pubopts) {}
-        MQTT_NS::buffer topic;
-        MQTT_NS::buffer contents;
-        MQTT_NS::v5::properties props;
-        MQTT_NS::publish_options pubopts;
-    };
-
-    // Each instance of sub_con_offline describes a subscription that the associated client id has made
-    // and a collection of data associated with that subscription to be sent when the client reconnects.
-    struct sub_con_offline {
-        sub_con_offline(
-            MQTT_NS::buffer client_id,
-            MQTT_NS::buffer topic,
-            MQTT_NS::subscribe_options subopts,
-            MQTT_NS::optional<std::size_t> sid)
-            :client_id(MQTT_NS::force_move(client_id)),
-             topic(MQTT_NS::force_move(topic)),
-             subopts(subopts),
-             sid(sid) {}
-
-        void deliver(
-            MQTT_NS::buffer pub_topic,
-            MQTT_NS::buffer contents,
-            MQTT_NS::qos pub_qos_value,
-            MQTT_NS::retain retain,
-            MQTT_NS::v5::properties props) {
-
-            MQTT_NS::publish_options pubopts = std::min(subopts.get_qos(), pub_qos_value);
-            if (subopts.get_rap() == MQTT_NS::rap::retain && retain == MQTT_NS::retain::yes) {
-                pubopts |= MQTT_NS::retain::yes;
-            }
-            if (sid) {
-                props.push_back(MQTT_NS::v5::property::subscription_identifier(*sid));
-            }
-            messages.emplace_back(
-                MQTT_NS::force_move(pub_topic),
-                MQTT_NS::force_move(contents),
-                MQTT_NS::force_move(props),
-                pubopts
-            );
-        }
-
-        bool from_me(endpoint_t const&) const {
-            return false;
-        }
-
-        MQTT_NS::buffer client_id;
-        MQTT_NS::buffer topic;
-        std::vector<offline_message> messages;
-        MQTT_NS::subscribe_options subopts;
-        MQTT_NS::optional<std::size_t> sid;
-    };
-
-    using mi_sub_con_offline = mi::multi_index_container<
-        sub_con_offline,
-        mi::indexed_by<
-            // Allow multiple client id's for the same topic
-            mi::ordered_non_unique<
-                mi::tag<tag_cid>,
-                BOOST_MULTI_INDEX_MEMBER(sub_con_offline, MQTT_NS::buffer, client_id)
-            >,
-            // Allow multiple topics for the same client id
-            mi::ordered_non_unique<
-                mi::tag<tag_topic>,
-                BOOST_MULTI_INDEX_MEMBER(sub_con_offline, MQTT_NS::buffer, topic)
-            >,
-            // Don't allow the same client id to have the same topic multiple times.
-            // Note that this index does not get used by any code in the broker
-            // other than to enforce the uniqueness constraints.
-            // Potentially this can be enabled only in debug builds.
-            mi::ordered_unique<
-                mi::tag<tag_cid_topic>,
-                mi::composite_key<
-                    sub_con_offline,
-                    BOOST_MULTI_INDEX_MEMBER(sub_con_offline, MQTT_NS::buffer, client_id),
-                    BOOST_MULTI_INDEX_MEMBER(sub_con_offline, MQTT_NS::buffer, topic)
-                >
-            >
-        >
-    >;
 
     as::io_context& ioc_; ///< The boost asio context to run this broker on.
     as::steady_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
@@ -1720,6 +1745,10 @@ private:
     std::function<void(MQTT_NS::v5::properties const&)> h_unsubscribe_props_;
     std::function<void(MQTT_NS::v5::properties const&)> h_auth_props_;
     bool pingresp_ = true;
+
+    sub_con_online_map subs_map_online_;
+    sub_con_offline_map subs_map_offline_;
+
 };
 
 #endif // MQTT_TEST_BROKER_HPP
