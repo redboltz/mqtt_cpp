@@ -210,7 +210,7 @@ protected:
             [this, &entries, &new_entries, &callback](MQTT_NS::string_view t) {
                 new_entries.resize(0);
 
-                for (auto const& entry : entries) {
+                for (auto entry : entries) {
                     auto parent = entry->second.id;
                     auto i = map.find(path_entry_key(parent, t));
                     if (i != map.end()) {
@@ -241,9 +241,17 @@ protected:
             }
         );
 
-        for (auto const& entry : entries) {
+        for (auto entry : entries) {
             callback(entry->second.value);
         }
+    }
+
+    // const cast match to allow modification
+    template<typename Output, typename IteratorType = map_type_const_iterator>
+    void modify_match(MQTT_NS::string_view topic, Output callback) {
+        find_match(topic, [this, &callback](Value const &i) {
+            callback(const_cast<Value &>(i));
+        });
     }
 
     template<typename Output>
@@ -503,6 +511,16 @@ public:
                 }
             }
         );
+    }
+
+    // Modify a subscription
+    template<typename Output>
+    void modify(MQTT_NS::string_view topic, Output callback) {
+        auto modify_callback = [&callback]( Cont &values ) {
+            callback(values);
+        };
+
+        this->template modify_match<decltype(modify_callback)>(topic, modify_callback);
     }
 
     template<typename Output>

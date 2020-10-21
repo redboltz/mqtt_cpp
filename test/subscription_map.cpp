@@ -231,4 +231,48 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     BOOST_TEST(map.internal_size() == 1);
 }
 
+namespace mi = boost::multi_index;
+
+struct my {
+    void const_mem_fun() const {
+        std::cout << "const_mem_fun()" << std::endl;
+    }
+    void non_const_mem_fun() {
+        std::cout << "non_const_mem_fun()" << std::endl;
+    }
+};
+
+inline bool operator<(my const& lhs, my const& rhs) {
+    return &lhs < &rhs;
+}
+
+template <typename T>
+using mi_t = mi::multi_index_container<
+    T,
+    mi::indexed_by<
+        mi::ordered_unique<
+            mi::identity<T>
+        >
+    >
+>;
+
+BOOST_AUTO_TEST_CASE( test_multiple_subscription_modify ) {
+
+    multiple_subscription_map<my, mi_t<my> > map;
+    map.insert("a/b/c", my());
+    map.insert("a/b/c", my());
+
+    map.modify("a/b/c", [](mi_t<my> &container) {
+        for(auto i = container.begin(); i != container.end(); ++i) {
+            container.modify(
+                i,
+                [&](my& v) {
+                    v.const_mem_fun();
+                    v.non_const_mem_fun();
+                }
+            );
+        }
+    });
+}
+
 BOOST_AUTO_TEST_SUITE_END()
