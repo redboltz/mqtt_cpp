@@ -1222,7 +1222,7 @@ private:
 
         subs_map_online_.find(
             topic,
-            [&](sub_con_online_cref sc) {
+            [&](sub_con_online_cref sc, int value) {
                 // If NL (no local) subscription option is set and
                 // publisher is the same as subscriber, then skip it.
                 if (sc.get().subopts.get_nl() == MQTT_NS::nl::yes && sc.get().from_me(ep)) return;
@@ -1231,7 +1231,7 @@ private:
         );
         subs_map_offline_.find(
             topic,
-            [&](sub_con_offline_cref sc) {
+            [&](sub_con_offline_cref sc, int value) {
                 deliver(subs_offline_, sc);
             }
         );
@@ -1521,8 +1521,28 @@ private:
     using sub_con_online_cref = std::reference_wrapper<sub_con_online const>;
     using sub_con_offline_cref = std::reference_wrapper<sub_con_offline const>;
 
-    using sub_con_online_map = multiple_subscription_map<sub_con_online_cref>;
-    using sub_con_offline_map = multiple_subscription_map<sub_con_offline_cref>;
+    struct sub_con_online_cref_hasher
+    {
+        std::size_t operator()(sub_con_online_cref const& s) const noexcept;
+    };
+
+    struct sub_con_offline_cref_hasher
+    {
+        std::size_t operator()(sub_con_offline_cref const& s) const noexcept;
+    };
+
+    struct sub_con_online_cref_equal_to
+    {
+        bool operator()(sub_con_online_cref const& lhs, sub_con_online_cref const& rhs) const noexcept;
+    };
+
+    struct sub_con_offline_cref_equal_to
+    {
+        bool operator()(sub_con_offline_cref const& lhs, sub_con_offline_cref const& rhs) const noexcept;
+    };
+
+    using sub_con_online_map = multiple_subscription_map<sub_con_online_cref, int, sub_con_online_cref_hasher, sub_con_online_cref_equal_to >;
+    using sub_con_offline_map = multiple_subscription_map<sub_con_offline_cref, int, sub_con_offline_cref_hasher, sub_con_offline_cref_equal_to >;
 
     friend bool operator<(sub_con_online_cref lhs, sub_con_online_cref rhs) {
         return &lhs.get() < &rhs.get();
@@ -1545,7 +1565,7 @@ private:
              topic_filter(MQTT_NS::force_move(topic_filter)),
              subopts(subopts),
              sid(sid),
-             handle(sco_map.insert(topic_filter, *this).first) {}
+             handle(sco_map.insert_or_update(topic_filter, *this, 0).first) {}
 
         ~sub_con_online() {
             sco_map.erase(handle, *this);
@@ -1651,7 +1671,7 @@ private:
              topic_filter(MQTT_NS::force_move(topic_filter)),
              subopts(subopts),
              sid(sid),
-             handle(sco_map.insert(topic_filter, *this).first) {}
+             handle(sco_map.insert_or_update(topic_filter, *this, 0).first) {}
 
         ~sub_con_offline() {
             sco_map.erase(handle, *this);
@@ -1719,6 +1739,7 @@ private:
         >
     >;
 
+
     // A collection of messages that have been retained in
     // case clients add a new subscription to the associated topics.
     struct retain {
@@ -1772,8 +1793,31 @@ private:
     std::function<void(MQTT_NS::v5::properties const&)> h_unsubscribe_props_;
     std::function<void(MQTT_NS::v5::properties const&)> h_auth_props_;
     bool pingresp_ = true;
-
-
 };
+
+// Hash and equal_to required for storing sub_con_online and sub_con_offline in subscription map
+inline std::size_t test_broker::sub_con_online_cref_hasher::operator()(test_broker::sub_con_online_cref const& s) const noexcept
+{
+    std::size_t result = 0;
+    boost::hash_combine(result, s.get().con);
+    boost::hash_combine(result, s.get().topic_filter);
+    return result;
+}
+
+inline std::size_t test_broker::sub_con_offline_cref_hasher::operator()(test_broker::sub_con_offline_cref const& s) const noexcept
+{
+    std::size_t result = 0;
+    boost::hash_combine(result, s.get().client_id);
+    boost::hash_combine(result, s.get().topic_filter);
+    return result;
+}
+
+inline bool test_broker::sub_con_online_cref_equal_to::operator()(test_broker::sub_con_online_cref const& lhs, test_broker::sub_con_online_cref const& rhs) const noexcept {
+    return lhs.get().con == rhs.get().con && lhs.get().topic_filter == rhs.get().topic_filter;
+}
+
+inline bool test_broker::sub_con_offline_cref_equal_to::operator()(test_broker::sub_con_offline_cref const& lhs, test_broker::sub_con_offline_cref const& rhs) const noexcept {
+    return lhs.get().client_id == rhs.get().client_id && lhs.get().topic_filter == rhs.get().topic_filter;
+}
 
 #endif // MQTT_TEST_BROKER_HPP

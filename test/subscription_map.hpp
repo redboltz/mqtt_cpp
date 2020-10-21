@@ -210,7 +210,7 @@ protected:
             [this, &entries, &new_entries, &callback](MQTT_NS::string_view t) {
                 new_entries.resize(0);
 
-                for (auto const& entry : entries) {
+                for (auto entry : entries) {
                     auto parent = entry->second.id;
                     auto i = map.find(path_entry_key(parent, t));
                     if (i != map.end()) {
@@ -241,9 +241,17 @@ protected:
             }
         );
 
-        for (auto const& entry : entries) {
+        for (auto entry : entries) {
             callback(entry->second.value);
         }
+    }
+
+    // const cast match to allow modification
+    template<typename Output, typename IteratorType = map_type_const_iterator>
+    void modify_match(MQTT_NS::string_view topic, Output callback) {
+        find_match(topic, [this, &callback](Value const &i) {
+            callback(const_cast<Value &>(i));
+        });
     }
 
     template<typename Output>
@@ -404,39 +412,45 @@ public:
 
 };
 
-
-template<typename Value, class Cont = std::set<Value, std::less<Value>, std::allocator<Value> > >
+template<typename Key, typename Value, class Hash = std::hash<Key>, class Pred = std::equal_to<Key>, class Cont = std::unordered_map<Key, Value, Hash, Pred, std::allocator< std::pair<const Key, Value> > > >
 class multiple_subscription_map
     : public subscription_map_base< Cont >
 {
 
 public:
+    using container_t = Cont;
+
     // Handle of an entry
     using handle = typename subscription_map_base< Value >::handle;
 
-    // Insert a value at the specified subscription path
+    // Insert a key => value at the specified subscription path
+    // returns the handle and true if key was inserted, false if key was updated
     template <typename V>
-    std::pair<handle, bool> insert(MQTT_NS::string_view subscription, V&& value) {
+    std::pair<handle, bool> insert_or_update(MQTT_NS::string_view subscription, Key const &key, V&& value) {
         auto path = this->find_subscription(subscription);
         if (path.empty()) {
             auto new_subscription_path = this->create_subscription(subscription);
-            new_subscription_path.back()->second.value.insert(std::forward<V>(value));
+            new_subscription_path.back()->second.value[key] = std::forward<V>(value);
             ++this->map_size;
             return std::make_pair(this->path_to_handle(new_subscription_path), true);
         }
         else {
-            auto result = path.back()->second.value.insert(std::forward<V>(value));
-            if(result.second) {
+            auto new_pair = std::make_pair(key, std::forward<V>(value));
+            auto insert_result = path.back()->second.value.insert(new_pair);
+            if(insert_result.second) {
                 this->increase_subscriptions(path);
                 ++this->map_size;
+            } else {
+                insert_result.first->second = new_pair.second;
             }
-            return std::make_pair(this->path_to_handle(path), result.second);
+            return std::make_pair(this->path_to_handle(path), insert_result.second);
         }
     }
 
-    // Insert a value with a handle to the subscription
+    // Insert a key => value with a handle to the subscription
+    // returns the handle and true if key was inserted, false if key was updated
     template <typename V>
-    std::pair<handle, bool> insert(handle h, V&& value) {
+    std::pair<handle, bool> insert_or_update(handle h, Key const &key, V&& value) {
         // Remove the specified value
         auto h_iter = this->get_key(h);
         if (h_iter == this->end()) {
@@ -444,18 +458,22 @@ public:
         }
 
         auto& subscription_set = h_iter->second.value;
-        auto insert_result = subscription_set.insert(std::forward<V>(value));
+
+        auto new_pair = std::make_pair(key, std::forward<V>(value));
+        auto insert_result = subscription_set.insert(new_pair);
         if (insert_result.second) {
             ++this->map_size;
             this->increase_subscriptions(h);
+        } else {
+            insert_result.first->second = new_pair.second;
         }
 
         return std::make_pair(h, insert_result.second);
     }
 
     // Remove a value at the specified subscription path
-    // returns the value of the removed element (if found)
-    std::size_t erase(MQTT_NS::string_view subscription, Value const& value) {
+    // returns the number of removed elements
+    std::size_t erase(MQTT_NS::string_view subscription, Key const& key) {
         // Find the subscription in the map
         auto path = this->find_subscription(subscription);
         if (path.empty()) {
@@ -463,7 +481,7 @@ public:
         }
 
         // Remove the specified value
-        auto result = path.back()->second.value.erase(value);
+        auto result = path.back()->second.value.erase(key);
         if (result) {
             --this->map_size;
             this->remove_subscription(path);
@@ -473,8 +491,8 @@ public:
     }
 
     // Remove a value at the specified handle
-    // returns the value of the removed element (if found)
-    std::size_t erase(handle h, Value const& value) {
+    // returns the number of removed elements
+    std::size_t erase(handle h, Key const& key) {
         // Remove the specified value
         auto h_iter = this->get_key(h);
         if (h_iter == this->end()) {
@@ -483,7 +501,7 @@ public:
 
         // Remove the specified value
         auto& subscription_set = h_iter->second.value;
-        auto result = subscription_set.erase(value);
+        auto result = subscription_set.erase(key);
         if (result) {
             this->remove_subscription(this->handle_to_iterators(h));
             --this->map_size;
@@ -498,11 +516,23 @@ public:
         this->find_match(
             topic,
             [&callback]( Cont const &values ) {
-                for (Value const& i : values) {
-                    callback(i);
+                for (auto const& i : values) {
+                    callback(i.first, i.second);
                 }
             }
         );
+    }
+
+    // Find all subscriptions that match and allow modification
+    template<typename Output>
+    void modify(MQTT_NS::string_view topic, Output callback) {
+        auto modify_callback = [&callback]( Cont &values ) {
+            for (auto& i : values) {
+                callback(i.first, i.second);
+            }
+        };
+
+        this->template modify_match<decltype(modify_callback)>(topic, modify_callback);
     }
 
     template<typename Output>

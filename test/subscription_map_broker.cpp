@@ -16,7 +16,7 @@ using namespace MQTT_NS::literals;
 
 namespace mi = boost::multi_index;
 
-using endpoint_t = int; // for test
+using endpoint_t = int;
 using con_sp_t = std::shared_ptr<endpoint_t>;
 
 struct sub_con_online;
@@ -30,9 +30,29 @@ struct sub_con_offline;
 using sub_con_online_cref = std::reference_wrapper<sub_con_online const>;
 using sub_con_offline_cref = std::reference_wrapper<sub_con_offline const>;
 
-using sub_con_online_map = multiple_subscription_map<sub_con_online_cref>;
-using sub_con_offline_map = multiple_subscription_map<sub_con_offline_cref>;
 
+struct sub_con_online_cref_hasher
+{
+    std::size_t operator()(sub_con_online_cref const& s) const noexcept;
+};
+
+struct sub_con_offline_cref_hasher
+{
+    std::size_t operator()(sub_con_offline_cref const& s) const noexcept;
+};
+
+struct sub_con_online_cref_equal_to
+{
+    bool operator()(sub_con_online_cref const& lhs, sub_con_online_cref const& rhs) const noexcept;
+};
+
+struct sub_con_offline_cref_equal_to
+{
+    bool operator()(sub_con_offline_cref const& lhs, sub_con_offline_cref const& rhs) const noexcept;
+};
+
+using sub_con_online_map = multiple_subscription_map<sub_con_online_cref, int, sub_con_online_cref_hasher, sub_con_online_cref_equal_to >;
+using sub_con_offline_map = multiple_subscription_map<sub_con_offline_cref, int, sub_con_offline_cref_hasher, sub_con_offline_cref_equal_to >;
 
 struct sub_con_online {
     sub_con_online(
@@ -56,6 +76,8 @@ struct sub_con_online {
     MQTT_NS::optional<sub_con_online_map::handle> h; // to efficient remove
 };
 
+
+
 struct sub_con_offline {
     sub_con_offline(
         MQTT_NS::buffer client_id,
@@ -78,11 +100,28 @@ struct sub_con_offline {
     sub_con_offline_map::handle h; // to efficient remove
 };
 
-inline bool operator<(sub_con_online_cref lhs, sub_con_online_cref rhs) {
-    return &lhs.get() < &rhs.get();
+std::size_t sub_con_online_cref_hasher::operator()(sub_con_online_cref const& s) const noexcept
+{
+    std::size_t result = 0;
+    boost::hash_combine(result, s.get().con);
+    boost::hash_combine(result, s.get().topic_filter);
+    return result;
 }
-inline bool operator<(sub_con_offline_cref lhs, sub_con_offline_cref rhs) {
-    return &lhs.get() < &rhs.get();
+
+std::size_t sub_con_offline_cref_hasher::operator()(sub_con_offline_cref const& s) const noexcept
+{
+    std::size_t result = 0;
+    boost::hash_combine(result, s.get().client_id);
+    boost::hash_combine(result, s.get().topic_filter);
+    return result;
+}
+
+bool sub_con_online_cref_equal_to::operator()(sub_con_online_cref const& lhs, sub_con_online_cref const& rhs) const noexcept {
+    return lhs.get().con == rhs.get().con && lhs.get().topic_filter == rhs.get().topic_filter;
+}
+
+bool sub_con_offline_cref_equal_to::operator()(sub_con_offline_cref const& lhs, sub_con_offline_cref const& rhs) const noexcept {
+    return lhs.get().client_id == rhs.get().client_id && lhs.get().topic_filter == rhs.get().topic_filter;
 }
 
 struct tag_con {};
@@ -191,7 +230,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
 
         BOOST_CHECK(!elem.h);
         // new insert or update (insert case)
-        auto h = m.insert(elem.topic_filter, elem);
+        auto h = m.insert_or_update(elem.topic_filter, elem, 0);
         auto& idx = scos.get<tag_con_topic_filter>();
         idx.modify(
             it,
@@ -213,7 +252,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         }
         else {
             // new insert
-            auto h = m.insert(elem.topic_filter, elem);
+            auto h = m.insert_or_update(elem.topic_filter, elem, 0);
             auto& idx = scos.get<tag_con_topic_filter>();
             idx.modify(
                 it,
@@ -234,7 +273,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
 
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc) {
+            [&](sub_con_online_cref sc, int value) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 sc.get().from_me(*sc.get().con); // call const member function
                 scos.modify(
@@ -261,7 +300,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         };
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc) {
+            [&](sub_con_online_cref sc, int value) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(sc.get().con == con2);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_most_once);
@@ -281,7 +320,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         };
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc) {
+            [&](sub_con_online_cref sc, int value) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(sc.get().con == con2);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_least_once);
@@ -308,7 +347,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
 
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref) {
+            [&](sub_con_online_cref, int value) {
                 BOOST_TEST(false);
             }
         );
@@ -362,7 +401,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
 
         BOOST_CHECK(!elem.h);
         // new insert or update (insert case)
-        auto h = m.insert(elem.topic_filter, elem);
+        auto h = m.insert_or_update(elem.topic_filter, elem, 0);
         auto& idx = scos.get<tag_con_topic_filter>();
         idx.modify(
             it,
@@ -384,7 +423,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
         }
         else {
             // new insert
-            auto h = m.insert(elem.topic_filter, elem);
+            auto h = m.insert_or_update(elem.topic_filter, elem, 0);
             auto& idx = scos.get<tag_con_topic_filter>();
             idx.modify(
                 it,
@@ -404,7 +443,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
 
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc) {
+            [&](sub_con_online_cref sc, int value) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 sc.get().from_me(*sc.get().con); // call const member function
                 scos.modify(
@@ -424,7 +463,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
 
         m.find(
             "a/b",
-            [&](sub_con_online_cref sc) {
+            [&](sub_con_online_cref sc, int value) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 sc.get().from_me(*sc.get().con); // call const member function
                 scos.modify(
@@ -452,13 +491,13 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
 
         m.find(
             "a/b",
-            [&](sub_con_online_cref) {
+            [&](sub_con_online_cref, int value) {
                 BOOST_TEST(false);
             }
         );
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc) {
+            [&](sub_con_online_cref sc, int value) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(sc.get().con == con1);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_most_once);
@@ -476,13 +515,13 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
         idx.erase(it);
         m.find(
             "a/b",
-            [&](sub_con_online_cref) {
+            [&](sub_con_online_cref, int value) {
                 BOOST_TEST(false);
             }
         );
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref) {
+            [&](sub_con_online_cref, int value) {
                 BOOST_TEST(false);
             }
         );
@@ -534,7 +573,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
 
         BOOST_CHECK(!elem.h);
         // new insert or update (insert case)
-        auto h = m.insert(elem.topic_filter, elem);
+        auto h = m.insert_or_update(elem.topic_filter, elem, 0);
         auto& idx = scos.get<tag_con_topic_filter>();
         idx.modify(
             it,
@@ -556,7 +595,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         }
         else {
             // new insert
-            auto h = m.insert(elem.topic_filter, elem);
+            auto h = m.insert_or_update(elem.topic_filter, elem, 0);
             auto& idx = scos.get<tag_con_topic_filter>();
             idx.modify(
                 it,
@@ -577,7 +616,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
 
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc) {
+            [&](sub_con_online_cref sc, int value) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 sc.get().from_me(*sc.get().con); // call const member function
                 scos.modify(
@@ -597,7 +636,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
 
         m.find(
             "a/b/d",
-            [&](sub_con_online_cref sc) {
+            [&](sub_con_online_cref sc, int value) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 sc.get().from_me(*sc.get().con); // call const member function
                 scos.modify(
@@ -624,7 +663,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         };
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc) {
+            [&](sub_con_online_cref sc, int value) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(sc.get().con == con2);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_most_once);
@@ -643,7 +682,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         };
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc) {
+            [&](sub_con_online_cref sc, int value) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(*sc.get().con == 2);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_least_once);
@@ -670,7 +709,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
 
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref) {
+            [&](sub_con_online_cref, int value) {
                 BOOST_TEST(false);
             }
         );

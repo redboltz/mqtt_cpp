@@ -15,26 +15,26 @@ BOOST_AUTO_TEST_SUITE(test_subscription_map)
 BOOST_AUTO_TEST_CASE( failed_erase ) {
     using elem_t = int;
     using value_t = std::shared_ptr<elem_t>; // shared_ptr for '<' and hash
-    using sm_t = multiple_subscription_map<value_t>;
+    using sm_t = multiple_subscription_map<std::string, value_t>;
 
     sm_t m;
     auto v1 = std::make_shared<elem_t>(1);
     auto v2 = std::make_shared<elem_t>(2);
 
     BOOST_TEST(m.size() == 0);
-    auto it_success1 = m.insert("a/b/c", v1);
+    auto it_success1 = m.insert_or_update("a/b/c", "test", v1);
     assert(it_success1.second);
     BOOST_TEST(m.size() == 1);
 
-    auto it_success2 = m.insert("a/b", v2);
+    auto it_success2 = m.insert_or_update("a/b", "test", v2);
     assert(it_success2.second);
     BOOST_TEST(m.size() == 2);
 
-    auto e1 = m.erase(it_success1.first, v1);
+    auto e1 = m.erase(it_success1.first, "test");
     BOOST_TEST(e1 == 1);
     BOOST_TEST(m.size() == 1);
 
-    auto e2 = m.erase(it_success2.first, v2); //  Invalid handle was specified is thrown here
+    auto e2 = m.erase(it_success2.first, "test"); //  Invalid handle was specified is thrown here
     BOOST_TEST(e2 == 1);
     BOOST_TEST(m.size() == 0);
 
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
 
     map.insert(text, text);
     BOOST_TEST(map.size() == 1);
-    BOOST_TEST(map.internal_size() > 1);
+    BOOST_TEST(map.internal_size() > 1u);
 
     map.erase(text);
     BOOST_TEST(map.size() == 0);
@@ -128,17 +128,27 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
 BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     std::string text = "example/test/A";
 
-    multiple_subscription_map<std::string> map;
+    multiple_subscription_map<std::string, int> map;
 
-    map.insert("a/b/c", "123");
+    BOOST_TEST(map.insert_or_update("a/b/c", "123", 0).second == true);
     BOOST_TEST(map.size() == 1);
     BOOST_TEST(map.internal_size() == 4);
 
-    map.insert("a/b/c", "123");
+    map.find("a/b/c", [](std::string const &key, int value) {
+        BOOST_TEST(key == "123");
+        BOOST_TEST(value == 0);
+    });
+
+    BOOST_TEST(map.insert_or_update("a/b/c", "123", 1).second == false);
     BOOST_TEST(map.size() == 1);
     BOOST_TEST(map.internal_size() == 4);
 
-    map.insert("a/b", "123");
+    map.find("a/b/c", [](std::string const &key, int value) {
+        BOOST_TEST(key == "123");
+        BOOST_TEST(value == 1);
+    });
+
+    map.insert_or_update("a/b", "123", 0);
     BOOST_TEST(map.size() == 2);
     BOOST_TEST(map.internal_size() == 4);
 
@@ -160,9 +170,9 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     };
 
     // Add some duplicates and overlapping paths
-    map.insert(values[0], values[0]);
-    BOOST_TEST(map.insert(values[0], values[0]).second == false);
-    BOOST_TEST(map.insert(values[0], "blaat").second == true);
+    map.insert_or_update(values[0], values[0], 0);
+    BOOST_TEST(map.insert_or_update(values[0], values[0], 0).second == false);
+    BOOST_TEST(map.insert_or_update(values[0], "blaat", 0).second == true);
 
     map.erase(values[0], "blaat");
     BOOST_TEST(map.size() == 1);
@@ -171,9 +181,9 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     BOOST_TEST(map.size() == 0);
 
     // Perform test again but this time using handles
-    map.insert(values[0], values[0]);
-    BOOST_TEST(map.insert(map.lookup(values[0]), values[0]).second == false);
-    BOOST_TEST(map.insert(map.lookup(values[0]), "blaat").second == true);
+    map.insert_or_update(values[0], values[0], 0);
+    BOOST_TEST(map.insert_or_update(map.lookup(values[0]), values[0], 0).second == false);
+    BOOST_TEST(map.insert_or_update(map.lookup(values[0]), "blaat", 0).second == true);
 
     map.erase(map.lookup(values[0]), "blaat");
     BOOST_TEST(map.size() == 1);
@@ -182,7 +192,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     BOOST_TEST(map.size() == 0);
 
     for (auto const& i : values) {
-        map.insert(i, i);
+        map.insert_or_update(i, i, 0);
     }
 
     BOOST_TEST(map.size() == 4);
@@ -197,25 +207,25 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     BOOST_TEST(map.handle_to_subscription(map.lookup(values[0])) == values[0]);
 
     std::vector<std::string> matches;
-    map.find("example/test/A", [&matches](std::string const &a) {
+    map.find("example/test/A", [&matches](std::string const &a, int value) {
         matches.push_back(a);
     });
     BOOST_TEST(matches.size() == 4);
 
     matches = {};
-    map.find("hash_match_only", [&matches](std::string const &a) {
+    map.find("hash_match_only", [&matches](std::string const &a, int value) {
         matches.push_back(a);
     });
     BOOST_TEST(matches.size() == 1);
 
     matches = {};
-    map.find("example/hash_only", [&matches](std::string const &a) {
+    map.find("example/hash_only", [&matches](std::string const &a, int value) {
         matches.push_back(a);
     });
     BOOST_TEST(matches.size() == 2);
 
     matches = {};
-    map.find("example/plus/A", [&matches](std::string const &a) {
+    map.find("example/plus/A", [&matches](std::string const &a, int value) {
         matches.push_back(a);
     });
     BOOST_TEST(matches.size() == 3);
@@ -229,6 +239,28 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
 
     BOOST_TEST(map.size() == 0);
     BOOST_TEST(map.internal_size() == 1);
+}
+
+struct my {
+    void const_mem_fun() const {
+       // std::cout << "const_mem_fun()" << std::endl;
+    }
+    void non_const_mem_fun() {
+       // std::cout << "non_const_mem_fun()" << std::endl;
+    }
+};
+
+BOOST_AUTO_TEST_CASE( test_multiple_subscription_modify ) {
+
+    using mi_t = multiple_subscription_map<std::string, my>;
+    mi_t map;
+    map.insert_or_update("a/b/c", "123", my());
+    map.insert_or_update("a/b/c", "456", my());
+
+    map.modify("a/b/c", [](std::string const &key, my &value) {
+        value.const_mem_fun();
+        value.non_const_mem_fun();
+    });
 }
 
 BOOST_AUTO_TEST_SUITE_END()
