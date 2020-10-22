@@ -68,6 +68,8 @@ private:
         {}
     };
 
+    using this_type = subscription_map_base<Value>;
+
     using map_type = std::unordered_map< path_entry_key, path_entry, boost::hash< path_entry_key > >;
     using map_type_iterator = typename map_type::iterator;
     using map_type_const_iterator = typename map_type::const_iterator;
@@ -195,41 +197,41 @@ protected:
         if (remove_hash_child_flag) {
             root->second.count &= ~path_entry::has_hash_child_flag;
         }
-   }
+    }
 
-    // Find all subscriptions that match the specified topic
-    template<typename Output>
-    void find_match(MQTT_NS::string_view topic, Output callback) const {
-        std::deque<map_type_const_iterator> entries;
-        entries.push_back(root);
+    template <typename ThisType, typename Output>
+    static void find_match_impl(ThisType& self, MQTT_NS::string_view topic, Output&& callback) {
+        using iterator_type = decltype(self.map.end()); // const_iterator or iterator depends on self
 
-        std::deque<map_type_const_iterator> new_entries;
+        std::vector<iterator_type> entries;
+        entries.push_back(self.root);
+
 
         topic_filter_tokenizer(
             topic,
-            [this, &entries, &new_entries, &callback](MQTT_NS::string_view t) {
-                new_entries.resize(0);
+            [&self, &entries, &callback](MQTT_NS::string_view t) {
+                std::vector<iterator_type> new_entries;
 
-                for (auto entry : entries) {
+                for (auto& entry : entries) {
                     auto parent = entry->second.id;
-                    auto i = map.find(path_entry_key(parent, t));
-                    if (i != map.end()) {
+                    auto i = self.map.find(path_entry_key(parent, t));
+                    if (i != self.map.end()) {
                         new_entries.push_back(i);
                     }
 
                     if (entry->second.count & path_entry::has_plus_child_flag) {
-                        i = map.find(path_entry_key(parent, MQTT_NS::string_view("+")));
-                        if (i != map.end()) {
-                            if (parent != root_node_id || (t.empty() ? true : t[0] != '$')) {
+                        i = self.map.find(path_entry_key(parent, MQTT_NS::string_view("+")));
+                        if (i != self.map.end()) {
+                            if (parent != self.root_node_id || (t.empty() ? true : t[0] != '$')) {
                                 new_entries.push_back(i);
                             }
                         }
                     }
 
                     if (entry->second.count & path_entry::has_hash_child_flag) {
-                        i = map.find(path_entry_key(parent, MQTT_NS::string_view("#")));
-                        if (i != map.end()) {
-                            if (parent != root_node_id || (t.empty() ? true : t[0] != '$')){
+                        i = self.map.find(path_entry_key(parent, MQTT_NS::string_view("#")));
+                        if (i != self.map.end()) {
+                            if (parent != self.root_node_id || (t.empty() ? true : t[0] != '$')){
                                 callback(i->second.value);
                             }
                         }
@@ -241,16 +243,27 @@ protected:
             }
         );
 
-        for (auto entry : entries) {
+        for (auto& entry : entries) {
             callback(entry->second.value);
         }
+    }
+
+    // Find all subscriptions that match the specified topic
+    template<typename Output>
+    void find_match(MQTT_NS::string_view topic, Output&& callback) const {
+        find_match_impl(*this, topic, std::forward<Output>(callback));
+    }
+
+    template<typename Output>
+    void find_match(MQTT_NS::string_view topic, Output&& callback) {
+        find_match_impl(*this, topic, std::forward<Output>(callback));
     }
 
     // const cast match to allow modification
     template<typename Output, typename IteratorType = map_type_const_iterator>
     void modify_match(MQTT_NS::string_view topic, Output callback) {
-        find_match(topic, [this, &callback](Value const &i) {
-            callback(const_cast<Value &>(i));
+        find_match(topic, [&callback](Value& i) {
+            callback(i);
         });
     }
 

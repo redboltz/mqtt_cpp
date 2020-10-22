@@ -273,7 +273,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
 
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc, int value) {
+            [&](sub_con_online_cref sc, int /*value*/) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 sc.get().from_me(*sc.get().con); // call const member function
                 scos.modify(
@@ -300,7 +300,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         };
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc, int value) {
+            [&](sub_con_online_cref sc, int /*value*/) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(sc.get().con == con2);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_most_once);
@@ -320,7 +320,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         };
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc, int value) {
+            [&](sub_con_online_cref sc, int /*value*/) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(sc.get().con == con2);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_least_once);
@@ -347,7 +347,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
 
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref, int value) {
+            [&](sub_con_online_cref, int /*value*/) {
                 BOOST_TEST(false);
             }
         );
@@ -443,7 +443,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
 
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc, int value) {
+            [&](sub_con_online_cref sc, int /*value*/) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 sc.get().from_me(*sc.get().con); // call const member function
                 scos.modify(
@@ -463,7 +463,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
 
         m.find(
             "a/b",
-            [&](sub_con_online_cref sc, int value) {
+            [&](sub_con_online_cref sc, int /*value*/) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 sc.get().from_me(*sc.get().con); // call const member function
                 scos.modify(
@@ -491,13 +491,13 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
 
         m.find(
             "a/b",
-            [&](sub_con_online_cref, int value) {
+            [&](sub_con_online_cref, int /*value*/) {
                 BOOST_TEST(false);
             }
         );
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc, int value) {
+            [&](sub_con_online_cref sc, int /*value*/) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(sc.get().con == con1);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_most_once);
@@ -515,13 +515,13 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
         idx.erase(it);
         m.find(
             "a/b",
-            [&](sub_con_online_cref, int value) {
+            [&](sub_con_online_cref, int /*value*/) {
                 BOOST_TEST(false);
             }
         );
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref, int value) {
+            [&](sub_con_online_cref, int /*value*/) {
                 BOOST_TEST(false);
             }
         );
@@ -616,7 +616,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
 
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc, int value) {
+            [&](sub_con_online_cref sc, int /*value*/) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 sc.get().from_me(*sc.get().con); // call const member function
                 scos.modify(
@@ -636,7 +636,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
 
         m.find(
             "a/b/d",
-            [&](sub_con_online_cref sc, int value) {
+            [&](sub_con_online_cref sc, int /*value*/) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 sc.get().from_me(*sc.get().con); // call const member function
                 scos.modify(
@@ -663,7 +663,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         };
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc, int value) {
+            [&](sub_con_online_cref sc, int /*value*/) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(sc.get().con == con2);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_most_once);
@@ -682,7 +682,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         };
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref sc, int value) {
+            [&](sub_con_online_cref sc, int /*value*/) {
                 BOOST_TEST(entries.erase(*sc.get().con) == 1);
                 BOOST_TEST(*sc.get().con == 2);
                 BOOST_TEST(sc.get().subopts.get_qos() == MQTT_NS::qos::at_least_once);
@@ -709,7 +709,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
 
         m.find(
             "a/b/c",
-            [&](sub_con_online_cref, int value) {
+            [&](sub_con_online_cref, int /*value*/) {
                 BOOST_TEST(false);
             }
         );

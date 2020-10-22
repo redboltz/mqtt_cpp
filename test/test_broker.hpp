@@ -1222,7 +1222,7 @@ private:
 
         subs_map_online_.find(
             topic,
-            [&](sub_con_online_cref sc, int value) {
+            [&](sub_con_online_cref sc, int /*value*/) {
                 // If NL (no local) subscription option is set and
                 // publisher is the same as subscriber, then skip it.
                 if (sc.get().subopts.get_nl() == MQTT_NS::nl::yes && sc.get().from_me(ep)) return;
@@ -1231,7 +1231,7 @@ private:
         );
         subs_map_offline_.find(
             topic,
-            [&](sub_con_offline_cref sc, int value) {
+            [&](sub_con_offline_cref sc, int /*value*/) {
                 deliver(subs_offline_, sc);
             }
         );

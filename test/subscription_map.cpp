@@ -207,25 +207,25 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     BOOST_TEST(map.handle_to_subscription(map.lookup(values[0])) == values[0]);
 
     std::vector<std::string> matches;
-    map.find("example/test/A", [&matches](std::string const &a, int value) {
+    map.find("example/test/A", [&matches](std::string const &a, int /*value*/) {
         matches.push_back(a);
     });
     BOOST_TEST(matches.size() == 4);
 
     matches = {};
-    map.find("hash_match_only", [&matches](std::string const &a, int value) {
+    map.find("hash_match_only", [&matches](std::string const &a, int /*value*/) {
         matches.push_back(a);
     });
     BOOST_TEST(matches.size() == 1);
 
     matches = {};
-    map.find("example/hash_only", [&matches](std::string const &a, int value) {
+    map.find("example/hash_only", [&matches](std::string const &a, int /*value*/) {
         matches.push_back(a);
     });
     BOOST_TEST(matches.size() == 2);
 
     matches = {};
-    map.find("example/plus/A", [&matches](std::string const &a, int value) {
+    map.find("example/plus/A", [&matches](std::string const &a, int /*value*/) {
         matches.push_back(a);
     });
     BOOST_TEST(matches.size() == 3);
@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription_modify ) {
     map.insert_or_update("a/b/c", "123", my());
     map.insert_or_update("a/b/c", "456", my());
 
-    map.modify("a/b/c", [](std::string const &key, my &value) {
+    map.modify("a/b/c", [](std::string const& /*key*/, my &value) {
         value.const_mem_fun();
         value.non_const_mem_fun();
     });
