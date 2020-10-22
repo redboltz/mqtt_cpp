@@ -124,6 +124,10 @@ bool sub_con_offline_cref_equal_to::operator()(sub_con_offline_cref const& lhs, 
     return lhs.get().client_id == rhs.get().client_id && lhs.get().topic_filter == rhs.get().topic_filter;
 }
 
+inline bool operator<(sub_con_online_cref lhs, sub_con_online_cref rhs) {
+    return &lhs.get() < &rhs.get();
+}
+
 struct tag_con {};
 struct tag_topic_filter {};
 struct tag_con_topic_filter {};

@@ -8,6 +8,8 @@
 #define MQTT_SUBSCRIPTION_MAP_HPP
 
 #include <unordered_map>
+#include <boost/container/flat_map.hpp>
+#include <boost/variant.hpp>
 #include <boost/functional/hash.hpp>
 #include <mqtt/string_view.hpp>
 #include <mqtt/optional.hpp>
@@ -259,8 +261,7 @@ protected:
         find_match_impl(*this, topic, std::forward<Output>(callback));
     }
 
-    // const cast match to allow modification
-    template<typename Output, typename IteratorType = map_type_const_iterator>
+    template<typename Output>
     void modify_match(MQTT_NS::string_view topic, Output callback) {
         find_match(topic, [&callback](Value& i) {
             callback(i);
@@ -425,13 +426,73 @@ public:
 
 };
 
-template<typename Key, typename Value, class Hash = std::hash<Key>, class Pred = std::equal_to<Key>, class Cont = std::unordered_map<Key, Value, Hash, Pred, std::allocator< std::pair<const Key, Value> > > >
+// Following templated functions allow for perfect forwarding through lambda capture
+// https://isocpp.org/blog/2016/12/capturing-perfectly-forwarded-objects-in-lambdas-vittorio-romeo
+template <typename... Ts> auto fwd_capture(Ts&&... xs)
+{
+    return std::tuple<Ts...>(std::forward<decltype(xs)>(xs)...);
+}
+
+template <typename T> decltype(auto) access(T&& x) { return std::get<0>(std::forward<decltype(x)>(x)); }
+
+template<typename Key, typename Value, class Hash = std::hash<Key>, class Pred = std::equal_to<Key>,
+         class multiple_subscription_map_store_flat = boost::container::flat_map<Key, Value>,
+         class multiple_subscription_map_store_hash = std::unordered_map<Key, Value, Hash, Pred>,
+         class multiple_subscription_map_store = boost::variant< multiple_subscription_map_store_flat, multiple_subscription_map_store_hash > >
 class multiple_subscription_map
-    : public subscription_map_base< Cont >
+    : public subscription_map_base< multiple_subscription_map_store >
 {
 
+    // Insert or update an entry in hash or flat map
+    static inline bool insert_or_update_map(multiple_subscription_map_store &values, std::pair<Key, Value>&& new_value) {
+       return boost::apply_visitor( [new_value = fwd_capture(std::forward<decltype(new_value)>(new_value))](auto &values) {
+            auto result = values.insert( access(new_value) );
+            if(!result.second) {
+                result.first->second = access(new_value).second;
+            }
+           return result.second;
+        }, values );
+    }
+
+    // Erase entry from flat or hash map
+    static inline bool erase_map(multiple_subscription_map_store &values, Key const &key) {
+       return boost::apply_visitor( [&key](auto &values) {
+            return values.erase(key);
+        }, values );
+    }
+
+    // Retrieve current size of the map
+    static inline std::size_t size_of_map(multiple_subscription_map_store &values) {
+       return boost::apply_visitor( [](auto &values) {
+            return values.size();
+        }, values );
+    }
+
+    // Threshold to convert between flatmap and hash
+    static constexpr std::size_t convert_to_hash_threshold = 1500;
+
+    // Convert a hash map to a flat map
+    static multiple_subscription_map_store_flat convert_to_flatmap(multiple_subscription_map_store_hash&& input)
+    {
+        multiple_subscription_map_store_flat result;
+        for(auto&& i : input) {
+            result.insert_or_assign(std::move(i.first), std::move(i.second));
+        }
+        return result;
+    }
+
+    // Convert a flat map to a hash map
+    static multiple_subscription_map_store_hash convert_to_hash(multiple_subscription_map_store_flat&& input)
+    {
+        multiple_subscription_map_store_hash result;
+        for(auto&& i : input) {
+            result.insert(i);
+        }
+        return result;
+    }
+
 public:
-    using container_t = Cont;
+    using container_t = multiple_subscription_map_store;
 
     // Handle of an entry
     using handle = typename subscription_map_base< Value >::handle;
@@ -443,20 +504,27 @@ public:
         auto path = this->find_subscription(subscription);
         if (path.empty()) {
             auto new_subscription_path = this->create_subscription(subscription);
-            new_subscription_path.back()->second.value[key] = std::forward<V>(value);
+            insert_or_update_map(new_subscription_path.back()->second.value, { key, std::forward<V>(value) });
             ++this->map_size;
             return std::make_pair(this->path_to_handle(new_subscription_path), true);
         }
         else {
+            auto& subscription_set = path.back()->second.value;
+
             auto new_pair = std::make_pair(key, std::forward<V>(value));
-            auto insert_result = path.back()->second.value.insert(new_pair);
-            if(insert_result.second) {
+            auto insert_result = insert_or_update_map(subscription_set, std::move(new_pair));
+            if(insert_result) {
                 this->increase_subscriptions(path);
                 ++this->map_size;
-            } else {
-                insert_result.first->second = new_pair.second;
             }
-            return std::make_pair(this->path_to_handle(path), insert_result.second);
+
+            auto result = std::make_pair(this->path_to_handle(path), insert_result);
+
+            // Convert map to a hash map, if large number of subscriptions is reached
+           if(size_of_map(subscription_set) >= convert_to_hash_threshold && boost::get<multiple_subscription_map_store_flat>(&subscription_set) != nullptr)
+                subscription_set = convert_to_hash(boost::get<multiple_subscription_map_store_flat>(std::move(subscription_set)));
+
+            return result;
         }
     }
 
@@ -473,15 +541,17 @@ public:
         auto& subscription_set = h_iter->second.value;
 
         auto new_pair = std::make_pair(key, std::forward<V>(value));
-        auto insert_result = subscription_set.insert(new_pair);
-        if (insert_result.second) {
+        auto insert_result = insert_or_update_map(subscription_set, std::move(new_pair));
+        if (insert_result) {
             ++this->map_size;
             this->increase_subscriptions(h);
-        } else {
-            insert_result.first->second = new_pair.second;
         }
 
-        return std::make_pair(h, insert_result.second);
+        // Convert map to a hash map, if large number of subscriptions is reached
+        if(size_of_map(subscription_set) >= convert_to_hash_threshold && boost::get<multiple_subscription_map_store_flat>(&subscription_set) != nullptr)
+            subscription_set = convert_to_hash(boost::get<multiple_subscription_map_store_flat>(std::move(subscription_set)));
+
+        return std::make_pair(h, insert_result);
     }
 
     // Remove a value at the specified subscription path
@@ -493,11 +563,19 @@ public:
             return 0;
         }
 
+        auto& subscription_set = path.back()->second.value;
+        auto old_size = size_of_map(subscription_set);
+
         // Remove the specified value
-        auto result = path.back()->second.value.erase(key);
+        auto result = erase_map(subscription_set, key);
         if (result) {
             --this->map_size;
             this->remove_subscription(path);
+
+            // Convert map back to a flat map, if number of subscriptions is small enough
+            if(old_size == convert_to_hash_threshold && size_of_map(subscription_set) < convert_to_hash_threshold && boost::get<multiple_subscription_map_store_hash>(&subscription_set) != nullptr)
+                subscription_set = convert_to_flatmap(boost::get<multiple_subscription_map_store_hash>(std::move(subscription_set)));
+
         }
 
         return result;
@@ -512,12 +590,18 @@ public:
             throw std::runtime_error("Invalid handle was specified");
         }
 
-        // Remove the specified value
         auto& subscription_set = h_iter->second.value;
-        auto result = subscription_set.erase(key);
+        auto old_size = size_of_map(subscription_set);
+
+        // Remove the specified value
+        auto result = erase_map(subscription_set, key);
         if (result) {
-            this->remove_subscription(this->handle_to_iterators(h));
             --this->map_size;
+            this->remove_subscription(this->handle_to_iterators(h));
+
+            // Convert map back to a flat map, if number of subscriptions is small enough
+            if(old_size == convert_to_hash_threshold && size_of_map(subscription_set) < convert_to_hash_threshold && boost::get<multiple_subscription_map_store_hash>(&subscription_set) != nullptr)
+                subscription_set = convert_to_flatmap(boost::get<multiple_subscription_map_store_hash>(std::move(subscription_set)));
         }
 
         return result;
@@ -528,10 +612,12 @@ public:
     void find(MQTT_NS::string_view topic, Output callback) const {
         this->find_match(
             topic,
-            [&callback]( Cont const &values ) {
-                for (auto const& i : values) {
-                    callback(i.first, i.second);
-                }
+            [&callback]( multiple_subscription_map_store const &values ) {
+                boost::apply_visitor( [&callback](auto const &values) {
+                   for (auto const& i : values) {
+                       callback(i.first, i.second);
+                   }
+                }, values );
             }
         );
     }
@@ -539,18 +625,21 @@ public:
     // Find all subscriptions that match and allow modification
     template<typename Output>
     void modify(MQTT_NS::string_view topic, Output callback) {
-        auto modify_callback = [&callback]( Cont &values ) {
-            for (auto& i : values) {
-                callback(i.first, i.second);
-            }
+        auto modify_callback = [&callback]( multiple_subscription_map_store &values ) {
+            boost::apply_visitor( [&callback](auto& values) {
+               for (auto& i : values) {
+                   callback(i.first, i.second);
+               }
+            }, values );
         };
 
         this->template modify_match<decltype(modify_callback)>(topic, modify_callback);
     }
 
+
     template<typename Output>
     void dump(Output &out) {
-        for (auto const& i: this->get_map()) {
+        for (auto const& i : this->get_map()) {
             out << i.first.first << " " << i.first.second << " " << i.second.value.size() << " " << i.second.count << std::endl;
         }
     }

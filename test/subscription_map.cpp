@@ -257,10 +257,27 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription_modify ) {
     map.insert_or_update("a/b/c", "123", my());
     map.insert_or_update("a/b/c", "456", my());
 
-    map.modify("a/b/c", [](std::string const& /*key*/, my &value) {
+    map.modify("a/b/c", [](std::string const& /*key*/, my& value) {
         value.const_mem_fun();
         value.non_const_mem_fun();
     });
+}
+
+BOOST_AUTO_TEST_CASE( test_multiple_subscription_large ) {
+    multiple_subscription_map<int, int> map;
+
+    size_t total_entries = 10000;
+    for(size_t i = 0; i < total_entries; ++i)
+        map.insert_or_update("a/b/c", i, i);
+
+    BOOST_TEST(map.size() == total_entries);
+    BOOST_TEST(map.internal_size() > 1u);
+
+    for(size_t i = 0; i < total_entries; ++i)
+        map.erase("a/b/c", i);
+
+    BOOST_TEST(map.size() == 0);
+    BOOST_TEST(map.internal_size() == 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
