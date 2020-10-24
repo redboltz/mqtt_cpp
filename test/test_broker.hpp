@@ -367,7 +367,7 @@ public:
              MQTT_NS::optional<MQTT_NS::buffer> username,
              MQTT_NS::optional<MQTT_NS::buffer> password,
              MQTT_NS::optional<MQTT_NS::will> will,
-             bool clean_session,
+             bool clean_start,
              std::uint16_t keep_alive,
              MQTT_NS::v5::properties props) {
                 con_sp_t sp = wp.lock();
@@ -378,7 +378,7 @@ public:
                     MQTT_NS::force_move(username),
                     MQTT_NS::force_move(password),
                     MQTT_NS::force_move(will),
-                    clean_session,
+                    clean_start,
                     keep_alive,
                     MQTT_NS::force_move(props)
                 );
@@ -646,8 +646,7 @@ public:
     }
 
     void clear_all_sessions() {
-        sessions_online_.clear();
-        sessions_offline_.clear();
+        sessions_.clear();
     }
 
 private:
@@ -663,7 +662,7 @@ private:
      * basic pre-connection logic, to setup the record keeping that this broker
      * class needs to handle the connection and process subscriptions and publishing.
      *
-     * @param clean_session - if the clean-session flag is set on the CONNECT message.
+     * @param clean_start - if the clean-session flag is set on the CONNECT message.
      * @param spep - MQTT_NS::varient of shared pointers to underlying connection type.
      * @param client_id - the id that the client wants to use
      * @param will - the last-will-and-testiment of the connection, if any.
@@ -674,7 +673,7 @@ private:
         MQTT_NS::optional<MQTT_NS::buffer> /*username*/,
         MQTT_NS::optional<MQTT_NS::buffer> /*password*/,
         MQTT_NS::optional<MQTT_NS::will> will,
-        bool clean_session,
+        bool clean_start,
         std::uint16_t /*keep_alive*/,
         MQTT_NS::v5::properties props
     ) {
@@ -708,13 +707,13 @@ private:
         // connection's session to a new connection later. So the connection must be rejected.
         switch (ep.get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
-            if (client_id.empty() && !clean_session) {
+            if (client_id.empty() && !clean_start) {
                 ep.connack(false, MQTT_NS::connect_return_code::identifier_rejected);
                 return false;
             }
             break;
         case MQTT_NS::protocol_version::v5:
-            if (client_id.empty() && !clean_session) {
+            if (client_id.empty() && !clean_start) {
                 ep.connack(false, MQTT_NS::v5::connect_reason_code::client_identifier_not_valid);
                 return false;
             }
@@ -724,36 +723,50 @@ private:
             break;
         }
 
-        // Find any sessions that have the same client_id
-        auto & act_sess_idx = sessions_online_.get<tag_cid>();
-        auto act_sess_it = act_sess_idx.find(client_id);
+        auto send_connack =
+            [&](bool session_present) {
+                // Reply to the connect message.
+                switch (ep.get_protocol_version()) {
+                case MQTT_NS::protocol_version::v3_1_1:
+                    ep.connack(
+                        session_present,
+                        MQTT_NS::connect_return_code::accepted
+                    );
+                    break;
+                case MQTT_NS::protocol_version::v5:
+                    ep.connack(
+                        session_present,
+                        MQTT_NS::v5::connect_reason_code::success,
+                        connack_props_
+                    );
+                    break;
+                default:
+                    BOOST_ASSERT(false);
+                    break;
+                }
+            };
 
-        auto & non_act_sess_idx = sessions_offline_.get<tag_cid>();
-        auto non_act_sess_it = non_act_sess_idx.find(client_id);
+        auto send_offline_messages =
+            [&] (session_state& session) {
+                try {
+                    while (!session.offline_messages.empty()) {
+                        auto const& msg = session.offline_messages.front();
+                        session.con->publish(
+                            msg.topic,
+                            msg.contents,
+                            msg.pubopts,
+                            msg.props
+                        );
+                        session.offline_messages.pop_front();
+                    }
+                }
+                catch (MQTT_NS::packet_id_exhausted_error const& e) {
+                    MQTT_LOG("mqtt_broker", warning)
+                        << MQTT_ADD_VALUE(address, session.con.get())
+                        << e.what();
+                }
+            };
 
-        // It's a hard error for a client_id to have a session object
-        // in both the active and non active session containers.
-        BOOST_ASSERT((act_sess_idx.end() == act_sess_it) || (non_act_sess_idx.end() == non_act_sess_it));
-
-        // Reply to the connect message.
-        switch (ep.get_protocol_version()) {
-        case MQTT_NS::protocol_version::v3_1_1:
-            ep.connack(
-                !clean_session && ((act_sess_idx.end() != act_sess_it) || (non_act_sess_idx.end() != non_act_sess_it)),
-                MQTT_NS::connect_return_code::accepted
-            );
-            break;
-        case MQTT_NS::protocol_version::v5:
-            ep.connack(
-                !clean_session && ((act_sess_idx.end() != act_sess_it) || (non_act_sess_idx.end() != non_act_sess_it)),
-                MQTT_NS::v5::connect_reason_code::success,
-                connack_props_
-            );
-            break;
-        default:
-            BOOST_ASSERT(false);
-            break;
-        }
 
         /**
          * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Toc514345311
@@ -762,127 +775,116 @@ private:
          * discard any existing Session and start a new Session [MQTT-3.1.2-4]. Consequently,
          *  the Session Present flag in CONNACK is always set to 0 if Clean Start is set to 1.
          */
-        if(clean_session && (non_act_sess_it != non_act_sess_idx.end())) {
-            non_act_sess_idx.erase(non_act_sess_it);
-            BOOST_ASSERT(non_act_sess_idx.end() == non_act_sess_idx.find(client_id));
 
-            non_act_sess_it = non_act_sess_idx.end();
+        // Find any sessions that have the same client_id
+        auto& idx = sessions_.get<tag_cid>();
+        auto it = idx.lower_bound(client_id);
+        if (it == idx.end() || it->client_id != client_id) {
+            // new connection
+            it = idx.emplace_hint(
+                it,
+                subs_map_,
+                spep,
+                client_id,
+                MQTT_NS::force_move(will),
+                MQTT_NS::force_move(session_expiry_interval)
+            );
+            send_connack(false);
         }
-
-        if(act_sess_it == act_sess_idx.end()) {
-            // If we have a saved session, we can transfer the state from it
-            // to the active_session container.
-            if(non_act_sess_it == non_act_sess_idx.end()) {
-                auto const& ret = sessions_online_.emplace(
+        else if (it->online()) {
+            // online overwrite
+            if (close_proc(it->con, true)) {
+                // remain offline
+                if (clean_start) {
+                    // discard offline session
+                    send_connack(false);
+                    idx.modify(
+                        it,
+                        [&](auto& e) {
+                            e.clean();
+                            e.will = MQTT_NS::force_move(will);
+                            // TODO: e.will_delay = MQTT_NS::force_move(will_delay);
+                            e.session_expiry_interval = MQTT_NS::force_move(session_expiry_interval);
+                            e.tim_session_expiry.reset();
+                        },
+                        [](auto&) { BOOST_ASSERT(false); }
+                    );
+                }
+                else {
+                    // inherit offline session
+                    send_connack(true);
+                    idx.modify(
+                        it,
+                        [&](auto& e) {
+                            e.con = spep;
+                            if (e.topic_alias_recv) {
+                                ep.restore_topic_alias_recv_container(MQTT_NS::force_move(e.topic_alias_recv.value()));
+                                e.topic_alias_recv = MQTT_NS::nullopt;
+                            }
+                            e.will = MQTT_NS::force_move(will);
+                            // TODO: e.will_delay = MQTT_NS::force_move(will_delay);
+                            e.session_expiry_interval = MQTT_NS::force_move(session_expiry_interval);
+                            e.tim_session_expiry.reset();
+                            send_offline_messages(e);
+                        },
+                        [](auto&) { BOOST_ASSERT(false); }
+                    );
+                    // send offline messages
+                }
+            }
+            else {
+                // new connection
+                it = idx.emplace_hint(
+                    it,
+                    subs_map_,
                     spep,
                     client_id,
                     MQTT_NS::force_move(will),
                     MQTT_NS::force_move(session_expiry_interval)
                 );
-                BOOST_ASSERT(ret.second);
-                act_sess_it = sessions_online_.project<tag_cid>(ret.first);
-                BOOST_ASSERT(act_sess_it->client_id == client_id);
-                BOOST_ASSERT(act_sess_it == act_sess_idx.find(client_id));
+                send_connack(false);
+            }
+        }
+        else {
+            // offline -> online
+            if (clean_start) {
+                // discard offline session
+                send_connack(false);
+                idx.modify(
+                    it,
+                    [&](auto& e) {
+                        e.clean();
+                        e.con = spep;
+                        e.will = MQTT_NS::force_move(will);
+                        // TODO: e.will_delay = MQTT_NS::force_move(will_delay);
+                        e.session_expiry_interval = MQTT_NS::force_move(session_expiry_interval);
+                        e.tim_session_expiry.reset();
+                    },
+                    [](auto&) { BOOST_ASSERT(false); }
+                );
             }
             else {
-
-                if (non_act_sess_it->topic_alias_recv) {
-
-                    // TopicAlias lifetime is the same as Session lifetime
-                    // It is different from MQTT v5 spec but practical choice.
-                    // See
-                    // https://lists.oasis-open.org/archives/mqtt-comment/202009/msg00000.html
-                    //
-                    // When minimum boost requirement will update to 1.74.0,
-                    // the following code is updated to move semantics
-                    // using multi_index extract functionality.
-                    // See
-                    // https://github.com/boostorg/multi_index/commit/e69466039d64dd49ecf8fc8a181d9f24d5f82386
-                    ep.restore_topic_alias_recv_container(non_act_sess_it->topic_alias_recv.value());
-                }
-
-                session_state state;
-                non_act_sess_idx.modify(non_act_sess_it,
-                                        [&](session_state & val) { state = val; },
-                                        [](session_state&) { BOOST_ASSERT(false); });
-                state.con = spep;
-                non_act_sess_idx.erase(non_act_sess_it);
-                BOOST_ASSERT(non_act_sess_idx.end() == non_act_sess_idx.find(client_id));
-
-                auto const& ret = sessions_online_.insert(MQTT_NS::force_move(state));
-                BOOST_ASSERT(ret.second);
-                act_sess_it = sessions_online_.project<tag_cid>(ret.first);
-                BOOST_ASSERT(act_sess_it->client_id == client_id);
-                BOOST_ASSERT(act_sess_it == act_sess_idx.find(client_id));
-                BOOST_ASSERT(sessions_online_.project<tag_con>(act_sess_it) == sessions_online_.get<tag_con>().find(spep));
+                // inherit offline session
+                send_connack(true);
+                idx.modify(
+                    it,
+                    [&](auto& e) {
+                        e.con = spep;
+                        if (e.topic_alias_recv) {
+                            ep.restore_topic_alias_recv_container(MQTT_NS::force_move(e.topic_alias_recv.value()));
+                            e.topic_alias_recv = MQTT_NS::nullopt;
+                        }
+                        e.will = MQTT_NS::force_move(will);
+                        // TODO: e.will_delay = MQTT_NS::force_move(will_delay);
+                        e.session_expiry_interval = MQTT_NS::force_move(session_expiry_interval);
+                        e.tim_session_expiry.reset();
+                        send_offline_messages(e);
+                    },
+                    [](auto&) { BOOST_ASSERT(false); }
+                );
             }
         }
-        else {
-            // Disconnect the existing connection
 
-            // Force disconnect the client.
-            // This shuts down the socket directly.
-            act_sess_it->con->force_disconnect();
-
-            // Replace it with the new connection
-            // Nothing more should need to be done
-            // ...
-            // But potentially we need to re-send
-            // messages marked as retain?
-            // TODO: Verify from standard.
-            {
-                auto& idx = subs_online_.get<tag_con>();
-                {
-                    auto const& range = boost::make_iterator_range(idx.equal_range(act_sess_it->con));
-                    for (auto it = range.begin(); it != range.end(); std::advance(it, 1)) {
-                        idx.modify_key(
-                            it,
-                            [&](con_sp_t& val) { val = spep; },
-                            [](con_sp_t&) { BOOST_ASSERT(false); }
-                        );
-                    }
-                }
-                BOOST_ASSERT(idx.count(act_sess_it->con) == 0);
-            }
-            sessions_online_.get<tag_con>().modify_key(sessions_online_.project<tag_con>(act_sess_it),
-                                                       [&](con_sp_t& val) { val = spep; },
-                                                       [](con_sp_t&) { BOOST_ASSERT(false); });
-        }
-
-        if (clean_session) {
-            subs_offline_.get<tag_cid>().erase(client_id);
-            BOOST_ASSERT(subs_offline_.get<tag_cid>().count(client_id) == 0);
-        }
-        else {
-            // If it's not a clean session, then all of the
-            // saved subscriptions are moved to the new session
-            // object so they can be used immediately.
-            auto & idx = subs_offline_.get<tag_cid>();
-            auto const& range = boost::make_iterator_range(idx.equal_range(client_id));
-            for (auto const& item : range) {
-                // Send the saved messages out on the wire.
-                for (auto & d : item.messages) {
-                    // But *only* for this connection
-                    // Not every connection in the broker.
-                    ep.publish(
-                        d.topic,
-                        d.contents,
-                        d.pubopts,
-                        d.props
-                    );
-                }
-                subs_online_.emplace(subs_map_online_, spep, item.topic_filter, item.subopts, item.sid);
-            }
-            // [TBD]
-            // This is wrong.
-            // If QoS is 0, no problem.
-            // If QoS is 1, erase should be done at PUBACK received.
-            // If QoS is 2, erase should be done at PUBCOMP received,
-            // and message should be overwritten to PUBREL at PUBREC received.
-            idx.erase(range.begin(), range.end());
-
-            BOOST_ASSERT(idx.count(client_id) == 0);
-        }
         return true;
     }
 
@@ -894,6 +896,115 @@ private:
             tim_disconnect_.wait();
         }
         close_proc(MQTT_NS::force_move(spep), false);
+    }
+
+    /**
+     * @brief close_proc - clean up a connection that has been closed.
+     *
+     * @param ep - The underlying MQTT_NS::server (of whichever type) that is disconnecting.
+     * @param send_will - Whether to publish this connections last will
+     * @return true if offline session is remained, otherwise false
+     */
+    // TODO: Maybe change the name of this function.
+    bool close_proc(con_sp_t spep, bool send_will) {
+        endpoint_t& ep = *spep;
+
+        auto& idx = sessions_.get<tag_con>();
+        auto it = idx.find(spep);
+
+        // act_sess_it == act_sess_idx.end() could happen if broker accepts
+        // the session from client but the client closes the session  before sending
+        // MQTT `CONNECT` message.
+        // In this case, do nothing is correct behavior.
+        if (it == idx.end()) return false;
+
+        bool session_clear =
+            [&] {
+                if (ep.get_protocol_version() == MQTT_NS::protocol_version::v3_1_1) {
+                    return ep.clean_session();
+                }
+                else {
+                    BOOST_ASSERT(ep.get_protocol_version() == MQTT_NS::protocol_version::v5);
+                    auto const& sei_opt = it->session_expiry_interval;
+                    return !sei_opt || sei_opt.value() == std::chrono::steady_clock::duration::zero();
+                }
+            } ();
+
+        auto do_send_will =
+            [&](session_state& session) {
+                if (session.will) {
+                    if (send_will) {
+                        // TODO: This should be triggered by the will delay
+                        // Not sent immediately.
+                        try {
+                            do_publish(
+                                ep,
+                                MQTT_NS::force_move(session.will.value().topic()),
+                                MQTT_NS::force_move(session.will.value().message()),
+                                session.will.value().get_qos() | session.will.value().get_retain(),
+                                MQTT_NS::force_move(session.will.value().props())
+                            );
+                        }
+                        catch (MQTT_NS::packet_id_exhausted_error const& e) {
+                            MQTT_LOG("mqtt_broker", warning)
+                                << MQTT_ADD_VALUE(address, session.con.get())
+                                << e.what();
+                        }
+                    }
+                    else {
+                        session.will = MQTT_NS::nullopt;
+                    }
+                }
+            };
+
+        if (session_clear) {
+            idx.modify(
+                it,
+                [&](session_state& e) {
+                    do_send_will(e);
+                },
+                [](auto&) { BOOST_ASSERT(false); }
+            );
+            idx.erase(it);
+            BOOST_ASSERT(sessions_.get<tag_con>().find(spep) == sessions_.get<tag_con>().end());
+            return false;
+        }
+        else {
+            idx.modify(
+                it,
+                [&](session_state& e) {
+                    do_send_will(e);
+                    // TODO: store inflight PUBLISH and PUBREL here using for_e.con.each_store()
+                    e.con.reset();
+
+                    auto const& sei_opt = e.session_expiry_interval;
+                    if (sei_opt && sei_opt.value() !=
+                        std::chrono::seconds(MQTT_NS::session_never_expire)) {
+                        e.tim_session_expiry = std::make_shared<as::steady_timer>(ioc_);
+                        e.tim_session_expiry->expires_after(sei_opt.value());
+                        e.tim_session_expiry->async_wait(
+                            [&, wp = std::weak_ptr<as::steady_timer>(e.tim_session_expiry)]
+                            (MQTT_NS::error_code ec) {
+                                auto sp = wp.lock();
+                                if (!ec) {
+                                    auto& idx = sessions_.get<tag_tim>();
+                                    idx.erase(sp);
+                                }
+                            }
+                        );
+                    }
+                    // TopicAlias lifetime is the same as Session lifetime
+                    // It is different from MQTT v5 spec but practical choice.
+                    // See
+                    // https://lists.oasis-open.org/archives/mqtt-comment/202009/msg00000.html
+                    e.topic_alias_recv = ep.get_topic_alias_recv_container();
+                },
+                [](auto&) { BOOST_ASSERT(false); }
+            );
+
+            return true;
+        }
+
     }
 
     bool publish_handler(
@@ -995,19 +1106,45 @@ private:
         std::vector<std::function<void()>> retain_deliver;
         retain_deliver.reserve(entries.size());
 
-        auto add_or_overwrite_sub =
+        auto insert_or_update_sub =
             [&](MQTT_NS::buffer topic_filter,
                 MQTT_NS::subscribe_options subopts,
                 MQTT_NS::optional<std::size_t> sid = MQTT_NS::nullopt) {
-                auto& idx = subs_online_.get<tag_con_topic_filter>();
-                auto r = idx.equal_range(std::make_tuple(spep, topic_filter));
-                if (r.first == r.second) {
-                    // add new subscription
+
+                auto& idx = sessions_.get<tag_con>();
+                auto it = idx.find(spep);
+                BOOST_ASSERT(it != idx.end());
+
+                // The element of sessions_ must have longer lifetime
+                // than corresponding subscription.
+                // Because the subscription store the reference of the element.
+                MQTT_NS::optional<session_state_ref> ssr_opt;
+                idx.modify(
+                    it,
+                    [&](session_state& e) {
+                        ssr_opt.emplace(e);
+                    },
+                    [](auto&) { BOOST_ASSERT(false); }
+                );
+
+                BOOST_ASSERT(ssr_opt);
+                session_state_ref ssr {ssr_opt.value()};
+
+                auto handle_ret = subs_map_.insert_or_assign(
+                    MQTT_NS::force_move(topic_filter),
+                    it->client_id,
+                    subscription(ssr, subopts, sid)
+                );
+
+                auto rh = subopts.get_retain_handling();
+
+                if (handle_ret.second) { // insert
+
                     MQTT_LOG("mqtt_broker", trace)
                         << MQTT_ADD_VALUE(address, spep.get())
                         << "subs_online_.emplace() " << "topic_filter:" << topic_filter << " qos:" << subopts.get_qos();
-                    idx.emplace_hint(r.first, subs_map_online_, spep, topic_filter, subopts, sid);
-                    auto rh = subopts.get_retain_handling();
+
+                    ssr.get().handles.insert(handle_ret.first);
                     if (rh == MQTT_NS::retain_handling::send ||
                         rh == MQTT_NS::retain_handling::send_only_new_subscription) {
                         retains_.find(
@@ -1022,20 +1159,12 @@ private:
                         );
                     }
                 }
-                else {
-                    // update subscription
+                else { // update
+
                     MQTT_LOG("mqtt_broker", trace)
                         << MQTT_ADD_VALUE(address, spep.get())
                         << "subs_online_.update " << "topic_filter:" << topic_filter << " qos:" << subopts.get_qos();
-                    idx.modify(
-                        r.first,
-                        [&](sub_con_online& e) {
-                            e.subopts = subopts;
-                            e.sid = sid;
-                        }
-                    );
 
-                    auto rh = subopts.get_retain_handling();
                     if (rh == MQTT_NS::retain_handling::send) {
                         retains_.find(
                             topic_filter,
@@ -1060,22 +1189,19 @@ private:
         // So we reply with the QOS setting that was granted
         // not the one requested.
         switch (ep.get_protocol_version()) {
-        case MQTT_NS::protocol_version::v3_1_1:
-        {
+        case MQTT_NS::protocol_version::v3_1_1: {
             std::vector<MQTT_NS::suback_return_code> res;
             res.reserve(entries.size());
             for (auto const& e : entries) {
                 MQTT_NS::buffer topic_filter = std::get<0>(e);
                 MQTT_NS::subscribe_options subopts = std::get<1>(e);
                 res.emplace_back(MQTT_NS::qos_to_suback_return_code(subopts.get_qos())); // converts to granted_qos_x
-                add_or_overwrite_sub(MQTT_NS::force_move(topic_filter), subopts);
+                insert_or_update_sub(MQTT_NS::force_move(topic_filter), subopts);
             }
             // Acknowledge the subscriptions, and the registered QOS settings
             ep.suback(packet_id, MQTT_NS::force_move(res));
-            break;
-        }
-        case MQTT_NS::protocol_version::v5:
-        {
+        } break;
+        case MQTT_NS::protocol_version::v5: {
             // Get subscription identifier
             for (auto const& p : props) {
                 MQTT_NS::visit(
@@ -1098,13 +1224,12 @@ private:
                 MQTT_NS::buffer topic_filter = std::get<0>(e);
                 MQTT_NS::subscribe_options subopts = std::get<1>(e);
                 res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(subopts.get_qos())); // converts to granted_qos_x
-                add_or_overwrite_sub(MQTT_NS::force_move(topic_filter), subopts, sid);
+                insert_or_update_sub(MQTT_NS::force_move(topic_filter), subopts, sid);
             }
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
             ep.suback(packet_id, MQTT_NS::force_move(res), suback_props_);
-            break;
-        }
+        } break;
         default:
             BOOST_ASSERT(false);
             break;
@@ -1124,47 +1249,25 @@ private:
 
         auto& ep = *spep;
 
+        auto& idx = sessions_.get<tag_con>();
+        auto it  = idx.find(spep);
+        BOOST_ASSERT(it != idx.end());
+
         // For each subscription that this connection has
         // Compare against the list of topic filters, and remove
         // the subscription if the topic filter is in the list.
-        {
-            auto & idx = subs_online_.get<tag_con>();
-            auto const& range = boost::make_iterator_range(idx.equal_range(spep));
-            for(auto it = range.begin(); it != range.end(); ) {
-                bool match = false;
-                for(auto const& topic_filter : topic_filters) {
-                    if(it->topic_filter == topic_filter) {
-                        /*
-                         * Advance the iterator using the return from erase.
-                         * The returned it may be equal to the next topic filter in
-                         * the list, so we continue comparing. When the loop
-                         * finishes, however, we can't blindly advance the
-                         * iterator, because that might result in skipping
-                         * an iterator that hasn't been checked. Further, we
-                         * can't only rely on the inner loop to advance the
-                         * iterator because we might not have a match, and
-                         * thus would infinitely loop on the current iterator.
-                         */
-                        MQTT_LOG("mqtt_broker", trace)
-                            << MQTT_ADD_VALUE(address, spep.get())
-                            << "subs_online_.erase() " << "topic_filter:" << topic_filter;
-                        it = idx.erase(it);
-                        match = true;
-                        break;
-                    }
-                }
-                if( ! match)
-                {
-                    std::advance(it, 1);
-                }
-            }
-        }
-
-        for(auto const& item : boost::make_iterator_range( subs_online_.get<tag_con>().equal_range(spep))) {
-            (void)item;
-            for(auto const& topic_filter : topic_filters) {
-                (void)topic_filter;
-                BOOST_ASSERT(item.topic_filter != topic_filter);
+        for (auto const& topic_filter : topic_filters) {
+            auto handle = subs_map_.lookup(topic_filter);
+            if (handle) {
+                idx.modify(
+                    it,
+                    [&](auto& e) {
+                        e.handles.erase(handle.value());
+                        e.clean();
+                    },
+                    [](auto&) { BOOST_ASSERT(false); }
+                );
+                subs_map_.erase(handle.value(), it->client_id);
             }
         }
 
@@ -1174,12 +1277,20 @@ private:
             break;
         case MQTT_NS::protocol_version::v5:
             if (h_unsubscribe_props_) h_unsubscribe_props_(props);
-            ep.unsuback(packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code>(topic_filters.size(), MQTT_NS::v5::unsuback_reason_code::success), unsuback_props_);
+            ep.unsuback(
+                packet_id,
+                std::vector<MQTT_NS::v5::unsuback_reason_code>(
+                    topic_filters.size(),
+                    MQTT_NS::v5::unsuback_reason_code::success
+                ),
+                unsuback_props_
+            );
             break;
         default:
             BOOST_ASSERT(false);
             break;
         }
+
         return true;
     }
 
@@ -1200,39 +1311,42 @@ private:
         MQTT_NS::publish_options pubopts,
         MQTT_NS::v5::properties props) {
 
-        auto deliver =
-            [&](auto& subs, auto sc) {
+        subs_map_.modify(
+            topic,
+            [&](MQTT_NS::buffer const& /*key*/, subscription& sub) {
+                // If NL (no local) subscription option is set and
+                // publisher is the same as subscriber, then skip it.
+                if (sub.subopts.get_nl() == MQTT_NS::nl::yes &&
+                    sub.ss.get().con.get() ==  &ep) return;
+
                 // publish the message to subscribers.
                 // retain is delivered as the original only if rap_value is rap::retain.
                 // On MQTT v3.1.1, rap_value is always rap::dont.
-                subs.modify(
-                    subs.iterator_to(sc.get()),
-                    [&](auto& val) {
-                        val.deliver(
-                            topic,
-                            contents,
-                            pubopts.get_qos(),
-                            pubopts.get_retain(),
-                            props
-                        );
-                    },
-                    [](auto&) { BOOST_ASSERT(false); }
-                );
-            };
 
-        subs_map_online_.find(
-            topic,
-            [&](sub_con_online_cref sc, int /*value*/) {
-                // If NL (no local) subscription option is set and
-                // publisher is the same as subscriber, then skip it.
-                if (sc.get().subopts.get_nl() == MQTT_NS::nl::yes && sc.get().from_me(ep)) return;
-                deliver(subs_online_, sc);
-            }
-        );
-        subs_map_offline_.find(
-            topic,
-            [&](sub_con_offline_cref sc, int /*value*/) {
-                deliver(subs_offline_, sc);
+                MQTT_NS::publish_options new_pubopts = std::min(pubopts.get_qos(), sub.subopts.get_qos());
+                if (sub.subopts.get_rap() == MQTT_NS::rap::retain && pubopts.get_retain() == MQTT_NS::retain::yes) {
+                    new_pubopts |= MQTT_NS::retain::yes;
+                }
+
+                if (sub.sid) {
+                    props.push_back(MQTT_NS::v5::property::subscription_identifier(sub.sid.value()));
+                    sub.ss.get().deliver(
+                        topic,
+                        contents,
+                        new_pubopts,
+                        props
+                    );
+                    props.pop_back();
+                }
+                else {
+                    sub.ss.get().deliver(
+                        topic,
+                        contents,
+                        new_pubopts,
+                        props
+                    );
+                }
+
             }
         );
 
@@ -1275,150 +1389,6 @@ private:
         }
     }
 
-    /**
-     * @brief close_proc - clean up a connection that has been closed.
-     *
-     * @param ep - The underlying MQTT_NS::server (of whichever type) that is disconnecting.
-     * @param send_will - Whether to publish this connections last will
-     */
-    // TODO: Maybe change the name of this function.
-    void close_proc(con_sp_t spep, bool send_will) {
-        endpoint_t& ep = *spep;
-
-        auto & act_sess_idx = sessions_online_.get<tag_con>();
-        auto act_sess_it = act_sess_idx.find(spep);
-
-        // act_sess_it == act_sess_idx.end() could happen if broker accepts
-        // the session from client but the client closes the session  before sending
-        // MQTT `CONNECT` message.
-        // In this case, do nothing is correct behavior.
-        if (act_sess_it == act_sess_idx.end()) return;
-
-        MQTT_NS::buffer client_id;
-        MQTT_NS::optional<MQTT_NS::will> will;
-        bool session_clear =
-            [&] {
-                if (ep.get_protocol_version() == MQTT_NS::protocol_version::v3_1_1) {
-                    return ep.clean_session();
-                }
-                else {
-                    BOOST_ASSERT(ep.get_protocol_version() == MQTT_NS::protocol_version::v5);
-                    auto const& sei_opt = act_sess_it->session_expiry_interval;
-                    return !sei_opt || sei_opt.value() == std::chrono::steady_clock::duration::zero();
-                }
-            } ();
-        if (session_clear) {
-            client_id = std::move(act_sess_it->client_id);
-            will = std::move(act_sess_it->will);
-
-            act_sess_idx.erase(act_sess_it);
-
-            BOOST_ASSERT(sessions_online_.get<tag_cid>().count(client_id) == 0);
-            BOOST_ASSERT(sessions_online_.get<tag_cid>().find(client_id) == sessions_online_.get<tag_cid>().end());
-
-            BOOST_ASSERT(sessions_online_.get<tag_con>().count(spep) == 0);
-            BOOST_ASSERT(sessions_online_.get<tag_con>().find(spep) == sessions_online_.get<tag_con>().end());
-
-            BOOST_ASSERT(sessions_offline_.get<tag_cid>().count(client_id) == 0);
-            BOOST_ASSERT(sessions_offline_.get<tag_cid>().find(client_id) == sessions_offline_.get<tag_cid>().end());
-        }
-        else {
-            session_state state = std::move(*act_sess_it);
-            client_id = state.client_id;
-            will = std::move(state.will);
-
-            // TODO: Should yank out the messages from this connection object and store it in the session_state object??
-            state.con.reset(); // clear the shared pointer, so it doesn't stay alive after this funciton ends.
-
-            act_sess_idx.erase(act_sess_it);
-            BOOST_ASSERT(sessions_online_.get<tag_cid>().count(client_id) == 0);
-            BOOST_ASSERT(sessions_online_.get<tag_cid>().find(client_id) == sessions_online_.get<tag_cid>().end());
-
-            BOOST_ASSERT(sessions_online_.get<tag_con>().count(spep) == 0);
-            BOOST_ASSERT(sessions_online_.get<tag_con>().find(spep) == sessions_online_.get<tag_con>().end());
-
-            BOOST_ASSERT(sessions_offline_.get<tag_cid>().count(client_id) == 0);
-            BOOST_ASSERT(sessions_offline_.get<tag_cid>().find(client_id) == sessions_offline_.get<tag_cid>().end());
-
-            auto const& sei_opt = state.session_expiry_interval;
-            if (sei_opt && sei_opt.value() !=
-                std::chrono::seconds(MQTT_NS::session_never_expire)) {
-                state.tim_session_expiry = std::make_shared<as::steady_timer>(ioc_);
-                state.tim_session_expiry->expires_after(sei_opt.value());
-                state.tim_session_expiry->async_wait(
-                    [&, wp = std::weak_ptr<as::steady_timer>(state.tim_session_expiry)]
-                    (MQTT_NS::error_code ec) {
-                        auto sp = wp.lock();
-                        if (!ec) {
-                            auto& idx_sess = sessions_offline_.get<tag_tim>();
-                            auto it = idx_sess.find(sp);
-                            if (it != idx_sess.end()) {
-                                auto& idx_sub = subs_offline_.get<tag_cid>();
-                                idx_sub.erase(it->client_id);
-                                idx_sess.erase(it);
-                            }
-                        }
-                    }
-                );
-            }
-
-            // TopicAlias lifetime is the same as Session lifetime
-            // It is different from MQTT v5 spec but practical choice.
-            // See
-            // https://lists.oasis-open.org/archives/mqtt-comment/202009/msg00000.html
-            state.topic_alias_recv = ep.get_topic_alias_recv_container();
-
-            auto const& ret = sessions_offline_.insert(MQTT_NS::force_move(state));
-            (void)ret;
-            BOOST_ASSERT(ret.second);
-            BOOST_ASSERT(sessions_offline_.get<tag_cid>().count(client_id) == 1);
-            BOOST_ASSERT(ret.first->client_id == client_id);
-            BOOST_ASSERT(ret.first == sessions_offline_.get<tag_cid>().find(client_id));
-        }
-
-        // Before sending the will, either erase, or save, any subscriptions that
-        // match this connection. It's possible that none match, and that's fine.
-        {
-            auto& idx = subs_online_.get<tag_con>();
-            auto const& range = boost::make_iterator_range(idx.equal_range(spep));
-            // In v3_1_1, session_expiry_interval is not set. So clean on close.
-            if (session_clear) {
-                // Remove all subscriptions for this clientid
-                idx.erase(range.begin(), range.end());
-            }
-            else if( ! range.empty()) {
-                // Save all the subscriptions for this clientid for later.
-                for(auto const& item : range) {
-                    auto const& ret =
-                        subs_offline_.emplace(
-                            subs_map_offline_,
-                            client_id,
-                            item.topic_filter,
-                            item.subopts,
-                            item.sid
-                        );
-                    (void)ret;
-                    BOOST_ASSERT(ret.second);
-                    BOOST_ASSERT(ret.first == subs_offline_.find(client_id));
-                }
-                idx.erase(range.begin(), range.end());
-            }
-            BOOST_ASSERT(idx.count(spep) == 0);
-        }
-
-        if(send_will && will) {
-            // TODO: This should be triggered by the will delay
-            // Not sent immediately.
-            do_publish(
-                ep,
-                MQTT_NS::force_move(will.value().topic()),
-                MQTT_NS::force_move(will.value().message()),
-                will.value().get_qos() | will.value().get_retain(),
-                MQTT_NS::force_move(will.value().props())
-            );
-        }
-    }
-
 private:
     struct tag_con {};
     struct tag_topic{};
@@ -1428,214 +1398,37 @@ private:
     struct tag_cid_topic_filter {};
     struct tag_tim {};
 
-    /**
-     * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Session_State
-     *
-     * 4.1 Session State
-     * In order to implement QoS 1 and QoS 2 protocol flows the Client and Server need to associate state with the Client Identifier, this is referred to as the Session State. The Server also stores the subscriptions as part of the Session State.
-     * The session can continue across a sequence of Network Connections. It lasts as long as the latest Network Connection plus the Session Expiry Interval.
-     * The Session State in the Server consists of:
-     * · The existence of a Session, even if the rest of the Session State is empty.
-     * · The Clients subscriptions, including any Subscription Identifiers.
-     * · QoS 1 and QoS 2 messages which have been sent to the Client, but have not been completely acknowledged.
-     * · QoS 1 and QoS 2 messages pending transmission to the Client and OPTIONALLY QoS 0 messages pending transmission to the Client.
-     * · QoS 2 messages which have been received from the Client, but have not been completely acknowledged.
-     * · The Will Message and the Will Delay Interval
-     * · If the Session is currently not connected, the time at which the Session will end and Session State will be discarded.
-     *
-     * Retained messages do not form part of the Session State in the Server, they are not deleted as a result of a Session ending.
-     */
-    struct session_state {
-        // TODO: Currently not fully implemented...
-        session_state(
-            con_sp_t con,
-            MQTT_NS::buffer client_id,
-            MQTT_NS::optional<MQTT_NS::will> will,
-            MQTT_NS::optional<std::chrono::steady_clock::duration> session_expiry_interval = MQTT_NS::nullopt)
-            :con(MQTT_NS::force_move(con)),
-             client_id(MQTT_NS::force_move(client_id)),
-             will(MQTT_NS::force_move(will)),
-             session_expiry_interval(MQTT_NS::force_move(session_expiry_interval))
-        {}
+    struct session_state;
+    using session_state_ref = std::reference_wrapper<session_state>;
 
-        session_state() = default;
-        session_state(session_state &&) = default;
-        session_state(session_state const&) = default;
-        session_state& operator=(session_state &&) = default;
-        session_state& operator=(session_state const&) = default;
-
-        con_sp_t con;
-        MQTT_NS::buffer client_id;
-
-        // TODO:
-        // Messages sent to client, but not acknowledged.
-        // Messages pending transmission to client
-        // messages received from client, but not acknowledged
-        MQTT_NS::optional<MQTT_NS::will> will;
-        MQTT_NS::optional<std::chrono::steady_clock::duration> will_delay;
-        MQTT_NS::optional<std::chrono::steady_clock::duration> session_expiry_interval;
-        std::shared_ptr<as::steady_timer> tim_session_expiry;
-        MQTT_NS::optional<MQTT_NS::topic_alias_recv_map_t> topic_alias_recv;
-    };
-
-    // The mi_session_online container holds the relevant data about an active connection with the broker.
-    // It can be queried either with the clientid, or with the shared pointer to the mqtt endpoint object
-    using mi_session_online = mi::multi_index_container<
-        session_state,
-        mi::indexed_by<
-            mi::ordered_unique<
-                mi::tag<tag_con>,
-                BOOST_MULTI_INDEX_MEMBER(session_state, con_sp_t, con)
-            >,
-            mi::ordered_unique<
-                mi::tag<tag_cid>,
-                BOOST_MULTI_INDEX_MEMBER(session_state, MQTT_NS::buffer, client_id)
-            >
-        >
-    >;
-
-    // The mi_session_online container holds the relevant data about an active connection with the broker.
-    // It can be queried either with the clientid, or with the shared pointer to the mqtt endpoint object
-    using mi_session_offline = mi::multi_index_container<
-        session_state,
-        mi::indexed_by<
-            mi::ordered_unique<
-                mi::tag<tag_cid>,
-                BOOST_MULTI_INDEX_MEMBER(session_state, MQTT_NS::buffer, client_id)
-            >,
-            mi::ordered_unique<
-                mi::tag<tag_tim>,
-                BOOST_MULTI_INDEX_MEMBER(session_state, std::shared_ptr<as::steady_timer>, tim_session_expiry)
-            >
-        >
-    >;
-
-    struct sub_con_online;
-    struct sub_con_offline;
-
-    // subscription_map manage only a reference of sub_con.
-    // It is more efficient than using shared_ptr.
-    // However, managing lifetime is user's responsibility.
-    // I design that multi_index container of sub_con always has longer lifetime
-    // than subscription_map.
-    using sub_con_online_cref = std::reference_wrapper<sub_con_online const>;
-    using sub_con_offline_cref = std::reference_wrapper<sub_con_offline const>;
-
-    struct sub_con_online_cref_hasher
-    {
-        std::size_t operator()(sub_con_online_cref const& s) const noexcept;
-    };
-
-    struct sub_con_offline_cref_hasher
-    {
-        std::size_t operator()(sub_con_offline_cref const& s) const noexcept;
-    };
-
-    struct sub_con_online_cref_equal_to
-    {
-        bool operator()(sub_con_online_cref const& lhs, sub_con_online_cref const& rhs) const noexcept;
-    };
-
-    struct sub_con_offline_cref_equal_to
-    {
-        bool operator()(sub_con_offline_cref const& lhs, sub_con_offline_cref const& rhs) const noexcept;
-    };
-
-    using sub_con_online_map = multiple_subscription_map<sub_con_online_cref, int, sub_con_online_cref_hasher, sub_con_online_cref_equal_to >;
-    using sub_con_offline_map = multiple_subscription_map<sub_con_offline_cref, int, sub_con_offline_cref_hasher, sub_con_offline_cref_equal_to >;
-
-    friend bool operator<(sub_con_online_cref lhs, sub_con_online_cref rhs) {
-        return &lhs.get() < &rhs.get();
-    }
-    friend bool operator<(sub_con_offline_cref lhs, sub_con_offline_cref rhs) {
-        return &lhs.get() < &rhs.get();
-    }
-
-
-    // Mapping between connection object and subscription topics
-    struct sub_con_online {
-        sub_con_online(
-            sub_con_online_map& sco_map,
-            con_sp_t con,
-            MQTT_NS::buffer topic_filter,
+    struct subscription {
+        subscription(
+            session_state_ref ss,
             MQTT_NS::subscribe_options subopts,
             MQTT_NS::optional<std::size_t> sid)
-            :sco_map(sco_map),
-             con(MQTT_NS::force_move(con)),
-             topic_filter(MQTT_NS::force_move(topic_filter)),
-             subopts(subopts),
-             sid(sid),
-             handle(sco_map.insert_or_assign(topic_filter, *this, 0).first) {}
+            :ss { ss },
+             subopts { subopts },
+             sid { sid }
+        {}
 
-        ~sub_con_online() {
-            sco_map.erase(handle, *this);
-        }
-
-        void deliver(
-            MQTT_NS::buffer pub_topic,
-            MQTT_NS::buffer contents,
-            MQTT_NS::qos pub_qos_value,
-            MQTT_NS::retain retain,
-            MQTT_NS::v5::properties props) {
-
-            MQTT_NS::publish_options pubopts = std::min(subopts.get_qos(), pub_qos_value);
-            if (subopts.get_rap() == MQTT_NS::rap::retain && retain == MQTT_NS::retain::yes) {
-                pubopts |= MQTT_NS::retain::yes;
-            }
-
-            if (sid) {
-                props.push_back(MQTT_NS::v5::property::subscription_identifier(*sid));
-            }
-            // TODO: Probably this should be switched to async_publish?
-
-            //       Given the async_client / sync_client seperation
-            //       and the way they have different function names,
-            //       it wouldn't be possible for test_broker.hpp to be
-            //       used with some hypothetical "async_server" in the future.
-            con->publish(
-                MQTT_NS::force_move(pub_topic),
-                MQTT_NS::force_move(contents),
-                pubopts,
-                MQTT_NS::force_move(props)
-            );
-        }
-
-        bool from_me(endpoint_t const& ep) const {
-            return con.get() == &ep;
-        }
-
-        sub_con_online_map& sco_map;
-        con_sp_t con;
-        MQTT_NS::buffer topic_filter;
+        session_state_ref ss;
         MQTT_NS::subscribe_options subopts;
         MQTT_NS::optional<std::size_t> sid;
-        sub_con_online_map::handle handle; // to efficient remove
     };
-    using mi_sub_con_online = mi::multi_index_container<
-        sub_con_online,
-        mi::indexed_by<
-            mi::ordered_non_unique<
-                mi::tag<tag_topic_filter>,
-                BOOST_MULTI_INDEX_MEMBER(sub_con_online, MQTT_NS::buffer, topic_filter)
-            >,
-            mi::ordered_non_unique<
-                mi::tag<tag_con>,
-                BOOST_MULTI_INDEX_MEMBER(sub_con_online, con_sp_t, con)
-            >,
-            // Don't allow the same connection object to have the same topic multiple times.
-            // Note that this index does not get used by any code in the broker
-            // other than to enforce the uniqueness constraints.
-            // Potentially this can be enabled only in debug builds.
-            mi::ordered_unique<
-                mi::tag<tag_con_topic_filter>,
-                mi::composite_key<
-                    sub_con_online,
-                    BOOST_MULTI_INDEX_MEMBER(sub_con_online, con_sp_t, con),
-                    BOOST_MULTI_INDEX_MEMBER(sub_con_online, MQTT_NS::buffer, topic_filter)
-                >
-            >
-        >
-    >;
+
+    friend bool operator<(subscription const& lhs, subscription const& rhs) {
+        return &lhs.ss.get() < &rhs.ss.get();
+    }
+
+    struct buffer_hasher  {
+        std::size_t operator()(MQTT_NS::buffer const& b) const noexcept {
+            std::size_t result = 0;
+            boost::hash_combine(result, b);
+            return result;
+        }
+    };
+
+    using sub_con_map = multiple_subscription_map<MQTT_NS::buffer, subscription, buffer_hasher>;
 
     // The offline_message structure holds messages that have been published on a
     // topic that a not-currently-connected client is subscribed to.
@@ -1657,88 +1450,129 @@ private:
         MQTT_NS::publish_options pubopts;
     };
 
-    // Each instance of sub_con_offline describes a subscription that the associated client id has made
-    // and a collection of data associated with that subscription to be sent when the client reconnects.
-    struct sub_con_offline {
-        sub_con_offline(
-            sub_con_offline_map& sco_map,
+    /**
+     * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Session_State
+     *
+     * 4.1 Session State
+     * In order to implement QoS 1 and QoS 2 protocol flows the Client and Server need to associate state with the Client Identifier, this is referred to as the Session State. The Server also stores the subscriptions as part of the Session State.
+     * The session can continue across a sequence of Network Connections. It lasts as long as the latest Network Connection plus the Session Expiry Interval.
+     * The Session State in the Server consists of:
+     * · The existence of a Session, even if the rest of the Session State is empty.
+     * · The Clients subscriptions, including any Subscription Identifiers.
+     * · QoS 1 and QoS 2 messages which have been sent to the Client, but have not been completely acknowledged.
+     * · QoS 1 and QoS 2 messages pending transmission to the Client and OPTIONALLY QoS 0 messages pending transmission to the Client.
+     * · QoS 2 messages which have been received from the Client, but have not been completely acknowledged.
+     * · The Will Message and the Will Delay Interval
+     * · If the Session is currently not connected, the time at which the Session will end and Session State will be discarded.
+     *
+     * Retained messages do not form part of the Session State in the Server, they are not deleted as a result of a Session ending.
+     */
+    struct session_state {
+        // TODO: Currently not fully implemented...
+        session_state(
+            sub_con_map& subs_map,
+            con_sp_t con,
             MQTT_NS::buffer client_id,
-            MQTT_NS::buffer topic_filter,
-            MQTT_NS::subscribe_options subopts,
-            MQTT_NS::optional<std::size_t> sid)
-            :sco_map(sco_map),
+            MQTT_NS::optional<MQTT_NS::will> will,
+            MQTT_NS::optional<std::chrono::steady_clock::duration> session_expiry_interval = MQTT_NS::nullopt)
+            :subs_map_(subs_map),
+             con(MQTT_NS::force_move(con)),
              client_id(MQTT_NS::force_move(client_id)),
-             topic_filter(MQTT_NS::force_move(topic_filter)),
-             subopts(subopts),
-             sid(sid),
-             handle(sco_map.insert_or_assign(topic_filter, *this, 0).first) {}
+             will(MQTT_NS::force_move(will)),
+             session_expiry_interval(MQTT_NS::force_move(session_expiry_interval))
+        {}
 
-        ~sub_con_offline() {
-            sco_map.erase(handle, *this);
+        session_state() = default;
+        session_state(session_state&&) = default;
+
+        ~session_state() {
+            unsubscribe_all();
+        }
+
+        bool online() const {
+            return bool(con);
         }
 
         void deliver(
             MQTT_NS::buffer pub_topic,
             MQTT_NS::buffer contents,
-            MQTT_NS::qos pub_qos_value,
-            MQTT_NS::retain retain,
+            MQTT_NS::publish_options pubopts,
             MQTT_NS::v5::properties props) {
 
-            MQTT_NS::publish_options pubopts = std::min(subopts.get_qos(), pub_qos_value);
-            if (subopts.get_rap() == MQTT_NS::rap::retain && retain == MQTT_NS::retain::yes) {
-                pubopts |= MQTT_NS::retain::yes;
+            if (online()) {
+                // TODO: Probably this should be switched to async_publish?
+
+                //       Given the async_client / sync_client seperation
+                //       and the way they have different function names,
+                //       it wouldn't be possible for test_broker.hpp to be
+                //       used with some hypothetical "async_server" in the future.
+                con->publish(
+                    MQTT_NS::force_move(pub_topic),
+                    MQTT_NS::force_move(contents),
+                    pubopts,
+                    MQTT_NS::force_move(props)
+                );
             }
-            if (sid) {
-                props.push_back(MQTT_NS::v5::property::subscription_identifier(*sid));
+            else {
+                offline_messages.emplace_back(
+                    MQTT_NS::force_move(pub_topic),
+                    MQTT_NS::force_move(contents),
+                    MQTT_NS::force_move(props),
+                    pubopts
+                );
             }
-            messages.emplace_back(
-                MQTT_NS::force_move(pub_topic),
-                MQTT_NS::force_move(contents),
-                MQTT_NS::force_move(props),
-                pubopts
-            );
         }
 
-        bool from_me(endpoint_t const&) const {
-            return false;
+        void clean() {
+            topic_alias_recv = MQTT_NS::nullopt;
+            offline_messages.clear();
+            unsubscribe_all();
         }
 
-        sub_con_offline_map& sco_map;
+        void unsubscribe_all() {
+            for (auto const& h : handles) {
+                subs_map_.value().get().erase(h, client_id);
+            }
+            handles.clear();
+        }
+
+        MQTT_NS::optional<std::reference_wrapper<sub_con_map>> subs_map_;
+        con_sp_t con;
         MQTT_NS::buffer client_id;
-        MQTT_NS::buffer topic_filter;
-        std::vector<offline_message> messages;
-        MQTT_NS::subscribe_options subopts;
-        MQTT_NS::optional<std::size_t> sid;
-        sub_con_offline_map::handle handle; // to efficient remove
+
+        MQTT_NS::optional<MQTT_NS::will> will;
+        MQTT_NS::optional<std::chrono::steady_clock::duration> will_delay;
+        MQTT_NS::optional<std::chrono::steady_clock::duration> session_expiry_interval;
+        std::shared_ptr<as::steady_timer> tim_session_expiry;
+        MQTT_NS::optional<MQTT_NS::topic_alias_recv_map_t> topic_alias_recv;
+        // TODO:
+        // insert resend_messages here. get by for_each_store
+        // PUBLISH with assigned packet_id
+        // PUBREL
+        std::deque<offline_message> offline_messages;
+        std::set<sub_con_map::handle> handles; // to efficient remove
     };
-    using mi_sub_con_offline = mi::multi_index_container<
-        sub_con_offline,
+
+    // The mi_session_online container holds the relevant data about an active connection with the broker.
+    // It can be queried either with the clientid, or with the shared pointer to the mqtt endpoint object
+    using mi_session_state = mi::multi_index_container<
+        session_state,
         mi::indexed_by<
-            // Allow multiple client id's for the same topic_filter
+            // non is nullable
             mi::ordered_non_unique<
-                mi::tag<tag_cid>,
-                BOOST_MULTI_INDEX_MEMBER(sub_con_offline, MQTT_NS::buffer, client_id)
+                mi::tag<tag_con>,
+                BOOST_MULTI_INDEX_MEMBER(session_state, con_sp_t, con)
             >,
-            // Allow multiple topic_filters for the same client id
-            mi::ordered_non_unique<
-                mi::tag<tag_topic_filter>,
-                BOOST_MULTI_INDEX_MEMBER(sub_con_offline, MQTT_NS::buffer, topic_filter)
-            >,
-            // Don't allow the same client id to have the same topic_filter multiple times.
-            // Note that this index does not get used by any code in the broker
-            // other than to enforce the uniqueness constraints.
-            // Potentially this can be enabled only in debug builds.
             mi::ordered_unique<
-                mi::tag<tag_cid_topic_filter>,
-                mi::composite_key<
-                    sub_con_offline,
-                    BOOST_MULTI_INDEX_MEMBER(sub_con_offline, MQTT_NS::buffer, client_id),
-                    BOOST_MULTI_INDEX_MEMBER(sub_con_offline, MQTT_NS::buffer, topic_filter)
-                >
+                mi::tag<tag_cid>,
+                BOOST_MULTI_INDEX_MEMBER(session_state, MQTT_NS::buffer, client_id)
+            >,
+            mi::ordered_non_unique<
+                mi::tag<tag_tim>,
+                BOOST_MULTI_INDEX_MEMBER(session_state, std::shared_ptr<as::steady_timer>, tim_session_expiry)
             >
         >
     >;
-
 
     // A collection of messages that have been retained in
     // case clients add a new subscription to the associated topics.
@@ -1764,14 +1598,10 @@ private:
     as::steady_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
     MQTT_NS::optional<std::chrono::steady_clock::duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
 
-    mi_session_online   sessions_online_; ///< Map of active client id and connections
-    mi_session_offline  sessions_offline_; ///< Storage for sessions not currently active. Indexed by client id.
+    mi_session_state sessions_; ///< Map of active client id and connections
 
-    sub_con_online_map subs_map_online_;   /// should have longer lifetime than subs_online_
-    sub_con_offline_map subs_map_offline_; /// should have longer lifetime than subs_offline_
+    sub_con_map subs_map_;   /// subscription information
 
-    mi_sub_con_online   subs_online_; ///< Map of topic subscriptions to client ids
-    mi_sub_con_offline  subs_offline_; ///< Topics and associated messages for clientids that are currently disconnected
     retained_messages retains_; ///< A list of messages retained so they can be sent to newly subscribed clients.
 
     // MQTTv5 members
@@ -1794,30 +1624,5 @@ private:
     std::function<void(MQTT_NS::v5::properties const&)> h_auth_props_;
     bool pingresp_ = true;
 };
-
-// Hash and equal_to required for storing sub_con_online and sub_con_offline in subscription map
-inline std::size_t test_broker::sub_con_online_cref_hasher::operator()(test_broker::sub_con_online_cref const& s) const noexcept
-{
-    std::size_t result = 0;
-    boost::hash_combine(result, s.get().con);
-    boost::hash_combine(result, s.get().topic_filter);
-    return result;
-}
-
-inline std::size_t test_broker::sub_con_offline_cref_hasher::operator()(test_broker::sub_con_offline_cref const& s) const noexcept
-{
-    std::size_t result = 0;
-    boost::hash_combine(result, s.get().client_id);
-    boost::hash_combine(result, s.get().topic_filter);
-    return result;
-}
-
-inline bool test_broker::sub_con_online_cref_equal_to::operator()(test_broker::sub_con_online_cref const& lhs, test_broker::sub_con_online_cref const& rhs) const noexcept {
-    return lhs.get().con == rhs.get().con && lhs.get().topic_filter == rhs.get().topic_filter;
-}
-
-inline bool test_broker::sub_con_offline_cref_equal_to::operator()(test_broker::sub_con_offline_cref const& lhs, test_broker::sub_con_offline_cref const& rhs) const noexcept {
-    return lhs.get().client_id == rhs.get().client_id && lhs.get().topic_filter == rhs.get().topic_filter;
-}
 
 #endif // MQTT_TEST_BROKER_HPP
