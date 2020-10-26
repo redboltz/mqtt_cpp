@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
             MQTT_NS::v5::properties {},
             MQTT_NS::qos::at_most_once
         };
-        m.insert_or_update(r.topic, r);
+        m.insert_or_assign(r.topic, r);
     }
     {
         retain r {
@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
             MQTT_NS::v5::properties {},
             MQTT_NS::qos::at_most_once
         };
-        m.insert_or_update(r.topic, r);
+        m.insert_or_assign(r.topic, r);
     }
 
     // subscribe match
@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
             MQTT_NS::v5::properties {},
             MQTT_NS::qos::at_most_once
         };
-        m.insert_or_update(r.topic, r);
+        m.insert_or_assign(r.topic, r);
     }
     {
         retain r {
@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
             MQTT_NS::v5::properties {},
             MQTT_NS::qos::at_most_once
         };
-        m.insert_or_update(r.topic, r);
+        m.insert_or_assign(r.topic, r);
     }
 
     // subscribe match

@@ -168,15 +168,15 @@ class retained_topic_map {
 
     }
 
-    // Find all topics that match the specified subscription
+    // Find all topics that match the specified topic filter
     template<typename Output>
-    void find_match(MQTT_NS::string_view subscription, Output callback) const {
+    void find_match(MQTT_NS::string_view topic_filter, Output callback) const {
         std::deque<direct_const_iterator> entries;
         entries.push_back(root);
 
         std::deque<direct_const_iterator> new_entries;
         topic_filter_tokenizer(
-            subscription,
+            topic_filter,
             [this, &entries, &new_entries, &callback](MQTT_NS::string_view t) {
                 auto const& direct_index = map.template get<direct_index_tag>();
                 auto const& wildcard_index = map.template get<wildcard_index_tag>();
@@ -187,7 +187,7 @@ class retained_topic_map {
 
                     if (t == MQTT_NS::string_view("+")) {
                         for (auto i = wildcard_index.lower_bound(parent); i != wildcard_index.end() && i->parent_id == parent; ++i) {
-                            if (parent != root_node_id || (i->name.empty() ? true : i->name[0] != '$')) {
+                            if (parent != root_node_id || i->name.empty() || i->name[0] != '$') {
                                 new_entries.push_back(map.template project<direct_index_tag, wildcard_const_iterator>(i));
                             }
                             else {
@@ -219,7 +219,7 @@ class retained_topic_map {
         }
     }
 
-    // Remove a value at the specified subscription path
+    // Remove a value at the specified topic
     size_t erase_topic(MQTT_NS::string_view topic) {
         auto path = find_topic(topic);
 
@@ -259,33 +259,34 @@ public:
         root = map.insert(path_entry(root_parent_id, "", root_node_id)).first;
     }
 
-    // Insert a value at the specified subscription path
-    size_t insert_or_update(MQTT_NS::string_view topic, Value const &value) {
+    // Insert a value at the specified topic
+    template<typename V>
+    std::size_t insert_or_assign(MQTT_NS::string_view topic, V&& value) {
         auto& direct_index = map.template get<direct_index_tag>();
         auto path = this->find_topic(topic);
 
         if (path.empty()) {
             auto new_topic = this->create_topic(topic);
-            direct_index.modify(new_topic, [&value](path_entry &entry){ entry.value.emplace(std::move(value)); });
+            direct_index.modify(new_topic, [&value](path_entry &entry) mutable { entry.value.emplace(std::forward<V>(value)); });
             ++map_size;
             return 1;
         }
 
         if (!path.back()->value) {
             this->increase_topics(path);
-            direct_index.modify(path.back(), [&value](path_entry &entry){ entry.value.emplace(std::move(value)); });
+            direct_index.modify(path.back(), [&value](path_entry &entry) mutable { entry.value.emplace(std::forward<V>(value)); });
             ++map_size;
             return 1;
         }
 
-        direct_index.modify(path.back(), [&value](path_entry &entry){ entry.value.emplace(std::move(value)); });
+        direct_index.modify(path.back(), [&value](path_entry &entry) mutable { entry.value.emplace(std::forward<V>(value)); });
 
         return 0;
     }
 
-    // Find all stored topics that math the specified subscription
-    void find(MQTT_NS::string_view subscription, std::function< void (Value const&) > const& callback) const {
-        find_match(subscription, callback);
+    // Find all stored topics that math the specified topic_filter
+    void find(MQTT_NS::string_view topic_filter, std::function< void (Value const&) > const& callback) const {
+        find_match(topic_filter, callback);
     }
 
     // Remove a stored value at the specified topic

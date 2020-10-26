@@ -16,16 +16,16 @@ BOOST_AUTO_TEST_SUITE(test_retained_map)
 
 BOOST_AUTO_TEST_CASE(general) {
     retained_topic_map<std::string> map;
-    map.insert_or_update("a/b/c", "123");
+    map.insert_or_assign("a/b/c", "123");
     BOOST_TEST(map.size() == 1);
     BOOST_TEST(map.internal_size() == 4);
 
 
-    BOOST_TEST(map.insert_or_update("a/b", "123") == 1);
+    BOOST_TEST(map.insert_or_assign("a/b", "123") == 1);
     BOOST_TEST(map.size() == 2);
     BOOST_TEST(map.internal_size() == 4);
 
-    BOOST_TEST(map.insert_or_update("a/b", "123") == 0);
+    BOOST_TEST(map.insert_or_assign("a/b", "123") == 0);
     BOOST_TEST(map.size() == 2);
     BOOST_TEST(map.internal_size() == 4);
 
@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(general) {
     };
 
     for (auto const& i : values) {
-        map.insert_or_update(i, i);
+        map.insert_or_assign(i, i);
     }
     BOOST_TEST(map.size() == 4);
 
@@ -111,8 +111,8 @@ BOOST_AUTO_TEST_CASE(general) {
 
 BOOST_AUTO_TEST_CASE(erase_lower_first) {
     retained_topic_map<std::string> map;
-    map.insert_or_update("a/b/c", "1");
-    map.insert_or_update("a/b", "2");
+    map.insert_or_assign("a/b/c", "1");
+    map.insert_or_assign("a/b", "2");
 
     auto e1 = map.erase("a/b/c"); // erase lower first
     BOOST_TEST(e1 == 1);
@@ -159,8 +159,8 @@ BOOST_AUTO_TEST_CASE(erase_lower_first) {
 
 BOOST_AUTO_TEST_CASE(erase_upper_first) {
     retained_topic_map<std::string> map;
-    map.insert_or_update("a/b/c", "1");
-    map.insert_or_update("a/b", "2");
+    map.insert_or_assign("a/b/c", "1");
+    map.insert_or_assign("a/b", "2");
 
     auto e1 = map.erase("a/b"); // erase upper first
 
@@ -211,7 +211,7 @@ BOOST_AUTO_TEST_CASE(large_number_of_topics) {
 
     constexpr size_t num_topics = 10000;
     for (size_t i = 0; i < num_topics; ++i) {
-        map.insert_or_update((boost::format("topic/%d") % i).str(), i);
+        map.insert_or_assign((boost::format("topic/%d") % i).str(), i);
     }
 
     BOOST_TEST(map.size() == num_topics);
