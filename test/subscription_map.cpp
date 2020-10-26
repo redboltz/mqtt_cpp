@@ -241,16 +241,15 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     BOOST_TEST(map.internal_size() == 1);
 }
 
-struct my {
-    void const_mem_fun() const {
-       // std::cout << "const_mem_fun()" << std::endl;
-    }
-    void non_const_mem_fun() {
-       // std::cout << "non_const_mem_fun()" << std::endl;
-    }
-};
-
 BOOST_AUTO_TEST_CASE( test_multiple_subscription_modify ) {
+    struct my {
+        void const_mem_fun() const {
+            // std::cout << "const_mem_fun()" << std::endl;
+        }
+        void non_const_mem_fun() {
+            // std::cout << "non_const_mem_fun()" << std::endl;
+        }
+    };
 
     using mi_t = multiple_subscription_map<std::string, my>;
     mi_t map;
@@ -262,5 +261,44 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription_modify ) {
         value.non_const_mem_fun();
     });
 }
+
+BOOST_AUTO_TEST_CASE( test_move_only ) {
+
+    struct my {
+        my() = delete;
+        my(int) {}
+        my(my const&) = delete;
+        my(my&&) = default;
+        my& operator=(my const&) = delete;
+        my& operator=(my&&) = default;
+        ~my() = default;
+    };
+
+    using mi_t = multiple_subscription_map<std::string, my>;
+    mi_t map;
+    map.insert_or_update("a/b/c", "123", my(1));
+    map.insert_or_update("a/b/c", "456", my(2));
+}
+
+BOOST_AUTO_TEST_CASE( test_move_construct_only ) {
+
+    struct my {
+        my() = delete;
+        my(int) {}
+        my(my const&) = delete;
+        my(my&&) = default;
+        my& operator=(my const&) = delete;
+        my& operator=(my&&) = delete;
+        ~my() = default;
+    };
+
+    using mi_t = multiple_subscription_map<std::string, my>;
+    mi_t map;
+    map.insert_or_update("a/b/c", "123", my(1));
+    map.insert_or_update("a/b/c", "456", my(2));
+}
+
+
+
 
 BOOST_AUTO_TEST_SUITE_END()
