@@ -232,4 +232,22 @@ BOOST_AUTO_TEST_CASE(large_number_of_topics) {
     BOOST_TEST(map.internal_size() == 1);
 }
 
+BOOST_AUTO_TEST_CASE( test_move_only ) {
+
+    struct my {
+        my() = delete;
+        my(int) {}
+        my(my const&) = delete;
+        my(my&&) = default;
+        my& operator=(my const&) = delete;
+        my& operator=(my&&) = default;
+        ~my() = default;
+    };
+
+    using mi_t = retained_topic_map<my>;
+    mi_t map;
+    map.insert_or_update("a/b/c", my(1));
+    map.insert_or_update("a/b/c", my(2));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

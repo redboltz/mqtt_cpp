@@ -19,6 +19,8 @@
 #include <boost/multi_index/composite_key.hpp>
 #include <boost/multi_index/member.hpp>
 
+#include <type_traits>
+
 namespace mi = boost::multi_index;
 
 template<typename Value>
@@ -260,7 +262,8 @@ public:
     }
 
     // Insert a value at the specified subscription path
-    size_t insert_or_update(MQTT_NS::string_view topic, Value const &value) {
+    template<typename V>
+    size_t insert_or_update(MQTT_NS::string_view topic, V&& value) {
         auto& direct_index = map.template get<direct_index_tag>();
         auto path = this->find_topic(topic);
 

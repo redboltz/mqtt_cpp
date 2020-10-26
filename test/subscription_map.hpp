@@ -438,32 +438,36 @@ public:
 
     // Insert a key => value at the specified subscription path
     // returns the handle and true if key was inserted, false if key was updated
-    template <typename V>
-    std::pair<handle, bool> insert_or_update(MQTT_NS::string_view subscription, Key const &key, V&& value) {
+    template <typename P>
+    std::pair<handle, bool> insert_or_update(MQTT_NS::string_view subscription, P&& new_pair) {
         auto path = this->find_subscription(subscription);
         if (path.empty()) {
             auto new_subscription_path = this->create_subscription(subscription);
-            new_subscription_path.back()->second.value[key] = std::forward<V>(value);
+            new_subscription_path.back()->second.value.insert(std::forward<P>(new_pair));
             ++this->map_size;
             return std::make_pair(this->path_to_handle(new_subscription_path), true);
         }
         else {
-            auto new_pair = std::make_pair(key, std::forward<V>(value));
-            auto insert_result = path.back()->second.value.insert(new_pair);
+            auto insert_result = path.back()->second.value.insert(std::forward<P>(new_pair));
             if(insert_result.second) {
                 this->increase_subscriptions(path);
                 ++this->map_size;
             } else {
-                insert_result.first->second = new_pair.second;
+                insert_result.first->second = std::forward<P::second_type>(new_pair.second);
             }
             return std::make_pair(this->path_to_handle(path), insert_result.second);
         }
     }
 
+    template <typename V>
+    std::pair<handle, bool> insert_or_update(MQTT_NS::string_view subscription, Key const &key, V&& value) {
+        return insert_or_update(subscription, std::make_pair(key, std::forward<V>(value)));
+    }
+
     // Insert a key => value with a handle to the subscription
     // returns the handle and true if key was inserted, false if key was updated
-    template <typename V>
-    std::pair<handle, bool> insert_or_update(handle h, Key const &key, V&& value) {
+    template <typename P>
+    std::pair<handle, bool> insert_or_update(handle h, P&& new_pair) {
         // Remove the specified value
         auto h_iter = this->get_key(h);
         if (h_iter == this->end()) {
@@ -472,16 +476,19 @@ public:
 
         auto& subscription_set = h_iter->second.value;
 
-        auto new_pair = std::make_pair(key, std::forward<V>(value));
-        auto insert_result = subscription_set.insert(new_pair);
+        auto insert_result = subscription_set.insert(std::forward<P>(new_pair));
         if (insert_result.second) {
             ++this->map_size;
             this->increase_subscriptions(h);
         } else {
-            insert_result.first->second = new_pair.second;
+            insert_result.first->second =std::forward<P::second_type>(new_pair.second);
         }
 
         return std::make_pair(h, insert_result.second);
+    }
+    template <typename V>
+    std::pair<handle, bool> insert_or_update(handle h, Key const &key, V&& value) {
+        return insert_or_update(h, std::make_pair(key, std::forward<V>(value)));
     }
 
     // Remove a value at the specified subscription path

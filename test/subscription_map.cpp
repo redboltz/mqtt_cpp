@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     // Add some duplicates and overlapping paths
     map.insert_or_update(values[0], values[0], 0);
     BOOST_TEST(map.insert_or_update(values[0], values[0], 0).second == false);
-    BOOST_TEST(map.insert_or_update(values[0], "blaat", 0).second == true);
+    BOOST_TEST(map.insert_or_update(values[0], std::make_pair("blaat", 0)).second == true);
 
     map.erase(values[0], "blaat");
     BOOST_TEST(map.size() == 1);
@@ -183,7 +183,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     // Perform test again but this time using handles
     map.insert_or_update(values[0], values[0], 0);
     BOOST_TEST(map.insert_or_update(map.lookup(values[0]), values[0], 0).second == false);
-    BOOST_TEST(map.insert_or_update(map.lookup(values[0]), "blaat", 0).second == true);
+    BOOST_TEST(map.insert_or_update(map.lookup(values[0]), std::make_pair("blaat", 0)).second == true);
 
     map.erase(map.lookup(values[0]), "blaat");
     BOOST_TEST(map.size() == 1);
@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     BOOST_TEST(map.size() == 0);
 
     for (auto const& i : values) {
-        map.insert_or_update(i, i, 0);
+        map.insert_or_update(i, std::make_pair(i, 0));
     }
 
     BOOST_TEST(map.size() == 4);
@@ -277,26 +277,9 @@ BOOST_AUTO_TEST_CASE( test_move_only ) {
     using mi_t = multiple_subscription_map<std::string, my>;
     mi_t map;
     map.insert_or_update("a/b/c", "123", my(1));
-    map.insert_or_update("a/b/c", "456", my(2));
+    map.insert_or_update("a/b/c", std::make_pair("456", my(2)));
 }
 
-BOOST_AUTO_TEST_CASE( test_move_construct_only ) {
-
-    struct my {
-        my() = delete;
-        my(int) {}
-        my(my const&) = delete;
-        my(my&&) = default;
-        my& operator=(my const&) = delete;
-        my& operator=(my&&) = delete;
-        ~my() = default;
-    };
-
-    using mi_t = multiple_subscription_map<std::string, my>;
-    mi_t map;
-    map.insert_or_update("a/b/c", "123", my(1));
-    map.insert_or_update("a/b/c", "456", my(2));
-}
 
 
 
