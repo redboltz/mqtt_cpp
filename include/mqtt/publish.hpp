@@ -51,8 +51,8 @@ enum class dup : std::uint8_t
 };
 
 struct publish_options final {
-    constexpr publish_options(void) = default;
-    ~publish_options(void) = default;
+    constexpr publish_options() = default;
+    ~publish_options() = default;
     constexpr publish_options(publish_options &&) = default;
     constexpr publish_options(publish_options const&) = default;
     constexpr publish_options& operator=(publish_options &&) = default;

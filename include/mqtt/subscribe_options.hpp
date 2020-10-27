@@ -37,8 +37,8 @@ enum class qos : std::uint8_t
 };
 
 struct subscribe_options final {
-    constexpr subscribe_options(void) = delete;
-    ~subscribe_options(void) = default;
+    constexpr subscribe_options() = delete;
+    ~subscribe_options() = default;
     constexpr subscribe_options(subscribe_options &&) = default;
     constexpr subscribe_options(subscribe_options const&) = default;
     constexpr subscribe_options& operator=(subscribe_options &&) = default;
