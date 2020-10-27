@@ -230,7 +230,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
 
         BOOST_CHECK(!elem.h);
         // new insert or update (insert case)
-        auto h = m.insert_or_update(elem.topic_filter, elem, 0);
+        auto h = m.insert_or_assign(elem.topic_filter, elem, 0);
         auto& idx = scos.get<tag_con_topic_filter>();
         idx.modify(
             it,
@@ -252,7 +252,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
         }
         else {
             // new insert
-            auto h = m.insert_or_update(elem.topic_filter, elem, 0);
+            auto h = m.insert_or_assign(elem.topic_filter, elem, 0);
             auto& idx = scos.get<tag_con_topic_filter>();
             idx.modify(
                 it,
@@ -401,7 +401,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
 
         BOOST_CHECK(!elem.h);
         // new insert or update (insert case)
-        auto h = m.insert_or_update(elem.topic_filter, elem, 0);
+        auto h = m.insert_or_assign(elem.topic_filter, elem, 0);
         auto& idx = scos.get<tag_con_topic_filter>();
         idx.modify(
             it,
@@ -423,7 +423,7 @@ BOOST_AUTO_TEST_CASE( multi_non_wc_crud_ow ) {
         }
         else {
             // new insert
-            auto h = m.insert_or_update(elem.topic_filter, elem, 0);
+            auto h = m.insert_or_assign(elem.topic_filter, elem, 0);
             auto& idx = scos.get<tag_con_topic_filter>();
             idx.modify(
                 it,
@@ -573,7 +573,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
 
         BOOST_CHECK(!elem.h);
         // new insert or update (insert case)
-        auto h = m.insert_or_update(elem.topic_filter, elem, 0);
+        auto h = m.insert_or_assign(elem.topic_filter, elem, 0);
         auto& idx = scos.get<tag_con_topic_filter>();
         idx.modify(
             it,
@@ -595,7 +595,7 @@ BOOST_AUTO_TEST_CASE( multi_wc_crud ) {
         }
         else {
             // new insert
-            auto h = m.insert_or_update(elem.topic_filter, elem, 0);
+            auto h = m.insert_or_assign(elem.topic_filter, elem, 0);
             auto& idx = scos.get<tag_con_topic_filter>();
             idx.modify(
                 it,
