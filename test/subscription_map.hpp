@@ -38,28 +38,105 @@
  *           Using a published topic, we can find all topic filters which match the specified topic
  *       . A stored topic map, storing topic -> data
  *           Using a new topic filter, we can find all stored topics which match the specified topic filter
+ *
+ *   Subscription map stores all entries in a tree
+ *   the tree starts from a root node, and topic filters are tokenized and stored in the tree
+ *
+ *   For example if the topic_filter example/monitor/Clients is stored, the following nodes are created:
+ *   root -> example -> monitor -> Clients
+ *
+ *   Every node in the tree may store one or multiple subscribers. Nodes store a reference count to the number of subscribers
+ *   so for example, if we store the following topic_filters:
+ *     example/
+ *     example/monitor/Clients
+ *
+ *   the subscription map looks as follows:
+ *     root(2) -> example(2) -> monitor(1) -> Clients (1)
+ *
+ *   hash and + are stored as normal nodes within the tree, but the parent node knows if a hash child is available. This
+ *   improves the matching, no extra lookup is required to see if a # or + child is available in a child node:
+ *
+ *     example/#
+ *
+ *    stores the following tree:
+ *      root -> example (hash: yes) -> #
+ *
+ *    and
+ *
+ *      example/+
+ *
+ *    stores the following tree:
+ *      root -> example (plus: yes) -> #
+ *
+ *    all node entries are stored in a single hash map. The key for every node is: (parent node id, path)
+ *
+ *      so if we store: root/example/test
+ *      root (id:1) -> example (id:2, key:1,example) -> test (id:3, key:2,test)
+ *
+ *    also, every node stores the key of its parent, allowing quick traversing from leaf to root of the tree
  */
+
+// Combined storage for count and flags
+// we can have 32bit or 64bit version
+
+// Compile error on other platforms (not 32 or 64 bit)
+template<std::size_t N>
+struct count_storage
+{
+   static_assert(N == 4 || N == 8, "Subscription map count_storage only knows how to handle architectures with 32 or 64 bit size_t: please update to support your platform.");
+};
+
+template<>
+struct count_storage<4>
+{
+    std::uint32_t value : 30;
+    std::uint32_t has_hash_child : 1;
+    std::uint32_t has_plus_child : 1;
+
+    count_storage(std::uint32_t value = 1)
+        : value(value), has_hash_child(false), has_plus_child(false)
+    { }
+
+    static constexpr std::size_t max() { return std::numeric_limits<uint32_t>::max() >> 2; }
+};
+
+template<>
+struct count_storage<8>
+{
+    std::uint64_t value : 62;
+    std::uint64_t has_hash_child : 1;
+    std::uint64_t has_plus_child : 1;
+
+    count_storage(std::uint64_t value = 1)
+        : value(value), has_hash_child(false), has_plus_child(false)
+    { }
+
+    static constexpr std::uint64_t max() { return std::numeric_limits<uint64_t>::max() >> 2; }
+};
 
 template<typename Value>
 class subscription_map_base {
 public:
     using node_id_t = std::size_t;
-    using path_entry_key = std::pair< node_id_t, MQTT_NS::buffer>;
+    using path_entry_key = std::pair<node_id_t, MQTT_NS::buffer>;
     using handle = path_entry_key;
 
-    static constexpr node_id_t root_node_id = 0;
-
 private:
+
+    // Generate a node id for a new node
+    node_id_t generate_node_id() {
+        if(next_node_id == std::numeric_limits<node_id_t>::max())
+            throw_max_stored_topics();
+         return ++next_node_id;
+    }
+
+    using count_storage_t = count_storage<sizeof(void *)>;
+
     struct path_entry {
         node_id_t id;
         path_entry_key parent;
 
-        std::size_t count = 1;
-
-        // the following flags and values are stored in count
-        static constexpr std::size_t has_hash_child_flag = (static_cast<std::size_t>(1) << (sizeof(std::size_t) * 8 - 1));
-        static constexpr std::size_t has_plus_child_flag = (static_cast<std::size_t>(1) << (sizeof(std::size_t) * 8 - 2));
-        static constexpr std::size_t max_count = (has_plus_child_flag - 1);
+        count_storage_t count;
 
         Value value;
 
@@ -68,18 +145,37 @@ private:
         {}
     };
 
+    // Increase the subscription count for a specific node
+    static void increase_count_storage(count_storage_t &count) {
+        if(count.value == count_storage_t::max()) {
+            throw_max_stored_topics();
+        }
+
+        ++count.value;
+    }
+
     using this_type = subscription_map_base<Value>;
 
+    // Use boost hash to hash pair in path_entry_key
     using map_type = std::unordered_map< path_entry_key, path_entry, boost::hash< path_entry_key > >;
+
+    map_type map;
     using map_type_iterator = typename map_type::iterator;
     using map_type_const_iterator = typename map_type::const_iterator;
 
-    map_type map;
-    map_type_iterator root;
-    path_entry_key root_key;
-    node_id_t next_node_id = root_node_id;
+    node_id_t next_node_id = 0;
 
 protected:
+    // Key and id of the root key
+    path_entry_key root_key;
+    node_id_t root_node_id;
+
+    // Return the iterator of the root
+    map_type_iterator get_root() { return map.find(root_key); };
+    map_type_const_iterator get_root() const { return map.find(root_key); };
+
+
+    // Map size tracks the total number of subscriptions within the map
     size_t map_size = 0;
 
     map_type_iterator get_key(path_entry_key key) { return map.find(key); }
@@ -92,21 +188,21 @@ protected:
     }
 
     std::vector< map_type_iterator> find_topic_filter(MQTT_NS::string_view topic_filter) {
-        auto parent = root;
+        auto parent_id = get_root()->second.id;
         std::vector< map_type_iterator > path;
 
         topic_filter_tokenizer(
             topic_filter,
-            [this, &path, &parent](MQTT_NS::string_view t) {
-                auto entry = map.find(path_entry_key(parent->second.id, t));
+            [this, &path, &parent_id](MQTT_NS::string_view t) mutable {
+                auto entry = map.find(path_entry_key(parent_id, t));
 
                 if (entry == map.end()) {
-                    path = std::vector<map_type_iterator>();
+                    path.clear();
                     return false;
                 }
 
                 path.push_back(entry);
-                parent = entry;
+                parent_id = entry->second.id;
                 return true;
             }
         );
@@ -114,48 +210,31 @@ protected:
         return path;
     }
 
-    void throw_max_filters_exception() const { throw std::overflow_error("Maximum number of stored topic filters reached"); }
-
     std::vector<map_type_iterator> create_topic_filter(MQTT_NS::string_view topic_filter) {
-        auto parent = root;
-
-        // Check on root entry if we can still add an entry
-        if ((parent->second.count & path_entry::max_count) == path_entry::max_count) {
-            throw_max_filters_exception();
-        }
+        auto parent = get_root();
 
         std::vector<map_type_iterator> result;
 
         topic_filter_tokenizer(
             topic_filter,
-            [this, &parent, &result](MQTT_NS::string_view t) {
-                auto parent_id = parent->second.id;
-                auto entry = map.find(path_entry_key(parent_id, t));
+            [this, &parent, &result](MQTT_NS::string_view t) mutable {
+                auto entry = map.find(path_entry_key(parent->second.id, t));
 
                 if (entry == map.end()) {
                     entry =
                         map.emplace(
                             path_entry_key(
-                                parent_id,
+                                parent->second.id,
                                 MQTT_NS::allocate_buffer(t)
                             ),
-                            path_entry(next_node_id++, parent->first)
+                            path_entry(generate_node_id(), parent->first)
                         ).first;
-                    if (t == "+") {
-                        parent->second.count |= path_entry::has_plus_child_flag;
-                    }
 
-                    if (t == "#") {
-                        parent->second.count |= path_entry::has_hash_child_flag;
-                    }
-
-                    if (next_node_id == std::numeric_limits<node_id_t>::max()) {
-                        throw_max_filters_exception();
-                    }
-
+                    parent->second.count.has_plus_child |= (t == "+");
+                    parent->second.count.has_hash_child |= (t == "#");
                 }
                 else {
-                    entry->second.count++;
+                    increase_count_storage(entry->second.count);
                 }
 
                 result.push_back(entry);
@@ -173,31 +252,35 @@ protected:
         bool remove_hash_child_flag = false;
 
         // Go through entries to remove
-        for (auto entry = path.rbegin(); entry != path.rend(); ++entry) {
+        for (auto& entry : boost::adaptors::reverse(path)) {
             if (remove_plus_child_flag) {
-                (*entry)->second.count &= ~path_entry::has_plus_child_flag;
+                entry->second.count.has_plus_child = false;
                 remove_plus_child_flag = false;
             }
 
             if (remove_hash_child_flag) {
-                (*entry)->second.count &= ~path_entry::has_hash_child_flag;
+                entry->second.count.has_hash_child = false;
                 remove_hash_child_flag = false;
             }
 
-            --(*entry)->second.count;
-            if (((*entry)->second.count & path_entry::max_count) == 0) {
-                remove_plus_child_flag = ((*entry)->first.second == "+");
-                remove_hash_child_flag = ((*entry)->first.second == "#");
-                map.erase((*entry)->first);
+            --entry->second.count.value;
+            if (entry->second.count.value == 0) {
+                remove_plus_child_flag = (entry->first.second == "+");
+                remove_hash_child_flag = (entry->first.second == "#");
+
+                // Erase in unordered map only invalidates erased iterator
+                // other iterators are unaffected
+                map.erase(entry->first);
             }
         }
 
+        auto root = get_root();
         if (remove_plus_child_flag) {
-            root->second.count &= ~path_entry::has_plus_child_flag;
+            root->second.count.has_plus_child = false;
         }
 
         if (remove_hash_child_flag) {
-            root->second.count &= ~path_entry::has_hash_child_flag;
+            root->second.count.has_hash_child = false;
         }
     }
 
@@ -206,8 +289,7 @@ protected:
         using iterator_type = decltype(self.map.end()); // const_iterator or iterator depends on self
 
         std::vector<iterator_type> entries;
-        entries.push_back(self.root);
-
+        entries.push_back(self.get_root());
 
         topic_filter_tokenizer(
             topic,
@@ -221,7 +303,7 @@ protected:
                         new_entries.push_back(i);
                     }
 
-                    if (entry->second.count & path_entry::has_plus_child_flag) {
+                    if (entry->second.count .has_plus_child) {
                         i = self.map.find(path_entry_key(parent, MQTT_NS::string_view("+")));
                         if (i != self.map.end()) {
                             if (parent != self.root_node_id || t.empty() || t[0] != '$') {
@@ -230,7 +312,7 @@ protected:
                         }
                     }
 
-                    if (entry->second.count & path_entry::has_hash_child_flag) {
+                    if (entry->second.count.has_hash_child) {
                         i = self.map.find(path_entry_key(parent, MQTT_NS::string_view("#")));
                         if (i != self.map.end()) {
                             if (parent != self.root_node_id || t.empty() || t[0] != '$'){
@@ -258,21 +340,17 @@ protected:
 
     // Find all topic filters and allow modification
     template<typename Output>
-    void modify_match(MQTT_NS::string_view topic, Output callback) {
+    void modify_match(MQTT_NS::string_view topic, Output&& callback) {
         find_match_impl(*this, topic, std::forward<Output>(callback));
     }
 
-    template<typename Output>
-    void handle_to_iterators(handle h, Output output) {
+    template<typename ThisType, typename Output>
+    static void handle_to_iterators(ThisType& self, handle const &h, Output&& output) {
         auto i = h;
-        while(true) {
-            if (i == root_key) {
-                return;
-            }
-
-            auto entry_iter = map.find(i);
-            if (entry_iter == map.end()) {
-                throw std::runtime_error("Invalid handle was specified");
+        while(i != self.root_key) {
+            auto entry_iter = self.map.find(i);
+            if (entry_iter == self.map.end()) {
+                throw_invalid_handle();
             }
 
             output(entry_iter);
@@ -280,32 +358,54 @@ protected:
         }
     }
 
+    // Exceptions used
+    static void throw_invalid_topic_filter() { throw std::runtime_error("Subscription map invalid topic filter was specified"); }
+    static void throw_invalid_handle() { throw std::runtime_error("Subscription map invalid handle was specified"); }
+    static void throw_max_stored_topics() { throw std::overflow_error("Subscription map maximum number of stored topic filters reached"); }
+
     // Get the iterators of a handle
-    std::vector<map_type_iterator> handle_to_iterators(handle h) {
+    std::vector<map_type_iterator> handle_to_iterators(handle const &h) {
         std::vector<map_type_iterator> result;
-        handle_to_iterators(h, [&result](map_type_iterator i) { result.push_back(i); });
+        handle_to_iterators(*this, h, [&result](map_type_iterator i) { result.push_back(i); });
         std::reverse(result.begin(), result.end());
         return result;
     }
 
     // Increase the number of subscriptions for this handle
-    void increase_subscriptions(handle h) {
-        handle_to_iterators(h, [](map_type_iterator i) { ++(i->second.count); });
+    void increase_subscriptions(handle const &h) {
+        handle_to_iterators(*this, h, [](map_type_iterator i) {
+            increase_count_storage(i->second.count);
+        });
+    }
+
+    // Increase the map size (total number of subscriptions stored)
+    void increase_map_size() {
+        if(map_size == std::numeric_limits<decltype(map_size)>::max()) {
+            throw_max_stored_topics();
+        }
+
+        ++map_size;
+    }
+
+    // Decrease the map size (total number of subscriptions stored)
+    void decrease_map_size() {
+        BOOST_ASSERT(map_size > 0);
+        --map_size;
     }
 
     // Increase the number of subscriptions for this path
     void increase_subscriptions(std::vector<map_type_iterator> const &path) {
         for (auto i : path) {
-            ++(i->second.count);
+            increase_count_storage(i->second.count);
         }
     }
 
     subscription_map_base()
-        : root_key(path_entry_key(std::numeric_limits<node_id_t>::max(), MQTT_NS::allocate_buffer("")))
     {
         // Create the root node
-        root = map.emplace(root_key, path_entry(root_node_id, path_entry_key())).first;
-        ++next_node_id;
+        root_node_id = generate_node_id();
+        root_key = path_entry_key(generate_node_id(), MQTT_NS::buffer());
+        map.emplace(root_key, path_entry(root_node_id, path_entry_key()));
     }
 
 public:
@@ -321,18 +421,20 @@ public:
         if(path.empty())
             return MQTT_NS::optional<handle>();
         else
-            return this->path_to_handle(std::move(path));
+            return this->path_to_handle(MQTT_NS::force_move(path));
     }
 
     // Get path of topic_filter
-    std::string handle_to_topic_filter(handle h) {
+    std::string handle_to_topic_filter(handle const &h) const {
         std::string result;
 
-        handle_to_iterators(h, [&result](map_type_iterator i) {
-            if (result.empty())
+        handle_to_iterators(*this, h, [&result](map_type_const_iterator i) {
+            if (result.empty()) {
                 result = std::string(i->first.second);
-            else
+            }
+            else {
                 result = std::string(i->first.second) + "/" + result;
+            }
         });
 
         return result;
@@ -350,19 +452,20 @@ public:
 
     // Insert a value at the specified topic_filter
     template <typename V>
-    handle insert(MQTT_NS::string_view topic_filter, V&& value) {
+    std::pair<handle, bool> insert(MQTT_NS::string_view topic_filter, V&& value) {
         auto existing_subscription = this->find_topic_filter(topic_filter);
         if (!existing_subscription.empty()) {
             if(existing_subscription.back()->second.value)
-                throw std::runtime_error("Subscription already exists in map");
+                return std::make_pair(this->path_to_handle(MQTT_NS::force_move(existing_subscription)), false);
+
             existing_subscription.back()->second.value.emplace(std::forward<V>(value));
-            return this->path_to_handle(std::move(existing_subscription));
+            return std::make_pair(this->path_to_handle(MQTT_NS::force_move(existing_subscription)), true);
         }
 
         auto new_topic_filter = this->create_topic_filter(topic_filter);
         new_topic_filter.back()->second.value = value;
-        ++this->map_size;
-        return this->path_to_handle(new_topic_filter);
+        this->increase_map_size();
+        return std::make_pair(this->path_to_handle(MQTT_NS::force_move(new_topic_filter)), true);
     }
 
     // Update a value at the specified topic filter
@@ -370,17 +473,17 @@ public:
     void update(MQTT_NS::string_view topic_filter, V&& value) {
         auto path = this->find_topic_filter(topic_filter);
         if (path.empty()) {
-            throw std::runtime_error("Invalid topic filter was specified");
+            this->throw_invalid_topic_filter();
         }
 
         path.back()->second.value.emplace(std::forward<V>(value));
     }
 
     template <typename V>
-    void update(handle h, V&& value) {
+    void update(handle const &h, V&& value) {
         auto entry_iter = this->get_key(h);
         if (entry_iter == this->end()) {
-            throw std::runtime_error("Invalid topic filter was specified");
+            this->throw_invalid_topic_filter();
         }
         entry_iter->second.value.emplace(std::forward<V>(value));
     }
@@ -393,25 +496,25 @@ public:
         }
 
         this->remove_topic_filter(path);
-        --this->map_size;
+        this->decrease_map_size();
         return 1;
     }
 
     // Remove a value using a handle
-    std::size_t erase(handle h) {
+    std::size_t erase(handle const &h) {
         auto path = this->handle_to_iterators(h);
         if (path.empty() || !path.back()->second.value) {
             return 0;
         }
 
         this->remove_topic_filter(path);
-        --this->map_size;
+        this->decrease_map_size();
         return 1;
     }
 
     // Find all topic filters that match the specified topic
     template<typename Output>
-    void find(MQTT_NS::string_view topic, Output callback) const {
+    void find(MQTT_NS::string_view topic, Output&& callback) const {
         this->find_match(
             topic,
             [&callback]( MQTT_NS::optional<Value> const& value ) {
@@ -443,8 +546,8 @@ public:
         if (path.empty()) {
             auto new_topic_filter = this->create_topic_filter(topic_filter);
             new_topic_filter.back()->second.value.emplace(std::forward<K>(key), std::forward<V>(value));
-            ++this->map_size;
-            return std::make_pair(this->path_to_handle(std::move(new_topic_filter)), true);
+            this->increase_map_size();
+            return std::make_pair(this->path_to_handle(MQTT_NS::force_move(new_topic_filter)), true);
         }
         else {
             auto& subscription_set = path.back()->second.value;
@@ -453,19 +556,19 @@ public:
             auto insert_result = subscription_set.insert_or_assign(std::forward<K>(key), std::forward<V>(value));
             if(insert_result.second) {
                 this->increase_subscriptions(path);
-                ++this->map_size;
+                this->increase_map_size();
             }
-            return std::make_pair(this->path_to_handle(std::move(path)), insert_result.second);
+            return std::make_pair(this->path_to_handle(MQTT_NS::force_move(path)), insert_result.second);
 #else
             auto iter = subscription_set.find(key);
             if(iter == subscription_set.end()) {
                 subscription_set.emplace(std::forward<K>(key), std::forward<V>(value));
                 this->increase_subscriptions(path);
-                ++this->map_size;
+                this->increase_map_size();
             } else {
                 iter->second = std::forward<V>(value);
             }
-            return std::make_pair(this->path_to_handle(std::move(path)), iter == subscription_set.end());
+            return std::make_pair(this->path_to_handle(MQTT_NS::force_move(path)), iter == subscription_set.end());
 
 #endif
         }
@@ -474,11 +577,10 @@ public:
     // Insert a key => value with a handle to the topic filter
     // returns the handle and true if key was inserted, false if key was updated
     template <typename K, typename V>
-    std::pair<handle, bool> insert_or_assign(handle h, K&& key, V&& value) {
-        // Remove the specified value
+    std::pair<handle, bool> insert_or_assign(handle const &h, K&& key, V&& value) {
         auto h_iter = this->get_key(h);
         if (h_iter == this->end()) {
-            throw std::runtime_error("Invalid handle was specified");
+            this->throw_invalid_handle();
         }
 
         auto& subscription_set = h_iter->second.value;
@@ -487,37 +589,36 @@ public:
         auto insert_result = subscription_set.insert_or_assign(std::forward<K>(key), std::forward<V>(value));
         if(insert_result.second) {
             this->increase_subscriptions(h);
-            ++this->map_size;
+            this->increase_map_size();
         }
-        return std::make_pair(std::move(h), insert_result.second);
+        return std::make_pair(h, insert_result.second);
 #else
         auto iter = subscription_set.find(key);
         if(iter == subscription_set.end()) {
             subscription_set.emplace(std::forward<K>(key), std::forward<V>(value));
             this->increase_subscriptions(h);
-            ++this->map_size;
+            this->increase_map_size();
         } else {
             iter->second = std::forward<V>(value);
         }
-        return std::make_pair(std::move(h), iter == subscription_set.end());
+        return std::make_pair(h, iter == subscription_set.end());
 #endif
     }
 
     // Remove a value at the specified handle
     // returns the number of removed elements
-    std::size_t erase(handle h, Key const& key) {
-        // Remove the specified value
+    std::size_t erase(handle const &h, Key const& key) {
+        // Find the handle in the map
         auto h_iter = this->get_key(h);
         if (h_iter == this->end()) {
-            throw std::runtime_error("Invalid handle was specified");
+            this->throw_invalid_handle();
         }
 
         // Remove the specified value
-        auto& subscription_set = h_iter->second.value;
-        auto result = subscription_set.erase(key);
+        auto result = h_iter->second.value.erase(key);
         if (result) {
             this->remove_topic_filter(this->handle_to_iterators(h));
-            --this->map_size;
+            this->decrease_map_size();
         }
 
         return result;
@@ -535,7 +636,7 @@ public:
         // Remove the specified value
         auto result = path.back()->second.value.erase(key);
         if (result) {
-            --this->map_size;
+            this->decrease_map_size();
             this->remove_topic_filter(path);
         }
 
@@ -544,7 +645,7 @@ public:
 
     // Find all topic filters that match the specified topic
     template<typename Output>
-    void find(MQTT_NS::string_view topic, Output callback) const {
+    void find(MQTT_NS::string_view topic, Output&& callback) const {
         this->find_match(
             topic,
             [&callback]( Cont const &values ) {
@@ -557,20 +658,22 @@ public:
 
     // Find all topic filters that match and allow modification
     template<typename Output>
-    void modify(MQTT_NS::string_view topic, Output callback) {
-        auto modify_callback = [&callback]( Cont &values ) {
-            for (auto& i : values) {
-                callback(i.first, i.second);
+    void modify(MQTT_NS::string_view topic, Output&& callback) {
+        this->modify_match(
+            topic,
+            [&callback]( Cont &values ) {
+                for (auto& i : values) {
+                    callback(i.first, i.second);
+                }
             }
-        };
-
-        this->template modify_match<decltype(modify_callback)>(topic, modify_callback);
+        );
     }
 
     template<typename Output>
     void dump(Output &out) {
+        out << "Root node id: " << this->root_node_id << std::endl;
         for (auto const& i: this->get_map()) {
-            out << i.first.first << " " << i.first.second << " " << i.second.value.size() << " " << i.second.count << std::endl;
+            out << "(" << i.first.first << ", " << i.first.second << "): id: " << i.second.id << ", size: " << i.second.value.size() << ", value: " << i.second.count.value << std::endl;
         }
     }
 
