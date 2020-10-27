@@ -662,7 +662,7 @@ private:
      * basic pre-connection logic, to setup the record keeping that this broker
      * class needs to handle the connection and process subscriptions and publishing.
      *
-     * @param clean_start - if the clean-session flag is set on the CONNECT message.
+     * @param clean_start - if the clean-start flag is set on the CONNECT message.
      * @param spep - MQTT_NS::varient of shared pointers to underlying connection type.
      * @param client_id - the id that the client wants to use
      * @param will - the last-will-and-testiment of the connection, if any.
@@ -1263,7 +1263,6 @@ private:
                     it,
                     [&](auto& e) {
                         e.handles.erase(handle.value());
-                        e.clean();
                     },
                     [](auto&) { BOOST_ASSERT(false); }
                 );
