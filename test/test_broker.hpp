@@ -1262,7 +1262,7 @@ private:
                 retains_.erase(topic);
             }
             else {
-                retains_.insert_or_update(
+                retains_.insert_or_assign(
                     topic,
                     retain {
                         MQTT_NS::force_move(topic),
@@ -1565,7 +1565,7 @@ private:
              topic_filter(MQTT_NS::force_move(topic_filter)),
              subopts(subopts),
              sid(sid),
-             handle(sco_map.insert_or_update(topic_filter, *this, 0).first) {}
+             handle(sco_map.insert_or_assign(topic_filter, *this, 0).first) {}
 
         ~sub_con_online() {
             sco_map.erase(handle, *this);
@@ -1671,7 +1671,7 @@ private:
              topic_filter(MQTT_NS::force_move(topic_filter)),
              subopts(subopts),
              sid(sid),
-             handle(sco_map.insert_or_update(topic_filter, *this, 0).first) {}
+             handle(sco_map.insert_or_assign(topic_filter, *this, 0).first) {}
 
         ~sub_con_offline() {
             sco_map.erase(handle, *this);
