@@ -134,7 +134,7 @@ jobs:
         $env:OPENSSL_ROOT_DIR="C:/vcpkg/packages/openssl_x64-windows/share/openssl"
         md build
         cd build
-        cmake -A x64 -DBOOST_ROOT="$env:BOOST_ROOT_1_72_0" $env:$MY_CMAKE_FLAGS ..
+        cmake -A x64 -DBOOST_ROOT="$env:BOOST_ROOT_1_72_0" -DMQTT_USE_TLS=OFF -DMQTT_USE_WS=ON -DMQTT_USE_STR_CHECK=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=ON -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7= OFF -DMQTT_BUILD_EXAMPLES=OFF ..
         if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
         cmake --build . --config Release
         $pathbak="$env:PATH"
