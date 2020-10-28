@@ -122,24 +122,22 @@ jobs:
       shell: powershell
       run: |
         vcpkg update
-        vcpkg install gtest:x64-windows
-        vcpkg install zlib:x64-windows
+        vcpkg install openssl:x64-windows
     - name: Build and test
       shell: powershell
       run: |
         if (${{ matrix.pattern }} -eq 0) {
-           $MQTT_USE_TLS=ON
-           $MQTT_USE_WS=OFF
-           $MQTT_USE_STR_CHECK=OFF
-           $MQTT_TEST_1=ON
-           $MQTT_TEST_2=OFF
-           $MQTT_TEST_3=OFF
-           $MQTT_TEST_4=OFF
-           $MQTT_TEST_5=OFF
-           $MQTT_TEST_6=OFF
-           $MQTT_TEST_7=OFF
-           $MQTT_BUILD_EXAMPLES=OFF
-          $CPPVER="-DMSGPACK_CXX17=ON"
+           $MQTT_USE_TLS="OFF"
+           $MQTT_USE_WS="OFF"
+           $MQTT_USE_STR_CHECK="OFF"
+           $MQTT_TEST_1="ON"
+           $MQTT_TEST_2="OFF"
+           $MQTT_TEST_3="OFF"
+           $MQTT_TEST_4="OFF"
+           $MQTT_TEST_5="OFF"
+           $MQTT_TEST_6="OFF"
+           $MQTT_TEST_7="OFF"
+           $MQTT_BUILD_EXAMPLES="OFF"
         }
         $CUR=(Get-Location).Path
         md build
