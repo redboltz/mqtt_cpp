@@ -123,6 +123,7 @@ jobs:
       run: |
         vcpkg update
         vcpkg install openssl:x64-windows
+        vcpkg list
     - name: Build and test
       shell: powershell
       run: |
