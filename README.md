@@ -34,7 +34,8 @@ g++ -std=c++14 -Ipath_to_mqtt_cpp/include your_program.cpp -pthread additional_o
 
 |what you want|required option|
 |---|---|
-|TLS support|`-DMQTT_USE_TLS -pthread -lssl -lcrypto`|
+|TLS support with OpenSSL|`-DMQTT_USE_TLS -pthread -lssl -lcrypto`|
+|TLS support with GnuTLS|`-DMQTT_USE_TLS -DMQTT_USE_GNU_TLS -pthread -lssl -lcrypto`|
 |Logging support|`-DMQTT_USE_LOG -DBOOST_LOG_DYN_LINK -lboost_log -lboost_filesystem -lboost_thread`|
 |WebSocket support|`-DMQTT_USE_WS`|
 

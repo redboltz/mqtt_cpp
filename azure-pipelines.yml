@@ -28,6 +28,17 @@ strategy:
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
       MQTT_BUILD_EXAMPLES: ON
+    ExamplesGnuTls:
+      MQTT_USE_TLS: MQTT_TLS_GNUTLS
+      MQTT_USE_WS: OFF
+      MQTT_USE_STR_CHECK: ON
+      MQTT_TEST_1: OFF
+      MQTT_TEST_2: OFF
+      MQTT_TEST_3: OFF
+      MQTT_TEST_4: OFF
+      MQTT_TEST_5: OFF
+      MQTT_TEST_6: OFF
+      MQTT_BUILD_EXAMPLES: ON
     ExamplesWs:
       MQTT_USE_TLS: OFF
       MQTT_USE_WS: ON
@@ -95,7 +106,7 @@ strategy:
       MQTT_TEST_6: OFF
       MQTT_BUILD_EXAMPLES: OFF
     TestGroup6:
-      MQTT_USE_TLS: ON
+      MQTT_USE_TLS: MQTT_TLS_OPENSSL
       MQTT_USE_WS: OFF
       MQTT_USE_STR_CHECK: ON
       MQTT_TEST_1: OFF
@@ -108,6 +119,39 @@ strategy:
     TestGroup7:
       MQTT_USE_TLS: OFF
       MQTT_USE_WS: ON
+      MQTT_USE_STR_CHECK: ON
+      MQTT_TEST_1: OFF
+      MQTT_TEST_2: OFF
+      MQTT_TEST_3: OFF
+      MQTT_TEST_4: OFF
+      MQTT_TEST_5: OFF
+      MQTT_TEST_6: ON
+      MQTT_BUILD_EXAMPLES: OFF
+    TestGroup8:
+      MQTT_USE_TLS: MQTT_TLS_GNUTLS
+      MQTT_USE_WS: OFF
+      MQTT_USE_STR_CHECK: OFF
+      MQTT_TEST_1: ON
+      MQTT_TEST_2: OFF
+      MQTT_TEST_3: OFF
+      MQTT_TEST_4: OFF
+      MQTT_TEST_5: OFF
+      MQTT_TEST_6: OFF
+      MQTT_BUILD_EXAMPLES: OFF
+    TestGroup9:
+      MQTT_USE_TLS: MQTT_TLS_GNUTLS
+      MQTT_USE_WS: OFF
+      MQTT_USE_STR_CHECK: ON
+      MQTT_TEST_1: OFF
+      MQTT_TEST_2: OFF
+      MQTT_TEST_3: ON
+      MQTT_TEST_4: OFF
+      MQTT_TEST_5: OFF
+      MQTT_TEST_6: OFF
+      MQTT_BUILD_EXAMPLES: OFF
+    TestGroup10:
+      MQTT_USE_TLS: MQTT_TLS_GNUTLS
+      MQTT_USE_WS: OFF
       MQTT_USE_STR_CHECK: ON
       MQTT_TEST_1: OFF
       MQTT_TEST_2: OFF

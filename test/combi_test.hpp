@@ -109,6 +109,7 @@ inline void do_tls_test(
     std::size_t pos = path.find_last_of("/\\");
     std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
     c->get_ssl_context().load_verify_file(base + "cacert.pem");
+
     test(
         ioc,
         c,
