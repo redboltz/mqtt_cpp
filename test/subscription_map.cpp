@@ -44,12 +44,15 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
     std::string text = "example/test/A";
 
     single_subscription_map< std::string > map;
-    auto handle = map.insert(text, text);
+    auto handle = map.insert(text, text).first;
     BOOST_TEST(handle.second == "A");
     BOOST_TEST(map.handle_to_topic_filter(handle) == text);
-    BOOST_CHECK_THROW(map.insert(text, text), std::exception);
+    BOOST_TEST(map.insert(text, text).second == false);
     map.update(handle, "new_value");
     map.erase(handle);
+
+    BOOST_TEST(map.insert(text, text).second == true);
+    BOOST_TEST(map.erase(text) == 1);
 
     BOOST_TEST(map.size() == 0);
     BOOST_TEST(map.internal_size() == 1);
@@ -112,7 +115,7 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
 
     std::vector< single_subscription_map< std::string >::handle > handles;
     for (auto const& i : values) {
-        handles.push_back(map.insert(i, i));
+        handles.push_back(map.insert(i, i).first);
     }
 
     for (auto const& i : handles) {
@@ -163,7 +166,6 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     map.erase("a/b/c", "123");
     BOOST_TEST(map.size() == 0);
     BOOST_TEST(map.internal_size() == 1);
-
 
     std::vector<std::string> values = {
         "example/test/A", "example/+/A", "example/#", "#"
@@ -241,6 +243,26 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
 
     BOOST_TEST(map.size() == 0);
     BOOST_TEST(map.internal_size() == 1);
+
+    // Check if $ does not match # at root
+    map = multiple_subscription_map<std::string, int>();
+
+    map.insert_or_assign("#", "123", 10);
+    map.insert_or_assign("example/plus/A", "123", 10);
+
+    matches = {};
+    map.find("example/plus/A", [&matches](std::string const &a, int /*value*/) {
+        matches.push_back(a);
+    });
+    BOOST_TEST(matches.size() == 2);
+
+    matches = {};
+    map.find("$SYS/plus/A", [&matches](std::string const &a, int /*value*/) {
+        matches.push_back(a);
+    });
+    BOOST_TEST(matches.size() == 0);
+
+ //   map.dump(std::cout);
 }
 
 BOOST_AUTO_TEST_CASE( test_multiple_subscription_modify ) {
@@ -252,6 +274,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription_modify ) {
             // std::cout << "non_const_mem_fun()" << std::endl;
         }
     };
+
 
     using mi_t = multiple_subscription_map<std::string, my>;
     mi_t map;

@@ -83,7 +83,7 @@ class retained_topic_map {
             topic,
             [this, &parent](MQTT_NS::string_view t) {
                 if (t == "+" || t == "#") {
-                    throw std::runtime_error("No wildcards allowed in retained topic name");
+                    throw_no_wildcards_allowed();
                 }
 
                 node_id_t parent_id = parent->id;
@@ -94,7 +94,7 @@ class retained_topic_map {
                 if (entry == direct_index.end()) {
                     entry = map.insert(path_entry(parent->id, t, next_node_id++)).first;
                     if (next_node_id == max_node_id) {
-                        throw std::overflow_error("Maximum number of topics reached");
+                        throw_max_stored_topics();
                     }
                 }
                 else {
@@ -136,7 +136,7 @@ class retained_topic_map {
     // Match all underlying topics when a hash entry is matched
     // perform a breadth-first iteration over all items in the tree below
     template<typename Output>
-    void match_hash_entries(node_id_t parent, Output callback, bool ignore_system) const {
+    void match_hash_entries(node_id_t parent, Output&& callback, bool ignore_system) const {
         std::deque<node_id_t> entries;
         entries.push_back(parent);
         std::deque<node_id_t> new_entries;
@@ -170,7 +170,7 @@ class retained_topic_map {
 
     // Find all topics that match the specified topic filter
     template<typename Output>
-    void find_match(MQTT_NS::string_view topic_filter, Output callback) const {
+    void find_match(MQTT_NS::string_view topic_filter, Output&& callback) const {
         std::deque<direct_const_iterator> entries;
         entries.push_back(root);
 
@@ -212,7 +212,7 @@ class retained_topic_map {
             }
         );
 
-        for (auto entry : entries) {
+        for (auto& entry : entries) {
             if (entry->value) {
                 callback(*entry->value);
             }
@@ -247,9 +247,28 @@ class retained_topic_map {
     void increase_topics(std::vector<direct_const_iterator> const &path) {
         auto& direct_index = map.template get<direct_index_tag>();
 
-        for(auto i : path) {
+        for(auto& i : path) {
             direct_index.modify(i, [](path_entry &entry){ ++entry.count; });
         }
+    }
+
+    // Exceptions used
+    static void throw_max_stored_topics() { throw std::overflow_error("Retained map maximum number of topics reached"); }
+    static void throw_no_wildcards_allowed() { throw std::runtime_error("Retained map no wildcards allowed in retained topic name"); }
+
+    // Increase the map size (total number of topics stored)
+    void increase_map_size() {
+        if(map_size == std::numeric_limits<decltype(map_size)>::max()) {
+            throw_max_stored_topics();
+        }
+
+        ++map_size;
+    }
+
+    // Decrease the map size (total number of topics stored)
+    void decrease_map_size(size_t count) {
+        BOOST_ASSERT(map_size >= count);
+        map_size -= count;
     }
 
 public:
@@ -268,14 +287,14 @@ public:
         if (path.empty()) {
             auto new_topic = this->create_topic(topic);
             direct_index.modify(new_topic, [&value](path_entry &entry) mutable { entry.value.emplace(std::forward<V>(value)); });
-            ++map_size;
+            increase_map_size();
             return 1;
         }
 
         if (!path.back()->value) {
             this->increase_topics(path);
             direct_index.modify(path.back(), [&value](path_entry &entry) mutable { entry.value.emplace(std::forward<V>(value)); });
-            ++map_size;
+            increase_map_size();
             return 1;
         }
 
@@ -285,14 +304,15 @@ public:
     }
 
     // Find all stored topics that math the specified topic_filter
-    void find(MQTT_NS::string_view topic_filter, std::function< void (Value const&) > const& callback) const {
-        find_match(topic_filter, callback);
+    template<typename Output>
+    void find(MQTT_NS::string_view topic_filter, Output&& callback) const {
+        find_match(topic_filter, std::forward<Output>(callback));
     }
 
     // Remove a stored value at the specified topic
     std::size_t erase(MQTT_NS::string_view topic) {
         auto result = erase_topic(topic);
-        map_size -= result;
+        decrease_map_size(result);
         return result;
     }
 
