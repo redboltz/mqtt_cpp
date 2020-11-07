@@ -27,6 +27,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
+      MQTT_TEST_7: OFF
       MQTT_BUILD_EXAMPLES: ON
     ExamplesWs:
       MQTT_USE_TLS: OFF
@@ -38,6 +39,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
+      MQTT_TEST_7: OFF
       MQTT_BUILD_EXAMPLES: ON
     TestGroup1:
       MQTT_USE_TLS: ON
@@ -49,6 +51,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
+      MQTT_TEST_7: OFF
       MQTT_BUILD_EXAMPLES: OFF
     TestGroup2:
       MQTT_USE_TLS: OFF
@@ -60,6 +63,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
+      MQTT_TEST_7: OFF
       MQTT_BUILD_EXAMPLES: OFF
     TestGroup3:
       MQTT_USE_TLS: ON
@@ -71,6 +75,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
+      MQTT_TEST_7: OFF
       MQTT_BUILD_EXAMPLES: OFF
     TestGroup4:
       MQTT_USE_TLS: OFF
@@ -82,6 +87,7 @@ strategy:
       MQTT_TEST_4: ON
       MQTT_TEST_5: OFF
       MQTT_TEST_6: OFF
+      MQTT_TEST_7: OFF
       MQTT_BUILD_EXAMPLES: OFF
     TestGroup5:
       MQTT_USE_TLS: OFF
@@ -93,6 +99,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: ON
       MQTT_TEST_6: OFF
+      MQTT_TEST_7: OFF
       MQTT_BUILD_EXAMPLES: OFF
     TestGroup6:
       MQTT_USE_TLS: ON
@@ -104,6 +111,7 @@ strategy:
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
       MQTT_TEST_6: ON
+      MQTT_TEST_7: OFF
       MQTT_BUILD_EXAMPLES: OFF
     TestGroup7:
       MQTT_USE_TLS: OFF
@@ -114,22 +122,37 @@ strategy:
       MQTT_TEST_3: OFF
       MQTT_TEST_4: OFF
       MQTT_TEST_5: OFF
-      MQTT_TEST_6: ON
+      MQTT_TEST_6: OFF
+      MQTT_TEST_7: ON
       MQTT_BUILD_EXAMPLES: OFF
 
 steps:
-- script: |
+- powershell: |
     choco install --confirm --limitoutput --no-progress openssl
   displayName: 'install openssl'
 
-- script: |
+- powershell: |
     git submodule update --init --recursive
+    if (!$?) {
+      return Write-Error "git submodule update --init --recursive failed"
+    }
     mkdir build
     cd build
-    set CL=/D_WIN32_WINNT#0x0601
-    cmake -A x64 -DMQTT_USE_TLS=%MQTT_USE_TLS% -DMQTT_USE_WS=%MQTT_USE_WS% -DMQTT_USE_STR_CHECK=%MQTT_USE_STR_CHECK% -DMQTT_TEST_1=%MQTT_TEST_1% -DMQTT_TEST_2=%MQTT_TEST_2% -DMQTT_TEST_3=%MQTT_TEST_3% -DMQTT_TEST_4=%MQTT_TEST_4% -DMQTT_TEST_5=%MQTT_TEST_5% -DMQTT_TEST_6=%MQTT_TEST_6% -DMQTT_BUILD_EXAMPLES=%MQTT_BUILD_EXAMPLES% ..
-    cmake --build . --config Release -- -verbosity:minimal
+    $env:CL="/D_WIN32_WINNT#0x0601 /DBOOST_THREAD_VERSION#3 /DBOOST_ALLOW_DEPRECATED_HEADERS /DBOOST_TEST_SOURCE"
+    $env:BOOST_ROOT=$env:BOOST_ROOT_1_69_0
+    $env:PATH="$env:BOOST_ROOT\lib;"+$env:PATH
+
+    cmake -A x64 -DMQTT_USE_TLS=$(MQTT_USE_TLS) -DMQTT_USE_WS=$(MQTT_USE_WS) -DMQTT_USE_STR_CHECK=$(MQTT_USE_STR_CHECK) -DMQTT_TEST_1=$(MQTT_TEST_1) -DMQTT_TEST_2=$(MQTT_TEST_2) -DMQTT_TEST_3=$(MQTT_TEST_3) -DMQTT_TEST_4=$(MQTT_TEST_4) -DMQTT_TEST_5=$(MQTT_TEST_5) -DMQTT_TEST_6=$(MQTT_TEST_6) -DMQTT_TEST_7=$(MQTT_TEST_7) -DMQTT_BUILD_EXAMPLES=$(MQTT_BUILD_EXAMPLES) ..
+    if (!$?) {
+      return Write-Error "cmake failed"
+    }
+    cmake --build . --config Release
+    if (!$?) {
+      return Write-Error "cmake --build failed"
+    }
     cd test
-    set PATH=%BOOST_ROOT%\lib;%PATH%
     ctest -VV
+    if (!$?) {
+      return Write-Error "ctest -VV failed"
+    }
   displayName: 'cmake test'
