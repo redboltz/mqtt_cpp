@@ -4553,28 +4553,12 @@ protected:
                 socket_->close(ignored_ec);
             }
         }
-        if (   (ec == as::error::eof)
-            || (ec == as::error::connection_reset)
-            || (ec == as::error::connection_aborted)
-            || (ec == as::error::operation_aborted)
-#if defined(MQTT_USE_WS)
-            || (ec == boost::beast::websocket::error::closed)
-#endif // defined(MQTT_USE_WS)
-#if defined(MQTT_USE_TLS)
-#if defined(SSL_R_SHORT_READ)
-            || (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ)
-#else  // defined(SSL_R_SHORT_READ)
-            || (ERR_GET_REASON(ec.value()) == boost::asio::ssl::error::stream_truncated)
-#endif // defined(SSL_R_SHORT_READ)
-#endif // defined(MQTT_USE_TLS)
-        ) {
-            if (disconnect_requested_) {
-                disconnect_requested_ = false;
-                connect_requested_ = false;
-                clean_sub_unsub_inflight();
-                on_close();
-                return true;
-            }
+        if (disconnect_requested_) {
+            disconnect_requested_ = false;
+            connect_requested_ = false;
+            clean_sub_unsub_inflight();
+            on_close();
+            return true;
         }
         disconnect_requested_ = false;
         connect_requested_ = false;
