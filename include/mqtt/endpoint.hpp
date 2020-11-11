@@ -1076,7 +1076,7 @@ public:
      * @param topic_name
      *        A topic name to publish
      * @param contents
-     *        The contents to publish
+     *        The contents or the range of contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
      * @param props
@@ -1092,10 +1092,14 @@ public:
      *       internally until the broker has confirmed delivery, which may involve resends, and as such the
      *       life_keeper parameter is important.
      */
-    void publish(
+    template <typename ConstBufferSequence>
+    typename std::enable_if<
+        as::is_const_buffer_sequence<ConstBufferSequence>::value
+    >::type
+    publish(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        as::const_buffer contents,
+        ConstBufferSequence contents,
         publish_options pubopts,
         v5::properties props,
         any life_keeper
@@ -1114,7 +1118,7 @@ public:
         send_publish(
             packet_id,
             topic_name,
-            contents,
+            force_move(contents),
             pubopts,
             force_move(props),
             force_move(life_keeper)
@@ -1130,7 +1134,7 @@ public:
      * @param topic_name
      *        A topic name to publish
      * @param contents
-     *        The contents to publish
+     *        The contents or the range of contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
      * @param life_keeper
@@ -1142,10 +1146,14 @@ public:
      *       internally until the broker has confirmed delivery, which may involve resends, and as such the
      *       life_keeper parameter is important.
      */
-    void publish(
+    template <typename ConstBufferSequence>
+    typename std::enable_if<
+        as::is_const_buffer_sequence<ConstBufferSequence>::value
+    >::type
+    publish(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        as::const_buffer contents,
+        ConstBufferSequence contents,
         publish_options pubopts,
         any life_keeper
     ) {
@@ -1163,7 +1171,7 @@ public:
         send_publish(
             packet_id,
             topic_name,
-            contents,
+            force_move(contents),
             pubopts,
             v5::properties{},
             force_move(life_keeper)
@@ -2274,7 +2282,7 @@ public:
      * @param topic_name
      *        A topic name to publish
      * @param contents
-     *        The contents to publish
+     *        The contents or the range of contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
      * @param life_keeper
@@ -2288,10 +2296,14 @@ public:
      *       internally until the broker has confirmed delivery, which may involve resends, and as such the
      *       life_keeper parameter is important.
      */
-    void async_publish(
+    template <typename ConstBufferSequence>
+    typename std::enable_if<
+        as::is_const_buffer_sequence<ConstBufferSequence>::value
+    >::type
+    async_publish(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        as::const_buffer contents,
+        ConstBufferSequence contents,
         publish_options pubopts = {},
         any life_keeper = {},
         async_handler_t func = {}
@@ -2310,7 +2322,7 @@ public:
         async_send_publish(
             packet_id,
             topic_name,
-            contents,
+            force_move(contents),
             pubopts,
             v5::properties{},
             force_move(life_keeper),
@@ -2327,7 +2339,7 @@ public:
      * @param topic_name
      *        A topic name to publish
      * @param contents
-     *        The contents to publish
+     *        The contents or the range of contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
      * @param props
@@ -2341,10 +2353,14 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
-    void async_publish(
+    template <typename ConstBufferSequence>
+    typename std::enable_if<
+        as::is_const_buffer_sequence<ConstBufferSequence>::value
+    >::type
+    async_publish(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        as::const_buffer contents,
+        ConstBufferSequence contents,
         publish_options pubopts,
         v5::properties props,
         any life_keeper = {},
@@ -2364,7 +2380,7 @@ public:
         async_send_publish(
             packet_id,
             topic_name,
-            contents,
+            force_move(contents),
             pubopts,
             force_move(props),
             force_move(life_keeper),
@@ -8820,13 +8836,17 @@ private:
         }
     }
 
-    void send_publish(
-        packet_id_t      packet_id,
-        as::const_buffer topic_name,
-        as::const_buffer payload,
-        publish_options  pubopts,
-        v5::properties   props,
-        any              life_keeper) {
+    template <typename ConstBufferSequence>
+    typename std::enable_if<
+        as::is_const_buffer_sequence<ConstBufferSequence>::value
+    >::type
+    send_publish(
+        packet_id_t         packet_id,
+        as::const_buffer    topic_name,
+        ConstBufferSequence payloads,
+        publish_options     pubopts,
+        v5::properties      props,
+        any                 life_keeper) {
 
         auto do_send_publish =
             [&](auto msg, auto const& serialize_publish) {
@@ -8854,7 +8874,7 @@ private:
                 v3_1_1::basic_publish_message<PacketIdBytes>(
                     packet_id,
                     topic_name,
-                    payload,
+                    force_move(payloads),
                     pubopts
                 ),
                 &endpoint::on_serialize_publish_message
@@ -8865,7 +8885,7 @@ private:
                 v5::basic_publish_message<PacketIdBytes>(
                     packet_id,
                     topic_name,
-                    payload,
+                    force_move(payloads),
                     pubopts,
                     force_move(props)
                 ),
@@ -9296,10 +9316,14 @@ private:
         }
     }
 
-    void async_send_publish(
+    template <typename ConstBufferSequence>
+    typename std::enable_if<
+        as::is_const_buffer_sequence<ConstBufferSequence>::value
+    >::type
+    async_send_publish(
         packet_id_t packet_id,
         as::const_buffer topic_name,
-        as::const_buffer payload,
+        ConstBufferSequence payloads,
         publish_options pubopts,
         v5::properties props,
         any life_keeper,
@@ -9339,7 +9363,7 @@ private:
                 v3_1_1::basic_publish_message<PacketIdBytes>(
                     packet_id,
                     topic_name,
-                    payload,
+                    force_move(payloads),
                     pubopts
                 ),
                 &endpoint::on_serialize_publish_message
@@ -9350,7 +9374,7 @@ private:
                 v5::basic_publish_message<PacketIdBytes>(
                     packet_id,
                     topic_name,
-                    payload,
+                    force_move(payloads),
                     pubopts,
                     force_move(props)
                 ),

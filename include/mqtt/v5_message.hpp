@@ -543,10 +543,17 @@ private:
 template <std::size_t PacketIdBytes>
 class basic_publish_message {
 public:
+    template <
+        typename ConstBufferSequence,
+        typename std::enable_if<
+            as::is_const_buffer_sequence<ConstBufferSequence>::value,
+            std::nullptr_t
+        >::type = nullptr
+    >
     basic_publish_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
         as::const_buffer topic_name,
-        as::const_buffer payload,
+        ConstBufferSequence payloads,
         publish_options pubopts,
         properties props
     )
@@ -564,11 +571,9 @@ public:
               )
           ),
           props_(force_move(props)),
-          payload_(payload),
           remaining_length_(
               2                      // topic name length
               + topic_name_.size()   // topic name
-              + payload_.size()      // payload
               + (  (pubopts.get_qos() == qos::at_least_once || pubopts.get_qos() == qos::exactly_once)
                  ? PacketIdBytes // packet_id
                  : 0)
@@ -587,10 +592,20 @@ public:
                   [](std::size_t total, property_variant const& pv) {
                       return total + v5::num_of_const_buffer_sequence(pv);
                   }
-              ) +
-              1                     // payload
+              )
           )
     {
+        auto b = as::buffer_sequence_begin(payloads);
+        auto e = as::buffer_sequence_end(payloads);
+        auto num_of_payloads = static_cast<std::size_t>(std::distance(b, e));
+        payloads_.reserve(num_of_payloads);
+        for (; b != e; ++b) {
+            auto const& payload = *b;
+            remaining_length_ += payload.size();
+            payloads_.push_back(payload);
+        }
+        num_of_const_buffer_sequence_ += num_of_payloads;
+
         utf8string_check(topic_name_);
 
         auto pb = variable_bytes(property_length_);
@@ -670,7 +685,9 @@ public:
 
         props_ = property::parse(buf.substr(0, property_length_));
         buf.remove_prefix(property_length_);
-        payload_ = as::buffer(buf);
+        if (!buf.empty()) {
+            payloads_.emplace_back(as::buffer(buf));
+        }
         num_of_const_buffer_sequence_ =
             1 +                   // fixed header
             1 +                   // remaining length
@@ -686,7 +703,7 @@ public:
                     return total + v5::num_of_const_buffer_sequence(pv);
                 }
             ) +
-            1;                    // payload
+            payloads_.size();     // payload
     }
 
     /**
@@ -712,7 +729,7 @@ public:
             v5::add_const_buffer_sequence(ret, p);
         }
 
-        ret.emplace_back(as::buffer(payload_));
+        std::copy(payloads_.begin(), payloads_.end(), std::back_inserter(ret));
 
         return ret;
     }
@@ -765,7 +782,9 @@ public:
             it += static_cast<std::string::difference_type>(v5::size(p));
         }
 
-        ret.append(get_pointer(payload_), get_size(payload_));
+        for (auto const& payload : payloads_) {
+            ret.append(get_pointer(payload), get_size(payload));
+        }
 
         return ret;
     }
@@ -822,8 +841,13 @@ public:
      * @brief Get payload
      * @return payload
      */
-    string_view payload() const {
-        return string_view(get_pointer(payload_), get_size(payload_));
+    std::vector<string_view> payload() const {
+        std::vector<string_view> ret;
+        ret.reserve(payloads_.size());
+        for (auto const& payload : payloads_) {
+            ret.emplace_back(get_pointer(payload), get_size(payload));
+        }
+        return ret;
     }
 
     /**
@@ -850,7 +874,7 @@ private:
     std::size_t property_length_;
     boost::container::static_vector<char, 4> property_length_buf_;
     properties props_;
-    as::const_buffer payload_;
+    std::vector<as::const_buffer> payloads_;
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
     std::size_t num_of_const_buffer_sequence_;
