@@ -340,7 +340,7 @@ int main(int argc, char** argv) {
     auto s = MQTT_NS::server<>(
         boost::asio::ip::tcp::endpoint(
             boost::asio::ip::tcp::v4(),
-            boost::lexical_cast<std::uint16_t>(argv[1])
+            port
         ),
         iocs
     );
