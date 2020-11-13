@@ -7,10 +7,6 @@
 #if !defined(MQTT_WS_ENDPOINT_HPP)
 #define MQTT_WS_ENDPOINT_HPP
 
-#if defined(MQTT_USE_TLS)
-#include <boost/beast/websocket/ssl.hpp>
-#endif // defined(MQTT_USE_TLS)
-
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/asio/bind_executor.hpp>
