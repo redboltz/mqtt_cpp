@@ -8,7 +8,7 @@
 #define MQTT_GLOBAL_FIXTURE_HPP
 
 #include <string>
-#include <boost/test/included/unit_test.hpp>
+#include <boost/test/unit_test.hpp>
 #include <mqtt/setup_log.hpp>
 
 struct global_fixture {
