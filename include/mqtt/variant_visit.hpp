@@ -9,6 +9,7 @@
 
 #include <ostream>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/variant.hpp>
 #include <mqtt/visitor_util.hpp>
 

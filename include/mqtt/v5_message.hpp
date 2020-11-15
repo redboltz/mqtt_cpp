@@ -34,7 +34,6 @@
 #include <mqtt/property_variant.hpp>
 #include <mqtt/property_parse.hpp>
 #include <mqtt/reason_code.hpp>
-
 #include <mqtt/packet_id_type.hpp>
 #include <mqtt/move.hpp>
 

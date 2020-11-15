@@ -7,6 +7,7 @@
 #if !defined(MQTT_CONSTANT_HPP)
 #define MQTT_CONSTANT_HPP
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/type.hpp>
 
 namespace MQTT_NS {

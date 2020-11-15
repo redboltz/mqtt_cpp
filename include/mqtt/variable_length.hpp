@@ -8,6 +8,7 @@
 #define MQTT_VARIABLE_LENGTH_HPP
 
 #include <string>
+
 #include <mqtt/namespace.hpp>
 #include <mqtt/exception.hpp>
 

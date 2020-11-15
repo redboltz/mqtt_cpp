@@ -9,6 +9,8 @@
 
 #include <cstdint>
 
+#include <mqtt/namespace.hpp>
+
 namespace MQTT_NS {
 
 using session_expiry_interval_t = std::uint32_t;

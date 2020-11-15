@@ -32,6 +32,7 @@
 #include <boost/system/error_code.hpp>
 #include <boost/assert.hpp>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/tls.hpp>
 #include <mqtt/namespace.hpp>
 #include <mqtt/attributes.hpp>
@@ -257,10 +258,10 @@ private:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      *
      */
-    virtual bool on_connect(MQTT_NS::buffer client_id,
-                            MQTT_NS::optional<MQTT_NS::buffer> user_name,
-                            MQTT_NS::optional<MQTT_NS::buffer> password,
-                            MQTT_NS::optional<will> will,
+    virtual bool on_connect(buffer client_id,
+                            optional<buffer> user_name,
+                            optional<buffer> password,
+                            optional<will> will,
                             bool clean_session,
                             std::uint16_t keep_alive) noexcept = 0;
 
@@ -282,23 +283,23 @@ private:
      * @brief Publish handler
      * @param packet_id
      *        packet identifier<BR>
-     *        If received publish's QoS is 0, packet_id is MQTT_NS::nullopt.<BR>
+     *        If received publish's QoS is 0, packet_id is nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718039<BR>
      *        3.3.2  Variable header
      * @param pubopts
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718038<BR>
      *        3.3.1 Fixed header<BR>
-     *        You can check the fixed header using MQTT_NS::publish functions.
+     *        You can check the fixed header using publish functions.
      * @param topic_name
      *        Topic name
      * @param contents
      *        Published contents
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_publish(MQTT_NS::optional<packet_id_t> packet_id,
-                            MQTT_NS::publish_options pubopts,
-                            MQTT_NS::buffer topic_name,
-                            MQTT_NS::buffer contents) noexcept = 0;
+    virtual bool on_publish(optional<packet_id_t> packet_id,
+                            publish_options pubopts,
+                            buffer topic_name,
+                            buffer contents) noexcept = 0;
 
     /**
      * @brief Puback handler
@@ -351,7 +352,7 @@ private:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     virtual bool on_subscribe(packet_id_t packet_id,
-                              std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries) noexcept = 0;
+                              std::vector<std::tuple<buffer, subscribe_options>> entries) noexcept = 0;
 
     /**
      * @brief Suback handler
@@ -360,11 +361,11 @@ private:
      *        3.9.2 Variable header
      * @param qoss
      *        Collection of QoS that is corresponding to subscribed topic order.<BR>
-     *        If subscription is failure, the value is MQTT_NS::nullopt.<BR>
+     *        If subscription is failure, the value is nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718071<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_suback(packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> returns) noexcept = 0;
+    virtual bool on_suback(packet_id_t packet_id, std::vector<suback_return_code> returns) noexcept = 0;
 
     /**
      * @brief Unsubscribe handler
@@ -376,7 +377,7 @@ private:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800448<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_unsubscribe(packet_id_t packet_id, std::vector<MQTT_NS::buffer> topics) noexcept = 0;
+    virtual bool on_unsubscribe(packet_id_t packet_id, std::vector<buffer> topics) noexcept = 0;
 
     /**
      * @brief Unsuback handler
@@ -439,10 +440,10 @@ private:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      *
      */
-    virtual bool on_v5_connect(MQTT_NS::buffer client_id,
-                               MQTT_NS::optional<MQTT_NS::buffer> user_name,
-                               MQTT_NS::optional<MQTT_NS::buffer> password,
-                               MQTT_NS::optional<will> will,
+    virtual bool on_v5_connect(buffer client_id,
+                               optional<buffer> user_name,
+                               optional<buffer> password,
+                               optional<will> will,
                                bool clean_start,
                                std::uint16_t keep_alive,
                                v5::properties props) noexcept = 0;
@@ -471,13 +472,13 @@ private:
      * @brief Publish handler
      * @param packet_id
      *        packet identifier<BR>
-     *        If received publish's QoS is 0, packet_id is MQTT_NS::nullopt.<BR>
+     *        If received publish's QoS is 0, packet_id is nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901108<BR>
      *        3.3.2.2 Packet Identifier
      * @param pubopts
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901101<BR>
      *        3.3.1 Fixed header<BR>
-     *        You can check the fixed header using MQTT_NS::publish functions.
+     *        You can check the fixed header using publish functions.
      * @param topic_name
      *        Topic name<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901107<BR>
@@ -492,10 +493,10 @@ private:
      *        3.3.2.3 PUBLISH Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_publish(MQTT_NS::optional<packet_id_t> packet_id,
-                               MQTT_NS::publish_options pubopts,
-                               MQTT_NS::buffer topic_name,
-                               MQTT_NS::buffer contents,
+    virtual bool on_v5_publish(optional<packet_id_t> packet_id,
+                               publish_options pubopts,
+                               buffer topic_name,
+                               buffer contents,
                                v5::properties props) noexcept = 0;
 
     /**
@@ -593,7 +594,7 @@ private:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     virtual bool on_v5_subscribe(packet_id_t packet_id,
-                                 std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries,
+                                 std::vector<std::tuple<buffer, subscribe_options>> entries,
                                  v5::properties props) noexcept = 0;
 
     /**
@@ -612,7 +613,7 @@ private:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     virtual bool on_v5_suback(packet_id_t packet_id,
-                              std::vector<MQTT_NS::v5::suback_reason_code> reasons,
+                              std::vector<v5::suback_reason_code> reasons,
                               v5::properties props) noexcept = 0;
 
     /**
@@ -631,7 +632,7 @@ private:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     virtual bool on_v5_unsubscribe(packet_id_t packet_id,
-                                   std::vector<MQTT_NS::buffer> topics,
+                                   std::vector<buffer> topics,
                                    v5::properties props) noexcept = 0;
 
     /**
@@ -782,7 +783,7 @@ protected:
      *        This handler is called when the current mqtt message has been processed.
      * @param func A callback function that is called when async operation will finish.
      */
-    MQTT_ALWAYS_INLINE virtual void on_mqtt_message_processed(MQTT_NS::any session_life_keeper) noexcept
+    MQTT_ALWAYS_INLINE virtual void on_mqtt_message_processed(any session_life_keeper) noexcept
     {
         if (async_read_on_message_processed_) {
             async_read_control_packet_type(force_move(session_life_keeper));
@@ -883,7 +884,7 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @param life_keeper (optional)
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      * @return packet_id. If qos is set to at_most_once, return 0.
      * packet_id is automatically generated.
@@ -1013,7 +1014,7 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      *
      * @note If your QOS level is exactly_once or at_least_once, then the library will store this publish
@@ -1085,7 +1086,7 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      *
      * @note If your QOS level is exactly_once or at_least_once, then the library will store this publish
@@ -1139,7 +1140,7 @@ public:
      *        qos, retain flag, and dup flag.
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      *
      * @note If your QOS level is exactly_once or at_least_once, then the library will store this publish
@@ -1192,7 +1193,7 @@ public:
      *        qos, retain flag, and dup flag.
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      *
      * @note If your QOS level is exactly_once or at_least_once, then the library will store this publish
@@ -1267,7 +1268,7 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      *
      * @note If your QOS level is exactly_once or at_least_once, then the library will store this publish
@@ -1884,7 +1885,7 @@ public:
      *        3.6.2.2 PUBREL Properties
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If your props are not using built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If your props are not using built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      *
      * @note The library may store this message while it communicates with the server for several round trips.
@@ -2067,7 +2068,7 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      *
      * @return packet_id. If qos is set to at_most_once, return 0.
@@ -2252,7 +2253,7 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
@@ -2315,7 +2316,7 @@ public:
      *        qos, retain flag, and dup flag.
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
@@ -2376,7 +2377,7 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
@@ -2430,7 +2431,7 @@ public:
      *        qos, retain flag, and dup flag.
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
@@ -2503,7 +2504,7 @@ public:
      *        3.3.2.3 PUBLISH Properties
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
@@ -3804,7 +3805,7 @@ public:
      *
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
-     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. MQTT_NS::buffer)
+     *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
      *
      * @note The library may store this message while it communicates with the server for several round trips.
@@ -4487,7 +4488,7 @@ private:
 
 public:
     void restore_serialized_message(basic_message_variant<PacketIdBytes> msg, any life_keeper = {}) {
-        MQTT_NS::visit(restore_basic_message_variant_visitor(*this, force_move(life_keeper)), force_move(msg));
+        visit(restore_basic_message_variant_visitor(*this, force_move(life_keeper)), force_move(msg));
     }
 
     /**
@@ -4566,7 +4567,7 @@ public:
      * 3.1.2.10 Keep Alive
      */
     void set_pingresp_timeout(std::chrono::steady_clock::duration tim) {
-        pingresp_timeout_ = MQTT_NS::force_move(tim);
+        pingresp_timeout_ = force_move(tim);
     }
 
     /**
@@ -4588,7 +4589,7 @@ public:
      */
     void restore_topic_alias_recv_container(topic_alias_recv_map_t con) {
         LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-        topic_alias_recv_ = MQTT_NS::force_move(con);
+        topic_alias_recv_ = force_move(con);
     }
 
 protected:
@@ -10052,7 +10053,7 @@ private:
 
     static optional<topic_alias_t> get_topic_alias_by_prop(v5::property_variant const& prop) {
         optional<topic_alias_t> val;
-        MQTT_NS::visit(
+        visit(
             make_lambda_visitor(
                 [&val](v5::property::topic_alias const& p) {
                     val = p.val();

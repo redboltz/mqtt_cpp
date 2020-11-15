@@ -12,13 +12,12 @@
 #include <memory>
 #include <algorithm>
 
-#include <mqtt/namespace.hpp>
-#include <mqtt/optional.hpp>
-
 #include <boost/asio/buffer.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 #include <boost/container/static_vector.hpp>
 
+#include <mqtt/namespace.hpp>
+#include <mqtt/optional.hpp>
 #include <mqtt/two_byte_util.hpp>
 #include <mqtt/const_buffer_util.hpp>
 #include <mqtt/exception.hpp>
