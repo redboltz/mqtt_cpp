@@ -10,6 +10,8 @@
 #include <utility>
 #include <type_traits>
 
+#include <mqtt/namespace.hpp>
+
 namespace MQTT_NS {
 
 template <typename T>

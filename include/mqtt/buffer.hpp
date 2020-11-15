@@ -27,7 +27,7 @@ namespace as = boost::asio;
  * This class provides string_view interface.
  * This class hold string_view target's lifetime optionally.
  */
-class buffer : public MQTT_NS::string_view {
+class buffer : public string_view {
 public:
     /**
      * @brief string_view constructor
@@ -35,8 +35,8 @@ public:
      * This constructor doesn't hold the sv target's lifetime.
      * It behaves as string_view. Caller needs to manage the target lifetime.
      */
-    explicit constexpr buffer(MQTT_NS::string_view sv = MQTT_NS::string_view())
-        : MQTT_NS::string_view(force_move(sv)) {}
+    explicit constexpr buffer(string_view sv = string_view())
+        : string_view(force_move(sv)) {}
 
     /**
      * @brief string constructor (deleted)
@@ -52,8 +52,8 @@ public:
      * @param spa shared_ptr_array that holds sv target's lifetime
      * If user creates buffer via this constructor, spa's lifetime is held by the buffer.
      */
-    buffer(MQTT_NS::string_view sv, const_shared_ptr_array spa)
-        : MQTT_NS::string_view(force_move(sv)),
+    buffer(string_view sv, const_shared_ptr_array spa)
+        : string_view(force_move(sv)),
           lifetime_(force_move(spa)) {
     }
 
@@ -62,12 +62,12 @@ public:
      * The returned buffer ragnge is the same as std::string_view::substr().
      * In addition the lifetime is shared between returned buffer and this buffer.
      * @param offset offset point of the buffer
-     * @param length length of the buffer, If the length is MQTT_NS::string_view::npos
+     * @param length length of the buffer, If the length is string_view::npos
      *               then the length is from offset to the end of string.
      */
-    buffer substr(std::size_t offset, std::size_t length = MQTT_NS::string_view::npos) const& {
-        // range is checked in MQTT_NS::string_view::substr.
-        return buffer(MQTT_NS::string_view::substr(offset, length), lifetime_);
+    buffer substr(std::size_t offset, std::size_t length = string_view::npos) const& {
+        // range is checked in string_view::substr.
+        return buffer(string_view::substr(offset, length), lifetime_);
     }
 
     /**
@@ -75,12 +75,12 @@ public:
      * The returned buffer ragnge is the same as std::string_view::substr().
      * In addition the lifetime is moved to returned buffer.
      * @param offset offset point of the buffer
-     * @param length length of the buffer, If the length is MQTT_NS::string_view::npos
+     * @param length length of the buffer, If the length is string_view::npos
      *               then the length is from offset to the end of string.
      */
-    buffer substr(std::size_t offset, std::size_t length = MQTT_NS::string_view::npos) && {
-        // range is checked in MQTT_NS::string_view::substr.
-        return buffer(MQTT_NS::string_view::substr(offset, length), force_move(lifetime_));
+    buffer substr(std::size_t offset, std::size_t length = string_view::npos) && {
+        // range is checked in string_view::substr.
+        return buffer(string_view::substr(offset, length), force_move(lifetime_));
     }
 
 private:
@@ -92,7 +92,7 @@ inline namespace literals {
 /**
  * @brief user defined literals for buffer
  * If user use this out of mqtt scope, then user need to declare
- * `using namespace MQTT_NS::literals`.
+ * `using namespace literals`.
  * When user write "ABC"_mb, then this function is called.
  * The created buffer doesn't hold any lifetimes because the string literals
  * has static strage duration, so buffer doesn't need to hold the lifetime.
@@ -102,7 +102,7 @@ inline namespace literals {
  * @return buffer
  */
 inline buffer operator""_mb(char const* str, std::size_t length) {
-    return buffer(MQTT_NS::string_view(str, length));
+    return buffer(string_view(str, length));
 }
 
 } // namespace literals

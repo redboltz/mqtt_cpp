@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <ostream>
+
 #include <mqtt/namespace.hpp>
 
 namespace MQTT_NS {

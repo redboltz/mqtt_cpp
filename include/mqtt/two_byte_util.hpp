@@ -9,8 +9,10 @@
 
 #include <string>
 #include <cstdint>
+
 #include <boost/assert.hpp>
 #include <boost/container/static_vector.hpp>
+
 #include <mqtt/namespace.hpp>
 
 namespace MQTT_NS {

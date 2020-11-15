@@ -11,6 +11,7 @@
 
 #include <mqtt/namespace.hpp>
 
+#include <mqtt/namespace.hpp>
 #include <mqtt/move.hpp>
 #include <mqtt/publish.hpp>
 #include <mqtt/property_variant.hpp>

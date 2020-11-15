@@ -1341,7 +1341,7 @@ private:
     static optional<session_expiry_interval_t> get_session_expiry_interval_by_props(v5::properties const& props) {
         optional<session_expiry_interval_t> val;
         for (auto const& prop : props) {
-            MQTT_NS::visit(
+            visit(
                 make_lambda_visitor(
                     [&val](v5::property::session_expiry_interval const& p) {
                         val = p.val();

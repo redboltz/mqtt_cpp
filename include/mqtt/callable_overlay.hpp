@@ -92,17 +92,17 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      *
      */
-    MQTT_ALWAYS_INLINE bool on_connect(MQTT_NS::buffer client_id,
-                                       MQTT_NS::optional<MQTT_NS::buffer> user_name,
-                                       MQTT_NS::optional<MQTT_NS::buffer> password,
-                                       MQTT_NS::optional<will> will,
+    MQTT_ALWAYS_INLINE bool on_connect(buffer client_id,
+                                       optional<buffer> user_name,
+                                       optional<buffer> password,
+                                       optional<will> will,
                                        bool clean_session,
                                        std::uint16_t keep_alive) noexcept override final {
         return    ! h_connect_
-               || h_connect_(MQTT_NS::force_move(client_id),
-                             MQTT_NS::force_move(user_name),
-                             MQTT_NS::force_move(password),
-                             MQTT_NS::force_move(will),
+               || h_connect_(force_move(client_id),
+                             force_move(user_name),
+                             force_move(password),
+                             force_move(will),
                              clean_session,
                              keep_alive);
     }
@@ -128,28 +128,28 @@ struct callable_overlay final : public Impl
      * @brief Publish handler
      * @param packet_id
      *        packet identifier<BR>
-     *        If received publish's QoS is 0, packet_id is MQTT_NS::nullopt.<BR>
+     *        If received publish's QoS is 0, packet_id is nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718039<BR>
      *        3.3.2  Variable header
      * @param fixed_header
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718038<BR>
      *        3.3.1 Fixed header<BR>
-     *        You can check the fixed header using MQTT_NS::publish functions.
+     *        You can check the fixed header using publish functions.
      * @param topic_name
      *        Topic name
      * @param contents
      *        Published contents
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    MQTT_ALWAYS_INLINE bool on_publish(MQTT_NS::optional<packet_id_t> packet_id,
-                                       MQTT_NS::publish_options pubopts,
-                                       MQTT_NS::buffer topic_name,
-                                       MQTT_NS::buffer contents) noexcept override final {
+    MQTT_ALWAYS_INLINE bool on_publish(optional<packet_id_t> packet_id,
+                                       publish_options pubopts,
+                                       buffer topic_name,
+                                       buffer contents) noexcept override final {
         return    ! h_publish_
                || h_publish_(packet_id,
                              pubopts,
-                             MQTT_NS::force_move(topic_name),
-                             MQTT_NS::force_move(contents));
+                             force_move(topic_name),
+                             force_move(contents));
     }
 
     /**
@@ -215,10 +215,10 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_subscribe(packet_id_t packet_id,
-                                         std::vector<std::tuple<MQTT_NS::buffer,
+                                         std::vector<std::tuple<buffer,
                                                                 subscribe_options>> entries) noexcept override final {
         return    ! h_subscribe_
-               || h_subscribe_(packet_id, MQTT_NS::force_move(entries));
+               || h_subscribe_(packet_id, force_move(entries));
     }
 
     /**
@@ -228,14 +228,14 @@ struct callable_overlay final : public Impl
      *        3.9.2 Variable header
      * @param qoss
      *        Collection of QoS that is corresponding to subscribed topic order.<BR>
-     *        If subscription is failure, the value is MQTT_NS::nullopt.<BR>
+     *        If subscription is failure, the value is nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718071<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_suback(packet_id_t packet_id,
-                                      std::vector<MQTT_NS::suback_return_code> reasons) noexcept override final {
+                                      std::vector<suback_return_code> reasons) noexcept override final {
         return    ! h_suback_
-               || h_suback_(packet_id, MQTT_NS::force_move(reasons));
+               || h_suback_(packet_id, force_move(reasons));
     }
 
     /**
@@ -249,9 +249,9 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_unsubscribe(packet_id_t packet_id,
-                                           std::vector<MQTT_NS::buffer> topics) noexcept override final {
+                                           std::vector<buffer> topics) noexcept override final {
         return    ! h_unsubscribe_
-               || h_unsubscribe_(packet_id, MQTT_NS::force_move(topics));
+               || h_unsubscribe_(packet_id, force_move(topics));
     }
 
     /**
@@ -320,21 +320,21 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      *
      */
-    MQTT_ALWAYS_INLINE bool on_v5_connect(MQTT_NS::buffer client_id,
-                                          MQTT_NS::optional<MQTT_NS::buffer> user_name,
-                                          MQTT_NS::optional<MQTT_NS::buffer> password,
-                                          MQTT_NS::optional<will> will,
+    MQTT_ALWAYS_INLINE bool on_v5_connect(buffer client_id,
+                                          optional<buffer> user_name,
+                                          optional<buffer> password,
+                                          optional<will> will,
                                           bool clean_start,
                                           std::uint16_t keep_alive,
                                           v5::properties props) noexcept override final {
         return    ! h_v5_connect_
-               || h_v5_connect_(MQTT_NS::force_move(client_id),
-                                MQTT_NS::force_move(user_name),
-                                MQTT_NS::force_move(password),
-                                MQTT_NS::force_move(will),
+               || h_v5_connect_(force_move(client_id),
+                                force_move(user_name),
+                                force_move(password),
+                                force_move(will),
                                 clean_start,
                                 keep_alive,
-                                MQTT_NS::force_move(props));
+                                force_move(props));
     }
 
     /**
@@ -358,20 +358,20 @@ struct callable_overlay final : public Impl
                                           v5::properties props) noexcept override final {
         if (!base::on_v5_connack(session_present, reason_code, props)) return false;
         return    ! h_v5_connack_
-               || h_v5_connack_(session_present, reason_code, MQTT_NS::force_move(props));
+               || h_v5_connack_(session_present, reason_code, force_move(props));
     }
 
     /**
      * @brief Publish handler
      * @param packet_id
      *        packet identifier<BR>
-     *        If received publish's QoS is 0, packet_id is MQTT_NS::nullopt.<BR>
+     *        If received publish's QoS is 0, packet_id is nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901108<BR>
      *        3.3.2.2 Packet Identifier
      * @param fixed_header
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901101<BR>
      *        3.3.1 Fixed header<BR>
-     *        You can check the fixed header using MQTT_NS::publish functions.
+     *        You can check the fixed header using publish functions.
      * @param topic_name
      *        Topic name<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901107<BR>
@@ -386,17 +386,17 @@ struct callable_overlay final : public Impl
      *        3.3.2.3 PUBLISH Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    MQTT_ALWAYS_INLINE bool on_v5_publish(MQTT_NS::optional<packet_id_t> packet_id,
-                                          MQTT_NS::publish_options pubopts,
-                                          MQTT_NS::buffer topic_name,
-                                          MQTT_NS::buffer contents,
+    MQTT_ALWAYS_INLINE bool on_v5_publish(optional<packet_id_t> packet_id,
+                                          publish_options pubopts,
+                                          buffer topic_name,
+                                          buffer contents,
                                           v5::properties props) noexcept override final {
         return    ! h_v5_publish_
                || h_v5_publish_(packet_id,
                                 pubopts,
-                                MQTT_NS::force_move(topic_name),
-                                MQTT_NS::force_move(contents),
-                                MQTT_NS::force_move(props));
+                                force_move(topic_name),
+                                force_move(contents),
+                                force_move(props));
     }
 
     /**
@@ -419,7 +419,7 @@ struct callable_overlay final : public Impl
                                          v5::puback_reason_code reason_code,
                                          v5::properties props) noexcept override final {
         return    ! h_v5_puback_
-               || h_v5_puback_(packet_id, reason_code, MQTT_NS::force_move(props));
+               || h_v5_puback_(packet_id, reason_code, force_move(props));
     }
 
     /**
@@ -442,7 +442,7 @@ struct callable_overlay final : public Impl
                                          v5::pubrec_reason_code reason_code,
                                          v5::properties props) noexcept override final {
         return    ! h_v5_pubrec_
-               || h_v5_pubrec_(packet_id, reason_code, MQTT_NS::force_move(props));
+               || h_v5_pubrec_(packet_id, reason_code, force_move(props));
     }
 
     /**
@@ -465,7 +465,7 @@ struct callable_overlay final : public Impl
                                          v5::pubrel_reason_code reason_code,
                                          v5::properties props) noexcept override final {
         return    ! h_v5_pubrel_
-               || h_v5_pubrel_(packet_id, reason_code, MQTT_NS::force_move(props));
+               || h_v5_pubrel_(packet_id, reason_code, force_move(props));
     }
 
     /**
@@ -488,7 +488,7 @@ struct callable_overlay final : public Impl
                                           v5::pubcomp_reason_code reason_code,
                                           v5::properties props) noexcept override final {
         return    ! h_v5_pubcomp_
-               || h_v5_pubcomp_(packet_id, reason_code, MQTT_NS::force_move(props));
+               || h_v5_pubcomp_(packet_id, reason_code, force_move(props));
     }
 
     /**
@@ -506,10 +506,10 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_subscribe(packet_id_t packet_id,
-                                            std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries,
+                                            std::vector<std::tuple<buffer, subscribe_options>> entries,
                                             v5::properties props) noexcept override final {
         return    ! h_v5_subscribe_
-               || h_v5_subscribe_(packet_id, MQTT_NS::force_move(entries), MQTT_NS::force_move(props));
+               || h_v5_subscribe_(packet_id, force_move(entries), force_move(props));
     }
 
     /**
@@ -528,10 +528,10 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_suback(packet_id_t packet_id,
-                                         std::vector<MQTT_NS::v5::suback_reason_code> reasons,
+                                         std::vector<v5::suback_reason_code> reasons,
                                          v5::properties props) noexcept override final {
         return    ! h_v5_suback_
-               || h_v5_suback_(packet_id, MQTT_NS::force_move(reasons), MQTT_NS::force_move(props));
+               || h_v5_suback_(packet_id, force_move(reasons), force_move(props));
     }
 
     /**
@@ -550,10 +550,10 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_unsubscribe(packet_id_t packet_id,
-                                              std::vector<MQTT_NS::buffer> topics,
+                                              std::vector<buffer> topics,
                                               v5::properties props) noexcept override final {
         return    ! h_v5_unsubscribe_
-               || h_v5_unsubscribe_(packet_id, MQTT_NS::force_move(topics), MQTT_NS::force_move(props));
+               || h_v5_unsubscribe_(packet_id, force_move(topics), force_move(props));
     }
 
     /**
@@ -575,7 +575,7 @@ struct callable_overlay final : public Impl
                                            std::vector<v5::unsuback_reason_code> reasons,
                                            v5::properties props) noexcept override final {
         return    ! h_v5_unsuback_
-               || h_v5_unsuback_(packet_id, MQTT_NS::force_move(reasons), MQTT_NS::force_move(props));
+               || h_v5_unsuback_(packet_id, force_move(reasons), force_move(props));
     }
 
     /**
@@ -593,7 +593,7 @@ struct callable_overlay final : public Impl
      */
     MQTT_ALWAYS_INLINE void on_v5_disconnect(v5::disconnect_reason_code reason_code,
                                              v5::properties props) noexcept override final {
-        if (h_v5_disconnect_) h_v5_disconnect_(reason_code, MQTT_NS::force_move(props));
+        if (h_v5_disconnect_) h_v5_disconnect_(reason_code, force_move(props));
     }
 
     /**
@@ -613,7 +613,7 @@ struct callable_overlay final : public Impl
     MQTT_ALWAYS_INLINE bool on_v5_auth(v5::auth_reason_code reason_code,
                                        v5::properties props) noexcept override final {
         return    ! h_v5_auth_
-               || h_v5_auth_(reason_code, MQTT_NS::force_move(props));
+               || h_v5_auth_(reason_code, force_move(props));
 
     }
 
@@ -745,12 +745,12 @@ struct callable_overlay final : public Impl
      *          handler only if it is set.
      * @param func A callback function that is called when async operation will finish.
      */
-    MQTT_ALWAYS_INLINE void on_mqtt_message_processed(MQTT_NS::any session_life_keeper) noexcept override final {
+    MQTT_ALWAYS_INLINE void on_mqtt_message_processed(any session_life_keeper) noexcept override final {
         if(h_mqtt_message_processed_) {
-            h_mqtt_message_processed_(MQTT_NS::force_move(session_life_keeper));
+            h_mqtt_message_processed_(force_move(session_life_keeper));
         }
         else {
-            base::on_mqtt_message_processed(MQTT_NS::force_move(session_life_keeper));
+            base::on_mqtt_message_processed(force_move(session_life_keeper));
         }
     }
 
@@ -811,10 +811,10 @@ struct callable_overlay final : public Impl
      *
      */
     using connect_handler = std::function<
-        bool(MQTT_NS::buffer client_id,
-             MQTT_NS::optional<MQTT_NS::buffer> user_name,
-             MQTT_NS::optional<MQTT_NS::buffer> password,
-             MQTT_NS::optional<will> will,
+        bool(buffer client_id,
+             optional<buffer> user_name,
+             optional<buffer> password,
+             optional<will> will,
              bool clean_session,
              std::uint16_t keep_alive)>;
 
@@ -837,10 +837,10 @@ struct callable_overlay final : public Impl
      * @param fixed_header
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718038<BR>
      *        3.3.1 Fixed header<BR>
-     *        You can check the fixed header using MQTT_NS::publish functions.
+     *        You can check the fixed header using publish functions.
      * @param packet_id
      *        packet identifier<BR>
-     *        If received publish's QoS is 0, packet_id is MQTT_NS::nullopt.<BR>
+     *        If received publish's QoS is 0, packet_id is nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718039<BR>
      *        3.3.2  Variable header
      * @param topic_name
@@ -849,10 +849,10 @@ struct callable_overlay final : public Impl
      *        Published contents
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using publish_handler = std::function<bool(MQTT_NS::optional<packet_id_t> packet_id,
-                                               MQTT_NS::publish_options pubopts,
-                                               MQTT_NS::buffer topic_name,
-                                               MQTT_NS::buffer contents)>;
+    using publish_handler = std::function<bool(optional<packet_id_t> packet_id,
+                                               publish_options pubopts,
+                                               buffer topic_name,
+                                               buffer contents)>;
 
     /**
      * @brief Puback handler
@@ -905,7 +905,7 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using subscribe_handler = std::function<bool(packet_id_t packet_id,
-                                                 std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries)>;
+                                                 std::vector<std::tuple<buffer, subscribe_options>> entries)>;
 
     /**
      * @brief Suback handler
@@ -914,12 +914,12 @@ struct callable_overlay final : public Impl
      *        3.9.2 Variable header
      * @param qoss
      *        Collection of QoS that is corresponding to subscribed topic order.<BR>
-     *        If subscription is failure, the value is MQTT_NS::nullopt.<BR>
+     *        If subscription is failure, the value is nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718071<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using suback_handler = std::function<bool(packet_id_t packet_id,
-                                              std::vector<MQTT_NS::suback_return_code> qoss)>;
+                                              std::vector<suback_return_code> qoss)>;
 
     /**
      * @brief Unsubscribe handler
@@ -932,7 +932,7 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using unsubscribe_handler = std::function<bool(packet_id_t packet_id,
-                                                   std::vector<MQTT_NS::buffer> topics)>;
+                                                   std::vector<buffer> topics)>;
 
     /**
      * @brief Unsuback handler
@@ -996,10 +996,10 @@ struct callable_overlay final : public Impl
      *
      */
     using v5_connect_handler = std::function<
-        bool(MQTT_NS::buffer client_id,
-             MQTT_NS::optional<MQTT_NS::buffer> user_name,
-             MQTT_NS::optional<MQTT_NS::buffer> password,
-             MQTT_NS::optional<will> will,
+        bool(buffer client_id,
+             optional<buffer> user_name,
+             optional<buffer> password,
+             optional<will> will,
              bool clean_start,
              std::uint16_t keep_alive,
              v5::properties props)
@@ -1031,13 +1031,13 @@ struct callable_overlay final : public Impl
      * @brief Publish handler
      * @param packet_id
      *        packet identifier<BR>
-     *        If received publish's QoS is 0, packet_id is MQTT_NS::nullopt.<BR>
+     *        If received publish's QoS is 0, packet_id is nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901108<BR>
      *        3.3.2.2 Packet Identifier
      * @param fixed_header
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901101<BR>
      *        3.3.1 Fixed header<BR>
-     *        You can check the fixed header using MQTT_NS::publish functions.
+     *        You can check the fixed header using publish functions.
      * @param topic_name
      *        Topic name<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901107<BR>
@@ -1053,10 +1053,10 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using v5_publish_handler = std::function<
-        bool(MQTT_NS::optional<packet_id_t> packet_id,
-             MQTT_NS::publish_options pubopts,
-             MQTT_NS::buffer topic_name,
-             MQTT_NS::buffer contents,
+        bool(optional<packet_id_t> packet_id,
+             publish_options pubopts,
+             buffer topic_name,
+             buffer contents,
              v5::properties props)
     >;
 
@@ -1164,7 +1164,7 @@ struct callable_overlay final : public Impl
      */
     using v5_subscribe_handler = std::function<
         bool(packet_id_t packet_id,
-             std::vector<std::tuple<MQTT_NS::buffer, subscribe_options>> entries,
+             std::vector<std::tuple<buffer, subscribe_options>> entries,
              v5::properties props)
     >;
 
@@ -1185,7 +1185,7 @@ struct callable_overlay final : public Impl
      */
     using v5_suback_handler = std::function<
         bool(packet_id_t packet_id,
-             std::vector<MQTT_NS::v5::suback_reason_code> reasons,
+             std::vector<v5::suback_reason_code> reasons,
              v5::properties props)
     >;
 
@@ -1206,7 +1206,7 @@ struct callable_overlay final : public Impl
      */
     using v5_unsubscribe_handler = std::function<
         bool(packet_id_t packet_id,
-             std::vector<MQTT_NS::buffer> topics,
+             std::vector<buffer> topics,
              v5::properties props)
     >;
 

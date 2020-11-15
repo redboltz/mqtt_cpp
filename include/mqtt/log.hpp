@@ -24,6 +24,7 @@
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/comparison/greater_equal.hpp>
 
+#include <mqtt/namespace.hpp>
 
 namespace MQTT_NS {
 

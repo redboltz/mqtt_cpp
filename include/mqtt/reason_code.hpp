@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <ostream>
+
 #include <mqtt/namespace.hpp>
 #include <mqtt/subscribe_options.hpp>
 
