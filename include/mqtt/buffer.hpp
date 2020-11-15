@@ -11,12 +11,16 @@
 #include <utility>
 #include <type_traits>
 
+#include <boost/asio/buffer.hpp>
+
 #include <mqtt/namespace.hpp>
 #include <mqtt/string_view.hpp>
 #include <mqtt/shared_ptr_array.hpp>
 #include <mqtt/move.hpp>
 
 namespace MQTT_NS {
+
+namespace as = boost::asio;
 
 /**
  * @brief buffer that has string_view interface
@@ -134,10 +138,95 @@ inline buffer allocate_buffer(string_view sv) {
     return allocate_buffer(sv.begin(), sv.end());
 }
 
+inline buffer const* buffer_sequence_begin(buffer const& buf) {
+    return std::addressof(buf);
+}
+
+inline buffer const* buffer_sequence_end(buffer const& buf) {
+    return std::addressof(buf) + 1;
+}
+
+template <typename Col>
+inline typename Col::const_iterator buffer_sequence_begin(Col const& col) {
+    return col.cbegin();
+}
+
+template <typename Col>
+inline typename Col::const_iterator buffer_sequence_end(Col const& col) {
+    return col.cend();
+}
+
+namespace detail {
+
+template <typename>
+char buffer_sequence_begin_helper(...);
+
+template <typename T>
+char (&buffer_sequence_begin_helper(
+    T* t,
+    typename std::enable_if<
+        !std::is_same<
+            decltype(buffer_sequence_begin(*t)),
+            void
+        >::value
+    >::type*)
+)[2];
+
+template <typename>
+char buffer_sequence_end_helper(...);
+
+template <typename T>
+char (&buffer_sequence_end_helper(
+    T* t,
+    typename std::enable_if<
+        !std::is_same<
+            decltype(buffer_sequence_end(*t)),
+            void
+        >::value
+    >::type*)
+)[2];
+
+template <typename, typename>
+char (&buffer_sequence_element_type_helper(...))[2];
+
+template <typename T, typename Buffer>
+char buffer_sequence_element_type_helper(
+    T* t,
+    typename std::enable_if<
+        std::is_convertible<
+            decltype(*buffer_sequence_begin(*t)),
+            Buffer
+        >::value
+    >::type*
+);
+
+template <typename T, typename Buffer>
+struct is_buffer_sequence_class
+    : std::integral_constant<bool,
+      sizeof(buffer_sequence_begin_helper<T>(0, 0)) != 1 &&
+      sizeof(buffer_sequence_end_helper<T>(0, 0)) != 1 &&
+      sizeof(buffer_sequence_element_type_helper<T, Buffer>(0, 0)) == 1>
+{
+};
+
+} // namespace detail
+
+template <typename T>
+struct is_buffer_sequence :
+    std::conditional<
+        std::is_class<T>::value,
+        detail::is_buffer_sequence_class<T, buffer>,
+        std::false_type
+    >::type
+{
+};
+
+template <>
+struct is_buffer_sequence<buffer> : std::true_type
+{
+};
 
 } // namespace MQTT_NS
-
-#include <boost/asio/buffer.hpp>
 
 namespace boost {
 namespace asio {
