@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE( publish_get_attributes1 ) {
         BOOST_TEST(m.is_retain() == true);
         BOOST_TEST(m.is_dup() == false);
         BOOST_TEST(m.topic() == "1234");
-        BOOST_TEST(m.payload() == "");
+        BOOST_TEST(m.payload().empty());
     }
     catch (...) {
         BOOST_TEST(false);
@@ -283,7 +283,7 @@ BOOST_AUTO_TEST_CASE( publish_get_attributes2 ) {
         BOOST_TEST(m.is_retain() == false);
         BOOST_TEST(m.is_dup() == true);
         BOOST_TEST(m.topic() == "1234");
-        BOOST_TEST(m.payload() == "AB");
+        BOOST_TEST(m.payload().front() == "AB");
         BOOST_TEST(m.continuous_buffer() == buf);
     }
     catch (...) {

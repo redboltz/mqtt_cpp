@@ -11,6 +11,7 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <numeric>
 
 #include <boost/asio/buffer.hpp>
 #include <boost/container/static_vector.hpp>
@@ -503,25 +504,40 @@ private:
 template <std::size_t PacketIdBytes>
 class basic_publish_message {
 public:
+    template <
+        typename ConstBufferSequence,
+        typename std::enable_if<
+            as::is_const_buffer_sequence<ConstBufferSequence>::value,
+            std::nullptr_t
+        >::type = nullptr
+    >
     basic_publish_message(
         typename packet_id_type<PacketIdBytes>::type packet_id,
         as::const_buffer topic_name,
-        as::const_buffer payload,
+        ConstBufferSequence payloads,
         publish_options pubopts
     )
         : fixed_header_(make_fixed_header(control_packet_type::publish, 0b0000) | pubopts.operator std::uint8_t()),
           topic_name_(topic_name),
           topic_name_length_buf_ { num_to_2bytes(boost::numeric_cast<std::uint16_t>(topic_name.size())) },
-          payload_(payload),
           remaining_length_(
               2                      // topic name length
               + topic_name_.size()   // topic name
-              + payload_.size()      // payload
               + (  (pubopts.get_qos() == qos::at_least_once || pubopts.get_qos() == qos::exactly_once)
                  ? PacketIdBytes // packet_id
                  : 0)
           )
     {
+        auto b = as::buffer_sequence_begin(payloads);
+        auto e = as::buffer_sequence_end(payloads);
+        auto num_of_payloads = static_cast<std::size_t>(std::distance(b, e));
+        payloads_.reserve(num_of_payloads);
+        for (; b != e; ++b) {
+            auto const& payload = *b;
+            remaining_length_ += payload.size();
+            payloads_.push_back(payload);
+        }
+
         utf8string_check(topic_name_);
 
         auto rb = remaining_bytes(remaining_length_);
@@ -578,7 +594,9 @@ public:
             break;
         };
 
-        payload_ = as::buffer(buf);
+        if (!buf.empty()) {
+            payloads_.emplace_back(as::buffer(buf));
+        }
     }
 
     /**
@@ -587,27 +605,20 @@ public:
      * @return const buffer sequence
      */
     std::vector<as::const_buffer> const_buffer_sequence() const {
-        if (packet_id_.empty()) {
-            return
-                {
-                    as::buffer(&fixed_header_, 1),
-                    as::buffer(remaining_length_buf_.data(), remaining_length_buf_.size()),
-                    as::buffer(topic_name_length_buf_.data(), topic_name_length_buf_.size()),
-                    as::buffer(topic_name_),
-                    as::buffer(payload_)
-                };
+        std::vector<as::const_buffer> ret;
+        ret.reserve(
+            5 + // fixed_header, remaining_length_buf, topic_name_length_buf, topic_name, packet_id
+            payloads_.size()
+        );
+        ret.emplace_back(as::buffer(&fixed_header_, 1));
+        ret.emplace_back(as::buffer(remaining_length_buf_.data(), remaining_length_buf_.size()));
+        ret.emplace_back(as::buffer(topic_name_length_buf_.data(), topic_name_length_buf_.size()));
+        ret.emplace_back(as::buffer(topic_name_));
+        if (!packet_id_.empty()) {
+            ret.emplace_back(as::buffer(packet_id_.data(), packet_id_.size()));
         }
-        else {
-            return
-                {
-                    as::buffer(&fixed_header_, 1),
-                    as::buffer(remaining_length_buf_.data(), remaining_length_buf_.size()),
-                    as::buffer(topic_name_length_buf_.data(), topic_name_length_buf_.size()),
-                    as::buffer(topic_name_),
-                    as::buffer(packet_id_.data(), packet_id_.size()),
-                    as::buffer(payload_)
-                };
-        }
+        std::copy(payloads_.begin(), payloads_.end(), std::back_inserter(ret));
+        return ret;
     }
 
     /**
@@ -631,7 +642,14 @@ public:
             1 +                   // remaining length
             2 +                   // topic name length, topic name
             (packet_id_.empty() ? 0 : 1) +  // packet_id
-            1;                    // payload
+            std::accumulate(
+                payloads_.begin(),
+                payloads_.end(),
+                std::size_t(0),
+                [](std::size_t s, as::const_buffer const& payload) {
+                    return s + payload.size();
+                }
+            );
     }
 
     /**
@@ -652,7 +670,9 @@ public:
         ret.append(get_pointer(topic_name_), get_size(topic_name_));
 
         ret.append(packet_id_.data(), packet_id_.size());
-        ret.append(get_pointer(payload_), get_size(payload_));
+        for (auto const& payload : payloads_) {
+            ret.append(get_pointer(payload), get_size(payload));
+        }
 
         return ret;
     }
@@ -709,8 +729,13 @@ public:
      * @brief Get payload
      * @return payload
      */
-    constexpr string_view payload() const {
-        return string_view(get_pointer(payload_), get_size(payload_));
+    std::vector<string_view> payload() const {
+        std::vector<string_view> ret;
+        ret.reserve(payloads_.size());
+        for (auto const& payload : payloads_) {
+            ret.emplace_back(get_pointer(payload), get_size(payload));
+        }
+        return ret;
     }
 
     /**
@@ -726,7 +751,7 @@ private:
     as::const_buffer topic_name_;
     boost::container::static_vector<char, 2> topic_name_length_buf_;
     boost::container::static_vector<char, PacketIdBytes> packet_id_;
-    as::const_buffer payload_;
+    std::vector<as::const_buffer> payloads_;
     std::size_t remaining_length_;
     boost::container::static_vector<char, 4> remaining_length_buf_;
 };
