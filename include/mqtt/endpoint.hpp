@@ -1076,7 +1076,7 @@ public:
      * @param topic_name
      *        A topic name to publish
      * @param contents
-     *        The contents or the range of contents to publish
+     *        The contents or the range of the contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
      * @param props
@@ -1134,7 +1134,7 @@ public:
      * @param topic_name
      *        A topic name to publish
      * @param contents
-     *        The contents or the range of contents to publish
+     *        The contents or the range of the contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
      * @param life_keeper
@@ -1187,7 +1187,7 @@ public:
      * @param topic_name
      *        A topic name to publish
      * @param contents
-     *        The contents to publish
+     *        The contents or the range of the contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
      * @param life_keeper
@@ -1201,10 +1201,14 @@ public:
      *       If topic_name and contents don't manage their lifetimes, then life_keeper should be used to keep
      *       their lifetimes.
      */
-    void publish(
+    template <typename BufferSequence>
+    typename std::enable_if<
+        is_buffer_sequence<BufferSequence>::value
+    >::type
+    publish(
         packet_id_t packet_id,
         buffer topic_name,
-        buffer contents,
+        BufferSequence contents,
         publish_options pubopts = {},
         any life_keeper = {}
     ) {
@@ -1220,11 +1224,21 @@ public:
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto topic_name_buf = as::buffer(topic_name);
-        auto contents_buf   = as::buffer(contents);
+
+        std::vector<as::const_buffer> cbs;
+        {
+            auto b = mqtt::buffer_sequence_begin(contents);
+            auto e = mqtt::buffer_sequence_end(contents);
+            cbs.reserve(static_cast<std::size_t>(std::distance(b, e)));
+            for (; b != e; ++b) {
+                cbs.emplace_back(as::buffer(*b));
+            }
+        }
+
         send_publish(
             packet_id,
             topic_name_buf,
-            contents_buf,
+            force_move(cbs),
             pubopts,
             v5::properties{},
             std::make_tuple(
@@ -1244,7 +1258,7 @@ public:
      * @param topic_name
      *        A topic name to publish
      * @param contents
-     *        The contents to publish
+     *        The contents or the range of the contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
      * @param props
@@ -1260,10 +1274,14 @@ public:
      *       internally until the broker has confirmed delivery, which may involve resends, and as such the
      *       life_keeper parameter is important.
      */
-    void publish(
+    template <typename BufferSequence>
+    typename std::enable_if<
+        is_buffer_sequence<BufferSequence>::value
+    >::type
+    publish(
         packet_id_t packet_id,
         buffer topic_name,
-        buffer contents,
+        BufferSequence contents,
         publish_options pubopts,
         v5::properties props,
         any life_keeper = {}
@@ -1280,11 +1298,21 @@ public:
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto topic_name_buf = as::buffer(topic_name);
-        auto contents_buf   = as::buffer(contents);
+
+        std::vector<as::const_buffer> cbs;
+        {
+            auto b = mqtt::buffer_sequence_begin(contents);
+            auto e = mqtt::buffer_sequence_end(contents);
+            cbs.reserve(static_cast<std::size_t>(std::distance(b, e)));
+            for (; b != e; ++b) {
+                cbs.emplace_back(as::buffer(*b));
+            }
+        }
+
         send_publish(
             packet_id,
             topic_name_buf,
-            contents_buf,
+            force_move(cbs),
             pubopts,
             force_move(props),
             std::make_tuple(
@@ -2282,7 +2310,7 @@ public:
      * @param topic_name
      *        A topic name to publish
      * @param contents
-     *        The contents or the range of contents to publish
+     *        The contents or the range of the contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
      * @param life_keeper
@@ -2339,7 +2367,7 @@ public:
      * @param topic_name
      *        A topic name to publish
      * @param contents
-     *        The contents or the range of contents to publish
+     *        The contents or the range of the contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
      * @param props
@@ -2397,7 +2425,7 @@ public:
      * @param topic_name
      *        A topic name to publish
      * @param contents
-     *        The contents to publish
+     *        The contents or the range of the contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
      * @param life_keeper
@@ -2407,10 +2435,14 @@ public:
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      */
-    void async_publish(
+    template <typename BufferSequence>
+    typename std::enable_if<
+        is_buffer_sequence<BufferSequence>::value
+    >::type
+    async_publish(
         packet_id_t packet_id,
         buffer topic_name,
-        buffer contents,
+        BufferSequence contents,
         publish_options pubopts = {},
         any life_keeper = {},
         async_handler_t func = {}
@@ -2427,12 +2459,21 @@ public:
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto topic_name_buf = as::buffer(topic_name);
-        auto contents_buf   = as::buffer(contents);
+
+        std::vector<as::const_buffer> cbs;
+        {
+            auto b = mqtt::buffer_sequence_begin(contents);
+            auto e = mqtt::buffer_sequence_end(contents);
+            cbs.reserve(static_cast<std::size_t>(std::distance(b, e)));
+            for (; b != e; ++b) {
+                cbs.emplace_back(as::buffer(*b));
+            }
+        }
 
         async_send_publish(
             packet_id,
             topic_name_buf,
-            contents_buf,
+            force_move(cbs),
             pubopts,
             v5::properties{},
             std::make_tuple(
@@ -2453,7 +2494,7 @@ public:
      * @param topic_name
      *        A topic name to publish
      * @param contents
-     *        The contents to publish
+     *        The contents or the range of the contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
      * @param props
@@ -2471,10 +2512,14 @@ public:
      *       internally until the broker has confirmed delivery, which may involve resends, and as such the
      *       life_keeper parameter is important.
      */
-    void async_publish(
+    template <typename BufferSequence>
+    typename std::enable_if<
+        is_buffer_sequence<BufferSequence>::value
+    >::type
+    async_publish(
         packet_id_t packet_id,
         buffer topic_name,
-        buffer contents,
+        BufferSequence contents,
         publish_options pubopts,
         v5::properties props,
         any life_keeper = {},
@@ -2492,12 +2537,21 @@ public:
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
         auto topic_name_buf = as::buffer(topic_name);
-        auto contents_buf   = as::buffer(contents);
+
+        std::vector<as::const_buffer> cbs;
+        {
+            auto b = mqtt::buffer_sequence_begin(contents);
+            auto e = mqtt::buffer_sequence_end(contents);
+            cbs.reserve(static_cast<std::size_t>(std::distance(b, e)));
+            for (; b != e; ++b) {
+                cbs.emplace_back(as::buffer(*b));
+            }
+        }
 
         async_send_publish(
             packet_id,
             topic_name_buf,
-            contents_buf,
+            force_move(cbs),
             pubopts,
             force_move(props),
             std::make_tuple(
