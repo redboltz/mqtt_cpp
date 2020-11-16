@@ -1228,8 +1228,8 @@ public:
 
         std::vector<as::const_buffer> cbs;
         {
-            auto b = mqtt::buffer_sequence_begin(contents);
-            auto e = mqtt::buffer_sequence_end(contents);
+            auto b = MQTT_NS::buffer_sequence_begin(contents);
+            auto e = MQTT_NS::buffer_sequence_end(contents);
             cbs.reserve(static_cast<std::size_t>(std::distance(b, e)));
             for (; b != e; ++b) {
                 cbs.emplace_back(as::buffer(*b));
@@ -1302,8 +1302,8 @@ public:
 
         std::vector<as::const_buffer> cbs;
         {
-            auto b = mqtt::buffer_sequence_begin(contents);
-            auto e = mqtt::buffer_sequence_end(contents);
+            auto b = MQTT_NS::buffer_sequence_begin(contents);
+            auto e = MQTT_NS::buffer_sequence_end(contents);
             cbs.reserve(static_cast<std::size_t>(std::distance(b, e)));
             for (; b != e; ++b) {
                 cbs.emplace_back(as::buffer(*b));
@@ -2463,8 +2463,8 @@ public:
 
         std::vector<as::const_buffer> cbs;
         {
-            auto b = mqtt::buffer_sequence_begin(contents);
-            auto e = mqtt::buffer_sequence_end(contents);
+            auto b = MQTT_NS::buffer_sequence_begin(contents);
+            auto e = MQTT_NS::buffer_sequence_end(contents);
             cbs.reserve(static_cast<std::size_t>(std::distance(b, e)));
             for (; b != e; ++b) {
                 cbs.emplace_back(as::buffer(*b));
@@ -2541,8 +2541,8 @@ public:
 
         std::vector<as::const_buffer> cbs;
         {
-            auto b = mqtt::buffer_sequence_begin(contents);
-            auto e = mqtt::buffer_sequence_end(contents);
+            auto b = MQTT_NS::buffer_sequence_begin(contents);
+            auto e = MQTT_NS::buffer_sequence_end(contents);
             cbs.reserve(static_cast<std::size_t>(std::distance(b, e)));
             for (; b != e; ++b) {
                 cbs.emplace_back(as::buffer(*b));
@@ -8209,8 +8209,8 @@ private:
                     case protocol_version::v3_1_1:
                     {
                         // TODO: We can avoid an allocation by casting the raw bytes of the
-                        // mqtt::buffer that is being parsed, and instead call the suback
-                        // handler with an std::span and the mqtt::buffer (as lifekeeper)
+                        // MQTT_NS::buffer that is being parsed, and instead call the suback
+                        // handler with an std::span and the MQTT_NS::buffer (as lifekeeper)
                         std::vector<suback_return_code> results;
                         results.resize(body.size());
                         std::transform(
@@ -8235,8 +8235,8 @@ private:
                     case protocol_version::v5:
                     {
                         // TODO: We can avoid an allocation by casting the raw bytes of the
-                        // mqtt::buffer that is being parsed, and instead call the suback
-                        // handler with an std::span and the mqtt::buffer (as lifekeeper)
+                        // MQTT_NS::buffer that is being parsed, and instead call the suback
+                        // handler with an std::span and the MQTT_NS::buffer (as lifekeeper)
                         std::vector<v5::suback_reason_code> reasons;
                         reasons.resize(body.size());
                         std::transform(
