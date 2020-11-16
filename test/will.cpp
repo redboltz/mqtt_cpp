@@ -719,6 +719,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
                 iocb,
                 [&] {
                     s->close();
+                    b.clear_all_retained_topics();
                 }
             );
         };

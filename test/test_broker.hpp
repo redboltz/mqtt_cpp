@@ -649,6 +649,24 @@ public:
         sessions_.clear();
     }
 
+    void clear_all_retained_topics() {
+        retains_.clear();
+    }
+
+    template<typename Callback>
+    void property_visitor(MQTT_NS::v5::properties props, Callback&& callback) {
+        for (auto const& p : props) {
+            MQTT_NS::visit(
+                MQTT_NS::make_lambda_visitor(
+                    MQTT_NS::force_move(callback),
+                    [](auto&& ...) {
+                    }
+                ),
+                p
+            );
+        }
+    }
+
 private:
     /**
      * @brief connect_proc Process an incoming CONNECT packet
@@ -682,20 +700,13 @@ private:
         MQTT_NS::optional<std::chrono::steady_clock::duration> session_expiry_interval;
 
         if (ep.get_protocol_version() == MQTT_NS::protocol_version::v5) {
-            for (auto const& p : props) {
-                MQTT_NS::visit(
-                    MQTT_NS::make_lambda_visitor(
-                        [&session_expiry_interval](MQTT_NS::v5::property::session_expiry_interval const& t) {
-                            if (t.val() != 0) {
-                                session_expiry_interval.emplace(std::chrono::seconds(t.val()));
-                            }
-                        },
-                        [](auto&& ...) {
-                        }
-                    ),
-                    p
-                );
-            }
+            property_visitor(props,
+                [&session_expiry_interval](MQTT_NS::v5::property::session_expiry_interval const& t) {
+                    if (t.val() != 0) {
+                        session_expiry_interval.emplace(std::chrono::seconds(t.val()));
+                    }
+                });
+
 
             if (h_connect_props_) {
                 h_connect_props_(props);
@@ -1203,20 +1214,12 @@ private:
         } break;
         case MQTT_NS::protocol_version::v5: {
             // Get subscription identifier
-            for (auto const& p : props) {
-                MQTT_NS::visit(
-                    MQTT_NS::make_lambda_visitor(
-                        [&sid](MQTT_NS::v5::property::subscription_identifier const& p) {
-                            if (p.val() != 0) {
-                                sid.emplace(p.val());
-                            }
-                        },
-                        [](auto&& ...) {
-                        }
-                    ),
-                    p
-                );
-            }
+            property_visitor(props,
+                [&sid](MQTT_NS::v5::property::subscription_identifier const& p) {
+                    if (p.val() != 0) {
+                        sid.emplace(p.val());
+                    }
+                });
 
             std::vector<MQTT_NS::v5::suback_reason_code> res;
             res.reserve(entries.size());
@@ -1349,6 +1352,16 @@ private:
             }
         );
 
+        MQTT_NS::optional<std::chrono::steady_clock::duration> message_expiry_interval;
+        if (ep.get_protocol_version() == MQTT_NS::protocol_version::v5) {
+            property_visitor(props,
+                [&message_expiry_interval](MQTT_NS::v5::property::message_expiry_interval const& t) {
+                    if (t.val() != 0) {
+                        message_expiry_interval.emplace(std::chrono::seconds(t.val()));
+                    }
+                });
+        }
+
         /*
          * If the message is marked as being retained, then we
          * keep it in case a new subscription is added that matches
@@ -1375,13 +1388,27 @@ private:
                 retains_.erase(topic);
             }
             else {
+                std::shared_ptr<as::steady_timer> tim_message_expiry;
+                if(message_expiry_interval) {
+                    tim_message_expiry = std::make_shared<as::steady_timer>(ioc_);
+                    tim_message_expiry->expires_after(message_expiry_interval.value());
+                    tim_message_expiry->async_wait(
+                      [&, topic = MQTT_NS::force_move(topic)]
+                      (boost::system::error_code const& ec) {
+                      if( ! ec ) {
+                          retains_.erase(topic);
+                      }
+                   });
+                }
+
                 retains_.insert_or_assign(
                     topic,
                     retain {
                         MQTT_NS::force_move(topic),
                         MQTT_NS::force_move(contents),
                         MQTT_NS::force_move(props),
-                        pubopts.get_qos()
+                        pubopts.get_qos(),
+                        tim_message_expiry
                     }
                 );
             }
@@ -1580,16 +1607,20 @@ private:
             MQTT_NS::buffer topic,
             MQTT_NS::buffer contents,
             MQTT_NS::v5::properties props,
-            MQTT_NS::qos qos_value)
+            MQTT_NS::qos qos_value,
+            std::shared_ptr<as::steady_timer> tim_message_expiry = std::shared_ptr<as::steady_timer>())
             :topic(MQTT_NS::force_move(topic)),
              contents(MQTT_NS::force_move(contents)),
              props(MQTT_NS::force_move(props)),
-             qos_value(qos_value)
+             qos_value(qos_value),
+             tim_message_expiry(tim_message_expiry)
         { }
+
         MQTT_NS::buffer topic;
         MQTT_NS::buffer contents;
         MQTT_NS::v5::properties props;
         MQTT_NS::qos qos_value;
+        std::shared_ptr<as::steady_timer> tim_message_expiry;
     };
     using retained_messages = retained_topic_map<retain>;
 
