@@ -606,10 +606,7 @@ public:
      */
     std::vector<as::const_buffer> const_buffer_sequence() const {
         std::vector<as::const_buffer> ret;
-        ret.reserve(
-            5 + // fixed_header, remaining_length_buf, topic_name_length_buf, topic_name, packet_id
-            payloads_.size()
-        );
+        ret.reserve(num_of_const_buffer_sequence());
         ret.emplace_back(as::buffer(&fixed_header_, 1));
         ret.emplace_back(as::buffer(remaining_length_buf_.data(), remaining_length_buf_.size()));
         ret.emplace_back(as::buffer(topic_name_length_buf_.data(), topic_name_length_buf_.size()));
@@ -642,14 +639,7 @@ public:
             1 +                   // remaining length
             2 +                   // topic name length, topic name
             (packet_id_.empty() ? 0 : 1) +  // packet_id
-            std::accumulate(
-                payloads_.begin(),
-                payloads_.end(),
-                std::size_t(0),
-                [](std::size_t s, as::const_buffer const& payload) {
-                    return s + payload.size();
-                }
-            );
+            payloads_.size();
     }
 
     /**
@@ -736,6 +726,35 @@ public:
             ret.emplace_back(get_pointer(payload), get_size(payload));
         }
         return ret;
+    }
+
+    /**
+     * @brief Get payload as single buffer
+     * @return payload
+     */
+    buffer payload_as_buffer() const {
+        auto size = std::accumulate(
+            payloads_.begin(),
+            payloads_.end(),
+            std::size_t(0),
+            [](std::size_t s, as::const_buffer const& payload) {
+                return s += payload.size();
+            }
+        );
+
+        if (size == 0) return buffer();
+
+        auto spa = make_shared_ptr_array(size);
+        auto ptr = spa.get();
+        auto it = ptr;
+        for (auto const& payload : payloads_) {
+            auto b = get_pointer(payload);
+            auto s = get_size(payload);
+            auto e = b + s;
+            std::copy(b, e, it);
+            it += s;
+        }
+        return buffer(string_view(ptr, size), force_move(spa));
     }
 
     /**
