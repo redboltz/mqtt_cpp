@@ -850,6 +850,35 @@ public:
     }
 
     /**
+     * @brief Get payload as single buffer
+     * @return payload
+     */
+    buffer payload_as_buffer() const {
+        auto size = std::accumulate(
+            payloads_.begin(),
+            payloads_.end(),
+            std::size_t(0),
+            [](std::size_t s, as::const_buffer const& payload) {
+                return s += payload.size();
+            }
+        );
+
+        if (size == 0) return buffer();
+
+        auto spa = make_shared_ptr_array(size);
+        auto ptr = spa.get();
+        auto it = ptr;
+        for (auto const& payload : payloads_) {
+            auto b = get_pointer(payload);
+            auto s = get_size(payload);
+            auto e = b + s;
+            std::copy(b, e, it);
+            it += s;
+        }
+        return buffer(string_view(ptr, size), force_move(spa));
+    }
+
+    /**
      * @brief Get properties
      * @return properties
      */
