@@ -499,6 +499,7 @@ BOOST_AUTO_TEST_CASE( resend_publish ) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
+        c->set_auto_pub_response(false);
 
         boost::asio::steady_timer tim(ioc);
 
@@ -517,7 +518,8 @@ BOOST_AUTO_TEST_CASE( resend_publish ) {
             deps("h_error", "h_suback"),
             cont("h_connack3"),
             cont("h_puback"),
-            deps("h_publish", "h_connack3"),
+            deps("h_publish_resend_by_broker", "h_connack3"),
+            cont("h_publish_resend_by_client"),
             cont("h_unsuback"),
             // disconnect
             cont("h_close2"),
@@ -572,7 +574,7 @@ BOOST_AUTO_TEST_CASE( resend_publish ) {
                     return true;
                 });
             c->set_v5_suback_handler(
-                [&chk, &c]
+                [&chk, &c, &tim]
                 (packet_id_t, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_suback");
                     BOOST_TEST(reasons.size() == 1U);
@@ -596,6 +598,13 @@ BOOST_AUTO_TEST_CASE( resend_publish ) {
                         }
                     );
 
+                    // TLS and WS combination seems to take a long time.
+                    // publish() only calls sync APIs but the message is not
+                    // transfered to the socket.
+                    // So force_disconnect close the socket before the message has been written.
+                    // It's weird but the following wait solve the problem.
+                    tim.expires_after(std::chrono::milliseconds(100));
+                    tim.wait();
                     // 1st publish is lost because QoS0 but topic_alias is registered
                     // 2nd publish will be resent in the future.
                     // However, it contains empty topic and topic_alias.
@@ -622,13 +631,30 @@ BOOST_AUTO_TEST_CASE( resend_publish ) {
                  MQTT_NS::buffer topic,
                  MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
-                    MQTT_CHK("h_publish");
-                    BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
-                    BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_least_once);
-                    BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
-                    BOOST_TEST(topic == "topic1");
-                    BOOST_TEST(contents == "topic1_contents_2");
-                    c->unsubscribe("topic1");
+                    auto ret = chk.match(
+                        "h_connack3",
+                        [&] {
+                            MQTT_CHK("h_publish_resend_by_broker");
+                            // dup is set by broker
+                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::yes);
+                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_least_once);
+                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                            BOOST_TEST(topic == "topic1");
+                            BOOST_TEST(contents == "topic1_contents_2");
+                        },
+                        "h_publish_resend_by_broker",
+                        [&] {
+                            MQTT_CHK("h_publish_resend_by_client");
+                            // client --dup--> broker --no dup--> client
+                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_least_once);
+                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                            BOOST_TEST(topic == "topic1");
+                            BOOST_TEST(contents == "topic1_contents_2");
+                            c->unsubscribe("topic1");
+                        }
+                    );
+                    BOOST_TEST(ret);
                     return true;
                 });
             break;

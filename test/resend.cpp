@@ -832,6 +832,828 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
     do_combi_test_sync(test);
 }
 
+
+BOOST_AUTO_TEST_CASE( publish_qos1_from_broker ) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
+        c->set_clean_session(true);
+        c->set_auto_pub_response(false);
+
+        packet_id_t pid_pub;
+
+        boost::asio::steady_timer tim(ioc);
+
+        checker chk = {
+            cont("start"),
+            // connect
+            cont("h_connack1"),
+            // disconnect
+            cont("h_close1"),
+            // connect
+            cont("h_connack2"),
+            cont("h_suback"),
+            // publish topic1 QoS1
+            cont("h_puback"),
+            deps("h_publish1", "h_suback"),
+            // force_disconnect
+            deps("h_error", "h_puback", "h_publish1"),
+            // connect
+            cont("h_connack3"),
+            cont("h_publish2"),
+            // disconnect
+            cont("h_close2"),
+        };
+
+        switch (c->get_protocol_version()) {
+        case MQTT_NS::protocol_version::v3_1_1:
+            c->set_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == false);
+                            c->subscribe("topic1", MQTT_NS::qos::exactly_once);
+                        },
+                        "h_error",
+                        [&] {
+                            MQTT_CHK("h_connack3");
+                            BOOST_TEST(sp == true);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_suback_handler(
+                [&chk, &c]
+                (packet_id_t, std::vector<MQTT_NS::suback_return_code> results) {
+                    MQTT_CHK("h_suback");
+                    BOOST_TEST(results.size() == 1U);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
+                    c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
+                    return true;
+                }
+            );
+            c->set_publish_handler(
+                [&chk, &c, &pid_pub]
+                (MQTT_NS::optional<packet_id_t> packet_id,
+                 MQTT_NS::publish_options pubopts,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
+                    auto ret = chk.match(
+                        "h_suback",
+                        [&] {
+                            MQTT_CHK("h_publish1");
+                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_least_once);
+                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                            BOOST_CHECK(packet_id);
+                            pid_pub = packet_id.value();
+                            BOOST_TEST(topic == "topic1");
+                            BOOST_TEST(contents == "topic1_contents");
+                            if (chk.passed("h_puback")) {
+                                c->force_disconnect();
+                            }
+                        },
+                        "h_publish1",
+                        [&] {
+                            MQTT_CHK("h_publish2");
+                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::yes);
+                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_least_once);
+                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                            BOOST_CHECK(packet_id);
+                            BOOST_TEST(packet_id.value() == pid_pub);
+                            BOOST_TEST(topic == "topic1");
+                            BOOST_TEST(contents == "topic1_contents");
+                            c->puback(packet_id.value());
+                            c->disconnect();
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                }
+            );
+            c->set_puback_handler(
+                [&chk, &c]
+                (packet_id_t) {
+                    MQTT_CHK("h_puback");
+                    if (chk.passed("h_publish1")) {
+                        c->force_disconnect();
+                    }
+                    return true;
+                }
+            );
+            break;
+        case MQTT_NS::protocol_version::v5:
+            c->set_v5_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            // The previous connection is not set Session Expiry Interval.
+                            // That means session state is cleared on close.
+                            BOOST_TEST(sp == false);
+                            c->subscribe("topic1", MQTT_NS::qos::exactly_once);
+                        },
+                        "h_error",
+                        [&] {
+                            MQTT_CHK("h_connack3");
+                            BOOST_TEST(sp == true);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_v5_suback_handler(
+                [&chk, &c]
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_suback");
+                    BOOST_TEST(reasons.size() == 1U);
+                    BOOST_TEST(reasons.size() == 1U);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_2);
+                    c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
+                    return true;
+                }
+            );
+            c->set_v5_publish_handler(
+                [&chk, &c, &pid_pub]
+                (MQTT_NS::optional<packet_id_t> packet_id,
+                 MQTT_NS::publish_options pubopts,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
+                 MQTT_NS::v5::properties /*props*/) {
+                    auto ret = chk.match(
+                        "h_suback",
+                        [&] {
+                            MQTT_CHK("h_publish1");
+                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_least_once);
+                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                            BOOST_CHECK(packet_id);
+                            pid_pub = packet_id.value();
+                            BOOST_TEST(topic == "topic1");
+                            BOOST_TEST(contents == "topic1_contents");
+                            if (chk.passed("h_puback")) {
+                                c->force_disconnect();
+                            }
+                        },
+                        "h_publish1",
+                        [&] {
+                            MQTT_CHK("h_publish2");
+                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::yes);
+                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_least_once);
+                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                            BOOST_CHECK(packet_id);
+                            BOOST_TEST(packet_id.value() == pid_pub);
+                            BOOST_TEST(topic == "topic1");
+                            BOOST_TEST(contents == "topic1_contents");
+                            c->puback(packet_id.value());
+                            c->disconnect();
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                }
+            );
+            c->set_v5_puback_handler(
+                [&chk, &c]
+                (packet_id_t /*packet_id*/, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_puback");
+                    if (chk.passed("h_publish1")) {
+                        c->force_disconnect();
+                    }
+                    return true;
+                }
+            );
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+
+        c->set_close_handler(
+            [&chk, &c, &finish]
+            () {
+                auto ret = chk.match(
+                    "h_connack1",
+                    [&] {
+                        MQTT_CHK("h_close1");
+                        connect_no_clean(c);
+                    },
+                    "h_puback",
+                    [&] {
+                        MQTT_CHK("h_close2");
+                        finish();
+                    }
+                );
+                BOOST_TEST(ret);
+            });
+        c->set_error_handler(
+            [&chk, &c, &tim]
+            (MQTT_NS::error_code) {
+                MQTT_CHK("h_error");
+                // TCP level disconnection detecting timing is unpredictable.
+                // Sometimes broker first, sometimes the client (this test) first.
+                // This test assume that the broker detects first, so I set timer.
+                // If client detect the disconnection first, then reconnect with
+                // existing client id. And it is overwritten at broker.
+                // Then error handler in the broker called, assertion failed due to
+                // no corresponding connection exists
+                tim.expires_after(std::chrono::milliseconds(100));
+                tim.async_wait(
+                    [&c] (MQTT_NS::error_code ec) {
+                        BOOST_ASSERT( ! ec);
+                        connect_no_clean(c);
+                    }
+                );
+            });
+        MQTT_CHK("start");
+        c->connect();
+        ioc.run();
+        BOOST_TEST(chk.all());
+    };
+    do_combi_test_sync(test);
+}
+
+BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
+        c->set_clean_session(true);
+        c->set_auto_pub_response(false);
+
+        packet_id_t pid_pub;
+
+        boost::asio::steady_timer tim(ioc);
+
+        checker chk = {
+            cont("start"),
+            // connect
+            cont("h_connack1"),
+            // disconnect
+            cont("h_close1"),
+            // connect
+            cont("h_connack2"),
+            cont("h_suback"),
+            // publish topic1 QoS2
+            cont("h_pubrec"),
+            cont("h_pubcomp"),
+            deps("h_publish1", "h_suback"),
+            // force_disconnect
+            deps("h_error", "h_pubcomp", "h_publish1"),
+            // connect
+            cont("h_connack3"),
+            cont("h_publish2"),
+            // disconnect
+            cont("h_close2"),
+        };
+
+        switch (c->get_protocol_version()) {
+        case MQTT_NS::protocol_version::v3_1_1:
+            c->set_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == false);
+                            c->subscribe("topic1", MQTT_NS::qos::exactly_once);
+                        },
+                        "h_error",
+                        [&] {
+                            MQTT_CHK("h_connack3");
+                            BOOST_TEST(sp == true);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                }
+            );
+            c->set_suback_handler(
+                [&chk, &c]
+                (packet_id_t, std::vector<MQTT_NS::suback_return_code> results) {
+                    MQTT_CHK("h_suback");
+                    BOOST_TEST(results.size() == 1U);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
+                    c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
+                    return true;
+                }
+            );
+            c->set_publish_handler(
+                [&chk, &c, &pid_pub]
+                (MQTT_NS::optional<packet_id_t> packet_id,
+                 MQTT_NS::publish_options pubopts,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
+                    auto ret = chk.match(
+                        "h_suback",
+                        [&] {
+                            MQTT_CHK("h_publish1");
+                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
+                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                            BOOST_CHECK(packet_id);
+                            pid_pub = packet_id.value();
+                            BOOST_TEST(topic == "topic1");
+                            BOOST_TEST(contents == "topic1_contents");
+                            if (chk.passed("h_pubcomp")) {
+                                c->force_disconnect();
+                            }
+                        },
+                        "h_publish1",
+                        [&] {
+                            MQTT_CHK("h_publish2");
+                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::yes);
+                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
+                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                            BOOST_CHECK(packet_id);
+                            BOOST_TEST(packet_id.value() == pid_pub);
+                            BOOST_TEST(topic == "topic1");
+                            BOOST_TEST(contents == "topic1_contents");
+                            c->pubrec(packet_id.value());
+                            c->disconnect();
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                }
+            );
+            c->set_pubrec_handler(
+                [&chk, &c]
+                (packet_id_t packet_id) {
+                    MQTT_CHK("h_pubrec");
+                    c->pubrel(packet_id);
+                    return true;
+                }
+            );
+            c->set_pubcomp_handler(
+                [&chk, &c]
+                (packet_id_t) {
+                    MQTT_CHK("h_pubcomp");
+                    if (chk.passed("h_publish1")) {
+                        c->force_disconnect();
+                    }
+                    return true;
+                }
+            );
+            break;
+        case MQTT_NS::protocol_version::v5:
+            c->set_v5_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            // The previous connection is not set Session Expiry Interval.
+                            // That means session state is cleared on close.
+                            BOOST_TEST(sp == false);
+                            c->subscribe("topic1", MQTT_NS::qos::exactly_once);
+                        },
+                        "h_error",
+                        [&] {
+                            MQTT_CHK("h_connack3");
+                            BOOST_TEST(sp == true);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_v5_suback_handler(
+                [&chk, &c]
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_suback");
+                    BOOST_TEST(reasons.size() == 1U);
+                    BOOST_TEST(reasons.size() == 1U);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_2);
+                    c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
+                    return true;
+                }
+            );
+            c->set_v5_publish_handler(
+                [&chk, &c, &pid_pub]
+                (MQTT_NS::optional<packet_id_t> packet_id,
+                 MQTT_NS::publish_options pubopts,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
+                 MQTT_NS::v5::properties /*props*/) {
+                    auto ret = chk.match(
+                        "h_suback",
+                        [&] {
+                            MQTT_CHK("h_publish1");
+                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
+                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                            BOOST_CHECK(packet_id);
+                            pid_pub = packet_id.value();
+                            BOOST_TEST(topic == "topic1");
+                            BOOST_TEST(contents == "topic1_contents");
+                            if (chk.passed("h_pubcomp")) {
+                                c->force_disconnect();
+                            }
+                        },
+                        "h_publish1",
+                        [&] {
+                            MQTT_CHK("h_publish2");
+                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::yes);
+                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
+                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                            BOOST_CHECK(packet_id);
+                            BOOST_TEST(packet_id.value() == pid_pub);
+                            BOOST_TEST(topic == "topic1");
+                            BOOST_TEST(contents == "topic1_contents");
+                            c->pubrec(packet_id.value());
+                            c->disconnect();
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                }
+            );
+            c->set_v5_pubrec_handler(
+                [&chk, &c]
+                (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_pubrec");
+                    c->pubrel(packet_id);
+                    return true;
+                });
+            c->set_v5_pubcomp_handler(
+                [&chk, &c]
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_pubcomp");
+                    if (chk.passed("h_publish1")) {
+                        c->force_disconnect();
+                    }
+                    return true;
+                });
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+
+        c->set_close_handler(
+            [&chk, &c, &finish]
+            () {
+                auto ret = chk.match(
+                    "h_connack1",
+                    [&] {
+                        MQTT_CHK("h_close1");
+                        connect_no_clean(c);
+                    },
+                    "h_pubcomp",
+                    [&] {
+                        MQTT_CHK("h_close2");
+                        finish();
+                    }
+                );
+                BOOST_TEST(ret);
+            });
+        c->set_error_handler(
+            [&chk, &c, &tim]
+            (MQTT_NS::error_code) {
+                MQTT_CHK("h_error");
+                // TCP level disconnection detecting timing is unpredictable.
+                // Sometimes broker first, sometimes the client (this test) first.
+                // This test assume that the broker detects first, so I set timer.
+                // If client detect the disconnection first, then reconnect with
+                // existing client id. And it is overwritten at broker.
+                // Then error handler in the broker called, assertion failed due to
+                // no corresponding connection exists
+                tim.expires_after(std::chrono::milliseconds(100));
+                tim.async_wait(
+                    [&c] (MQTT_NS::error_code ec) {
+                        BOOST_ASSERT( ! ec);
+                        connect_no_clean(c);
+                    }
+                );
+            });
+        MQTT_CHK("start");
+        c->connect();
+        ioc.run();
+        BOOST_TEST(chk.all());
+    };
+    do_combi_test_sync(test);
+}
+
+BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
+        c->set_clean_session(true);
+        c->set_auto_pub_response(false);
+
+        packet_id_t pid_pub;
+
+        boost::asio::steady_timer tim(ioc);
+
+        checker chk = {
+            cont("start"),
+            // connect
+            cont("h_connack1"),
+            // disconnect
+            cont("h_close1"),
+            // connect
+            cont("h_connack2"),
+            cont("h_suback"),
+            // publish topic1 QoS2
+            cont("h_pubrec"),
+            cont("h_pubcomp"),
+            deps("h_publish", "h_suback"),
+            cont("h_pubrel1"),
+            // force_disconnect
+            deps("h_error", "h_pubcomp", "h_publish"),
+            // connect
+            cont("h_connack3"),
+            cont("h_pubrel2"),
+            // disconnect
+            cont("h_close2"),
+        };
+
+        switch (c->get_protocol_version()) {
+        case MQTT_NS::protocol_version::v3_1_1:
+            c->set_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == false);
+                            c->subscribe("topic1", MQTT_NS::qos::exactly_once);
+                        },
+                        "h_error",
+                        [&] {
+                            MQTT_CHK("h_connack3");
+                            BOOST_TEST(sp == true);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            c->set_suback_handler(
+                [&chk, &c]
+                (packet_id_t, std::vector<MQTT_NS::suback_return_code> results) {
+                    MQTT_CHK("h_suback");
+                    BOOST_TEST(results.size() == 1U);
+                    BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
+                    c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
+                    return true;
+                }
+            );
+            c->set_publish_handler(
+                [&chk, &c, &pid_pub]
+                (MQTT_NS::optional<packet_id_t> packet_id,
+                 MQTT_NS::publish_options pubopts,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents) {
+                    MQTT_CHK("h_publish");
+                    BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                    BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
+                    BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                    BOOST_CHECK(packet_id);
+                    pid_pub = packet_id.value();
+                    BOOST_TEST(topic == "topic1");
+                    BOOST_TEST(contents == "topic1_contents");
+                    c->pubrec(packet_id.value());
+                    return true;
+                }
+            );
+            c->set_pubrec_handler(
+                [&chk, &c]
+                (packet_id_t packet_id) {
+                    MQTT_CHK("h_pubrec");
+                    c->pubrel(packet_id);
+                    return true;
+                }
+            );
+            c->set_pubrel_handler(
+                [&chk, &c, &pid_pub]
+                (packet_id_t packet_id) {
+                    auto ret = chk.match(
+                        "h_publish",
+                        [&] {
+                            MQTT_CHK("h_pubrel1");
+                            BOOST_TEST(packet_id == pid_pub);
+                            if (chk.passed("h_pubcomp")) {
+                                c->force_disconnect();
+                            }
+                        },
+                        "h_pubrel1",
+                        [&] {
+                            MQTT_CHK("h_pubrel2");
+                            BOOST_TEST(packet_id == pid_pub);
+                            c->pubcomp(packet_id);
+                            c->disconnect();
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                }
+            );
+            c->set_pubcomp_handler(
+                [&chk, &c]
+                (packet_id_t) {
+                    MQTT_CHK("h_pubcomp");
+                    if (chk.passed("h_publish")) {
+                        c->force_disconnect();
+                    }
+                    return true;
+                }
+            );
+            break;
+        case MQTT_NS::protocol_version::v5:
+            c->set_auto_pub_response(false);
+            c->set_v5_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
+                    auto ret = chk.match(
+                        "start",
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            c->disconnect();
+                        },
+                        "h_close1",
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            // The previous connection is not set Session Expiry Interval.
+                            // That means session state is cleared on close.
+                            BOOST_TEST(sp == false);
+                            c->subscribe("topic1", MQTT_NS::qos::exactly_once);
+                        },
+                        "h_error",
+                        [&] {
+                            MQTT_CHK("h_connack3");
+                            BOOST_TEST(sp == true);
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                }
+            );
+            c->set_v5_suback_handler(
+                [&chk, &c]
+                (packet_id_t /*packet_id*/, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_suback");
+                    BOOST_TEST(reasons.size() == 1U);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_2);
+                    c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
+                    return true;
+                }
+            );
+            c->set_v5_publish_handler(
+                [&chk, &c, &pid_pub]
+                (MQTT_NS::optional<packet_id_t> packet_id,
+                 MQTT_NS::publish_options pubopts,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
+                 MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_publish");
+                    BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                    BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
+                    BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                    BOOST_CHECK(packet_id);
+                    pid_pub = packet_id.value();
+                    BOOST_TEST(topic == "topic1");
+                    BOOST_TEST(contents == "topic1_contents");
+                    c->pubrec(packet_id.value());
+                    return true;
+                }
+            );
+            c->set_v5_pubrec_handler(
+                [&chk, &c]
+                (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_pubrec");
+                    c->pubrel(packet_id);
+                    return true;
+                }
+            );
+            c->set_v5_pubrel_handler(
+                [&chk, &c, &pid_pub]
+                (packet_id_t packet_id, MQTT_NS::v5::pubrel_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    auto ret = chk.match(
+                        "h_publish",
+                        [&] {
+                            MQTT_CHK("h_pubrel1");
+                            BOOST_TEST(packet_id == pid_pub);
+                            if (chk.passed("h_pubcomp")) {
+                                c->force_disconnect();
+                            }
+                        },
+                        "h_pubrel1",
+                        [&] {
+                            MQTT_CHK("h_pubrel2");
+                            BOOST_TEST(packet_id == pid_pub);
+                            c->pubcomp(packet_id);
+                            c->disconnect();
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                }
+            );
+            c->set_v5_pubcomp_handler(
+                [&chk, &c]
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_pubcomp");
+                    if (chk.passed("h_publish")) {
+                        c->force_disconnect();
+                    }
+                    return true;
+                }
+            );
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+
+        c->set_close_handler(
+            [&chk, &c, &finish]
+            () {
+                auto ret = chk.match(
+                    "h_connack1",
+                    [&] {
+                        MQTT_CHK("h_close1");
+                        connect_no_clean(c);
+                    },
+                    "h_pubcomp",
+                    [&] {
+                        MQTT_CHK("h_close2");
+                        finish();
+                    }
+                );
+                BOOST_TEST(ret);
+            });
+        c->set_error_handler(
+            [&chk, &c, &tim]
+            (MQTT_NS::error_code) {
+                MQTT_CHK("h_error");
+                // TCP level disconnection detecting timing is unpredictable.
+                // Sometimes broker first, sometimes the client (this test) first.
+                // This test assume that the broker detects first, so I set timer.
+                // If client detect the disconnection first, then reconnect with
+                // existing client id. And it is overwritten at broker.
+                // Then error handler in the broker called, assertion failed due to
+                // no corresponding connection exists
+                tim.expires_after(std::chrono::milliseconds(100));
+                tim.async_wait(
+                    [&c] (MQTT_NS::error_code ec) {
+                        BOOST_ASSERT( ! ec);
+                        connect_no_clean(c);
+                    }
+                );
+            });
+        MQTT_CHK("start");
+        c->connect();
+        ioc.run();
+        BOOST_TEST(chk.all());
+    };
+    do_combi_test_sync(test);
+}
+
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
