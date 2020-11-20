@@ -402,65 +402,117 @@ public:
             }
         );
         ep.set_puback_handler(
-            []
-            (packet_id_t /*packet_id*/){
-                return true;
-            });
-        ep.set_v5_puback_handler(
-            []
-            (packet_id_t /*packet_id*/,
-             MQTT_NS::v5::puback_reason_code /*reason_code*/,
-             MQTT_NS::v5::properties /*props*/){
-                return true;
-            });
-        ep.set_pubrec_handler(
-            [wp]
+            [this, wp]
             (packet_id_t packet_id){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                sp->pubrel(packet_id);
-                return true;
-            });
+                return puback_handler(
+                    MQTT_NS::force_move(sp),
+                    packet_id,
+                    MQTT_NS::v5::puback_reason_code::success,
+                    MQTT_NS::v5::properties{}
+                );
+            }
+        );
+        ep.set_v5_puback_handler(
+            [this, wp]
+            (packet_id_t packet_id,
+             MQTT_NS::v5::puback_reason_code reason_code,
+             MQTT_NS::v5::properties props){
+                con_sp_t sp = wp.lock();
+                BOOST_ASSERT(sp);
+                return puback_handler(
+                    MQTT_NS::force_move(sp),
+                    packet_id,
+                    reason_code,
+                    MQTT_NS::force_move(props)
+                );
+            }
+        );
+        ep.set_pubrec_handler(
+            [this, wp]
+            (packet_id_t packet_id){
+                con_sp_t sp = wp.lock();
+                BOOST_ASSERT(sp);
+                return pubrec_handler(
+                    MQTT_NS::force_move(sp),
+                    packet_id,
+                    MQTT_NS::v5::pubrec_reason_code::success,
+                    MQTT_NS::v5::properties{}
+                );
+            }
+        );
         ep.set_v5_pubrec_handler(
             [this, wp]
             (packet_id_t packet_id,
-             MQTT_NS::v5::pubrec_reason_code /*reason_code*/,
-             MQTT_NS::v5::properties /*props*/){
+             MQTT_NS::v5::pubrec_reason_code reason_code,
+             MQTT_NS::v5::properties props){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                sp->pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, pubrel_props_);
-                return true;
-            });
+                return pubrec_handler(
+                    MQTT_NS::force_move(sp),
+                    packet_id,
+                    reason_code,
+                    MQTT_NS::force_move(props)
+                );
+            }
+        );
         ep.set_pubrel_handler(
-            [wp]
+            [this, wp]
             (packet_id_t packet_id){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                sp->pubcomp(packet_id);
-                return true;
-            });
+                return pubrel_handler(
+                    MQTT_NS::force_move(sp),
+                    packet_id,
+                    MQTT_NS::v5::pubrel_reason_code::success,
+                    MQTT_NS::v5::properties{}
+                );
+            }
+        );
         ep.set_v5_pubrel_handler(
             [this, wp]
             (packet_id_t packet_id,
-             MQTT_NS::v5::pubrel_reason_code /*reason_code*/,
-             MQTT_NS::v5::properties /*props*/){
+             MQTT_NS::v5::pubrel_reason_code reason_code,
+             MQTT_NS::v5::properties props){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                sp->pubcomp(packet_id, MQTT_NS::v5::pubcomp_reason_code::success, pubcomp_props_);
-                return true;
-            });
+                return pubrel_handler(
+                    MQTT_NS::force_move(sp),
+                    packet_id,
+                    reason_code,
+                    MQTT_NS::force_move(props)
+                );
+            }
+        );
         ep.set_pubcomp_handler(
-            []
-            (packet_id_t /*packet_id*/){
-                return true;
-            });
+            [this, wp]
+            (packet_id_t packet_id){
+                con_sp_t sp = wp.lock();
+                BOOST_ASSERT(sp);
+                return pubcomp_handler(
+                    MQTT_NS::force_move(sp),
+                    packet_id,
+                    MQTT_NS::v5::pubcomp_reason_code::success,
+                    MQTT_NS::v5::properties{}
+                );
+            }
+        );
         ep.set_v5_pubcomp_handler(
-            []
-            (packet_id_t /*packet_id*/,
-             MQTT_NS::v5::pubcomp_reason_code /*reason_code*/,
-             MQTT_NS::v5::properties /*props*/){
-                return true;
-            });
+            [this, wp]
+            (packet_id_t packet_id,
+             MQTT_NS::v5::pubcomp_reason_code reason_code,
+             MQTT_NS::v5::properties props){
+                con_sp_t sp = wp.lock();
+                BOOST_ASSERT(sp);
+                return pubcomp_handler(
+                    MQTT_NS::force_move(sp),
+                    packet_id,
+                    reason_code,
+                    MQTT_NS::force_move(props)
+                );
+            }
+        );
         ep.set_publish_handler(
             [this, wp]
             (MQTT_NS::optional<packet_id_t> packet_id,
@@ -477,7 +529,8 @@ public:
                     MQTT_NS::force_move(contents),
                     MQTT_NS::v5::properties{}
                 );
-            });
+            }
+        );
         ep.set_v5_publish_handler(
             [this, wp]
             (MQTT_NS::optional<packet_id_t> packet_id,
@@ -497,7 +550,8 @@ public:
                     MQTT_NS::force_move(contents),
                     MQTT_NS::force_move(props)
                 );
-            });
+            }
+        );
         ep.set_subscribe_handler(
             [this, wp]
             (packet_id_t packet_id,
@@ -746,6 +800,13 @@ private:
                 }
             };
 
+        auto send_inflight_messages =
+            [&] (session_state& session) {
+                for (auto const& ifm : session.inflight_messages) {
+                    session.con->send_store_message(ifm.msg, ifm.life_keeper);
+                }
+            };
+
         auto send_offline_messages =
             [&] (session_state& session) {
                 try {
@@ -825,6 +886,7 @@ private:
                             // TODO: e.will_delay = MQTT_NS::force_move(will_delay);
                             e.session_expiry_interval = MQTT_NS::force_move(session_expiry_interval);
                             e.tim_session_expiry.reset();
+                            send_inflight_messages(e);
                             send_offline_messages(e);
                         },
                         [](auto&) { BOOST_ASSERT(false); }
@@ -878,6 +940,7 @@ private:
                         // TODO: e.will_delay = MQTT_NS::force_move(will_delay);
                         e.session_expiry_interval = MQTT_NS::force_move(session_expiry_interval);
                         e.tim_session_expiry.reset();
+                        send_inflight_messages(e);
                         send_offline_messages(e);
                     },
                     [](auto&) { BOOST_ASSERT(false); }
@@ -974,7 +1037,19 @@ private:
                 it,
                 [&](session_state& e) {
                     do_send_will(e);
-                    // TODO: store inflight PUBLISH and PUBREL here using for_e.con.each_store()
+
+                    e.con->for_each_store_with_life_keeper(
+                        [&e] (MQTT_NS::store_message_variant msg, MQTT_NS::any life_keeper) {
+                            MQTT_LOG("mqtt_broker", trace)
+                                << MQTT_ADD_VALUE(address, e.con.get())
+                                << "store inflight message";
+                            e.inflight_messages.emplace_back(
+                                MQTT_NS::force_move(msg),
+                                MQTT_NS::force_move(life_keeper)
+                            );
+                        }
+                    );
+
                     e.con.reset();
 
                     auto const& sei_opt = e.session_expiry_interval;
@@ -1015,6 +1090,43 @@ private:
         MQTT_NS::buffer contents,
         MQTT_NS::v5::properties props) {
 
+        auto& ep = *spep;
+
+        auto& idx = sessions_.get<tag_con>();
+        auto it = idx.find(spep);
+        BOOST_ASSERT(it != idx.end());
+
+        auto send_pubrec =
+            [&] {
+                switch (pubopts.get_qos()) {
+                case MQTT_NS::qos::at_least_once:
+                    ep.puback(packet_id.value(), MQTT_NS::v5::puback_reason_code::success, puback_props_);
+                    break;
+                case MQTT_NS::qos::exactly_once: {
+                    idx.modify(
+                        it,
+                        [&](auto& e) {
+                            e.qos2_publish_processed.insert(packet_id.value());
+                        }
+                    );
+                    ep.pubrec(packet_id.value(), MQTT_NS::v5::pubrec_reason_code::success, pubrec_props_);
+                } break;
+                default:
+                    break;
+                }
+            };
+
+        if (packet_id) {
+            if (pubopts.get_qos() == MQTT_NS::qos::exactly_once &&
+                it->qos2_publish_processed.find(packet_id.value()) != it->qos2_publish_processed.end()) {
+                MQTT_LOG("mqtt_broker", info)
+                    << MQTT_ADD_VALUE(address, spep.get())
+                    << "receive already processed publish pid:" << packet_id.value();
+                send_pubrec();
+                return true;
+            }
+        }
+
         MQTT_NS::v5::properties forward_props;
 
         for (auto&& p : props) {
@@ -1039,7 +1151,6 @@ private:
             );
         }
 
-        auto& ep = *spep;
         do_publish(
             ep,
             MQTT_NS::force_move(topic_name),
@@ -1055,7 +1166,7 @@ private:
                 ep.puback(packet_id.value());
                 break;
             case MQTT_NS::qos::exactly_once:
-                ep.pubrec(packet_id.value());
+                send_pubrec();
                 break;
             default:
                 break;
@@ -1067,7 +1178,7 @@ private:
                 ep.puback(packet_id.value(), MQTT_NS::v5::puback_reason_code::success, puback_props_);
                 break;
             case MQTT_NS::qos::exactly_once:
-                ep.pubrec(packet_id.value(), MQTT_NS::v5::pubrec_reason_code::success, pubrec_props_);
+                send_pubrec();
                 break;
             default:
                 break;
@@ -1078,6 +1189,105 @@ private:
             break;
         }
 
+        return true;
+    }
+
+    bool puback_handler(
+        con_sp_t spep,
+        packet_id_t packet_id,
+        MQTT_NS::v5::puback_reason_code /*reason_code*/,
+        MQTT_NS::v5::properties /*props*/) {
+        auto& idx = sessions_.get<tag_con>();
+        auto it = idx.find(spep);
+        BOOST_ASSERT(it != idx.end());
+        idx.modify(
+            it,
+            [&](auto& e) {
+                auto& idx = e.inflight_messages.template get<tag_pid>();
+                idx.erase(packet_id);
+            }
+        );
+        return true;
+    }
+
+    bool pubrec_handler(
+        con_sp_t spep,
+        packet_id_t packet_id,
+        MQTT_NS::v5::pubrec_reason_code /*reason_code*/,
+        MQTT_NS::v5::properties /*props*/) {
+        auto& idx = sessions_.get<tag_con>();
+        auto it = idx.find(spep);
+        BOOST_ASSERT(it != idx.end());
+        idx.modify(
+            it,
+            [&](auto& e) {
+                auto& idx = e.inflight_messages.template get<tag_pid>();
+                idx.erase(packet_id);
+            }
+        );
+
+        auto& ep = *spep;
+
+        switch (ep.get_protocol_version()) {
+        case MQTT_NS::protocol_version::v3_1_1:
+            ep.pubrel(packet_id);
+            break;
+        case MQTT_NS::protocol_version::v5:
+            ep.pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, pubrel_props_);
+            break;
+        default:
+            BOOST_ASSERT(false);
+            break;
+        }
+        return true;
+    }
+
+    bool pubrel_handler(
+        con_sp_t spep,
+        packet_id_t packet_id,
+        MQTT_NS::v5::pubrel_reason_code /*reason_code*/,
+        MQTT_NS::v5::properties /*props*/) {
+        auto& idx = sessions_.get<tag_con>();
+        auto it = idx.find(spep);
+        BOOST_ASSERT(it != idx.end());
+        idx.modify(
+            it,
+            [&](auto& e) {
+                e.qos2_publish_processed.erase(packet_id);
+            }
+        );
+
+        auto& ep = *spep;
+
+        switch (ep.get_protocol_version()) {
+        case MQTT_NS::protocol_version::v3_1_1:
+            ep.pubcomp(packet_id);
+            break;
+        case MQTT_NS::protocol_version::v5:
+            ep.pubcomp(packet_id, MQTT_NS::v5::pubcomp_reason_code::success, pubcomp_props_);
+            break;
+        default:
+            BOOST_ASSERT(false);
+            break;
+        }
+        return true;
+    }
+
+    bool pubcomp_handler(
+        con_sp_t spep,
+        packet_id_t packet_id,
+        MQTT_NS::v5::pubcomp_reason_code /*reason_code*/,
+        MQTT_NS::v5::properties /*props*/){
+        auto& idx = sessions_.get<tag_con>();
+        auto it = idx.find(spep);
+        BOOST_ASSERT(it != idx.end());
+        idx.modify(
+            it,
+            [&](auto& e) {
+                auto& idx = e.inflight_messages.template get<tag_pid>();
+                idx.erase(packet_id);
+            }
+        );
         return true;
     }
 
@@ -1396,6 +1606,8 @@ private:
     struct tag_cid {};
     struct tag_cid_topic_filter {};
     struct tag_tim {};
+    struct tag_pid {};
+    struct tag_seq {};
 
     struct session_state;
     using session_state_ref = std::reference_wrapper<session_state>;
@@ -1428,6 +1640,40 @@ private:
     };
 
     using sub_con_map = multiple_subscription_map<MQTT_NS::buffer, subscription, buffer_hasher>;
+
+    struct inflight_message {
+        inflight_message(MQTT_NS::store_message_variant msg, MQTT_NS::any life_keeper)
+            :msg { MQTT_NS::force_move(msg) },
+             life_keeper { MQTT_NS::force_move(life_keeper) }
+        {}
+
+        packet_id_t packet_id() const {
+            return
+                MQTT_NS::visit(
+                    MQTT_NS::make_lambda_visitor(
+                        [](auto const& m) {
+                            return m.packet_id();
+                        }
+                    ),
+                    msg
+                );
+        }
+        MQTT_NS::store_message_variant msg;
+        MQTT_NS::any life_keeper;
+    };
+
+    using mi_inflight_message = mi::multi_index_container<
+        inflight_message,
+        mi::indexed_by<
+            mi::sequenced<
+                mi::tag<tag_seq>
+            >,
+            mi::ordered_unique<
+                mi::tag<tag_pid>,
+                BOOST_MULTI_INDEX_CONST_MEM_FUN(inflight_message, packet_id_t, packet_id)
+            >
+        >
+    >;
 
     // The offline_message structure holds messages that have been published on a
     // topic that a not-currently-connected client is subscribed to.
@@ -1485,7 +1731,7 @@ private:
         session_state(session_state&&) = default;
 
         ~session_state() {
-            unsubscribe_all();
+            clean();
         }
 
         bool online() const {
@@ -1524,7 +1770,9 @@ private:
 
         void clean() {
             topic_alias_recv = MQTT_NS::nullopt;
+            inflight_messages.clear();
             offline_messages.clear();
+            qos2_publish_processed.clear();
             unsubscribe_all();
         }
 
@@ -1544,11 +1792,9 @@ private:
         MQTT_NS::optional<std::chrono::steady_clock::duration> session_expiry_interval;
         std::shared_ptr<as::steady_timer> tim_session_expiry;
         MQTT_NS::optional<MQTT_NS::topic_alias_recv_map_t> topic_alias_recv;
-        // TODO:
-        // insert resend_messages here. get by for_each_store
-        // PUBLISH with assigned packet_id
-        // PUBREL
+        mi_inflight_message inflight_messages;
         std::deque<offline_message> offline_messages;
+        std::set<packet_id_t> qos2_publish_processed;
         std::set<sub_con_map::handle> handles; // to efficient remove
     };
 

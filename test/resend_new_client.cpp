@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             // Inherit store data from c1 to c2
             c1->for_each_store(
                 [&c2]
-                (MQTT_NS::message_variant const& msg) {
+                (MQTT_NS::store_message_variant const& msg) {
                     c2->restore_serialized_message(msg);
                 }
             );
@@ -247,7 +247,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             // Inherit store data from c1 to c2
             c1->for_each_store(
                 [&c2]
-                (MQTT_NS::message_variant const& msg) {
+                (MQTT_NS::store_message_variant const& msg) {
                     c2->restore_serialized_message(msg);
                 }
             );
@@ -393,7 +393,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             // Inherit store data from c1 to c2
             c1->for_each_store(
                 [&c2]
-                (MQTT_NS::message_variant const& msg) {
+                (MQTT_NS::store_message_variant const& msg) {
                     c2->restore_serialized_message(msg);
                 }
             );
@@ -544,7 +544,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             // Inherit store data from c1 to c2
             c1->for_each_store(
                 [&c2]
-                (MQTT_NS::message_variant const& msg) {
+                (MQTT_NS::store_message_variant const& msg) {
                     c2->restore_serialized_message(msg);
                 }
             );
@@ -762,7 +762,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
             // Inherit store data from c1 to c2
             c1->for_each_store(
                 [&c2]
-                (MQTT_NS::message_variant const& msg) {
+                (MQTT_NS::store_message_variant const& msg) {
                     c2->restore_serialized_message(msg);
                 }
             );
@@ -905,7 +905,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
             // Inherit store data from c1 to c2
             c1->for_each_store(
                 [&c2]
-                (MQTT_NS::message_variant const& msg) {
+                (MQTT_NS::store_message_variant const& msg) {
                     c2->restore_serialized_message(msg);
                 }
             );
@@ -1103,7 +1103,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
             // Inherit store data from c1 to c2
             c1->for_each_store(
                 [&c2]
-                (MQTT_NS::message_variant const& msg) {
+                (MQTT_NS::store_message_variant const& msg) {
                     c2->restore_serialized_message(msg);
                 }
             );
@@ -1257,7 +1257,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
             // Inherit store data from c1 to c2
             c1->for_each_store(
                 [&c2]
-                (MQTT_NS::message_variant const& msg) {
+                (MQTT_NS::store_message_variant const& msg) {
                     c2->restore_serialized_message(msg);
                 }
             );

@@ -1883,7 +1883,7 @@ struct callable_overlay final : public Impl
             [h_publish = force_move(h_publish)]
             (basic_publish_message<sizeof(packet_id_t)> msg) {
                 if (h_publish) {
-                    auto buf = continuous_buffer<sizeof(packet_id_t)>(msg);
+                    auto buf = msg.continuous_buffer();
                     h_publish(msg.packet_id(), buf.data(), buf.size());
                 }
             };
@@ -1891,7 +1891,7 @@ struct callable_overlay final : public Impl
             [h_pubrel = force_move(h_pubrel)]
             (basic_pubrel_message<sizeof(packet_id_t)> msg) {
                 if (h_pubrel) {
-                    auto buf = continuous_buffer<sizeof(packet_id_t)>(msg);
+                    auto buf = msg.continuous_buffer();
                     h_pubrel(msg.packet_id(), buf.data(), buf.size());
                 }
             };
@@ -1912,7 +1912,7 @@ struct callable_overlay final : public Impl
             [h_publish = force_move(h_publish)]
             (v5::basic_publish_message<sizeof(packet_id_t)> msg) {
                 if (h_publish) {
-                    auto buf = continuous_buffer<sizeof(packet_id_t)>(msg);
+                    auto buf = msg.continuous_buffer();
                     h_publish(msg.packet_id(), buf.data(), buf.size());
                 }
             };
@@ -1920,7 +1920,7 @@ struct callable_overlay final : public Impl
             [h_pubrel = force_move(h_pubrel)]
             (v5::basic_pubrel_message<sizeof(packet_id_t)> msg) {
                 if (h_pubrel) {
-                    auto buf = continuous_buffer<sizeof(packet_id_t)>(msg);
+                    auto buf = msg.continuous_buffer();
                     h_pubrel(msg.packet_id(), buf.data(), buf.size());
                 }
             };

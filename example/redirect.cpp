@@ -88,7 +88,7 @@ void set_client_handlers(
                 // Inherit store data from c to c2
                 c.for_each_store(
                     [&c2]
-                    (MQTT_NS::message_variant const& msg) {
+                    (MQTT_NS::store_message_variant const& msg) {
                         c2->restore_serialized_message(msg);
                     }
                 );

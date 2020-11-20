@@ -4139,6 +4139,9 @@ public:
      * @param f applying function. f should be void(char const*, std::size_t)
      */
     void for_each_store(std::function<void(char const*, std::size_t)> const& f) {
+        MQTT_LOG("mqtt_api", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "for_each_store(ptr, size)";
         LockGuard<Mutex> lck (store_mtx_);
         auto const& idx = store_.template get<tag_seq>();
         for (auto const & e : idx) {
@@ -4150,13 +4153,32 @@ public:
 
     /**
      * @brief Apply f to stored messages.
-     * @param f applying function. f should be void(message_variant)
+     * @param f applying function. f should be void(store_message_variant)
      */
-    void for_each_store(std::function<void(basic_message_variant<PacketIdBytes>)> const& f) {
+    void for_each_store(std::function<void(basic_store_message_variant<PacketIdBytes>)> const& f) {
+        MQTT_LOG("mqtt_api", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "for_each_store(store_message_variant)";
         LockGuard<Mutex> lck (store_mtx_);
         auto const& idx = store_.template get<tag_seq>();
         for (auto const & e : idx) {
             f(e.message());
+        }
+    }
+
+    /**
+     * @brief Apply f to stored messages.
+     * @param f applying function. f should be void(store_message_variant, any)
+     */
+    void for_each_store_with_life_keeper(std::function<void(basic_store_message_variant<PacketIdBytes>, any)> const& f) {
+        MQTT_LOG("mqtt_api", info)
+            << MQTT_ADD_VALUE(address, this)
+
+            << "for_each_store(store_message_variant, life_keeper)";
+        LockGuard<Mutex> lck (store_mtx_);
+        auto const& idx = store_.template get<tag_seq>();
+        for (auto const & e : idx) {
+            f(e.message(), e.life_keeper());
         }
     }
 
@@ -4487,8 +4509,159 @@ private:
     };
 
 public:
-    void restore_serialized_message(basic_message_variant<PacketIdBytes> msg, any life_keeper = {}) {
-        visit(restore_basic_message_variant_visitor(*this, force_move(life_keeper)), force_move(msg));
+    void restore_serialized_message(basic_store_message_variant<PacketIdBytes> msg, any life_keeper = {}) {
+        MQTT_NS::visit(restore_basic_message_variant_visitor(*this, force_move(life_keeper)), force_move(msg));
+    }
+
+
+    void send_store_message(basic_store_message_variant<PacketIdBytes> msg, any life_keeper) {
+        auto publish_proc =
+            [&](auto msg, auto const& serialize) {
+                auto qos_value = msg.get_qos();
+                if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
+                    auto store_msg = msg;
+                    auto packet_id = msg.packet_id();
+                    store_msg.set_dup(true);
+
+                    LockGuard<Mutex> lck (store_mtx_);
+                    auto ret = packet_id_.insert(packet_id);
+                    (void)ret;
+                    BOOST_ASSERT(ret.second);
+                    store_.emplace(
+                        packet_id,
+                        qos_value == qos::at_least_once
+                            ? control_packet_type::puback
+                            : control_packet_type::pubrec,
+                        store_msg,
+                        force_move(life_keeper)
+                    );
+                    (this->*serialize)(msg);
+                }
+                do_sync_write(force_move(msg));
+            };
+
+        auto pubrel_proc =
+            [&](auto msg, auto const& serialize) {
+                auto packet_id = msg.packet_id();
+
+                LockGuard<Mutex> lck (store_mtx_);
+                packet_id_.insert(packet_id);
+                auto ret = store_.emplace(
+                    packet_id,
+                    control_packet_type::pubcomp,
+                    msg,
+                    force_move(life_keeper)
+                );
+                (void)ret;
+                BOOST_ASSERT(ret.second);
+                (this->*serialize)(msg);
+                do_sync_write(force_move(msg));
+            };
+
+        MQTT_NS::visit(
+            make_lambda_visitor(
+                [this, &publish_proc](v3_1_1::basic_publish_message<PacketIdBytes>& m) {
+                    MQTT_LOG("mqtt_api", info)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "send_store_message publish v3.1.1";
+                    publish_proc(force_move(m), &endpoint::on_serialize_publish_message);
+                },
+                [this, &pubrel_proc](v3_1_1::basic_pubrel_message<PacketIdBytes>& m) {
+                    MQTT_LOG("mqtt_api", info)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "send_store_message pubrel v3.1.1";
+                    pubrel_proc(force_move(m), &endpoint::on_serialize_pubrel_message);
+                },
+                [this, &publish_proc](v5::basic_publish_message<PacketIdBytes>& m) {
+                    MQTT_LOG("mqtt_api", info)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "send_store_message publish v5";
+                    publish_proc(force_move(m), &endpoint::on_serialize_v5_publish_message);
+                },
+                [this, &pubrel_proc](v5::basic_pubrel_message<PacketIdBytes>& m) {
+                    MQTT_LOG("mqtt_api", info)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "send_store_message pubrel v5";
+                    pubrel_proc(force_move(m), &endpoint::on_serialize_v5_pubrel_message);
+                }
+            ),
+            msg
+        );
+    }
+
+    void async_send_store_message(basic_store_message_variant<PacketIdBytes> msg, any life_keeper, async_handler_t func) {
+        auto publish_proc =
+            [&](auto msg, auto const& serialize) {
+                auto qos_value = msg.get_qos();
+                if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
+                    auto store_msg = msg;
+                    auto packet_id = msg.packet_id();
+                    store_msg.set_dup(true);
+
+                    LockGuard<Mutex> lck (store_mtx_);
+                    auto ret = packet_id_.insert(packet_id);
+                    (void)ret;
+                    BOOST_ASSERT(ret.second);
+                    store_.emplace(
+                        packet_id,
+                        qos_value == qos::at_least_once
+                            ? control_packet_type::puback
+                            : control_packet_type::pubrec,
+                        store_msg,
+                        force_move(life_keeper)
+                    );
+                    (this->*serialize)(msg);
+                }
+                do_async_write(force_move(msg), force_move(func));
+            };
+
+        auto pubrel_proc =
+            [&](auto msg, auto const& serialize) {
+                auto packet_id = msg.packet_id();
+
+                LockGuard<Mutex> lck (store_mtx_);
+                packet_id_.insert(packet_id);
+                auto ret = store_.emplace(
+                    packet_id,
+                    control_packet_type::pubcomp,
+                    msg,
+                    force_move(life_keeper)
+                );
+                (void)ret;
+                BOOST_ASSERT(ret.second);
+                (this->*serialize)(msg);
+                do_async_write(force_move(msg), force_move(func));
+            };
+
+        MQTT_NS::visit(
+            make_lambda_visitor(
+                [this, &publish_proc](v3_1_1::basic_publish_message<PacketIdBytes>& m) {
+                    MQTT_LOG("mqtt_api", info)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "async_send_store_message publish v3.1.1";
+                    publish_proc(force_move(m), &endpoint::on_serialize_publish_message);
+                },
+                [this, &pubrel_proc](v3_1_1::basic_pubrel_message<PacketIdBytes>& m) {
+                    MQTT_LOG("mqtt_api", info)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "async_send_store_message pubrel v3.1.1";
+                    pubrel_proc(force_move(m), &endpoint::on_serialize_pubrel_message);
+                },
+                [this, &publish_proc](v5::basic_publish_message<PacketIdBytes>& m) {
+                    MQTT_LOG("mqtt_api", info)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "async_send_store_message publish v5";
+                    publish_proc(force_move(m), &endpoint::on_serialize_v5_publish_message);
+                },
+                [this, &pubrel_proc](v5::basic_pubrel_message<PacketIdBytes>& m) {
+                    MQTT_LOG("mqtt_api", info)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "async_send_store_message pubrel v5";
+                    pubrel_proc(force_move(m), &endpoint::on_serialize_v5_pubrel_message);
+                }
+            ),
+            msg
+        );
     }
 
     /**
@@ -4733,9 +4906,16 @@ private:
             , life_keeper_(force_move(life_keeper)) {}
         packet_id_t packet_id() const { return packet_id_; }
         control_packet_type expected_control_packet_type() const { return expected_control_packet_type_; }
-        basic_message_variant<PacketIdBytes> message() const {
-            return get_basic_message_variant<PacketIdBytes>(smv_);
+        basic_store_message_variant<PacketIdBytes> const& message() const {
+            return smv_;
         }
+        basic_store_message_variant<PacketIdBytes>& message() {
+            return smv_;
+        }
+        any const& life_keeper() const {
+            return life_keeper_;
+        }
+
     private:
         packet_id_t packet_id_;
         control_packet_type expected_control_packet_type_;
@@ -8913,8 +9093,8 @@ private:
                     store_.emplace(
                         packet_id,
                         pubopts.get_qos() == qos::at_least_once
-                         ? control_packet_type::puback
-                         : control_packet_type::pubrec,
+                             ? control_packet_type::puback
+                             : control_packet_type::pubrec,
                         store_msg,
                         force_move(life_keeper)
                     );
@@ -9279,7 +9459,7 @@ private:
         LockGuard<Mutex> lck (store_mtx_);
         auto const& idx = store_.template get<tag_seq>();
         for (auto const& e : idx) {
-            do_sync_write(e.message());
+            do_sync_write(get_basic_message_variant<PacketIdBytes>(e.message()));
         }
     }
 
@@ -9828,7 +10008,7 @@ private:
         auto const& idx = store_.template get<tag_seq>();
         for (auto const& e : idx) {
             do_async_write(
-                e.message(),
+                get_basic_message_variant<PacketIdBytes>(e.message()),
                 [g]
                 (error_code /*ec*/) {
                 }
@@ -10053,7 +10233,7 @@ private:
 
     static optional<topic_alias_t> get_topic_alias_by_prop(v5::property_variant const& prop) {
         optional<topic_alias_t> val;
-        visit(
+        MQTT_NS::visit(
             make_lambda_visitor(
                 [&val](v5::property::topic_alias const& p) {
                     val = p.val();
