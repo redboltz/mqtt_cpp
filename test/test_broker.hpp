@@ -1843,9 +1843,8 @@ private:
     as::steady_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
     MQTT_NS::optional<std::chrono::steady_clock::duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
 
-    mi_session_state sessions_; ///< Map of active client id and connections
-
     sub_con_map subs_map_;   /// subscription information
+    mi_session_state sessions_; ///< Map of active client id and connections
 
     retained_messages retains_; ///< A list of messages retained so they can be sent to newly subscribed clients.
 
