@@ -34,6 +34,7 @@ IF (MQTT_TEST_2)
         remaining_length.cpp
         message.cpp
         property.cpp
+        broker_offline_message.cpp
     )
 ENDIF ()
 
