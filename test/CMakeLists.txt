@@ -124,6 +124,7 @@ FOREACH (source_file ${check_PROGRAMS})
     ENDIF ()
 
     ADD_TEST (${source_file_we} ${source_file_we})
+    set_tests_properties(${source_file_we} PROPERTIES TIMEOUT 240)
 ENDFOREACH ()
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
