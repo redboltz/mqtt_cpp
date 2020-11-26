@@ -27,6 +27,13 @@ public:
         :ws_(ioc, std::forward<Args>(args)...),
          strand_(ioc) {
         ws_.binary(true);
+        ws_.set_option(
+            boost::beast::websocket::stream_base::decorator(
+                [](boost::beast::websocket::request_type& req) {
+                    req.set("Sec-WebSocket-Protocol", "mqtt");
+                }
+            )
+        );
     }
 
     void close(boost::system::error_code& ec) {
