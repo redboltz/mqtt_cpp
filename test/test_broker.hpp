@@ -196,7 +196,7 @@ bool compare_topic_filter(MQTT_NS::string_view topic_filter, MQTT_NS::string_vie
 
         if ('+' == topic_filter[idx]) {
             // Compare everything up to the first +
-            if(topic_filter.substr(0, idx) == topic_name.substr(0, idx)) {
+            if (topic_filter.substr(0, idx) == topic_name.substr(0, idx)) {
                 /*
                  * We already know thanks to the topic filter being validated
                  * that the + symbol is directly touching '/'s on both sides
@@ -774,7 +774,7 @@ private:
                 session_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
             }
 
-            if(will) {
+            if (will) {
                 auto v = get_property<MQTT_NS::v5::property::message_expiry_interval>(will.value().props());
                 if (v && v.value().val() != 0) {
                     will_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
@@ -845,7 +845,7 @@ private:
                         seq_idx.modify(seq_idx.begin(), [&](auto &i) {
                             auto props = MQTT_NS::force_move(i.props);
 
-                            if(i.tim_message_expiry) {
+                            if (i.tim_message_expiry) {
                                 set_property<MQTT_NS::v5::property::message_expiry_interval>(props,
                                     MQTT_NS::v5::property::message_expiry_interval(static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(
                                         i.tim_message_expiry->expiry() - std::chrono::steady_clock::now()).count())));
@@ -1048,7 +1048,7 @@ private:
                         try {
                             auto props = MQTT_NS::force_move(session.will().value().props());
 
-                            if(session.get_tim_will_expiry()) {
+                            if (session.get_tim_will_expiry()) {
                                 set_property<MQTT_NS::v5::property::message_expiry_interval>(props,
                                     MQTT_NS::v5::property::message_expiry_interval(static_cast<uint32_t>(
                                         std::chrono::duration_cast<std::chrono::seconds>(session.get_tim_will_expiry()->expiry() - std::chrono::steady_clock::now()).count())));
@@ -1643,17 +1643,18 @@ private:
             }
             else {
                 std::shared_ptr<as::steady_timer> tim_message_expiry;
-                if(message_expiry_interval) {
+                if (message_expiry_interval) {
                     tim_message_expiry = std::make_shared<as::steady_timer>(ioc_, message_expiry_interval.value());
                     tim_message_expiry->async_wait(
-                      [this, topic = topic, wp = std::weak_ptr<as::steady_timer>(tim_message_expiry)]
-                      (boost::system::error_code const& ec) {
-                      if (auto sp = wp.lock()) {
-                          if( ! ec ) {
-                              retains_.erase(topic);
-                          }
-                      }
-                   });
+                        [this, topic = topic, wp = std::weak_ptr<as::steady_timer>(tim_message_expiry)]
+                        (boost::system::error_code const& ec) {
+                            if (auto sp = wp.lock()) {
+                                if (!ec) {
+                                    retains_.erase(topic);
+                                }
+                            }
+                        }
+                    );
                 }
 
                 retains_.insert_or_assign(
