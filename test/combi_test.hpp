@@ -67,6 +67,7 @@ inline void do_test(
                 [&] {
                     s->close();
                     b.clear_all_sessions();
+                    b.clear_all_retained_topics();
                 }
             );
         },
@@ -118,6 +119,7 @@ inline void do_tls_test(
                 [&] {
                     s->close();
                     b.clear_all_sessions();
+                    b.clear_all_retained_topics();
                 }
             );
         },
@@ -167,6 +169,7 @@ inline void do_ws_test(
                 [&] {
                     s->close();
                     b.clear_all_sessions();
+                    b.clear_all_retained_topics();
                 }
             );
         },
@@ -218,6 +221,7 @@ inline void do_tls_ws_test(
                 [&] {
                     s->close();
                     b.clear_all_sessions();
+                    b.clear_all_retained_topics();
                 }
             );
         },
