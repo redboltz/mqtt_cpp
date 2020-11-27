@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE( connect ) {
         switch (c->get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
             c->set_connack_handler(
-                [&chk, &c]
+                [&chk, &c, &finish]
                 (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(c->connected() == true);
