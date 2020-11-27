@@ -1044,7 +1044,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
                             BOOST_TEST(t.val() == MQTT_NS::v5::property::payload_format_indicator::string);
                         },
                         [&](MQTT_NS::v5::property::message_expiry_interval const& t) {
-                            BOOST_TEST(t.val() == 0x12345678UL);
+                            BOOST_TEST(t.val() <= 0x12345678UL);
                         },
                         [&](MQTT_NS::v5::property::will_delay_interval const& t) {
                             BOOST_TEST(t.val() == 0x12345678UL);

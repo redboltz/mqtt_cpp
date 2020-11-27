@@ -351,7 +351,7 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
         }
     );
     c2->set_v5_connack_handler(
-        [&chk, &c1, &c2]
+        [&chk, &c2]
         (bool sp, MQTT_NS::v5::connect_reason_code connack_reason_code, MQTT_NS::v5::properties /*props*/) {
             auto ret = chk.match(
                 "c1_h_connack",
@@ -454,7 +454,7 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
                             BOOST_TEST(t.val() == "content type");
                         },
                         [&](MQTT_NS::v5::property::message_expiry_interval const& t) {
-                            BOOST_TEST(t.val() == 0x12345678UL);
+                            BOOST_TEST(t.val() <= 0x12345678UL);
                         },
                         [&](MQTT_NS::v5::property::response_topic const& t) {
                             BOOST_TEST(t.val() == "response topic");
@@ -645,9 +645,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5_timeout ) {
         MQTT_NS::v5::property::user_property("key2"_mb, "val2"_mb),
     };
 
-    auto prop_size = ps.size();
-    std::size_t user_prop_count = 0;
-
     c1->set_v5_connack_handler(
         [&chk, &c2]
         (bool sp, MQTT_NS::v5::connect_reason_code connack_reason_code, MQTT_NS::v5::properties /*props*/) {
@@ -767,13 +764,12 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5_timeout ) {
         }
     );
     c2->set_v5_publish_handler(
-        [&chk, &c1]
-            (MQTT_NS::optional<packet_id_t> packet_id,
-             MQTT_NS::publish_options pubopts,
-             MQTT_NS::buffer topic,
-             MQTT_NS::buffer contents,
-             MQTT_NS::v5::properties props) {
-
+        []
+        (MQTT_NS::optional<packet_id_t>,
+         MQTT_NS::publish_options,
+         MQTT_NS::buffer,
+         MQTT_NS::buffer,
+         MQTT_NS::v5::properties) {
             // We should not received any published message when offline messages timeout
             BOOST_TEST(false);
             return true;

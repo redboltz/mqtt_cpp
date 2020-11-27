@@ -1165,7 +1165,7 @@ BOOST_AUTO_TEST_CASE( prop ) {
                                 BOOST_TEST(t.val() == MQTT_NS::v5::property::payload_format_indicator::string);
                             },
                             [&](MQTT_NS::v5::property::message_expiry_interval const& t) {
-                                BOOST_TEST(t.val() == 0x12345678UL);
+                                BOOST_TEST(t.val() <= 0x12345678UL);
                             },
                             [&](MQTT_NS::v5::property::response_topic const& t) {
                                 BOOST_TEST(t.val() == "response topic");
