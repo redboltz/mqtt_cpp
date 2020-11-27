@@ -62,7 +62,7 @@ jobs:
         [ ${{ matrix.pattern }} == 6 ] && FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=ON  -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_TLS=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_USE_LOG=OFF -DMQTT_STD_ANY=ON  -DMQTT_STD_OPTIONAL=ON  -DMQTT_STD_VARIANT=ON  -DMQTT_STD_STRING_VIEW=ON  -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
         [ ${{ matrix.pattern }} == 7 ] && FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_CODECOV=ON -DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_TLS=ON  -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=OFF -DMQTT_USE_LOG=ON  -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
 
-         BOOST_ROOT=$BOOST_ROOT_1_72_0 cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${FLAGS}
+        BOOST_ROOT=$BOOST_ROOT_1_72_0 CMAKE_C_FLAGS=$CFLAGS CMAKE_CXX_FLAGS=$CXXFLAGS cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${FLAGS}
     - name: Check Header Dependencies
       run: |
         cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first --target check_deps
@@ -73,8 +73,7 @@ jobs:
         CXXFLAGS: -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -fsanitize=address
         LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -fsanitize=address
       run: |
-        CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
-        cmake --build ${{ runner.temp }} --clean-first
+        CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING" cmake --build ${{ runner.temp }} --clean-first
     - name: Compile without Sanitizer
       if: (matrix.pattern == 0) || (matrix.pattern == 4) || (matrix.pattern == 5) || (matrix.pattern == 6) || (matrix.pattern == 7)
       env:
@@ -82,8 +81,7 @@ jobs:
         CXXFLAGS: -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer
         LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer
       run: |
-        CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING"
-        cmake --build ${{ runner.temp }} --clean-first
+        CXXFLAGS="${CXXFLAGS} -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING" cmake --build ${{ runner.temp }} --clean-first
     - name: Test
       working-directory: ${{ runner.temp }}
       run: |

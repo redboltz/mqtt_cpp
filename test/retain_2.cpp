@@ -327,7 +327,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
                     return true;
                 });
             c->set_v5_suback_handler(
-                [&chk, &c, &pid_sub, &pid_unsub, &timeout, &message_timeout]
+                [&chk, &c, &pid_sub, &pid_unsub, &timeout]
                 (packet_id_t packet_id, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
@@ -361,7 +361,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
                     return true;
                 });
             c->set_v5_unsuback_handler(
-                [&chk, &c, &pid_sub, &pid_unsub, &timeout, message_timeout]
+                [&chk, &c, &pid_sub, &pid_unsub, &timeout]
                 (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);

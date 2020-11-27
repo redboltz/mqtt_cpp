@@ -282,7 +282,7 @@ BOOST_AUTO_TEST_CASE( will_qo0_timeout ) {
             BOOST_CHECK(false);
         });
     c2->set_v5_suback_handler(
-        [&chk, &c2, &c1_force_disconnect, &pid_sub2, &pid_unsub2, &timeout, &timeout_2, &will_expiry_interval]
+        [&chk, &c2, &c1_force_disconnect, &pid_sub2, &pid_unsub2, &timeout, &timeout_2]
         (packet_id_t packet_id, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_suback_2");
             BOOST_TEST(packet_id == pid_sub2);
@@ -311,18 +311,18 @@ BOOST_AUTO_TEST_CASE( will_qo0_timeout ) {
         });
     c2->set_v5_unsuback_handler(
         [&chk, &c2, &pid_unsub2]
-        (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
+        (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code>, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_unsuback_2");
             BOOST_TEST(packet_id == pid_unsub2);
             c2->disconnect();
             return true;
         });
     c2->set_v5_publish_handler(
-        [&chk, &c2, &pid_unsub2]
-        (MQTT_NS::optional<packet_id_t> packet_id,
-         MQTT_NS::publish_options pubopts,
-         MQTT_NS::buffer topic,
-         MQTT_NS::buffer contents,
+        []
+        (MQTT_NS::optional<packet_id_t>,
+         MQTT_NS::publish_options,
+         MQTT_NS::buffer,
+         MQTT_NS::buffer,
          MQTT_NS::v5::properties /*props*/) {
 
             // Will should not be received

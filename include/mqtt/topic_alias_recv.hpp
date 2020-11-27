@@ -26,7 +26,7 @@ namespace MQTT_NS {
 using topic_alias_recv_map_t = std::map<topic_alias_t, std::string>;
 
 inline void register_topic_alias(topic_alias_recv_map_t& m,  string_view topic, topic_alias_t alias) {
-    BOOST_ASSERT(alias > 0 && alias <= topic_alias_max);
+    BOOST_ASSERT(alias > 0); //alias <= topic_alias_max is always true
 
     MQTT_LOG("mqtt_impl", info)
         << MQTT_ADD_VALUE(address, &m)
@@ -43,7 +43,7 @@ inline void register_topic_alias(topic_alias_recv_map_t& m,  string_view topic, 
 }
 
 inline std::string find_topic_by_alias(topic_alias_recv_map_t const& m,  topic_alias_t alias) {
-    BOOST_ASSERT(alias > 0 && alias <= topic_alias_max);
+    BOOST_ASSERT(alias > 0); //alias <= topic_alias_max is always true
 
     std::string topic;
     auto it = m.find(alias);

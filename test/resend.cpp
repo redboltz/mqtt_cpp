@@ -1858,7 +1858,7 @@ BOOST_AUTO_TEST_CASE( publish_message_expiry_update_from_broker ) {
                         // The previous connection is not set Session Expiry Interval.
                         // That means session state is cleared on close.
                         BOOST_TEST(sp == false);
-                        c->subscribe("topic1", MQTT_NS::qos::at_least_once);
+                        c->subscribe("topic1", MQTT_NS::qos::exactly_once);
                     },
                     "h_error",
                     [&] {
