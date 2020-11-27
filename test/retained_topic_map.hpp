@@ -71,8 +71,8 @@ class retained_topic_map {
     using wildcard_const_iterator = typename path_entry_set::template index<wildcard_index_tag>::type::const_iterator;
 
     path_entry_set map;
-    size_t map_size = 0;
-    node_id_t next_node_id = root_node_id + 1;
+    size_t map_size;
+    node_id_t next_node_id;
 
     direct_const_iterator root;
 
@@ -271,11 +271,17 @@ class retained_topic_map {
         map_size -= count;
     }
 
+    void init_map() {
+        map_size = 0;
+        // Create the root node
+        root = map.insert(path_entry(root_parent_id, "", root_node_id)).first;
+        next_node_id = root_node_id + 1;
+    }
+
 public:
     retained_topic_map()
     {
-        // Create the root node
-        root = map.insert(path_entry(root_parent_id, "", root_node_id)).first;
+        init_map();
     }
 
     // Insert a value at the specified topic
@@ -321,6 +327,12 @@ public:
 
     // Get the number of entries in the map (for debugging purpose only)
     std::size_t internal_size() const { return map.size(); }
+
+    // Clear all topics
+    void clear() {
+        map.clear();
+        init_map();
+    }
 
     // Dump debug information
     template<typename Output>
