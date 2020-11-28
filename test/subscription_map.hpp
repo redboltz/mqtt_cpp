@@ -202,6 +202,12 @@ private:
         count.increment_value();
     }
 
+    // Decrease the subscription count for a specific node
+    static void decrease_count_storage(count_storage_t &count) {
+        BOOST_ASSERT(count.value() > 0);
+        count.decrement_value();
+    }
+
     using this_type = subscription_map_base<Value>;
 
     // Use boost hash to hash pair in path_entry_key
@@ -311,7 +317,7 @@ protected:
                 remove_hash_child_flag = false;
             }
 
-            entry->second.count.decrement_value();
+            decrease_count_storage(entry->second.count);
             if (entry->second.count.value() == 0) {
                 remove_plus_child_flag = (entry->first.second == "+");
                 remove_hash_child_flag = (entry->first.second == "#");
