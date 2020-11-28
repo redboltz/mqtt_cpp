@@ -123,7 +123,9 @@ FOREACH (source_file ${check_PROGRAMS})
         ENDIF ()
     ENDIF ()
 
-    ADD_TEST (${source_file_we} ${source_file_we})
+    # Running test with arguments
+    # CTEST_ARGS="--log_level=all" ctest -V
+    ADD_TEST (NAME ${source_file_we} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/args_provider.sh ${CMAKE_CURRENT_BINARY_DIR}/${source_file_we})
     set_tests_properties(${source_file_we} PROPERTIES TIMEOUT 300)
 ENDFOREACH ()
 
