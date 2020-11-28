@@ -708,12 +708,12 @@ public:
     }
 
     template <typename T>
-    static MQTT_NS::optional<T> get_property(MQTT_NS::v5::properties const &props) {
+    static MQTT_NS::optional<T> get_property(MQTT_NS::v5::properties const& props) {
         MQTT_NS::optional<T> result;
 
         auto visitor = MQTT_NS::make_lambda_visitor(
             [&result](T const& t) { result = t; },
-            [](auto&& ...) { }
+            [](auto const&) { }
         );
 
         for (auto const& p : props) {
@@ -724,13 +724,13 @@ public:
     }
 
     template <typename T>
-    static void set_property(MQTT_NS::v5::properties const &props, T&& v) {
+    static void set_property(MQTT_NS::v5::properties& props, T&& v) {
         auto visitor = MQTT_NS::make_lambda_visitor(
             [&v](T& t) mutable { t = std::forward<T>(v); },
-            [](auto&& ...) { }
+            [](auto&) { }
         );
 
-        for (auto const& p : props) {
+        for (auto& p : props) {
             MQTT_NS::visit(visitor, p);
         }
     }
@@ -776,7 +776,7 @@ private:
 
             if (will) {
                 auto v = get_property<MQTT_NS::v5::property::message_expiry_interval>(will.value().props());
-                if (v && v.value().val() != 0) {
+                if (v) {
                     will_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
                 }
             }
@@ -833,7 +833,34 @@ private:
         auto send_inflight_messages =
             [&] (session_state& session) {
                 for (auto const& ifm : session.inflight_messages) {
-                    session.con->send_store_message(ifm.msg, ifm.life_keeper);
+                    MQTT_NS::optional<MQTT_NS::store_message_variant> msg;
+                    if (ifm.tim_message_expiry) {
+                        MQTT_NS::visit(
+                            MQTT_NS::make_lambda_visitor(
+                                [&](MQTT_NS::v5::basic_publish_message<sizeof(packet_id_t)> const& m) {
+                                    auto updated_msg = m;
+                                    auto& props = updated_msg.props();
+
+                                    auto d =
+                                        std::chrono::duration_cast<std::chrono::seconds>(
+                                            ifm.tim_message_expiry->expiry() - std::chrono::steady_clock::now()
+                                        ).count();
+                                    if (d < 0) d = 0;
+                                    set_property<MQTT_NS::v5::property::message_expiry_interval>(
+                                        props,
+                                        MQTT_NS::v5::property::message_expiry_interval(
+                                            static_cast<uint32_t>(d)
+                                        )
+                                    );
+                                    msg.emplace(MQTT_NS::force_move(updated_msg));
+                                },
+                                [](auto const&) {
+                                }
+                            ),
+                            ifm.msg
+                        );
+                    }
+                    session.con->send_store_message(msg ? msg.value() : ifm.msg, ifm.life_keeper);
                 }
             };
 
@@ -842,23 +869,33 @@ private:
                 try {
                     auto &seq_idx = session.offline_messages.get<tag_seq>();
                     while(!seq_idx.empty()) {
-                        seq_idx.modify(seq_idx.begin(), [&](auto &i) {
-                            auto props = MQTT_NS::force_move(i.props);
+                        seq_idx.modify(
+                            seq_idx.begin(),
+                            [&](auto &i) {
+                                auto props = MQTT_NS::force_move(i.props);
 
-                            if (i.tim_message_expiry) {
-                                set_property<MQTT_NS::v5::property::message_expiry_interval>(props,
-                                    MQTT_NS::v5::property::message_expiry_interval(static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(
-                                        i.tim_message_expiry->expiry() - std::chrono::steady_clock::now()).count())));
+                                if (i.tim_message_expiry) {
+                                    auto d =
+                                        std::chrono::duration_cast<std::chrono::seconds>(
+                                            i.tim_message_expiry->expiry() - std::chrono::steady_clock::now()
+                                        ).count();
+                                    if (d < 0) d = 0;
+                                    set_property<MQTT_NS::v5::property::message_expiry_interval>(
+                                        props,
+                                        MQTT_NS::v5::property::message_expiry_interval(
+                                            static_cast<uint32_t>(d)
+                                        )
+                                    );
+                                }
+
+                                session.con->publish(
+                                    MQTT_NS::force_move(i.topic),
+                                    MQTT_NS::force_move(i.contents),
+                                    MQTT_NS::force_move(i.pubopts),
+                                    MQTT_NS::force_move(props)
+                                );
                             }
-
-                            session.con->publish(
-                                MQTT_NS::force_move(i.topic),
-                                MQTT_NS::force_move(i.contents),
-                                MQTT_NS::force_move(i.pubopts),
-                                MQTT_NS::force_move(props)
-                            );
-                        });
-
+                        );
                         seq_idx.pop_front();
                     }
                 }
@@ -1049,9 +1086,17 @@ private:
                             auto props = MQTT_NS::force_move(session.will().value().props());
 
                             if (session.get_tim_will_expiry()) {
-                                set_property<MQTT_NS::v5::property::message_expiry_interval>(props,
-                                    MQTT_NS::v5::property::message_expiry_interval(static_cast<uint32_t>(
-                                        std::chrono::duration_cast<std::chrono::seconds>(session.get_tim_will_expiry()->expiry() - std::chrono::steady_clock::now()).count())));
+                                auto d =
+                                    std::chrono::duration_cast<std::chrono::seconds>(
+                                        session.get_tim_will_expiry()->expiry() - std::chrono::steady_clock::now()
+                                    ).count();
+                                if (d < 0) d = 0;
+                                set_property<MQTT_NS::v5::property::message_expiry_interval>(
+                                    props,
+                                    MQTT_NS::v5::property::message_expiry_interval(
+                                        static_cast<uint32_t>(d)
+                                    )
+                                );
                             }
 
                             do_publish(
@@ -1093,13 +1138,41 @@ private:
                     do_send_will(e);
 
                     e.con->for_each_store_with_life_keeper(
-                        [&e] (MQTT_NS::store_message_variant msg, MQTT_NS::any life_keeper) {
+                        [this, &e] (MQTT_NS::store_message_variant msg, MQTT_NS::any life_keeper) {
                             MQTT_LOG("mqtt_broker", trace)
                                 << MQTT_ADD_VALUE(address, e.con.get())
                                 << "store inflight message";
+
+                            std::shared_ptr<as::steady_timer> tim_message_expiry;
+
+                            MQTT_NS::visit(
+                                MQTT_NS::make_lambda_visitor(
+                                    [&](MQTT_NS::v5::basic_publish_message<sizeof(packet_id_t)> const& m) {
+                                        auto v = get_property<MQTT_NS::v5::property::message_expiry_interval>(m.props());
+                                        if (v) {
+                                            tim_message_expiry =
+                                                std::make_shared<as::steady_timer>(ioc_, std::chrono::seconds(v.value().val()));
+                                            tim_message_expiry->async_wait(
+                                                [&e, wp = std::weak_ptr<as::steady_timer>(tim_message_expiry)]
+                                                (MQTT_NS::error_code ec) {
+                                                    if (auto sp = wp.lock()) {
+                                                        if (!ec) {
+                                                            e.inflight_messages.get<tag_tim>().erase(sp);
+                                                        }
+                                                    }
+                                                }
+                                            );
+                                        }
+                                    },
+                                    [&](auto const&) {}
+                                ),
+                                msg
+                            );
+
                             e.inflight_messages.emplace_back(
                                 MQTT_NS::force_move(msg),
-                                MQTT_NS::force_move(life_keeper)
+                                MQTT_NS::force_move(life_keeper),
+                                MQTT_NS::force_move(tim_message_expiry)
                             );
                         }
                     );
@@ -1357,9 +1430,16 @@ private:
                     props.push_back(MQTT_NS::v5::property::subscription_identifier(*sid));
                 }
                 if (r.tim_message_expiry) {
-                    set_property<MQTT_NS::v5::property::message_expiry_interval>(props,
-                        MQTT_NS::v5::property::message_expiry_interval(static_cast<uint32_t>(
-                            std::chrono::duration_cast<std::chrono::seconds>(r.tim_message_expiry->expiry() - std::chrono::steady_clock::now()).count())));
+                    auto d =
+                        std::chrono::duration_cast<std::chrono::seconds>(
+                            r.tim_message_expiry->expiry() - std::chrono::steady_clock::now()
+                        ).count();
+                    set_property<MQTT_NS::v5::property::message_expiry_interval>(
+                        props,
+                        MQTT_NS::v5::property::message_expiry_interval(
+                            static_cast<uint32_t>(d)
+                        )
+                    );
                 }
                 ep.publish(
                     r.topic,
@@ -1610,7 +1690,7 @@ private:
         MQTT_NS::optional<std::chrono::steady_clock::duration> message_expiry_interval;
         if (ep.get_protocol_version() == MQTT_NS::protocol_version::v5) {
             auto v = get_property<MQTT_NS::v5::property::message_expiry_interval>(props);
-            if (v && v.value().val() != 0) {
+            if (v) {
                 message_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
             }
 
@@ -1715,9 +1795,13 @@ private:
     using sub_con_map = multiple_subscription_map<MQTT_NS::buffer, subscription, buffer_hasher>;
 
     struct inflight_message {
-        inflight_message(MQTT_NS::store_message_variant msg, MQTT_NS::any life_keeper)
+        inflight_message(
+            MQTT_NS::store_message_variant msg,
+            MQTT_NS::any life_keeper,
+            std::shared_ptr<as::steady_timer> tim_message_expiry)
             :msg { MQTT_NS::force_move(msg) },
-             life_keeper { MQTT_NS::force_move(life_keeper) }
+             life_keeper { MQTT_NS::force_move(life_keeper) },
+             tim_message_expiry { MQTT_NS::force_move(tim_message_expiry) }
         {}
 
         packet_id_t packet_id() const {
@@ -1733,6 +1817,7 @@ private:
         }
         MQTT_NS::store_message_variant msg;
         MQTT_NS::any life_keeper;
+        std::shared_ptr<as::steady_timer> tim_message_expiry;
     };
 
     using mi_inflight_message = mi::multi_index_container<
@@ -1744,6 +1829,10 @@ private:
             mi::ordered_unique<
                 mi::tag<tag_pid>,
                 BOOST_MULTI_INDEX_CONST_MEM_FUN(inflight_message, packet_id_t, packet_id)
+            >,
+            mi::ordered_non_unique<
+                mi::tag<tag_tim>,
+                BOOST_MULTI_INDEX_MEMBER(inflight_message, std::shared_ptr<as::steady_timer>, tim_message_expiry)
             >
         >
     >;
@@ -1858,7 +1947,7 @@ private:
                 MQTT_NS::optional<std::chrono::steady_clock::duration> message_expiry_interval;
 
                 auto v = get_property<MQTT_NS::v5::property::message_expiry_interval>(props);
-                if (v && v.value().val() != 0) {
+                if (v) {
                     message_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
                 }
 
@@ -1877,7 +1966,7 @@ private:
                 }
 
                 auto& seq_idx = offline_messages.get<tag_seq>();
-                auto i = seq_idx.emplace_back(
+                seq_idx.emplace_back(
                     MQTT_NS::force_move(pub_topic),
                     MQTT_NS::force_move(contents),
                     MQTT_NS::force_move(props),
@@ -1918,17 +2007,24 @@ private:
 
         std::set<sub_con_map::handle> handles; // to efficient remove
 
-        void update_will(as::io_context& ioc, MQTT_NS::optional<MQTT_NS::will> will, MQTT_NS::optional<std::chrono::steady_clock::duration> will_expiry_interval) {
+        void update_will(
+            as::io_context& ioc,
+            MQTT_NS::optional<MQTT_NS::will> will,
+            MQTT_NS::optional<std::chrono::steady_clock::duration> will_expiry_interval) {
             tim_will_expiry.reset();
             will_value = MQTT_NS::force_move(will);
 
             if (will_value && will_expiry_interval) {
                 tim_will_expiry = std::make_shared<as::steady_timer>(ioc, will_expiry_interval.value());
                 tim_will_expiry->async_wait(
-                    [this, client_id = client_id, wp = std::weak_ptr<as::steady_timer>(tim_will_expiry)](MQTT_NS::error_code ec) {
+                    [this, client_id = client_id, wp = std::weak_ptr<as::steady_timer>(tim_will_expiry)]
+                    (MQTT_NS::error_code ec) {
                         if (auto sp = wp.lock()) {
-                            reset_will();
-                        }                                           }
+                            if (!ec) {
+                                reset_will();
+                            }
+                        }
+                    }
                 );
             }
         }

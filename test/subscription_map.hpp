@@ -8,11 +8,14 @@
 #define MQTT_SUBSCRIPTION_MAP_HPP
 
 #include <unordered_map>
+
 #include <boost/functional/hash.hpp>
+#include <boost/range/adaptor/reversed.hpp>
+
 #include <mqtt/string_view.hpp>
 #include <mqtt/optional.hpp>
+#include <mqtt/buffer.hpp>
 
-#include <boost/range/adaptor/reversed.hpp>
 #include "topic_filter_tokenizer.hpp"
 
 /**
@@ -81,37 +84,82 @@
 
 // Compile error on other platforms (not 32 or 64 bit)
 template<std::size_t N>
-struct count_storage
-{
+struct count_storage {
    static_assert(N == 4 || N == 8, "Subscription map count_storage only knows how to handle architectures with 32 or 64 bit size_t: please update to support your platform.");
 };
 
 template<>
-struct count_storage<4>
-{
-    std::uint32_t value : 30;
-    std::uint32_t has_hash_child : 1;
-    std::uint32_t has_plus_child : 1;
-
-    count_storage(std::uint32_t value = 1)
-        : value(value), has_hash_child(false), has_plus_child(false)
+struct count_storage<4> {
+public:
+    count_storage(std::uint32_t v = 1)
+        : value_(v & 0x3fffffffUL), has_hash_child_(false), has_plus_child_(false)
     { }
 
     static constexpr std::size_t max() { return std::numeric_limits<uint32_t>::max() >> 2; }
+
+    std::uint32_t value() const { return value_; }
+    void set_value(std::uint32_t v) {
+        value_ = v & 0x3fffffffUL;
+    }
+    void increment_value() {
+        ++value_;
+    }
+    void decrement_value() {
+        --value_;
+    }
+
+    bool has_hash_child() const { return has_hash_child_; }
+    void set_hash_child(bool v) {
+        has_hash_child_ = v;
+    }
+
+    bool has_plus_child() const { return has_plus_child_; }
+    void set_plus_child(bool v) {
+        has_plus_child_ = v;
+    }
+
+private:
+    std::uint32_t value_ : 30;
+    std::uint32_t has_hash_child_ : 1;
+    std::uint32_t has_plus_child_ : 1;
+
 };
 
 template<>
-struct count_storage<8>
-{
-    std::uint64_t value : 62;
-    std::uint64_t has_hash_child : 1;
-    std::uint64_t has_plus_child : 1;
-
-    count_storage(std::uint64_t value = 1)
-        : value(value), has_hash_child(false), has_plus_child(false)
+struct count_storage<8> {
+public:
+    count_storage(std::uint64_t v= 1)
+        : value_(v & 0x3fffffffffffffffULL), has_hash_child_(false), has_plus_child_(false)
     { }
 
     static constexpr std::uint64_t max() { return std::numeric_limits<uint64_t>::max() >> 2; }
+
+    std::uint64_t value() const { return value_; }
+    void set_value(std::uint64_t v) {
+        value_ = v & 0x3fffffffffffffffULL;
+    }
+    void increment_value() {
+        ++value_;
+    }
+    void decrement_value() {
+        --value_;
+    }
+
+    bool has_hash_child() const { return has_hash_child_; }
+    void set_hash_child(bool v) {
+        has_hash_child_ = v;
+    }
+
+    bool has_plus_child() const { return has_plus_child_; }
+    void set_plus_child(bool v) {
+        has_plus_child_ = v;
+    }
+
+
+private:
+    std::uint64_t value_ : 62;
+    std::uint64_t has_hash_child_ : 1;
+    std::uint64_t has_plus_child_ : 1;
 };
 
 template<typename Value>
@@ -147,11 +195,11 @@ private:
 
     // Increase the subscription count for a specific node
     static void increase_count_storage(count_storage_t &count) {
-        if(count.value == count_storage_t::max()) {
+        if(count.value() == count_storage_t::max()) {
             throw_max_stored_topics();
         }
 
-        ++count.value;
+        count.increment_value();
     }
 
     using this_type = subscription_map_base<Value>;
@@ -230,8 +278,8 @@ protected:
                             path_entry(generate_node_id(), parent->first)
                         ).first;
 
-                    parent->second.count.has_plus_child |= (t == "+");
-                    parent->second.count.has_hash_child |= (t == "#");
+                    parent->second.count.set_plus_child(parent->second.count.has_plus_child() | (t == "+"));
+                    parent->second.count.set_hash_child(parent->second.count.has_hash_child() | (t == "#"));
                 }
                 else {
                     increase_count_storage(entry->second.count);
@@ -254,17 +302,17 @@ protected:
         // Go through entries to remove
         for (auto& entry : boost::adaptors::reverse(path)) {
             if (remove_plus_child_flag) {
-                entry->second.count.has_plus_child = false;
+                entry->second.count.set_plus_child(false);
                 remove_plus_child_flag = false;
             }
 
             if (remove_hash_child_flag) {
-                entry->second.count.has_hash_child = false;
+                entry->second.count.set_hash_child(false);
                 remove_hash_child_flag = false;
             }
 
-            --entry->second.count.value;
-            if (entry->second.count.value == 0) {
+            entry->second.count.decrement_value();
+            if (entry->second.count.value() == 0) {
                 remove_plus_child_flag = (entry->first.second == "+");
                 remove_hash_child_flag = (entry->first.second == "#");
 
@@ -276,11 +324,11 @@ protected:
 
         auto root = get_root();
         if (remove_plus_child_flag) {
-            root->second.count.has_plus_child = false;
+            root->second.count.set_plus_child(false);
         }
 
         if (remove_hash_child_flag) {
-            root->second.count.has_hash_child = false;
+            root->second.count.set_hash_child(false);
         }
     }
 
@@ -303,7 +351,7 @@ protected:
                         new_entries.push_back(i);
                     }
 
-                    if (entry->second.count .has_plus_child) {
+                    if (entry->second.count .has_plus_child()) {
                         i = self.map.find(path_entry_key(parent, MQTT_NS::string_view("+")));
                         if (i != self.map.end()) {
                             if (parent != self.root_node_id || t.empty() || t[0] != '$') {
@@ -312,7 +360,7 @@ protected:
                         }
                     }
 
-                    if (entry->second.count.has_hash_child) {
+                    if (entry->second.count.has_hash_child()) {
                         i = self.map.find(path_entry_key(parent, MQTT_NS::string_view("#")));
                         if (i != self.map.end()) {
                             if (parent != self.root_node_id || t.empty() || t[0] != '$'){

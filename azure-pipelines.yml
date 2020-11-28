@@ -151,7 +151,11 @@ steps:
       return Write-Error "cmake --build failed"
     }
     cd test
-    ctest -VV
+
+    # If you want to debug a specific test file with logs, do as follows instead of execute ctest
+    # Release\resend.exe --log_level=all
+    ctest -VV -C Release
+
     if (!$?) {
       return Write-Error "ctest -VV failed"
     }

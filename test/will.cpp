@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_CASE( will_qo0_timeout ) {
 
     boost::asio::io_context ioc;
 
-    constexpr uint32_t will_expiry_interval = 1;
+    uint32_t will_expiry_interval = 1;
     as::steady_timer timeout(ioc);
     as::steady_timer timeout_2(ioc);
 
@@ -282,7 +282,7 @@ BOOST_AUTO_TEST_CASE( will_qo0_timeout ) {
             BOOST_CHECK(false);
         });
     c2->set_v5_suback_handler(
-        [&chk, &c2, &c1_force_disconnect, &pid_sub2, &pid_unsub2, &timeout, &timeout_2, &will_expiry_interval]
+        [&chk, &c2, &c1_force_disconnect, &pid_sub2, &pid_unsub2, &timeout, &timeout_2, will_expiry_interval]
         (packet_id_t packet_id, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_suback_2");
             BOOST_TEST(packet_id == pid_sub2);
@@ -311,18 +311,18 @@ BOOST_AUTO_TEST_CASE( will_qo0_timeout ) {
         });
     c2->set_v5_unsuback_handler(
         [&chk, &c2, &pid_unsub2]
-        (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
+        (packet_id_t packet_id, std::vector<MQTT_NS::v5::unsuback_reason_code>, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_unsuback_2");
             BOOST_TEST(packet_id == pid_unsub2);
             c2->disconnect();
             return true;
         });
     c2->set_v5_publish_handler(
-        [&chk, &c2, &pid_unsub2]
-        (MQTT_NS::optional<packet_id_t> packet_id,
-         MQTT_NS::publish_options pubopts,
-         MQTT_NS::buffer topic,
-         MQTT_NS::buffer contents,
+        []
+        (MQTT_NS::optional<packet_id_t>,
+         MQTT_NS::publish_options,
+         MQTT_NS::buffer,
+         MQTT_NS::buffer,
          MQTT_NS::v5::properties /*props*/) {
 
             // Will should not be received
@@ -1044,7 +1044,7 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
                             BOOST_TEST(t.val() == MQTT_NS::v5::property::payload_format_indicator::string);
                         },
                         [&](MQTT_NS::v5::property::message_expiry_interval const& t) {
-                            BOOST_TEST(t.val() == 0x12345678UL);
+                            BOOST_TEST(t.val() <= 0x12345678UL);
                         },
                         [&](MQTT_NS::v5::property::will_delay_interval const& t) {
                             BOOST_TEST(t.val() == 0x12345678UL);

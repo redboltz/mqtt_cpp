@@ -887,6 +887,14 @@ public:
     }
 
     /**
+     * @brief Get properties
+     * @return properties
+     */
+    properties& props() {
+        return props_;
+    }
+
+    /**
      * @brief Set dup flag
      * @param dup flag value to set
      */
