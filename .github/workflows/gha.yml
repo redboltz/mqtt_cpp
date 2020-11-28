@@ -28,7 +28,7 @@ jobs:
         NS_LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion
       run: |
         [ ${{ matrix.pattern }} == 0 ] || [ ${{ matrix.pattern }} == 4 || [ ${{ matrix.pattern }} == 5 ] || [ ${{ matrix.pattern }} == 6 ] || [ ${{ matrix.pattern }} == 7 ] \
-        export CFLAGS=${NS_CFLAGS} && export CXXFLAGS=${NS_CXXFLAGS} && export LDLFLAGS=${NS_DLFLAGS}
+        export CFLAGS=${NS_CFLAGS} && export CXXFLAGS=${NS_CXXFLAGS} && export LDFLAGS=${NS_LDFLAGS}
         echo ${CFLAGS}
         echo ${CXXFLAGS}
         echo ${LDFLAGS}
