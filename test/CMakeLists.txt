@@ -21,71 +21,9 @@ OPTION(MQTT_TEST_7 "Build test part7" ON)
 IF (MQTT_TEST_1)
     LIST (APPEND check_PROGRAMS
         connect.cpp
-        underlying_timeout.cpp
-        topic_alias_recv.cpp
     )
 ENDIF ()
 
-IF (MQTT_TEST_2)
-    LIST (APPEND check_PROGRAMS
-        length_check.cpp
-        utf8string_validate.cpp
-        packet_id.cpp
-        remaining_length.cpp
-        message.cpp
-        property.cpp
-        broker_offline_message.cpp
-    )
-ENDIF ()
-
-IF (MQTT_TEST_3)
-    LIST (APPEND check_PROGRAMS
-        sub.cpp
-        pubsub_1.cpp
-        pubsub_2.cpp
-        pubsub_no_strand.cpp
-        multi_sub.cpp
-    )
-ENDIF ()
-
-IF (MQTT_TEST_4)
-    LIST (APPEND check_PROGRAMS
-        async_pubsub_1.cpp
-    )
-ENDIF ()
-
-IF (MQTT_TEST_5)
-    LIST (APPEND check_PROGRAMS
-        resend.cpp
-        resend_new_client.cpp
-        resend_serialize.cpp
-        resend_serialize_ptr_size.cpp
-    )
-ENDIF ()
-
-IF (MQTT_TEST_6)
-    LIST (APPEND check_PROGRAMS
-        offline.cpp
-        manual_publish.cpp
-        retain_1.cpp
-        retain_2.cpp
-        will.cpp
-    )
-ENDIF ()
-
-IF (MQTT_TEST_7)
-    LIST (APPEND check_PROGRAMS
-        as_buffer_sub.cpp
-        as_buffer_pubsub.cpp
-        as_buffer_async_pubsub_1.cpp
-        as_buffer_async_pubsub_2.cpp
-        subscription_map.cpp
-        retained_topic_map.cpp
-        subscription_map_broker.cpp
-        retained_topic_map_broker.cpp
-        async_pubsub_2.cpp
-    )
-ENDIF ()
 
 FIND_PACKAGE (Boost 1.67.0 REQUIRED COMPONENTS unit_test_framework)
 
