@@ -40,6 +40,7 @@ jobs:
         CXXFLAGS: -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -pedantic -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING
         LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer
       run: |
+        export CFLAGS="-Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion"
         VERBOSE=1 cmake --build ${{ runner.temp }} --clean-first
     - name: Test
       working-directory: ${{ runner.temp }}
