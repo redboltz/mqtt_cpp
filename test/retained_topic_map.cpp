@@ -206,30 +206,39 @@ BOOST_AUTO_TEST_CASE(erase_upper_first) {
     }
 }
 
-BOOST_AUTO_TEST_CASE(large_number_of_topics) {
-    retained_topic_map<size_t> map;
+#if 0
 
-    constexpr size_t num_topics = 10000;
-    for (size_t i = 0; i < num_topics; ++i) {
+BOOST_AUTO_TEST_CASE(large_number_of_topics) {
+    retained_topic_map<std::size_t> map;
+
+    constexpr std::size_t num_topics = 10000;
+    for (std::size_t i = 0; i < num_topics; ++i) {
         map.insert_or_assign((boost::format("topic/%d") % i).str(), i);
     }
 
     BOOST_TEST(map.size() == num_topics);
-    for (size_t i = 0; i < num_topics; ++i) {
-        map.find(
-            (boost::format("topic/%d") % i).str(),
-            [&](size_t value) {
-                BOOST_TEST(value == i);
-            }
-        );
-   }
+    try {
+        for (std::size_t i = 0; i < num_topics; ++i) {
+            map.find(
+                (boost::format("topic/%d") % i).str(),
+                [&](std::size_t value) {
+                    if (value != i) throw false;
+                }
+            );
+        }
+    }
+    catch (bool) {
+        BOOST_TEST(false);
+    }
 
-    for (size_t i = 0; i < num_topics; ++i) {
+    for (std::size_t i = 0; i < num_topics; ++i) {
         map.erase((boost::format("topic/%d") % i).str());
     }
 
     BOOST_TEST(map.size() == 0);
     BOOST_TEST(map.internal_size() == 1);
 }
+
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()

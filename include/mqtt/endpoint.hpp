@@ -783,8 +783,7 @@ protected:
      *        This handler is called when the current mqtt message has been processed.
      * @param func A callback function that is called when async operation will finish.
      */
-    MQTT_ALWAYS_INLINE virtual void on_mqtt_message_processed(any session_life_keeper) noexcept
-    {
+    MQTT_ALWAYS_INLINE virtual void on_mqtt_message_processed(any session_life_keeper) {
         if (async_read_on_message_processed_) {
             async_read_control_packet_type(force_move(session_life_keeper));
         }

@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
             cont("h_close"),
         };
 
-        constexpr unsigned int message_timeout = 1;
+        std::uint32_t message_timeout = 1;
         as::steady_timer timeout(ioc);
 
         switch (c->get_protocol_version()) {
@@ -327,7 +327,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
                     return true;
                 });
             c->set_v5_suback_handler(
-                [&chk, &c, &pid_sub, &pid_unsub, &timeout, &message_timeout]
+                [&chk, &c, &pid_sub, &pid_unsub, &timeout, message_timeout]
                 (packet_id_t packet_id, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
@@ -1165,7 +1165,7 @@ BOOST_AUTO_TEST_CASE( prop ) {
                                 BOOST_TEST(t.val() == MQTT_NS::v5::property::payload_format_indicator::string);
                             },
                             [&](MQTT_NS::v5::property::message_expiry_interval const& t) {
-                                BOOST_TEST(t.val() == 0x12345678UL);
+                                BOOST_TEST(t.val() <= 0x12345678UL);
                             },
                             [&](MQTT_NS::v5::property::response_topic const& t) {
                                 BOOST_TEST(t.val() == "response topic");
