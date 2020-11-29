@@ -203,7 +203,7 @@ private:
     }
 
     // Decrease the subscription count for a specific node
-    static void decrease_count_storage(count_storage_t &count) {
+    static void decrease_count_storage(count_storage_t& count) {
         BOOST_ASSERT(count.value() > 0);
         count.decrement_value();
     }

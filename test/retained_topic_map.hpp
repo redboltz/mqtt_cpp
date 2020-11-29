@@ -46,7 +46,7 @@ class retained_topic_map {
 
         // Increase the count for this node
         void increase_count() {
-            if(count == max_count) {
+            if (count == max_count) {
                 throw_max_stored_topics();
             }
 
@@ -117,7 +117,7 @@ class retained_topic_map {
                     }
                 }
                 else {
-                    direct_index.modify(entry, [](path_entry &entry){ entry.increase_count(); });
+                    direct_index.modify(entry, [](path_entry& entry){ entry.increase_count(); });
                 }
 
                 parent = entry;
@@ -249,7 +249,7 @@ class retained_topic_map {
 
             // Do iterators stay valid when erasing ? I think they do ?
             for (auto entry : path) {
-                direct_index.modify(entry, [](path_entry &entry){ entry.decrease_count(); });
+                direct_index.modify(entry, [](path_entry& entry){ entry.decrease_count(); });
 
                 if (entry->count == 0) {
                     map.erase(entry);
@@ -267,7 +267,7 @@ class retained_topic_map {
         auto& direct_index = map.template get<direct_index_tag>();
 
         for(auto& i : path) {
-            direct_index.modify(i, [](path_entry &entry){ entry.increase_count(); });
+            direct_index.modify(i, [](path_entry& entry){ entry.increase_count(); });
         }
     }
 

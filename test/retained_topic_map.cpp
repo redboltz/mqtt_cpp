@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE(erase_upper_first) {
 }
 
 BOOST_AUTO_TEST_CASE(large_number_of_topics) {
-    retained_topic_map< std::pair<std::size_t, std::size_t> > map;
+    retained_topic_map<std::pair<std::size_t, std::size_t>> map;
 
     std::vector< std::pair<std::string, std::pair<std::size_t, std::size_t> > > created_topics;
 
