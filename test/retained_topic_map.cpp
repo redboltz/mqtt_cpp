@@ -3,6 +3,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
+
 #include "test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
@@ -11,6 +12,8 @@
 #include "retained_topic_map.hpp"
 
 #include <boost/format.hpp>
+#include <algorithm>
+#include <random>
 
 BOOST_AUTO_TEST_SUITE(test_retained_map)
 
@@ -206,39 +209,49 @@ BOOST_AUTO_TEST_CASE(erase_upper_first) {
     }
 }
 
-#if 0
-
 BOOST_AUTO_TEST_CASE(large_number_of_topics) {
-    retained_topic_map<std::size_t> map;
+    retained_topic_map<std::pair<std::size_t, std::size_t>> map;
 
-    constexpr std::size_t num_topics = 10000;
+    std::vector< std::pair<std::string, std::pair<std::size_t, std::size_t> > > created_topics;
+
+    constexpr std::size_t num_topics = 25;
     for (std::size_t i = 0; i < num_topics; ++i) {
-        map.insert_or_assign((boost::format("topic/%d") % i).str(), i);
-    }
+        for (std::size_t j = 0; j < num_topics; ++j) {
+            std::string topic = (boost::format("topic/first_level_%d/second_level_%d") % i % j).str();
+            auto value = std::make_pair(i, j);
 
-    BOOST_TEST(map.size() == num_topics);
-    try {
-        for (std::size_t i = 0; i < num_topics; ++i) {
-            map.find(
-                (boost::format("topic/%d") % i).str(),
-                [&](std::size_t value) {
-                    if (value != i) throw false;
-                }
-            );
+            map.insert_or_assign(topic, value);
+
+            created_topics.push_back(std::make_pair(topic, value));
         }
     }
-    catch (bool) {
-        BOOST_TEST(false);
+
+    BOOST_TEST(map.size() == num_topics * num_topics);
+
+    std::vector< std::pair<std::size_t, std::size_t> > received_values;
+    std::vector< std::pair<std::size_t, std::size_t> > searched_values;
+
+    std::shuffle(created_topics.begin(), created_topics.end(), std::default_random_engine(0x12345));
+
+    for (auto const& i : created_topics) {
+       map.find(
+            i.first,
+            [&](std::pair<std::size_t, std::size_t> const& value) {
+                received_values.push_back(value);
+            }
+        );
+
+        searched_values.push_back(i.second);
     }
 
-    for (std::size_t i = 0; i < num_topics; ++i) {
-        map.erase((boost::format("topic/%d") % i).str());
+    BOOST_TEST(searched_values == received_values);
+
+    for (auto const& i : created_topics) {
+        map.erase(i.first);
     }
 
     BOOST_TEST(map.size() == 0);
     BOOST_TEST(map.internal_size() == 1);
 }
-
-#endif
 
 BOOST_AUTO_TEST_SUITE_END()

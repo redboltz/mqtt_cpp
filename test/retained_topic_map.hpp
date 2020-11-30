@@ -23,6 +23,11 @@ namespace mi = boost::multi_index;
 
 template<typename Value>
 class retained_topic_map {
+
+    // Exceptions used
+    static void throw_max_stored_topics() { throw std::overflow_error("Retained map maximum number of topics reached"); }
+    static void throw_no_wildcards_allowed() { throw std::runtime_error("Retained map no wildcards allowed in retained topic name"); }
+
     using node_id_t = std::size_t;
 
     static constexpr node_id_t root_parent_id = 0;
@@ -37,8 +42,22 @@ class retained_topic_map {
         node_id_t id;
 
         std::size_t count = 1;
-
         static constexpr std::size_t max_count = std::numeric_limits<std::size_t>::max();
+
+        // Increase the count for this node
+        void increase_count() {
+            if (count == max_count) {
+                throw_max_stored_topics();
+            }
+
+            ++count;
+        }
+
+        // Decrease the count for this node
+        void decrease_count() {
+            BOOST_ASSERT(count >= count);
+            --count;
+        }
 
         MQTT_NS::optional<Value> value;
 
@@ -98,7 +117,7 @@ class retained_topic_map {
                     }
                 }
                 else {
-                    direct_index.modify(entry, [](path_entry &entry){ ++entry.count; });
+                    direct_index.modify(entry, [](path_entry& entry){ entry.increase_count(); });
                 }
 
                 parent = entry;
@@ -230,7 +249,7 @@ class retained_topic_map {
 
             // Do iterators stay valid when erasing ? I think they do ?
             for (auto entry : path) {
-                direct_index.modify(entry, [](path_entry &entry){ --entry.count; });
+                direct_index.modify(entry, [](path_entry& entry){ entry.decrease_count(); });
 
                 if (entry->count == 0) {
                     map.erase(entry);
@@ -248,13 +267,9 @@ class retained_topic_map {
         auto& direct_index = map.template get<direct_index_tag>();
 
         for(auto& i : path) {
-            direct_index.modify(i, [](path_entry &entry){ ++entry.count; });
+            direct_index.modify(i, [](path_entry& entry){ entry.increase_count(); });
         }
     }
-
-    // Exceptions used
-    static void throw_max_stored_topics() { throw std::overflow_error("Retained map maximum number of topics reached"); }
-    static void throw_no_wildcards_allowed() { throw std::runtime_error("Retained map no wildcards allowed in retained topic name"); }
 
     // Increase the map size (total number of topics stored)
     void increase_map_size() {
