@@ -23,8 +23,6 @@ OPTION(MQTT_STD_ANY "Use std::any from C++17 instead of boost::any" OFF)
 OPTION(MQTT_STD_SHARED_PTR_ARRAY "Use std::shared_ptr<char[]> from C++17 instead of boost::shared_ptr<char[]>" OFF)
 OPTION(MQTT_DISABLE_LIBSTDCXX_TUPLE_ANY_WORKAROUND "std::tuple<std::any> workaround for libstdc++" OFF)
 
-ADD_COMPILE_DEFINITIONS(BOOST_ASIO_NO_DEPRECATED)
-
 IF (POLICY CMP0074)
   CMAKE_POLICY(SET CMP0074 NEW)
 ENDIF ()
