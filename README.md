@@ -30,6 +30,12 @@ You can compile your code as follows:
 g++ -std=c++14 -Ipath_to_mqtt_cpp/include your_program.cpp -pthread additional_options
 ```
 
+mqtt_cpp uses std::variant or boost::variant internally.
+If you define the preprocessor macro MQTT_STD_VARIANT then std::variant is chosen, otherwise boost::variant is chosen.
+
+If you use boost::variant, you need to include [mqtt/config.hpp](https://github.com/redboltz/mqtt_cpp/blob/master/include/mqtt/config.hpp) prior to the boost headers inclusion becausse it defines boost configuration macros.
+When you use [mqtt_client_cpp.hpp](https://github.com/redboltz/mqtt_cpp/blob/master/include/mqtt_client_cpp.hpp) and/or [mqtt_server_cpp.hpp](https://github.com/redboltz/mqtt_cpp/blob/master/include/mqtt_server_cpp.hpp), they include [mqtt/config.hpp](https://github.com/redboltz/mqtt_cpp/blob/master/include/mqtt/config.hpp) internally.
+
 **additional_options**
 
 |what you want|required option|
