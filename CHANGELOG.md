@@ -1,3 +1,36 @@
+## 9.0.0
+* Added Websocket sub-ptorocol. (#735)
+* Added BOOST_ASIO_NO_DEPRECATED to CI. (#734, #745)
+* Added test timeout. (#733)
+* Added Message Expiry Interval support to test_broker. (#731, #732, #736)
+  * NOTE: client side is not supported yet.
+* Added inflight message resending functionality for test_broker. (#730)
+  * NOTE: client side already have the functionality.
+* Added payload_as_buffer() for publish message. (#727)
+* <<<< breaking change >>>> Supported scattered payload publish. (#723, #724)
+  * NOTE: The return type of payload() has been changed. Ues payload_as_buffer().
+* Impropve examples. (#722)
+* Fixed Boost.Test include file. (#721)
+* Improved CI. (#718)
+* Fixed session expiry. (#700)
+* Added Subscription Identifier support. (#683)
+* Added NL(No Local) support. (#682)
+* Added tests. (#680)
+* Added subscription update. (#678, #679)
+* Supported alternative TLS library. (#673)
+* Added wildcard support to test_broker. (#671, #674, #681, #685, #687, #688, #689, #691, #693, #694, #695, #696, #698, #699, #707, #713, #715, #717, #742)
+* Fixed compile error on Boost 1.74.0. (#670)
+* Fixed namespace qualification. (#667, #668, #725, #726)
+* Fixed warnings. (#665, #677)
+* Improved client connect function. (#664)
+* Added Topic Alias support. (#660, #666)
+* Added strand_wrap for timeout code. (#659)
+* <<<< breaking change >>>> Fixed error code. (#658)
+* Added Session Expiry Interval functionality. (#657)
+* Added MQTT_USE_LOG to enable logging. (#656)
+* Improved output stream operator. (#655)
+* Fixed user name and password empty case handling. (#654)
+
 ## 8.0.0
 * Added PINGRESP timeout and made internal force_disconnect() calling in the strand. (#649)
 * Added async_client example. (#647)
