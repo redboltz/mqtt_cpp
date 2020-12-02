@@ -10,7 +10,7 @@ Important note https://github.com/redboltz/mqtt_cpp/wiki/News.
 
 mqtt_cpp is a header only library. It requires C++14 and the Boost Libraries 1.67.0 or later.
 
-Add mqtt_cpp/include to your include path. Then, include `mqtt_cpp.hpp` and/or `mqtt_server_cpp.hpp` as follows:
+Add mqtt_cpp/include to your include path. Then, include `mqtt_client_cpp.hpp` and/or `mqtt_server_cpp.hpp` as follows:
 
 For clients:
 ```c++
@@ -29,6 +29,18 @@ You can compile your code as follows:
 ```
 g++ -std=c++14 -Ipath_to_mqtt_cpp/include your_program.cpp -pthread additional_options
 ```
+
+mqtt_cpp uses std::variant or boost::variant internally.
+If you define the preprocessor macro MQTT_STD_VARIANT then std::variant is chosen, otherwise boost::variant is chosen.
+
+If you use boost::variant, you need to include [mqtt/config.hpp](https://github.com/redboltz/mqtt_cpp/blob/master/include/mqtt/config.hpp) prior to the boost headers inclusion becausse it defines boost configuration macros.
+When you use [mqtt_client_cpp.hpp](https://github.com/redboltz/mqtt_cpp/blob/master/include/mqtt_client_cpp.hpp) and/or [mqtt_server_cpp.hpp](https://github.com/redboltz/mqtt_cpp/blob/master/include/mqtt_server_cpp.hpp), they include [mqtt/config.hpp](https://github.com/redboltz/mqtt_cpp/blob/master/include/mqtt/config.hpp) internally.
+
+### Experimental feature
+
+In `include/mqtt/broker`, there are header files to implement mqtt broker.
+It is an experimental feature. It would frequently updated. Even if the broker interface would be changed, major version won't be updated.
+
 
 **additional_options**
 
