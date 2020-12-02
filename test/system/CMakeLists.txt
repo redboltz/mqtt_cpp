@@ -14,20 +14,20 @@ IF (MQTT_TEST_2)
     LIST (APPEND check_PROGRAMS
         st_connect.cpp
         st_underlying_timeout.cpp
-        st_topic_alias_recv.cpp
         st_as_buffer_sub.cpp
+        st_topic_alias_recv.cpp
         st_as_buffer_pubsub.cpp
     )
 ENDIF ()
 
 IF (MQTT_TEST_3)
     LIST (APPEND check_PROGRAMS
-        st_sub.cpp
         st_pubsub_1.cpp
+        st_sub.cpp
         st_pubsub_2.cpp
         st_pubsub_no_strand.cpp
-        st_multi_sub.cpp
         st_as_buffer_async_pubsub_1.cpp
+        st_multi_sub.cpp
         st_as_buffer_async_pubsub_2.cpp
     )
 ENDIF ()
@@ -41,9 +41,10 @@ ENDIF ()
 IF (MQTT_TEST_5)
     LIST (APPEND check_PROGRAMS
         st_resend.cpp
+        st_retain_1.cpp
         st_resend_new_client.cpp
-        st_resend_serialize.cpp
-        st_resend_serialize_ptr_size.cpp
+        st_retain_2.cpp
+        st_will.cpp
     )
 ENDIF ()
 
@@ -51,19 +52,18 @@ IF (MQTT_TEST_6)
     LIST (APPEND check_PROGRAMS
         st_offline.cpp
         st_manual_publish.cpp
-        st_retain_1.cpp
-        st_retain_2.cpp
-        st_will.cpp
     )
 ENDIF ()
 
 IF (MQTT_TEST_7)
     LIST (APPEND check_PROGRAMS
         st_async_pubsub_2.cpp
-        st_length_check.cpp
         st_broker_offline_message.cpp
         st_remaining_length.cpp
         st_utf8string_validate.cpp
+        st_resend_serialize.cpp
+        st_length_check.cpp
+        st_resend_serialize_ptr_size.cpp
     )
 ENDIF ()
 
