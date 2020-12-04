@@ -982,8 +982,8 @@ private:
             }
             else {
                 // new connection
-                it = idx.emplace_hint(
-                    it,
+                bool inserted;
+                std::tie(it, inserted) = idx.emplace(
                     ioc_,
                     subs_map_,
                     spep,
@@ -992,6 +992,7 @@ private:
                     force_move(will_expiry_interval),
                     force_move(session_expiry_interval)
                 );
+                BOOST_ASSERT(inserted);
                 send_connack(false);
             }
         }
