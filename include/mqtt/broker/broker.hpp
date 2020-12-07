@@ -4,38 +4,33 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#if !defined(MQTT_BROKER_HPP)
-#define MQTT_BROKER_HPP
+#if !defined(MQTT_BROKER_BROKER_HPP)
+#define MQTT_BROKER_BROKER_HPP
 
 #include <mqtt/config.hpp>
 
 #include <set>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/multi_index/sequenced_index.hpp>
-#include <boost/multi_index/member.hpp>
-#include <boost/multi_index/identity.hpp>
 
-#include <mqtt/namespace.hpp>
+#include <mqtt/broker/broker_namespace.hpp>
 #include <mqtt/optional.hpp>
 #include <mqtt/property.hpp>
 #include <mqtt/visitor_util.hpp>
-#include <mqtt/broker/subscription_map.hpp>
-#include <mqtt/broker/retained_topic_map.hpp>
-#include <mqtt/server.hpp>
 
-namespace MQTT_NS {
+#include <mqtt/broker/session_state.hpp>
+#include <mqtt/broker/sub_con_map.hpp>
+#include <mqtt/broker/retained_messages.hpp>
+
+#include <mqtt/broker/retained_topic_map.hpp>
+#include <mqtt/broker/shared_subscriptions.hpp>
+#include <mqtt/broker/shared_target_impl.hpp>
+
+MQTT_BROKER_NS_BEGIN
 
 namespace mi = boost::multi_index;
 namespace as = boost::asio;
 
-
-using endpoint_t = server<>::endpoint_t;
-using con_sp_t = std::shared_ptr<endpoint_t>;
-using con_wp_t = std::weak_ptr<endpoint_t>;
-using packet_id_t = endpoint_t::packet_id_t;
 
 #if defined(MQTT_STD_STRING_VIEW)
 #define MQTT_STRING_VIEW_CONSTEXPR constexpr
@@ -259,9 +254,9 @@ static_assert(compare_topic_filter("bob/alice/mary/#", "bob/alice/mary/sue"), "E
 static_assert( ! compare_topic_filter("bob/alice/mary/sue/#", "bob/alice/mary/sue"), "Each non-wildcarded level in the Topic Filter has to match the corresponding level in the Topic Name character for character for the match to succeed");
 #endif // defined(MQTT_STD_STRING_VIEW)
 
-class broker {
+class broker_t {
 public:
-    broker(as::io_context& ioc)
+    broker_t(as::io_context& ioc)
         :ioc_(ioc),
          tim_disconnect_(ioc_)
     {}
@@ -712,34 +707,6 @@ public:
         retains_.clear();
     }
 
-    template <typename T>
-    static optional<T> get_property(v5::properties const& props) {
-        optional<T> result;
-
-        auto visitor = make_lambda_visitor(
-            [&result](T const& t) { result = t; },
-            [](auto const&) { }
-        );
-
-        for (auto const& p : props) {
-            MQTT_NS::visit(visitor, p);
-        }
-
-        return result;
-    }
-
-    template <typename T>
-    static void set_property(v5::properties& props, T&& v) {
-        auto visitor = make_lambda_visitor(
-            [&v](T& t) mutable { t = std::forward<T>(v); },
-            [](auto&) { }
-        );
-
-        for (auto& p : props) {
-            MQTT_NS::visit(visitor, p);
-        }
-    }
-
 private:
     /**
      * @brief connect_proc Process an incoming CONNECT packet
@@ -835,83 +802,6 @@ private:
                 }
             };
 
-        auto send_inflight_messages =
-            [&] (session_state& session) {
-                for (auto const& ifm : session.inflight_messages) {
-                    optional<store_message_variant> msg;
-                    if (ifm.tim_message_expiry) {
-                        MQTT_NS::visit(
-                            make_lambda_visitor(
-                                [&](v5::basic_publish_message<sizeof(packet_id_t)> const& m) {
-                                    auto updated_msg = m;
-                                    auto& props = updated_msg.props();
-
-                                    auto d =
-                                        std::chrono::duration_cast<std::chrono::seconds>(
-                                            ifm.tim_message_expiry->expiry() - std::chrono::steady_clock::now()
-                                        ).count();
-                                    if (d < 0) d = 0;
-                                    set_property<v5::property::message_expiry_interval>(
-                                        props,
-                                        v5::property::message_expiry_interval(
-                                            static_cast<uint32_t>(d)
-                                        )
-                                    );
-                                    msg.emplace(force_move(updated_msg));
-                                },
-                                [](auto const&) {
-                                }
-                            ),
-                            ifm.msg
-                        );
-                    }
-                    session.con->send_store_message(msg ? msg.value() : ifm.msg, ifm.life_keeper);
-                }
-            };
-
-        auto send_offline_messages =
-            [&] (session_state& session) {
-                try {
-                    auto &seq_idx = session.offline_messages.get<tag_seq>();
-                    while(!seq_idx.empty()) {
-                        seq_idx.modify(
-                            seq_idx.begin(),
-                            [&](auto &i) {
-                                auto props = force_move(i.props);
-
-                                if (i.tim_message_expiry) {
-                                    auto d =
-                                        std::chrono::duration_cast<std::chrono::seconds>(
-                                            i.tim_message_expiry->expiry() - std::chrono::steady_clock::now()
-                                        ).count();
-                                    if (d < 0) d = 0;
-                                    set_property<v5::property::message_expiry_interval>(
-                                        props,
-                                        v5::property::message_expiry_interval(
-                                            static_cast<uint32_t>(d)
-                                        )
-                                    );
-                                }
-
-                                session.con->publish(
-                                    force_move(i.topic),
-                                    force_move(i.contents),
-                                    force_move(i.pubopts),
-                                    force_move(props)
-                                );
-                            }
-                        );
-                        seq_idx.pop_front();
-                    }
-                }
-                catch (packet_id_exhausted_error const& e) {
-                    MQTT_LOG("mqtt_broker", warning)
-                        << MQTT_ADD_VALUE(address, session.con.get())
-                        << e.what();
-                }
-            };
-
-
         /**
          * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Toc514345311
          * 3.1.2.4 Clean Start
@@ -923,12 +813,13 @@ private:
         // Find any sessions that have the same client_id
         auto& idx = sessions_.get<tag_cid>();
         auto it = idx.lower_bound(client_id);
-        if (it == idx.end() || it->client_id != client_id) {
+        if (it == idx.end() || it->client_id() != client_id) {
             // new connection
             it = idx.emplace_hint(
                 it,
                 ioc_,
                 subs_map_,
+                shared_targets_,
                 spep,
                 client_id,
                 force_move(will),
@@ -940,7 +831,7 @@ private:
         }
         else if (it->online()) {
             // online overwrite
-            if (close_proc(it->con, true)) {
+            if (close_proc(it->con(), true)) {
                 // remain offline
                 if (clean_start) {
                     // discard offline session
@@ -951,8 +842,7 @@ private:
                             e.clean();
                             e.update_will(ioc_, force_move(will), will_expiry_interval);
                             // TODO: e.will_delay = force_move(will_delay);
-                            e.session_expiry_interval = force_move(session_expiry_interval);
-                            e.tim_session_expiry.reset();
+                            e.renew_session_expiry(force_move(session_expiry_interval));
                         },
                         [](auto&) { BOOST_ASSERT(false); }
                     );
@@ -963,17 +853,13 @@ private:
                     idx.modify(
                         it,
                         [&](auto& e) {
-                            e.con = spep;
-                            if (e.topic_alias_recv) {
-                                ep.restore_topic_alias_recv_container(force_move(e.topic_alias_recv.value()));
-                                e.topic_alias_recv = nullopt;
-                            }
+                            e.reset_con(spep);
+                            e.restore_topic_alias_recv();
                             e.update_will(ioc_, force_move(will), will_expiry_interval);
                             // TODO: e.will_delay = force_move(will_delay);
-                            e.session_expiry_interval = force_move(session_expiry_interval);
-                            e.tim_session_expiry.reset();
-                            send_inflight_messages(e);
-                            send_offline_messages(e);
+                            e.renew_session_expiry(force_move(session_expiry_interval));
+                            e.send_inflight_messages();
+                            e.send_offline_messages();
                         },
                         [](auto&) { BOOST_ASSERT(false); }
                     );
@@ -986,6 +872,7 @@ private:
                 std::tie(it, inserted) = idx.emplace(
                     ioc_,
                     subs_map_,
+                    shared_targets_,
                     spep,
                     client_id,
                     force_move(will),
@@ -1005,11 +892,10 @@ private:
                     it,
                     [&](auto& e) {
                         e.clean();
-                        e.con = spep;
+                        e.reset_con(spep);
                         e.update_will(ioc_, force_move(will), will_expiry_interval);
                         // TODO: e.will_delay = force_move(will_delay);
-                        e.session_expiry_interval = force_move(session_expiry_interval);
-                        e.tim_session_expiry.reset();
+                        e.renew_session_expiry(force_move(session_expiry_interval));
                     },
                     [](auto&) { BOOST_ASSERT(false); }
                 );
@@ -1020,17 +906,13 @@ private:
                 idx.modify(
                     it,
                     [&](auto& e) {
-                        e.con = spep;
-                        if (e.topic_alias_recv) {
-                            ep.restore_topic_alias_recv_container(force_move(e.topic_alias_recv.value()));
-                            e.topic_alias_recv = nullopt;
-                        }
+                        e.reset_con(spep);
+                        e.restore_topic_alias_recv();
                         e.update_will(ioc_, force_move(will), will_expiry_interval);
                         // TODO: e.will_delay = force_move(will_delay);
-                        e.session_expiry_interval = force_move(session_expiry_interval);
-                        e.tim_session_expiry.reset();
-                        send_inflight_messages(e);
-                        send_offline_messages(e);
+                        e.renew_session_expiry(force_move(session_expiry_interval));
+                        e.send_inflight_messages();
+                        e.send_offline_messages();
                     },
                     [](auto&) { BOOST_ASSERT(false); }
                 );
@@ -1077,7 +959,7 @@ private:
                 }
                 else {
                     BOOST_ASSERT(ep.get_protocol_version() == protocol_version::v5);
-                    auto const& sei_opt = it->session_expiry_interval;
+                    auto const& sei_opt = it->session_expiry_interval();
                     return !sei_opt || sei_opt.value() == std::chrono::steady_clock::duration::zero();
                 }
             } ();
@@ -1115,7 +997,7 @@ private:
                         }
                         catch (packet_id_exhausted_error const& e) {
                             MQTT_LOG("mqtt_broker", warning)
-                                << MQTT_ADD_VALUE(address, session.con.get())
+                                << MQTT_ADD_VALUE(address, session.con().get())
                                 << e.what();
                         }
                     }
@@ -1142,67 +1024,12 @@ private:
                 it,
                 [&](session_state& e) {
                     do_send_will(e);
-
-                    e.con->for_each_store_with_life_keeper(
-                        [this, &e] (store_message_variant msg, any life_keeper) {
-                            MQTT_LOG("mqtt_broker", trace)
-                                << MQTT_ADD_VALUE(address, e.con.get())
-                                << "store inflight message";
-
-                            std::shared_ptr<as::steady_timer> tim_message_expiry;
-
-                            MQTT_NS::visit(
-                                make_lambda_visitor(
-                                    [&](v5::basic_publish_message<sizeof(packet_id_t)> const& m) {
-                                        auto v = get_property<v5::property::message_expiry_interval>(m.props());
-                                        if (v) {
-                                            tim_message_expiry =
-                                                std::make_shared<as::steady_timer>(ioc_, std::chrono::seconds(v.value().val()));
-                                            tim_message_expiry->async_wait(
-                                                [&e, wp = std::weak_ptr<as::steady_timer>(tim_message_expiry)]
-                                                (error_code ec) {
-                                                    if (auto sp = wp.lock()) {
-                                                        if (!ec) {
-                                                            e.inflight_messages.get<tag_tim>().erase(sp);
-                                                        }
-                                                    }
-                                                }
-                                            );
-                                        }
-                                    },
-                                    [&](auto const&) {}
-                                ),
-                                msg
-                            );
-
-                            e.inflight_messages.emplace_back(
-                                force_move(msg),
-                                force_move(life_keeper),
-                                force_move(tim_message_expiry)
-                            );
+                    e.become_offline(
+                        [this]
+                        (std::shared_ptr<as::steady_timer> const& sp_tim) {
+                            sessions_.get<tag_tim>().erase(sp_tim);
                         }
                     );
-
-                    e.con.reset();
-
-                    if (e.session_expiry_interval && e.session_expiry_interval.value() != std::chrono::seconds(session_never_expire)) {
-                        e.tim_session_expiry = std::make_shared<as::steady_timer>(ioc_, e.session_expiry_interval.value());
-                        e.tim_session_expiry->async_wait(
-                            [this, wp = std::weak_ptr<as::steady_timer>(e.tim_session_expiry)](error_code ec) {
-                                if (auto sp = wp.lock()) {
-                                    if (!ec) {
-                                        sessions_.get<tag_tim>().erase(sp);
-                                    }
-                                }
-                            }
-                        );
-                    }
-
-                    // TopicAlias lifetime is the same as Session lifetime
-                    // It is different from MQTT v5 spec but practical choice.
-                    // See
-                    // https://lists.oasis-open.org/archives/mqtt-comment/202009/msg00000.html
-                    e.topic_alias_recv = ep.get_topic_alias_recv_container();
                 },
                 [](auto&) { BOOST_ASSERT(false); }
             );
@@ -1236,7 +1063,7 @@ private:
                     idx.modify(
                         it,
                         [&](auto& e) {
-                            e.qos2_publish_processed.insert(packet_id.value());
+                            e.exactly_once_start(packet_id.value());
                         }
                     );
                     ep.pubrec(packet_id.value(), v5::pubrec_reason_code::success, pubrec_props_);
@@ -1248,7 +1075,7 @@ private:
 
         if (packet_id) {
             if (pubopts.get_qos() == qos::exactly_once &&
-                it->qos2_publish_processed.find(packet_id.value()) != it->qos2_publish_processed.end()) {
+                it->exactly_once_processing(packet_id.value())) {
                 MQTT_LOG("mqtt_broker", info)
                     << MQTT_ADD_VALUE(address, spep.get())
                     << "receive already processed publish pid:" << packet_id.value();
@@ -1333,8 +1160,7 @@ private:
         idx.modify(
             it,
             [&](auto& e) {
-                auto& idx = e.inflight_messages.template get<tag_pid>();
-                idx.erase(packet_id);
+                e.erase_inflight_message_by_packet_id(packet_id);
             }
         );
         return true;
@@ -1351,8 +1177,7 @@ private:
         idx.modify(
             it,
             [&](auto& e) {
-                auto& idx = e.inflight_messages.template get<tag_pid>();
-                idx.erase(packet_id);
+                e.erase_inflight_message_by_packet_id(packet_id);
             }
         );
 
@@ -1383,7 +1208,7 @@ private:
         idx.modify(
             it,
             [&](auto& e) {
-                e.qos2_publish_processed.erase(packet_id);
+                e.exactly_once_finish(packet_id);
             }
         );
 
@@ -1414,8 +1239,7 @@ private:
         idx.modify(
             it,
             [&](auto& e) {
-                auto& idx = e.inflight_messages.template get<tag_pid>();
-                idx.erase(packet_id);
+                e.erase_inflight_message_by_packet_id(packet_id);
             }
         );
         return true;
@@ -1429,8 +1253,27 @@ private:
 
         auto& ep = *spep;
 
+        auto& idx = sessions_.get<tag_con>();
+        auto it = idx.find(spep);
+        BOOST_ASSERT(it != idx.end());
+
+        // The element of sessions_ must have longer lifetime
+        // than corresponding subscription.
+        // Because the subscription store the reference of the element.
+        optional<session_state_ref> ssr_opt;
+        idx.modify(
+            it,
+            [&](session_state& e) {
+                ssr_opt.emplace(e);
+            },
+            [](auto&) { BOOST_ASSERT(false); }
+        );
+
+        BOOST_ASSERT(ssr_opt);
+        session_state_ref ssr {ssr_opt.value()};
+
         auto publish_proc =
-            [&ep](retain const& r, qos qos_value, optional<std::size_t> sid) {
+            [&ep](retain_t const& r, qos qos_value, optional<std::size_t> sid) {
                 auto props = r.props;
                 if (sid) {
                     props.push_back(v5::property::subscription_identifier(*sid));
@@ -1458,80 +1301,6 @@ private:
         std::vector<std::function<void()>> retain_deliver;
         retain_deliver.reserve(entries.size());
 
-        auto insert_or_update_sub =
-            [&](buffer topic_filter,
-                subscribe_options subopts,
-                optional<std::size_t> sid = nullopt) {
-
-                auto& idx = sessions_.get<tag_con>();
-                auto it = idx.find(spep);
-                BOOST_ASSERT(it != idx.end());
-
-                // The element of sessions_ must have longer lifetime
-                // than corresponding subscription.
-                // Because the subscription store the reference of the element.
-                optional<session_state_ref> ssr_opt;
-                idx.modify(
-                    it,
-                    [&](session_state& e) {
-                        ssr_opt.emplace(e);
-                    },
-                    [](auto&) { BOOST_ASSERT(false); }
-                );
-
-                BOOST_ASSERT(ssr_opt);
-                session_state_ref ssr {ssr_opt.value()};
-
-                auto handle_ret = subs_map_.insert_or_assign(
-                    force_move(topic_filter),
-                    it->client_id,
-                    subscription(ssr, subopts, sid)
-                );
-
-                auto rh = subopts.get_retain_handling();
-
-                if (handle_ret.second) { // insert
-
-                    MQTT_LOG("mqtt_broker", trace)
-                        << MQTT_ADD_VALUE(address, spep.get())
-                        << "subs_online_.emplace() " << "topic_filter:" << topic_filter << " qos:" << subopts.get_qos();
-
-                    ssr.get().handles.insert(handle_ret.first);
-                    if (rh == retain_handling::send ||
-                        rh == retain_handling::send_only_new_subscription) {
-                        retains_.find(
-                            topic_filter,
-                            [&](retain const& r) {
-                                retain_deliver.emplace_back(
-                                    [&publish_proc, &r, qos_value = subopts.get_qos(), sid] {
-                                        publish_proc(r, qos_value, sid);
-                                    }
-                                );
-                            }
-                        );
-                    }
-                }
-                else { // update
-
-                    MQTT_LOG("mqtt_broker", trace)
-                        << MQTT_ADD_VALUE(address, spep.get())
-                        << "subs_online_.update " << "topic_filter:" << topic_filter << " qos:" << subopts.get_qos();
-
-                    if (rh == retain_handling::send) {
-                        retains_.find(
-                            topic_filter,
-                            [&](retain const& r) {
-                                retain_deliver.emplace_back(
-                                    [&publish_proc, &r, qos_value = subopts.get_qos(), sid] {
-                                        publish_proc(r, qos_value, sid);
-                                    }
-                                );
-                            }
-                        );
-                    }
-                }
-            };
-
         // subscription identifier
         optional<std::size_t> sid;
 
@@ -1545,10 +1314,26 @@ private:
             std::vector<suback_return_code> res;
             res.reserve(entries.size());
             for (auto const& e : entries) {
-                buffer topic_filter = std::get<0>(e);
+                auto sn_tf = parse_shared_subscription(std::get<0>(e));
                 subscribe_options subopts = std::get<1>(e);
                 res.emplace_back(qos_to_suback_return_code(subopts.get_qos())); // converts to granted_qos_x
-                insert_or_update_sub(force_move(topic_filter), subopts);
+                ssr.get().subscribe(
+                    force_move(sn_tf.share_name),
+                    sn_tf.topic_filter,
+                    subopts,
+                    [&] {
+                        retains_.find(
+                            sn_tf.topic_filter,
+                            [&](retain_t const& r) {
+                                retain_deliver.emplace_back(
+                                    [&publish_proc, &r, qos_value = subopts.get_qos(), sid] {
+                                        publish_proc(r, qos_value, sid);
+                                    }
+                                );
+                            }
+                        );
+                    }
+                );
             }
             // Acknowledge the subscriptions, and the registered QOS settings
             ep.suback(packet_id, force_move(res));
@@ -1563,10 +1348,27 @@ private:
             std::vector<v5::suback_reason_code> res;
             res.reserve(entries.size());
             for (auto const& e : entries) {
-                buffer topic_filter = std::get<0>(e);
+                auto sn_tf = parse_shared_subscription(std::get<0>(e));
                 subscribe_options subopts = std::get<1>(e);
                 res.emplace_back(v5::qos_to_suback_reason_code(subopts.get_qos())); // converts to granted_qos_x
-                insert_or_update_sub(force_move(topic_filter), subopts, sid);
+                ssr.get().subscribe(
+                    force_move(sn_tf.share_name),
+                    sn_tf.topic_filter,
+                    subopts,
+                    [&] {
+                        retains_.find(
+                            sn_tf.topic_filter,
+                            [&](retain_t const& r) {
+                                retain_deliver.emplace_back(
+                                    [&publish_proc, &r, qos_value = subopts.get_qos(), sid] {
+                                        publish_proc(r, qos_value, sid);
+                                    }
+                                );
+                            }
+                        );
+                    },
+                    sid
+                );
             }
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
@@ -1595,21 +1397,28 @@ private:
         auto it  = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
 
+
+        // The element of sessions_ must have longer lifetime
+        // than corresponding subscription.
+        // Because the subscription store the reference of the element.
+        optional<session_state_ref> ssr_opt;
+        idx.modify(
+            it,
+            [&](session_state& e) {
+                ssr_opt.emplace(e);
+            },
+            [](auto&) { BOOST_ASSERT(false); }
+        );
+
+        BOOST_ASSERT(ssr_opt);
+        session_state_ref ssr {ssr_opt.value()};
+
         // For each subscription that this connection has
         // Compare against the list of topic filters, and remove
         // the subscription if the topic filter is in the list.
-        for (auto const& topic_filter : topic_filters) {
-            auto handle = subs_map_.lookup(topic_filter);
-            if (handle) {
-                idx.modify(
-                    it,
-                    [&](auto& e) {
-                        e.handles.erase(handle.value());
-                    },
-                    [](auto&) { BOOST_ASSERT(false); }
-                );
-                subs_map_.erase(handle.value(), it->client_id);
-            }
+        for (auto const& whole_topic_filter : topic_filters) {
+            auto sn_tf = parse_shared_subscription(whole_topic_filter);
+            ssr.get().unsubscribe(sn_tf.share_name, sn_tf.topic_filter);
         }
 
         switch (ep.get_protocol_version()) {
@@ -1652,18 +1461,11 @@ private:
         publish_options pubopts,
         v5::properties props) {
 
-        subs_map_.modify(
-            topic,
-            [&](buffer const& /*key*/, subscription& sub) {
-                // If NL (no local) subscription option is set and
-                // publisher is the same as subscriber, then skip it.
-                if (sub.subopts.get_nl() == nl::yes &&
-                    sub.ss.get().con.get() ==  &ep) return;
-
-                // publish the message to subscribers.
-                // retain is delivered as the original only if rap_value is rap::retain.
-                // On MQTT v3.1.1, rap_value is always rap::dont.
-
+        // publish the message to subscribers.
+        // retain is delivered as the original only if rap_value is rap::retain.
+        // On MQTT v3.1.1, rap_value is always rap::dont.
+        auto deliver =
+            [&] (session_state& ss, subscription& sub) {
                 publish_options new_pubopts = std::min(pubopts.get_qos(), sub.subopts.get_qos());
                 if (sub.subopts.get_rap() == rap::retain && pubopts.get_retain() == MQTT_NS::retain::yes) {
                     new_pubopts |= MQTT_NS::retain::yes;
@@ -1671,7 +1473,7 @@ private:
 
                 if (sub.sid) {
                     props.push_back(v5::property::subscription_identifier(sub.sid.value()));
-                    sub.ss.get().deliver(
+                    ss.deliver(
                         ioc_,
                         topic,
                         contents,
@@ -1681,7 +1483,7 @@ private:
                     props.pop_back();
                 }
                 else {
-                    sub.ss.get().deliver(
+                    ss.deliver(
                         ioc_,
                         topic,
                         contents,
@@ -1689,7 +1491,32 @@ private:
                         props
                     );
                 }
+            };
 
+        std::set<share_name_topic_filter> sent;
+
+        subs_map_.modify(
+            topic,
+            [&](buffer const& /*key*/, subscription& sub) {
+                if (sub.share_name.empty()) {
+                    // Non shared subscriptions
+
+                    // If NL (no local) subscription option is set and
+                    // publisher is the same as subscriber, then skip it.
+                    if (sub.subopts.get_nl() == nl::yes &&
+                        sub.ss.get().con().get() ==  &ep) return;
+                    deliver(sub.ss.get(), sub);
+                }
+                else {
+                    // Shared subscriptions
+                    bool inserted;
+                    std::tie(std::ignore, inserted) = sent.emplace(sub.share_name, sub.topic_filter);
+                    if (inserted) {
+                        if (auto ssr_opt = shared_targets_.get_target(sub.share_name, sub.topic_filter)) {
+                            deliver(ssr_opt.value().get(), sub);
+                        }
+                    }
+                }
             }
         );
 
@@ -1745,7 +1572,7 @@ private:
 
                 retains_.insert_or_assign(
                     topic,
-                    retain {
+                    retain_t {
                         force_move(topic),
                         force_move(contents),
                         force_move(props),
@@ -1758,349 +1585,18 @@ private:
     }
 
 private:
-    struct tag_seq {};
-    struct tag_con {};
-    struct tag_topic{};
-    struct tag_topic_filter{};
-    struct tag_con_topic_filter {};
-    struct tag_cid {};
-    struct tag_cid_topic_filter {};
-    struct tag_tim {};
-    struct tag_pid {};
-
-    struct session_state;
-    using session_state_ref = std::reference_wrapper<session_state>;
-
-    struct subscription {
-        subscription(
-            session_state_ref ss,
-            subscribe_options subopts,
-            optional<std::size_t> sid)
-            :ss { ss },
-             subopts { subopts },
-             sid { sid }
-        {}
-
-        session_state_ref ss;
-        subscribe_options subopts;
-        optional<std::size_t> sid;
-    };
-
-    friend bool operator<(subscription const& lhs, subscription const& rhs) {
-        return &lhs.ss.get() < &rhs.ss.get();
-    }
-
-    struct buffer_hasher  {
-        std::size_t operator()(buffer const& b) const noexcept {
-            std::size_t result = 0;
-            boost::hash_combine(result, b);
-            return result;
-        }
-    };
-
-    using sub_con_map = multiple_subscription_map<buffer, subscription, buffer_hasher>;
-
-    struct inflight_message {
-        inflight_message(
-            store_message_variant msg,
-            any life_keeper,
-            std::shared_ptr<as::steady_timer> tim_message_expiry)
-            :msg { force_move(msg) },
-             life_keeper { force_move(life_keeper) },
-             tim_message_expiry { force_move(tim_message_expiry) }
-        {}
-
-        packet_id_t packet_id() const {
-            return
-                MQTT_NS::visit(
-                    make_lambda_visitor(
-                        [](auto const& m) {
-                            return m.packet_id();
-                        }
-                    ),
-                    msg
-                );
-        }
-        store_message_variant msg;
-        any life_keeper;
-        std::shared_ptr<as::steady_timer> tim_message_expiry;
-    };
-
-    using mi_inflight_message = mi::multi_index_container<
-        inflight_message,
-        mi::indexed_by<
-            mi::sequenced<
-                mi::tag<tag_seq>
-            >,
-            mi::ordered_unique<
-                mi::tag<tag_pid>,
-                BOOST_MULTI_INDEX_CONST_MEM_FUN(inflight_message, packet_id_t, packet_id)
-            >,
-            mi::ordered_non_unique<
-                mi::tag<tag_tim>,
-                BOOST_MULTI_INDEX_MEMBER(inflight_message, std::shared_ptr<as::steady_timer>, tim_message_expiry)
-            >
-        >
-    >;
-
-    // The offline_message structure holds messages that have been published on a
-    // topic that a not-currently-connected client is subscribed to.
-    // When a new connection is made with the client id for this saved data,
-    // these messages will be published to that client, and only that client.
-    struct offline_message {
-        offline_message(
-            buffer topic,
-            buffer contents,
-            v5::properties props,
-            publish_options pubopts,
-            std::shared_ptr<as::steady_timer> tim_message_expiry)
-            : topic(force_move(topic)),
-              contents(force_move(contents)),
-              props(force_move(props)),
-              pubopts(pubopts),
-              tim_message_expiry(force_move(tim_message_expiry))
-        { }
-
-        buffer topic;
-        buffer contents;
-        v5::properties props;
-        publish_options pubopts;
-
-        std::shared_ptr<as::steady_timer> tim_message_expiry;
-    };
-
-    using mi_offline_message = mi::multi_index_container<
-        offline_message,
-        mi::indexed_by<
-            mi::sequenced<
-                mi::tag<tag_seq>
-            >,
-            mi::ordered_non_unique<
-                mi::tag<tag_tim>,
-                BOOST_MULTI_INDEX_MEMBER(offline_message, std::shared_ptr<as::steady_timer>, tim_message_expiry)
-            >
-        >
-    >;
-
-    /**
-     * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Session_State
-     *
-     * 4.1 Session State
-     * In order to implement QoS 1 and QoS 2 protocol flows the Client and Server need to associate state with the Client Identifier, this is referred to as the Session State. The Server also stores the subscriptions as part of the Session State.
-     * The session can continue across a sequence of Network Connections. It lasts as long as the latest Network Connection plus the Session Expiry Interval.
-     * The Session State in the Server consists of:
-     * · The existence of a Session, even if the rest of the Session State is empty.
-     * · The Clients subscriptions, including any Subscription Identifiers.
-     * · QoS 1 and QoS 2 messages which have been sent to the Client, but have not been completely acknowledged.
-     * · QoS 1 and QoS 2 messages pending transmission to the Client and OPTIONALLY QoS 0 messages pending transmission to the Client.
-     * · QoS 2 messages which have been received from the Client, but have not been completely acknowledged.
-     * · The Will Message and the Will Delay Interval
-     * · If the Session is currently not connected, the time at which the Session will end and Session State will be discarded.
-     *
-     * Retained messages do not form part of the Session State in the Server, they are not deleted as a result of a Session ending.
-     */
-    struct session_state {
-        // TODO: Currently not fully implemented...
-        session_state(
-            as::io_context& ioc,
-            sub_con_map& subs_map,
-            con_sp_t con,
-            buffer client_id,
-            optional<will> will,
-            optional<std::chrono::steady_clock::duration> will_expiry_interval,
-            optional<std::chrono::steady_clock::duration> session_expiry_interval = nullopt)
-            :subs_map_(subs_map),
-             con(force_move(con)),
-             client_id(force_move(client_id)),
-             session_expiry_interval(force_move(session_expiry_interval))
-        {
-            update_will(ioc, will, will_expiry_interval);
-        }
-
-        session_state() = default;
-        session_state(session_state&&) = default;
-
-        ~session_state() {
-            clean();
-        }
-
-        bool online() const {
-            return bool(con);
-        }
-
-        void deliver(
-            as::io_context& ioc,
-            buffer pub_topic,
-            buffer contents,
-            publish_options pubopts,
-            v5::properties props) {
-
-            if (online()) {
-                // TODO: Probably this should be switched to async_publish?
-
-                //       Given the async_client / sync_client seperation
-                //       and the way they have different function names,
-                //       it wouldn't be possible for broker.hpp to be
-                //       used with some hypothetical "async_server" in the future.
-                con->publish(
-                    force_move(pub_topic),
-                    force_move(contents),
-                    pubopts,
-                    force_move(props)
-                );
-            }
-            else {
-                optional<std::chrono::steady_clock::duration> message_expiry_interval;
-
-                auto v = get_property<v5::property::message_expiry_interval>(props);
-                if (v) {
-                    message_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
-                }
-
-                std::shared_ptr<as::steady_timer> tim_message_expiry;
-                if (message_expiry_interval) {
-                    tim_message_expiry = std::make_shared<as::steady_timer>(ioc, message_expiry_interval.value());
-                    tim_message_expiry->async_wait(
-                        [this, wp = std::weak_ptr<as::steady_timer>(tim_message_expiry)](error_code ec) mutable {
-                            if (auto sp = wp.lock()) {
-                                if (!ec) {
-                                    offline_messages.get<tag_tim>().erase(sp);
-                                }
-                            }
-                        }
-                    );
-                }
-
-                auto& seq_idx = offline_messages.get<tag_seq>();
-                seq_idx.emplace_back(
-                    force_move(pub_topic),
-                    force_move(contents),
-                    force_move(props),
-                    pubopts,
-                    force_move(tim_message_expiry)
-                );
-            }
-        }
-
-        void clean() {
-            topic_alias_recv = nullopt;
-            inflight_messages.clear();
-            offline_messages.clear();
-            qos2_publish_processed.clear();
-            unsubscribe_all();
-        }
-
-        void unsubscribe_all() {
-            for (auto const& h : handles) {
-                subs_map_.value().get().erase(h, client_id);
-            }
-            handles.clear();
-        }
-
-        optional<std::reference_wrapper<sub_con_map>> subs_map_;
-        con_sp_t con;
-        buffer client_id;
-
-        optional<std::chrono::steady_clock::duration> will_delay;
-        optional<std::chrono::steady_clock::duration> session_expiry_interval;
-        std::shared_ptr<as::steady_timer> tim_session_expiry;
-        optional<topic_alias_recv_map_t> topic_alias_recv;
-
-        mi_inflight_message inflight_messages;
-        std::set<packet_id_t> qos2_publish_processed;
-
-        mi_offline_message offline_messages;
-
-        std::set<sub_con_map::handle> handles; // to efficient remove
-
-        void update_will(
-            as::io_context& ioc,
-            optional<MQTT_NS::will> will,
-            optional<std::chrono::steady_clock::duration> will_expiry_interval) {
-            tim_will_expiry.reset();
-            will_value = force_move(will);
-
-            if (will_value && will_expiry_interval) {
-                tim_will_expiry = std::make_shared<as::steady_timer>(ioc, will_expiry_interval.value());
-                tim_will_expiry->async_wait(
-                    [this, client_id = client_id, wp = std::weak_ptr<as::steady_timer>(tim_will_expiry)]
-                    (error_code ec) {
-                        if (auto sp = wp.lock()) {
-                            if (!ec) {
-                                reset_will();
-                            }
-                        }
-                    }
-                );
-            }
-        }
-
-        void reset_will() {
-            tim_will_expiry.reset();
-            will_value = nullopt;
-        }
-
-        optional<MQTT_NS::will>& will() { return will_value; }
-        optional<MQTT_NS::will> const& will() const { return will_value; }
-
-        std::shared_ptr<as::steady_timer>& get_tim_will_expiry() { return tim_will_expiry; }
-    private:
-        std::shared_ptr<as::steady_timer> tim_will_expiry;
-        optional<MQTT_NS::will> will_value;
-
-    };
-
-    // The mi_session_online container holds the relevant data about an active connection with the broker.
-    // It can be queried either with the clientid, or with the shared pointer to the mqtt endpoint object
-    using mi_session_state = mi::multi_index_container<
-        session_state,
-        mi::indexed_by<
-            // non is nullable
-            mi::ordered_non_unique<
-                mi::tag<tag_con>,
-                BOOST_MULTI_INDEX_MEMBER(session_state, con_sp_t, con)
-            >,
-            mi::ordered_unique<
-                mi::tag<tag_cid>,
-                BOOST_MULTI_INDEX_MEMBER(session_state, buffer, client_id)
-            >,
-            mi::ordered_non_unique<
-                mi::tag<tag_tim>,
-                BOOST_MULTI_INDEX_MEMBER(session_state, std::shared_ptr<as::steady_timer>, tim_session_expiry)
-            >
-        >
-    >;
-
-    // A collection of messages that have been retained in
-    // case clients add a new subscription to the associated topics.
-    struct retain {
-        retain(
-            buffer topic,
-            buffer contents,
-            v5::properties props,
-            qos qos_value,
-            std::shared_ptr<as::steady_timer> tim_message_expiry = std::shared_ptr<as::steady_timer>())
-            :topic(force_move(topic)),
-             contents(force_move(contents)),
-             props(force_move(props)),
-             qos_value(qos_value),
-             tim_message_expiry(force_move(tim_message_expiry))
-        { }
-
-        buffer topic;
-        buffer contents;
-        v5::properties props;
-        qos qos_value;
-        std::shared_ptr<as::steady_timer> tim_message_expiry;
-    };
-    using retained_messages = retained_topic_map<retain>;
-
     as::io_context& ioc_; ///< The boost asio context to run this broker on.
     as::steady_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
     optional<std::chrono::steady_clock::duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
 
     sub_con_map subs_map_;   /// subscription information
-    mi_session_state sessions_; ///< Map of active client id and connections
+    shared_target shared_targets_; /// shared subscription targets
+
+    ///< Map of active client id and connections
+    /// session_state has references of subs_map_ and shared_targets_.
+    /// because session_state (member of sessions_) has references of subs_map_ and shared_targets_.
+    session_states sessions_;
+
 
     retained_messages retains_; ///< A list of messages retained so they can be sent to newly subscribed clients.
 
@@ -2125,6 +1621,6 @@ private:
     bool pingresp_ = true;
 };
 
-} // namespace MQTT_NS
+MQTT_BROKER_NS_END
 
-#endif // MQTT_BROKER_HPP
+#endif // MQTT_BROKER_BROKER_HPP

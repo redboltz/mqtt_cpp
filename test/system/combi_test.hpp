@@ -37,7 +37,7 @@ inline void do_test(
     Test const& test,
     MQTT_NS::optional<MQTT_NS::protocol_version> v = MQTT_NS::nullopt) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -85,7 +85,7 @@ inline void do_tls_test(
     Test const& test,
     MQTT_NS::optional<MQTT_NS::protocol_version> v = MQTT_NS::nullopt) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -139,7 +139,7 @@ inline void do_ws_test(
     Test const& test,
     MQTT_NS::optional<MQTT_NS::protocol_version> v = MQTT_NS::nullopt) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls_ws> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -187,7 +187,7 @@ inline void do_tls_ws_test(
     Test const& test,
     MQTT_NS::optional<MQTT_NS::protocol_version> v = MQTT_NS::nullopt) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_tls_ws> s;
     std::promise<void> p;
     auto f = p.get_future();

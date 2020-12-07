@@ -4,8 +4,8 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#if !defined(MQTT_RETAINED_TOPIC_MAP_HPP)
-#define MQTT_RETAINED_TOPIC_MAP_HPP
+#if !defined(MQTT_BROKER_RETAINED_TOPIC_MAP_HPP)
+#define MQTT_BROKER_RETAINED_TOPIC_MAP_HPP
 
 #include <boost/functional/hash.hpp>
 #include <boost/multi_index_container.hpp>
@@ -14,14 +14,14 @@
 #include <boost/multi_index/composite_key.hpp>
 #include <boost/multi_index/member.hpp>
 
-#include <mqtt/namespace.hpp>
+#include <mqtt/broker/broker_namespace.hpp>
 #include <mqtt/string_view.hpp>
 #include <mqtt/optional.hpp>
 #include <mqtt/buffer.hpp>
 
 #include <mqtt/broker/topic_filter_tokenizer.hpp>
 
-namespace MQTT_NS {
+MQTT_BROKER_NS_BEGIN
 
 namespace mi = boost::multi_index;
 
@@ -364,6 +364,6 @@ public:
 
 };
 
-} // namespace MQTT_NS
+MQTT_BROKER_NS_END
 
-#endif // MQTT_RETAINED_TOPIC_MAP_HPP
+#endif // MQTT_BROKER_RETAINED_TOPIC_MAP_HPP

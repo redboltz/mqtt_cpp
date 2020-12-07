@@ -18,7 +18,7 @@ namespace as = boost::asio;
 
 class test_server_no_tls_ws {
 public:
-    test_server_no_tls_ws(as::io_context& ioc, MQTT_NS::broker& b)
+    test_server_no_tls_ws(as::io_context& ioc, MQTT_NS::broker::broker_t& b)
         : server_(
             as::ip::tcp::endpoint(
                 as::ip::tcp::v4(), broker_notls_ws_port
@@ -43,7 +43,7 @@ public:
         server_.listen();
     }
 
-    MQTT_NS::broker& broker() const {
+    MQTT_NS::broker::broker_t& broker() const {
         return b_;
     }
 
@@ -53,7 +53,7 @@ public:
 
 private:
     MQTT_NS::server_ws<> server_;
-    MQTT_NS::broker& b_;
+    MQTT_NS::broker::broker_t& b_;
 };
 
 #endif // MQTT_TEST_SERVER_NO_TLS_WS_HPP

@@ -18,7 +18,7 @@
 BOOST_AUTO_TEST_SUITE(ut_retained_map)
 
 BOOST_AUTO_TEST_CASE(general) {
-    MQTT_NS::retained_topic_map<std::string> map;
+    MQTT_NS::broker::retained_topic_map<std::string> map;
     map.insert_or_assign("a/b/c", "123");
     BOOST_TEST(map.size() == 1);
     BOOST_TEST(map.internal_size() == 4);
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(general) {
 }
 
 BOOST_AUTO_TEST_CASE(erase_lower_first) {
-    MQTT_NS::retained_topic_map<std::string> map;
+    MQTT_NS::broker::retained_topic_map<std::string> map;
     map.insert_or_assign("a/b/c", "1");
     map.insert_or_assign("a/b", "2");
 
@@ -161,7 +161,7 @@ BOOST_AUTO_TEST_CASE(erase_lower_first) {
 }
 
 BOOST_AUTO_TEST_CASE(erase_upper_first) {
-    MQTT_NS::retained_topic_map<std::string> map;
+    MQTT_NS::broker::retained_topic_map<std::string> map;
     map.insert_or_assign("a/b/c", "1");
     map.insert_or_assign("a/b", "2");
 
@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE(erase_upper_first) {
 }
 
 BOOST_AUTO_TEST_CASE(large_number_of_topics) {
-    MQTT_NS::retained_topic_map<std::pair<std::size_t, std::size_t>> map;
+    MQTT_NS::broker::retained_topic_map<std::pair<std::size_t, std::size_t>> map;
 
     std::vector< std::pair<std::string, std::pair<std::size_t, std::size_t> > > created_topics;
 

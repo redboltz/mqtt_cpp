@@ -20,7 +20,7 @@ using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( will_qos0 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
 
 BOOST_AUTO_TEST_CASE( will_qo0_timeout ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -341,7 +341,7 @@ BOOST_AUTO_TEST_CASE( will_qo0_timeout ) {
 
 BOOST_AUTO_TEST_CASE( will_qos1 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -488,7 +488,7 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( will_qos2 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -641,7 +641,7 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( will_retain ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -825,7 +825,7 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
 
 BOOST_AUTO_TEST_CASE( overlength_message ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -871,7 +871,7 @@ BOOST_AUTO_TEST_CASE( overlength_message ) {
 
 BOOST_AUTO_TEST_CASE( will_prop ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
