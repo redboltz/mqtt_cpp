@@ -48,16 +48,9 @@ void setup_log(std::map<std::string, severity_level> threshold) {
                 );
                 strm << v.get() << " ";
             }
-            // ThreadID indexed example
+            // ThreadID example
             if (auto v = boost::log::extract<boost::log::thread_id>("ThreadID", rec)) {
-                static std::map<boost::log::thread_id, std::size_t> m;
-                auto it = m.find(v.get());
-                if (it == m.end()) {
-                    auto r = m.emplace(v.get(), m.size());
-                    BOOST_ASSERT(r.second);
-                    it = r.first;
-                }
-                strm << "T:" << it->second << " ";
+                strm << "T:" << v.get() << " ";
             }
             // Adjust severity length example
             if (auto v = boost::log::extract<severity_level>("Severity", rec)) {
