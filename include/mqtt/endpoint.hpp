@@ -4184,6 +4184,16 @@ public:
     // manual packet_id management for advanced users
 
     /**
+     * @brief Checks whether packet id's are still available.
+     *        This method can be called before acquire_unique_packet_id to prevent packet_id_exhausted_error
+     *        to be thrown
+     * @return true if packet ids are still available
+     */
+    bool has_available_unique_packet_id() {
+        return packet_id_.size() < std::numeric_limits<packet_id_t>::max();
+    }
+
+    /**
      * @brief Acquire the new unique packet id.
      *        If all packet ids are already in use, then throw packet_id_exhausted_error exception.
      *        After acquiring the packet id, you can call acquired_* functions.

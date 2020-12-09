@@ -178,51 +178,62 @@ struct session_state {
         publish_options pubopts,
         v5::properties props) {
 
-        if (online()) {
+        if (online() && con_->has_available_unique_packet_id()) {
             // TODO: Probably this should be switched to async_publish?
 
             //       Given the async_client / sync_client seperation
             //       and the way they have different function names,
             //       it wouldn't be possible for broker.hpp to be
             //       used with some hypothetical "async_server" in the future.
-            con_->publish(
-                force_move(pub_topic),
-                force_move(contents),
-                pubopts,
-                force_move(props)
-            );
-        }
-        else {
-            optional<std::chrono::steady_clock::duration> message_expiry_interval;
+            try {
+                con_->publish(
+                    force_move(pub_topic),
+                    force_move(contents),
+                    pubopts,
+                    force_move(props)
+                );
 
-            auto v = get_property<v5::property::message_expiry_interval>(props);
-            if (v) {
-                message_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
+                return;
+             }
+            catch (packet_id_exhausted_error const& e) {
+                MQTT_LOG("mqtt_broker", warning)
+                    << MQTT_ADD_VALUE(address, con_.get())
+                    << e.what();
+                BOOST_ASSERT(false);
             }
+        }
 
-            std::shared_ptr<as::steady_timer> tim_message_expiry;
-            if (message_expiry_interval) {
-                tim_message_expiry = std::make_shared<as::steady_timer>(ioc, message_expiry_interval.value());
-                tim_message_expiry->async_wait(
-                    [this, wp = std::weak_ptr<as::steady_timer>(tim_message_expiry)](error_code ec) mutable {
-                        if (auto sp = wp.lock()) {
-                            if (!ec) {
-                                offline_messages_.get<tag_tim>().erase(sp);
-                            }
+        // If offline or packet id exhausted, add packet as offline packet
+        optional<std::chrono::steady_clock::duration> message_expiry_interval;
+
+        auto v = get_property<v5::property::message_expiry_interval>(props);
+        if (v) {
+            message_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
+        }
+
+        std::shared_ptr<as::steady_timer> tim_message_expiry;
+        if (message_expiry_interval) {
+            tim_message_expiry = std::make_shared<as::steady_timer>(ioc, message_expiry_interval.value());
+            tim_message_expiry->async_wait(
+                [this, wp = std::weak_ptr<as::steady_timer>(tim_message_expiry)](error_code ec) mutable {
+                    if (auto sp = wp.lock()) {
+                        if (!ec) {
+                            offline_messages_.get<tag_tim>().erase(sp);
                         }
                     }
-                );
-            }
-
-            auto& seq_idx = offline_messages_.get<tag_seq>();
-            seq_idx.emplace_back(
-                force_move(pub_topic),
-                force_move(contents),
-                force_move(props),
-                pubopts,
-                force_move(tim_message_expiry)
+                }
             );
         }
+
+        auto& seq_idx = offline_messages_.get<tag_seq>();
+        seq_idx.emplace_back(
+            force_move(pub_topic),
+            force_move(contents),
+            force_move(props),
+            pubopts,
+            force_move(tim_message_expiry)
+        );
+
     }
 
     void clean() {
@@ -359,11 +370,17 @@ struct session_state {
 
     void erase_inflight_message_by_expiry(std::shared_ptr<as::steady_timer> const& sp) {
         inflight_messages_.get<tag_tim>().erase(sp);
+
+        // try to send offline messages which have no packet_id yet
+        send_offline_messages();
     }
 
     void erase_inflight_message_by_packet_id(packet_id_t packet_id) {
         auto& idx = inflight_messages_.get<tag_pid>();
         idx.erase(packet_id);
+
+        // try to send offline messages which have no packet_id yet
+        send_offline_messages();
     }
 
     void send_offline_messages() {

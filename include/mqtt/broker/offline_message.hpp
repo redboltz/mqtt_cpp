@@ -65,7 +65,14 @@ public:
             );
         }
 
-        ep.publish(topic_, contents_, pubopts_, force_move(props));
+        try {
+            ep.publish(topic_, contents_, pubopts_, force_move(props));
+        }
+        catch (packet_id_exhausted_error const& e) {
+            MQTT_LOG("mqtt_broker", warning)
+                << MQTT_ADD_VALUE(address, &ep)
+                << e.what();
+        }
     }
 
 private:
@@ -83,7 +90,7 @@ public:
     void send_all_messages(endpoint_t& ep) {
         try {
             auto& idx = messages_.get<tag_seq>();
-            while (!idx.empty()) {
+            while (!idx.empty() && ep.has_available_unique_packet_id()) {
                 idx.modify(
                     idx.begin(),
                     [&](auto& e) {
@@ -97,9 +104,7 @@ public:
             MQTT_LOG("mqtt_broker", warning)
                 << MQTT_ADD_VALUE(address, &ep)
                 << e.what();
-        }
-        for (auto const& oflm : messages_) {
-            oflm.send(ep);
+            BOOST_ASSERT(false);
         }
     }
 
