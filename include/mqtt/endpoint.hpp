@@ -4796,8 +4796,8 @@ protected:
     }
 
     bool handle_close_or_error(error_code ec) {
-        if (!ec) return false;
         if (connected_) {
+            if (!ec) return false;
             connected_ = false;
             mqtt_connected_ = false;
             {
@@ -4814,6 +4814,7 @@ protected:
         }
         disconnect_requested_ = false;
         connect_requested_ = false;
+        if (!ec) ec = boost::system::errc::make_error_code(boost::system::errc::not_connected);
         clean_sub_unsub_inflight_on_error(ec);
         return true;
     }
