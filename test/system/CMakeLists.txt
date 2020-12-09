@@ -17,6 +17,7 @@ IF (MQTT_TEST_2)
         st_as_buffer_sub.cpp
         st_topic_alias_recv.cpp
         st_as_buffer_pubsub.cpp
+        st_shared_sub.cpp
     )
 ENDIF ()
 

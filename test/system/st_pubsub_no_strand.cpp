@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_SUITE(st_pubsub_no_strand)
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -272,7 +272,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -400,7 +400,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -523,7 +523,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -658,7 +658,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -795,7 +795,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -919,7 +919,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -1055,7 +1055,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -1193,7 +1193,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( publish_function ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();

@@ -96,7 +96,7 @@ set_serialize_handlers(Client const& c, Serialized& serialized) {
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -420,7 +420,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -585,7 +585,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -837,7 +837,7 @@ set_v5_serialize_handlers(Client const& c, Serialized& serialized) {
 
 BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -1063,7 +1063,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
 
 BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -1230,7 +1230,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -1448,7 +1448,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();

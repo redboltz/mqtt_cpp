@@ -21,7 +21,7 @@ using con_sp_t = std::shared_ptr<con_t>;
 
 class test_server_no_tls {
 public:
-    test_server_no_tls(as::io_context& ioc, MQTT_NS::broker& b)
+    test_server_no_tls(as::io_context& ioc, MQTT_NS::broker::broker_t& b)
         : server_(
             as::ip::tcp::endpoint(
                 as::ip::tcp::v4(), broker_notls_port
@@ -46,7 +46,7 @@ public:
         server_.listen();
     }
 
-    MQTT_NS::broker& broker() const {
+    MQTT_NS::broker::broker_t& broker() const {
         return b_;
     }
 
@@ -56,7 +56,7 @@ public:
 
 private:
     MQTT_NS::server<> server_;
-    MQTT_NS::broker& b_;
+    MQTT_NS::broker::broker_t& b_;
 };
 
 #endif // MQTT_TEST_SERVER_NO_TLS_HPP

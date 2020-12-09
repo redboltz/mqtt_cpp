@@ -59,8 +59,8 @@ struct sub_con_offline_cref_equal_to
     bool operator()(sub_con_offline_cref const& lhs, sub_con_offline_cref const& rhs) const noexcept;
 };
 
-using sub_con_online_map = MQTT_NS::multiple_subscription_map<sub_con_online_cref, int, sub_con_online_cref_hasher, sub_con_online_cref_equal_to >;
-using sub_con_offline_map = MQTT_NS::multiple_subscription_map<sub_con_offline_cref, int, sub_con_offline_cref_hasher, sub_con_offline_cref_equal_to >;
+using sub_con_online_map = MQTT_NS::broker::multiple_subscription_map<sub_con_online_cref, int, sub_con_online_cref_hasher, sub_con_online_cref_equal_to >;
+using sub_con_offline_map = MQTT_NS::broker::multiple_subscription_map<sub_con_offline_cref, int, sub_con_offline_cref_hasher, sub_con_offline_cref_equal_to >;
 
 struct sub_con_online {
     sub_con_online(

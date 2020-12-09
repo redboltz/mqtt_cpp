@@ -4,15 +4,15 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#if !defined(MQTT_SUBSCRIPTION_MAP_HPP)
-#define MQTT_SUBSCRIPTION_MAP_HPP
+#if !defined(MQTT_BROKER_SUBSCRIPTION_MAP_HPP)
+#define MQTT_BROKER_SUBSCRIPTION_MAP_HPP
 
 #include <unordered_map>
 
 #include <boost/functional/hash.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 
-#include <mqtt/namespace.hpp>
+#include <mqtt/broker/broker_namespace.hpp>
 
 #include <mqtt/string_view.hpp>
 #include <mqtt/optional.hpp>
@@ -20,7 +20,7 @@
 
 #include <mqtt/broker/topic_filter_tokenizer.hpp>
 
-namespace MQTT_NS {
+MQTT_BROKER_NS_BEGIN
 
 /**
  *
@@ -737,6 +737,6 @@ public:
 
 };
 
-} // namespace MQTT_NS
+MQTT_BROKER_NS_END
 
-#endif // MQTT_SUBSCRIPTION_MAP_HPP
+#endif // MQTT_BROKER_SUBSCRIPTION_MAP_HPP

@@ -17,7 +17,7 @@ using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
         });
     c2->set_puback_handler(
         [&chk, &c2, &pid_pub]
-        (MQTT_NS::packet_id_t packet_id) {
+        (MQTT_NS::broker::packet_id_t packet_id) {
             MQTT_CHK("h_puback");
             BOOST_TEST(packet_id == pid_pub);
             c2->disconnect();
@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -283,14 +283,14 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         });
     c2->set_pubrec_handler(
         [&chk, &pid_pub]
-        (MQTT_NS::packet_id_t packet_id) {
+        (MQTT_NS::broker::packet_id_t packet_id) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
             return true;
         });
     c2->set_pubcomp_handler(
         [&chk, &c2, &pid_pub]
-        (MQTT_NS::packet_id_t packet_id) {
+        (MQTT_NS::broker::packet_id_t packet_id) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == pid_pub);
             c2->disconnect();
@@ -305,7 +305,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -414,7 +414,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
         });
     c1->set_pubrec_handler(
         [&chk, &c1, &pid_pub]
-        (MQTT_NS::packet_id_t packet_id) {
+        (MQTT_NS::broker::packet_id_t packet_id) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
             c1->force_disconnect();
@@ -437,7 +437,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
         });
     c2->set_pubcomp_handler(
         [&chk, &c2]
-        (MQTT_NS::packet_id_t packet_id) {
+        (MQTT_NS::broker::packet_id_t packet_id) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == 1);
             c2->disconnect();
@@ -452,7 +452,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -579,7 +579,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
         });
     c2->set_puback_handler(
         [&chk, &c2, &pid_pub1, &pid_pub2]
-        (MQTT_NS::packet_id_t packet_id) {
+        (MQTT_NS::broker::packet_id_t packet_id) {
             auto ret = chk.match(
                 "start",
                 [&] {
@@ -606,7 +606,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -798,7 +798,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
         });
     c2->set_v5_puback_handler(
         [&chk, &c2, &pid_pub]
-        (MQTT_NS::packet_id_t packet_id, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
+        (MQTT_NS::broker::packet_id_t packet_id, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_puback");
             BOOST_TEST(packet_id == pid_pub);
             c2->disconnect();
@@ -814,7 +814,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
 
 BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -941,14 +941,14 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
         });
     c2->set_v5_pubrec_handler(
         [&chk, &pid_pub]
-        (MQTT_NS::packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
+        (MQTT_NS::broker::packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
             return true;
         });
     c2->set_v5_pubcomp_handler(
         [&chk, &c2, &pid_pub]
-        (MQTT_NS::packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
+        (MQTT_NS::broker::packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == pid_pub);
             c2->disconnect();
@@ -963,7 +963,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -1124,7 +1124,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
         });
     c1->set_v5_pubrec_handler(
         [&chk, &c1, &pid_pub, ps = std::move(ps)]
-        (MQTT_NS::packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
+        (MQTT_NS::broker::packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
             c1->pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, std::move(ps));
@@ -1148,7 +1148,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
         });
     c2->set_v5_pubcomp_handler(
         [&chk, &c2]
-        (MQTT_NS::packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
+        (MQTT_NS::broker::packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == 1);
             c2->disconnect();
@@ -1163,7 +1163,7 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
     boost::asio::io_context iocb;
-    MQTT_NS::broker b(iocb);
+    MQTT_NS::broker::broker_t b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
     std::promise<void> p;
     auto f = p.get_future();
@@ -1292,7 +1292,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
         });
     c2->set_v5_puback_handler(
         [&chk, &c2, &pid_pub1, &pid_pub2]
-        (MQTT_NS::packet_id_t packet_id, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
+        (MQTT_NS::broker::packet_id_t packet_id, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
             auto ret = chk.match(
                 "start",
                 [&] {

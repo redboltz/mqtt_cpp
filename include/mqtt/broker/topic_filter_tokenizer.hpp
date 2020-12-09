@@ -4,16 +4,15 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#if !defined(MQTT_TOPIC_FILTER_TOKENIZER_HPP)
-#define MQTT_TOPIC_FILTER_TOKENIZER_HPP
+#if !defined(MQTT_BROKER_TOPIC_FILTER_TOKENIZER_HPP)
+#define MQTT_BROKER_TOPIC_FILTER_TOKENIZER_HPP
 
 #include <algorithm>
 
-#include <mqtt/namespace.hpp>
-#include <mqtt/namespace.hpp>
+#include <mqtt/broker/broker_namespace.hpp>
 #include <mqtt/string_view.hpp>
 
-namespace MQTT_NS {
+MQTT_BROKER_NS_BEGIN
 
 static constexpr char topic_filter_separator = '/';
 
@@ -42,6 +41,6 @@ inline void topic_filter_tokenizer(string_view str, Output write) {
     );
 }
 
-} // namespace MQTT_NS
+MQTT_BROKER_NS_END
 
-#endif // MQTT_TOPIC_FILTER_TOKENIZER_HPP
+#endif // MQTT_BROKER_TOPIC_FILTER_TOKENIZER_HPP

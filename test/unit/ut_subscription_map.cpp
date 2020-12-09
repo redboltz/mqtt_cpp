@@ -13,7 +13,7 @@ BOOST_AUTO_TEST_SUITE(ut_subscription_map)
 BOOST_AUTO_TEST_CASE( failed_erase ) {
     using elem_t = int;
     using value_t = std::shared_ptr<elem_t>; // shared_ptr for '<' and hash
-    using sm_t = MQTT_NS::multiple_subscription_map<std::string, value_t>;
+    using sm_t = MQTT_NS::broker::multiple_subscription_map<std::string, value_t>;
 
     sm_t m;
     auto v1 = std::make_shared<elem_t>(1);
@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE( failed_erase ) {
 BOOST_AUTO_TEST_CASE( test_single_subscription ) {
     std::string text = "example/test/A";
 
-    MQTT_NS::single_subscription_map< std::string > map;
+    MQTT_NS::broker::single_subscription_map< std::string > map;
     auto handle = map.insert(text, text).first;
     BOOST_TEST(handle.second == "A");
     BOOST_TEST(map.handle_to_topic_filter(handle) == text);
@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
     BOOST_TEST(map.size() == 0);
     BOOST_TEST(map.internal_size() == 1);
 
-    std::vector< MQTT_NS::single_subscription_map< std::string >::handle > handles;
+    std::vector< MQTT_NS::broker::single_subscription_map< std::string >::handle > handles;
     for (auto const& i : values) {
         handles.push_back(map.insert(i, i).first);
     }
@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE( test_single_subscription ) {
 BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     std::string text = "example/test/A";
 
-    MQTT_NS::multiple_subscription_map<std::string, int> map;
+    MQTT_NS::broker::multiple_subscription_map<std::string, int> map;
 
     BOOST_TEST(map.insert_or_assign("a/b/c", "123", 0).second == true);
     BOOST_TEST(map.size() == 1);
@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription ) {
     BOOST_TEST(map.internal_size() == 1);
 
     // Check if $ does not match # at root
-    map = MQTT_NS::multiple_subscription_map<std::string, int>();
+    map = MQTT_NS::broker::multiple_subscription_map<std::string, int>();
 
     map.insert_or_assign("#", "123", 10);
     map.insert_or_assign("example/plus/A", "123", 10);
@@ -274,7 +274,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_subscription_modify ) {
     };
 
 
-    using mi_t = MQTT_NS::multiple_subscription_map<std::string, my>;
+    using mi_t = MQTT_NS::broker::multiple_subscription_map<std::string, my>;
     mi_t map;
     map.insert_or_assign("a/b/c", "123", my());
     map.insert_or_assign("a/b/c", "456", my());
@@ -297,7 +297,7 @@ BOOST_AUTO_TEST_CASE( test_move_only ) {
         ~my() = default;
     };
 
-    using mi_t = MQTT_NS::multiple_subscription_map<std::string, my>;
+    using mi_t = MQTT_NS::broker::multiple_subscription_map<std::string, my>;
     mi_t map;
     map.insert_or_assign("a/b/c", "123", my(1));
     map.insert_or_assign("a/b/c", "456", my(2));

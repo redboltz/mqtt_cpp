@@ -32,7 +32,7 @@ struct retain {
     MQTT_NS::qos qos_value;
 };
 
-using retained_messages = MQTT_NS::retained_topic_map<retain>;
+using retained_messages = MQTT_NS::broker::retained_topic_map<retain>;
 
 BOOST_AUTO_TEST_CASE( multi_non_wc_crud ) {
     retained_messages m;
