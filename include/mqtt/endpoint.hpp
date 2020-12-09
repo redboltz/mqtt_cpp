@@ -5225,22 +5225,11 @@ private:
                 call_protocol_error_handlers();
                 return;
             }
-            socket_->post(
-                [
-                    self = force_move(self),
-                    session_life_keeper = force_move(session_life_keeper),
-                    buf = force_move(buf),
-                    size,
-                    handler = force_move(handler)
-                ]
-                () mutable {
-                    handler(
-                        buf.substr(0, size),
-                        buf.substr(size),
-                        force_move(session_life_keeper),
-                        force_move(self)
-                    );
-                }
+            handler(
+                buf.substr(0, size),
+                buf.substr(size),
+                force_move(session_life_keeper),
+                force_move(self)
             );
         }
     }
@@ -5285,27 +5274,17 @@ private:
             );
         }
         else {
-            socket_->post(
-               [
-                    self = force_move(self),
-                    session_life_keeper = force_move(session_life_keeper),
-                    buf = force_move(buf),
-                    handler = force_move(handler)
-               ]
-               () mutable {
-                    auto packet_id =
-                        make_packet_id<Bytes>::apply(
-                            buf.data(),
-                            std::next(buf.data(), boost::numeric_cast<buffer::difference_type>(Bytes))
-                        );
-                    buf.remove_prefix(Bytes);
-                    handler(
-                        packet_id,
-                        force_move(buf),
-                        force_move(session_life_keeper),
-                        force_move(self)
-                    );
-               }
+            auto packet_id =
+                make_packet_id<Bytes>::apply(
+                    buf.data(),
+                    std::next(buf.data(), boost::numeric_cast<buffer::difference_type>(Bytes))
+                );
+            buf.remove_prefix(Bytes);
+            handler(
+                packet_id,
+                force_move(buf),
+                force_move(session_life_keeper),
+                force_move(self)
             );
         }
     }
@@ -5409,26 +5388,13 @@ private:
             );
         }
         else {
-            socket_->post(
-                [
-                    session_life_keeper = force_move(session_life_keeper),
-                    handler = force_move(handler),
-                    buf = force_move(buf),
-                    size,
-                    multiplier,
-                    proc = force_move(proc),
-                    self = force_move(self)
-                ]
-                () mutable {
-                    proc(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(handler),
-                        size,
-                        multiplier,
-                        force_move(self)
-                    );
-                }
+            proc(
+                force_move(session_life_keeper),
+                force_move(buf),
+                force_move(handler),
+                size,
+                multiplier,
+                force_move(self)
             );
         }
     }
@@ -5585,25 +5551,13 @@ private:
                     );
                 }
                 else {
-                    socket_->post(
-                        [
-                            this,
-                            self = force_move(self),
-                            session_life_keeper = force_move(session_life_keeper),
-                            buf = force_move(buf),
-                            handler = force_move(handler),
-                            property_length
-                        ]
-                        () mutable {
-                            process_property_id(
-                                force_move(session_life_keeper),
-                                force_move(buf),
-                                property_length,
-                                v5::properties(),
-                                force_move(handler),
-                                force_move(self)
-                            );
-                        }
+                    process_property_id(
+                        force_move(session_life_keeper),
+                        force_move(buf),
+                        property_length,
+                        v5::properties(),
+                        force_move(handler),
+                        force_move(self)
                     );
                 }
             },
@@ -5654,29 +5608,16 @@ private:
             );
         }
         else {
-            socket_->post(
-                [
-                    this,
-                    self = force_move(self),
-                    session_life_keeper = force_move(session_life_keeper),
-                    buf = force_move(buf),
-                    props = force_move(props),
-                    handler = force_move(handler),
-                    property_length_rest
-                ]
-                () mutable {
-                    auto id = static_cast<v5::property::id>(buf.front());
-                    buf.remove_prefix(1);
-                    process_property_body(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        id,
-                        property_length_rest - 1,
-                        force_move(props),
-                        force_move(handler),
-                        force_move(self)
-                    );
-                }
+            auto id = static_cast<v5::property::id>(buf.front());
+            buf.remove_prefix(1);
+            process_property_body(
+                force_move(session_life_keeper),
+                force_move(buf),
+                id,
+                property_length_rest - 1,
+                force_move(props),
+                force_move(handler),
+                force_move(self)
             );
         }
     }
