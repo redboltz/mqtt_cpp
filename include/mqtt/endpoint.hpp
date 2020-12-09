@@ -4672,6 +4672,14 @@ public:
     }
 
     /**
+     * @brief Check underlying layer connection status
+     * @return current connection status
+     */
+    bool underlying_connected() const {
+        return connected_;
+    }
+
+    /**
      * @brief Trigger next mqtt message manually.
      *        If you call this function, you need to set manual receive mode
      *        using set_auto_next_read(false);

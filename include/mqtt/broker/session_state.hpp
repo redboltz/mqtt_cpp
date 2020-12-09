@@ -133,7 +133,6 @@ struct session_state {
         // See
         // https://lists.oasis-open.org/archives/mqtt-comment/202009/msg00000.html
         topic_alias_recv_ = con_->get_topic_alias_recv_container();
-
         reset_con();
 
         if (session_expiry_interval_ &&

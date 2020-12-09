@@ -331,7 +331,8 @@ public:
                     if (sp->connected()) {
                         sp->disconnect(v5::disconnect_reason_code::protocol_error);
                     }
-                    else { // connecting
+                    else if (sp->underlying_connected()){
+                        // underlying layer connected, mqtt connecting
                         sp->connack(false, v5::connect_reason_code::protocol_error);
                     }
                 }
@@ -815,6 +816,10 @@ private:
         auto it = idx.lower_bound(client_id);
         if (it == idx.end() || it->client_id() != client_id) {
             // new connection
+            MQTT_LOG("mqtt_broker", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "cid:" << client_id
+                << " new connection inserted.";
             it = idx.emplace_hint(
                 it,
                 ioc_,
@@ -835,6 +840,10 @@ private:
                 // remain offline
                 if (clean_start) {
                     // discard offline session
+                    MQTT_LOG("mqtt_broker", trace)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "cid:" << client_id
+                        << "online connection exists, discard old one due to new one's clean_start and renew";
                     send_connack(false);
                     idx.modify(
                         it,
@@ -849,6 +858,10 @@ private:
                 }
                 else {
                     // inherit offline session
+                    MQTT_LOG("mqtt_broker", trace)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "cid:" << client_id
+                        << "online connection exists, inherit old one and renew";
                     send_connack(true);
                     idx.modify(
                         it,
@@ -868,6 +881,10 @@ private:
             }
             else {
                 // new connection
+                MQTT_LOG("mqtt_broker", trace)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "cid:" << client_id
+                    << "online connection exists, discard old one due to session_expiry and renew";
                 bool inserted;
                 std::tie(it, inserted) = idx.emplace(
                     ioc_,
@@ -887,6 +904,10 @@ private:
             // offline -> online
             if (clean_start) {
                 // discard offline session
+                MQTT_LOG("mqtt_broker", trace)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "cid:" << client_id
+                    << "offline connection exists, discard old one due to new one's clean_start and renew";
                 send_connack(false);
                 idx.modify(
                     it,
@@ -902,6 +923,10 @@ private:
             }
             else {
                 // inherit offline session
+                    MQTT_LOG("mqtt_broker", trace)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "cid:" << client_id
+                        << "offline connection exists, inherit old one and renew";
                 send_connack(true);
                 idx.modify(
                     it,
@@ -1012,6 +1037,7 @@ private:
                 it,
                 [&](session_state& e) {
                     do_send_will(e);
+                    e.con()->force_disconnect();
                 },
                 [](auto&) { BOOST_ASSERT(false); }
             );
@@ -1024,6 +1050,7 @@ private:
                 it,
                 [&](session_state& e) {
                     do_send_will(e);
+                    e.con()->force_disconnect();
                     e.become_offline(
                         [this]
                         (std::shared_ptr<as::steady_timer> const& sp_tim) {
