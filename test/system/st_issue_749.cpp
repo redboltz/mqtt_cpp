@@ -10,22 +10,36 @@
 #include "test_util.hpp"
 #include "../common/global_fixture.hpp"
 
-BOOST_AUTO_TEST_SUITE(st_broker)
+BOOST_AUTO_TEST_SUITE(st_issue_749)
 
 using namespace MQTT_NS::literals;
 
-BOOST_AUTO_TEST_CASE( broker_bug ) {
+BOOST_AUTO_TEST_CASE( broker_assertion_fail ) {
 
     boost::asio::io_context iocb;
     MQTT_NS::broker::broker_t  b(iocb);
     MQTT_NS::optional<test_server_no_tls> s;
 
+    std::promise<void> p;
+    auto f = p.get_future();
     std::thread th(
         [&] {
             s.emplace(iocb, b);
+            p.set_value();
             iocb.run();
         }
     );
+    f.wait();
+
+    auto finish =
+        [&] {
+            as::post(
+                iocb,
+                [&] {
+                    s->close();
+                }
+            );
+        };
 
     std::vector<std::shared_ptr<std::thread>> client_th;
 
@@ -48,12 +62,14 @@ BOOST_AUTO_TEST_CASE( broker_bug ) {
                     for (std::size_t i = 0; i != 100; ++i) {
                         c1->publish("topic1", "topic1_contents1", MQTT_NS::qos::at_most_once);
                     }
+                    c1->disconnect();
                     return true;
                 }
             );
 
             c1->connect();
             ioc.run();
+            std::cout << "finished" << std::endl;
         };
 
     for (unsigned int i = 0; i != num_clients; ++i) {
@@ -63,14 +79,7 @@ BOOST_AUTO_TEST_CASE( broker_bug ) {
     for(auto& th: client_th) {
         th->join();
     }
-
-    as::post(
-        iocb,
-        [&] {
-            s->close();
-        }
-    );
-
+    finish();
     th.join();
 }
 

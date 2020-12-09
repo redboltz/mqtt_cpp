@@ -59,7 +59,7 @@ ENDIF ()
 IF (MQTT_TEST_7)
     LIST (APPEND check_PROGRAMS
         st_async_pubsub_2.cpp
-        st_broker
+        st_issue_749.cpp
         st_broker_offline_message.cpp
         st_remaining_length.cpp
         st_utf8string_validate.cpp
