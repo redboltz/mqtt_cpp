@@ -39,17 +39,17 @@ public:
     offline_message(
         buffer topic,
         buffer contents,
-        v5::properties props,
         publish_options pubopts,
+        v5::properties props,
         std::shared_ptr<as::steady_timer> tim_message_expiry)
         : topic_(force_move(topic)),
           contents_(force_move(contents)),
-          props_(force_move(props)),
           pubopts_(pubopts),
+          props_(force_move(props)),
           tim_message_expiry_(force_move(tim_message_expiry))
     { }
 
-    void send(endpoint_t& ep) const {
+    bool send(endpoint_t& ep) const {
         auto props = props_;
         if (tim_message_expiry_) {
             auto d =
@@ -64,8 +64,19 @@ public:
                 )
             );
         }
-
-        ep.publish(topic_, contents_, pubopts_, force_move(props));
+        auto qos_value = pubopts_.get_qos();
+        if (qos_value == qos::at_least_once ||
+            qos_value == qos::exactly_once) {
+            if (auto pid = ep.acquire_unique_packet_id_no_except()) {
+                ep.publish(pid.value(), topic_, contents_, pubopts_, force_move(props));
+                return true;
+            }
+        }
+        else {
+            ep.publish(topic_, contents_, pubopts_, force_move(props));
+            return true;
+        }
+        return false;
     }
 
 private:
@@ -73,33 +84,35 @@ private:
 
     buffer topic_;
     buffer contents_;
-    v5::properties props_;
     publish_options pubopts_;
+    v5::properties props_;
     std::shared_ptr<as::steady_timer> tim_message_expiry_;
 };
 
 class offline_messages {
 public:
-    void send_all_messages(endpoint_t& ep) {
-        try {
-            auto& idx = messages_.get<tag_seq>();
-            while (!idx.empty()) {
-                idx.modify(
-                    idx.begin(),
-                    [&](auto& e) {
-                        e.send(ep);
-                    }
-                );
+    void send_all(endpoint_t& ep) {
+        auto& idx = messages_.get<tag_seq>();
+        while (!idx.empty()) {
+            if (idx.front().send(ep)) {
                 idx.pop_front();
             }
+            else {
+                break;
+            }
         }
-        catch (packet_id_exhausted_error const& e) {
-            MQTT_LOG("mqtt_broker", warning)
-                << MQTT_ADD_VALUE(address, &ep)
-                << e.what();
-        }
-        for (auto const& oflm : messages_) {
-            oflm.send(ep);
+    }
+
+    void send_by_packet_id_release(endpoint_t& ep) {
+        auto& idx = messages_.get<tag_seq>();
+        while (!idx.empty()) {
+            if (idx.front().send(ep)) {
+                // if packet_id is consumed, then finish
+                idx.pop_front();
+            }
+            else {
+                break;
+            }
         }
     }
 
@@ -107,14 +120,45 @@ public:
         messages_.clear();
     }
 
-    template <typename Tag>
-    decltype(auto) get() {
-        return messages_.get<Tag>();
+    bool empty() const {
+        return messages_.empty();
     }
 
-    template <typename Tag>
-    decltype(auto) get() const {
-        return messages_.get<Tag>();
+    void push_back(
+        as::io_context& ioc,
+        buffer pub_topic,
+        buffer contents,
+        publish_options pubopts,
+        v5::properties props) {
+        optional<std::chrono::steady_clock::duration> message_expiry_interval;
+
+        auto v = get_property<v5::property::message_expiry_interval>(props);
+        if (v) {
+            message_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
+        }
+
+        std::shared_ptr<as::steady_timer> tim_message_expiry;
+        if (message_expiry_interval) {
+            tim_message_expiry = std::make_shared<as::steady_timer>(ioc, message_expiry_interval.value());
+            tim_message_expiry->async_wait(
+                [this, wp = std::weak_ptr<as::steady_timer>(tim_message_expiry)](error_code ec) mutable {
+                    if (auto sp = wp.lock()) {
+                        if (!ec) {
+                            messages_.get<tag_tim>().erase(sp);
+                        }
+                    }
+                }
+            );
+        }
+
+        auto& seq_idx = messages_.get<tag_seq>();
+        seq_idx.emplace_back(
+            force_move(pub_topic),
+            force_move(contents),
+            pubopts,
+            force_move(props),
+            force_move(tim_message_expiry)
+        );
     }
 
 private:

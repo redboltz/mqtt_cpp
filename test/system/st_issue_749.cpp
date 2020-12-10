@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE( broker_assertion_fail ) {
         [] {
             boost::asio::io_context ioc;
 
-            int publish_count = 100;
+            std::size_t publish_count = 100;
 
             auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port);
             c1->set_clean_session(true);
@@ -58,8 +58,7 @@ BOOST_AUTO_TEST_CASE( broker_assertion_fail ) {
             c1->set_connack_handler(
                 [&c1, &publish_count]
                 (bool /*sp*/, MQTT_NS::connect_return_code /*connack_return_code*/) {
-                    std::cout << "Publish: " << publish_count << std::endl;
-                    for (std::size_t i = 0; i != 100; ++i) {
+                    for (std::size_t i = 0; i != publish_count; ++i) {
                         c1->publish("topic1", "topic1_contents1", MQTT_NS::qos::at_most_once);
                     }
                     c1->disconnect();
@@ -69,7 +68,6 @@ BOOST_AUTO_TEST_CASE( broker_assertion_fail ) {
 
             c1->connect();
             ioc.run();
-            std::cout << "finished" << std::endl;
         };
 
     for (unsigned int i = 0; i != num_clients; ++i) {

@@ -77,6 +77,9 @@ public:
                 msg_
             );
         }
+        // packet_id_exhausted never happen because inflight message has already
+        // allocated packet_id at the previous connection.
+        // In  send_store_message(), packet_id is registered.
         ep.send_store_message(msg_opt ? msg_opt.value() : msg_, life_keeper_);
     }
 

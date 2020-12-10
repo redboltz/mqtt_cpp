@@ -4192,8 +4192,21 @@ public:
      * @return packet id
      */
     packet_id_t acquire_unique_packet_id() {
+        if (auto pid = acquire_unique_packet_id_no_except()) return pid.value();
+        throw packet_id_exhausted_error();
+    }
+
+    /**
+     * @brief Acquire the new unique packet id.
+     *        If all packet ids are already in use, then returns nullopt
+     *        After acquiring the packet id, you can call acquired_* functions.
+     *        The ownership of packet id is moved to the library.
+     *        Or you can call release_packet_id to release it.
+     * @return packet id
+     */
+    optional<packet_id_t> acquire_unique_packet_id_no_except() {
         LockGuard<Mutex> lck (store_mtx_);
-        if (packet_id_.size() == std::numeric_limits<packet_id_t>::max()) throw packet_id_exhausted_error();
+        if (packet_id_.size() == std::numeric_limits<packet_id_t>::max()) return nullopt;
         if (packet_id_master_ == std::numeric_limits<packet_id_t>::max()) {
             packet_id_master_ = 1U;
         }
