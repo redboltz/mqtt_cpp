@@ -39,13 +39,13 @@ public:
     offline_message(
         buffer topic,
         buffer contents,
-        v5::properties props,
         publish_options pubopts,
+        v5::properties props,
         std::shared_ptr<as::steady_timer> tim_message_expiry)
         : topic_(force_move(topic)),
           contents_(force_move(contents)),
-          props_(force_move(props)),
           pubopts_(pubopts),
+          props_(force_move(props)),
           tim_message_expiry_(force_move(tim_message_expiry))
     { }
 
@@ -73,14 +73,14 @@ private:
 
     buffer topic_;
     buffer contents_;
-    v5::properties props_;
     publish_options pubopts_;
+    v5::properties props_;
     std::shared_ptr<as::steady_timer> tim_message_expiry_;
 };
 
 class offline_messages {
 public:
-    void send_all_messages(endpoint_t& ep) {
+    void send_all(endpoint_t& ep) {
         try {
             auto& idx = messages_.get<tag_seq>();
             while (!idx.empty()) {
@@ -96,10 +96,39 @@ public:
         catch (packet_id_exhausted_error const& e) {
             MQTT_LOG("mqtt_broker", warning)
                 << MQTT_ADD_VALUE(address, &ep)
-                << e.what();
+                << e.what()
+                << " : send the rest messages later.";
         }
         for (auto const& oflm : messages_) {
             oflm.send(ep);
+        }
+    }
+
+    void send_by_packet_id_release(endpoint_t& ep) {
+        try {
+            auto& idx = messages_.get<tag_seq>();
+            bool finish = false;
+            while (!idx.empty() && !finish) {
+                idx.modify(
+                    idx.begin(),
+                    [&](auto& e) {
+                        auto qos_value = e.pubopts_.get_qos();
+                        e.send(ep);
+                        // if packet_id is consumed, then finish
+                        if (qos_value == qos::at_least_once ||
+                            qos_value == qos::exactly_once) {
+                            finish = true;
+                        }
+                    }
+                );
+                idx.pop_front();
+            }
+        }
+        catch (packet_id_exhausted_error const& e) {
+            MQTT_LOG("mqtt_broker", fatal)
+                << MQTT_ADD_VALUE(address, &ep)
+                << "even if packet_id is released, got exception "
+                << e.what();
         }
     }
 
@@ -107,14 +136,45 @@ public:
         messages_.clear();
     }
 
-    template <typename Tag>
-    decltype(auto) get() {
-        return messages_.get<Tag>();
+    bool empty() const {
+        return messages_.empty();
     }
 
-    template <typename Tag>
-    decltype(auto) get() const {
-        return messages_.get<Tag>();
+    void push_back(
+        as::io_context& ioc,
+        buffer pub_topic,
+        buffer contents,
+        publish_options pubopts,
+        v5::properties props) {
+        optional<std::chrono::steady_clock::duration> message_expiry_interval;
+
+        auto v = get_property<v5::property::message_expiry_interval>(props);
+        if (v) {
+            message_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
+        }
+
+        std::shared_ptr<as::steady_timer> tim_message_expiry;
+        if (message_expiry_interval) {
+            tim_message_expiry = std::make_shared<as::steady_timer>(ioc, message_expiry_interval.value());
+            tim_message_expiry->async_wait(
+                [this, wp = std::weak_ptr<as::steady_timer>(tim_message_expiry)](error_code ec) mutable {
+                    if (auto sp = wp.lock()) {
+                        if (!ec) {
+                            messages_.get<tag_tim>().erase(sp);
+                        }
+                    }
+                }
+            );
+        }
+
+        auto& seq_idx = messages_.get<tag_seq>();
+        seq_idx.emplace_back(
+            force_move(pub_topic),
+            force_move(contents),
+            pubopts,
+            force_move(props),
+            force_move(tim_message_expiry)
+        );
     }
 
 private:

@@ -872,7 +872,7 @@ private:
                             // TODO: e.will_delay = force_move(will_delay);
                             e.renew_session_expiry(force_move(session_expiry_interval));
                             e.send_inflight_messages();
-                            e.send_offline_messages();
+                            e.send_all_offline_messages();
                         },
                         [](auto&) { BOOST_ASSERT(false); }
                     );
@@ -937,7 +937,7 @@ private:
                         // TODO: e.will_delay = force_move(will_delay);
                         e.renew_session_expiry(force_move(session_expiry_interval));
                         e.send_inflight_messages();
-                        e.send_offline_messages();
+                        e.send_all_offline_messages();
                     },
                     [](auto&) { BOOST_ASSERT(false); }
                 );
@@ -1188,6 +1188,7 @@ private:
             it,
             [&](auto& e) {
                 e.erase_inflight_message_by_packet_id(packet_id);
+                e.send_offline_messages_by_packet_id_release();
             }
         );
         return true;
@@ -1267,6 +1268,7 @@ private:
             it,
             [&](auto& e) {
                 e.erase_inflight_message_by_packet_id(packet_id);
+                e.send_offline_messages_by_packet_id_release();
             }
         );
         return true;
@@ -1300,7 +1302,7 @@ private:
         session_state_ref ssr {ssr_opt.value()};
 
         auto publish_proc =
-            [&ep](retain_t const& r, qos qos_value, optional<std::size_t> sid) {
+            [this, &ssr](retain_t const& r, qos qos_value, optional<std::size_t> sid) {
                 auto props = r.props;
                 if (sid) {
                     props.push_back(v5::property::subscription_identifier(*sid));
@@ -1317,7 +1319,8 @@ private:
                         )
                     );
                 }
-                ep.publish(
+                ssr.get().publish(
+                    ioc_,
                     r.topic,
                     r.contents,
                     std::min(r.qos_value, qos_value) | MQTT_NS::retain::yes,

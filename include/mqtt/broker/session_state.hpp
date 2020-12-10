@@ -171,6 +171,49 @@ struct session_state {
         return tim_session_expiry_;
     }
 
+    void publish(
+        as::io_context& ioc,
+        buffer pub_topic,
+        buffer contents,
+        publish_options pubopts,
+        v5::properties props) {
+
+        BOOST_ASSERT(online());
+
+        if (offline_messages_.empty()) {
+            try {
+                // TODO: Probably this should be switched to async_publish?
+
+                //       Given the async_client / sync_client seperation
+                //       and the way they have different function names,
+                //       it wouldn't be possible for broker.hpp to be
+                //       used with some hypothetical "async_server" in the future.
+                con_->publish(
+                    pub_topic,
+                    contents,
+                    pubopts,
+                    props
+                );
+                return;
+            }
+            catch (packet_id_exhausted_error const& e) {
+                MQTT_LOG("mqtt_broker", warning)
+                    << MQTT_ADD_VALUE(address, this)
+                    << e.what()
+                    << " : send the rest messages later.";
+            }
+        }
+
+        // offline_messages_ is not empty or packet_id_exhausted
+        offline_messages_.push_back(
+            ioc,
+            force_move(pub_topic),
+            force_move(contents),
+            pubopts,
+            force_move(props)
+        );
+    }
+
     void deliver(
         as::io_context& ioc,
         buffer pub_topic,
@@ -179,13 +222,8 @@ struct session_state {
         v5::properties props) {
 
         if (online()) {
-            // TODO: Probably this should be switched to async_publish?
-
-            //       Given the async_client / sync_client seperation
-            //       and the way they have different function names,
-            //       it wouldn't be possible for broker.hpp to be
-            //       used with some hypothetical "async_server" in the future.
-            con_->publish(
+            publish(
+                ioc,
                 force_move(pub_topic),
                 force_move(contents),
                 pubopts,
@@ -193,34 +231,12 @@ struct session_state {
             );
         }
         else {
-            optional<std::chrono::steady_clock::duration> message_expiry_interval;
-
-            auto v = get_property<v5::property::message_expiry_interval>(props);
-            if (v) {
-                message_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
-            }
-
-            std::shared_ptr<as::steady_timer> tim_message_expiry;
-            if (message_expiry_interval) {
-                tim_message_expiry = std::make_shared<as::steady_timer>(ioc, message_expiry_interval.value());
-                tim_message_expiry->async_wait(
-                    [this, wp = std::weak_ptr<as::steady_timer>(tim_message_expiry)](error_code ec) mutable {
-                        if (auto sp = wp.lock()) {
-                            if (!ec) {
-                                offline_messages_.get<tag_tim>().erase(sp);
-                            }
-                        }
-                    }
-                );
-            }
-
-            auto& seq_idx = offline_messages_.get<tag_seq>();
-            seq_idx.emplace_back(
+            offline_messages_.push_back(
+                ioc,
                 force_move(pub_topic),
                 force_move(contents),
-                force_move(props),
                 pubopts,
-                force_move(tim_message_expiry)
+                force_move(props)
             );
         }
     }
@@ -366,11 +382,15 @@ struct session_state {
         idx.erase(packet_id);
     }
 
-    void send_offline_messages() {
+    void send_all_offline_messages() {
         BOOST_ASSERT(con_);
-        offline_messages_.send_all_messages(*con_);
+        offline_messages_.send_all(*con_);
     }
 
+    void send_offline_messages_by_packet_id_release() {
+        BOOST_ASSERT(con_);
+        offline_messages_.send_by_packet_id_release(*con_);
+    }
 
     buffer const& client_id() const {
         return client_id_;
