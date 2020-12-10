@@ -181,26 +181,22 @@ struct session_state {
         BOOST_ASSERT(online());
 
         if (offline_messages_.empty()) {
-            try {
-                // TODO: Probably this should be switched to async_publish?
-
-                //       Given the async_client / sync_client seperation
-                //       and the way they have different function names,
-                //       it wouldn't be possible for broker.hpp to be
-                //       used with some hypothetical "async_server" in the future.
-                con_->publish(
-                    pub_topic,
-                    contents,
-                    pubopts,
-                    props
-                );
-                return;
+            auto qos_value = pubopts.get_qos();
+            if (qos_value == qos::at_least_once ||
+                qos_value == qos::exactly_once) {
+                if (auto pid = con_->acquire_unique_packet_id_no_except()) {
+                    // TODO: Probably this should be switched to async_publish?
+                    //       Given the async_client / sync_client seperation
+                    //       and the way they have different function names,
+                    //       it wouldn't be possible for broker.hpp to be
+                    //       used with some hypothetical "async_server" in the future.
+                    con_->publish(pid.value(), pub_topic, contents, pubopts, props);
+                    return;
+                }
             }
-            catch (packet_id_exhausted_error const& e) {
-                MQTT_LOG("mqtt_broker", warning)
-                    << MQTT_ADD_VALUE(address, this)
-                    << e.what()
-                    << " : send the rest messages later.";
+            else {
+                con_->publish(pub_topic, contents, pubopts, props);
+                return;
             }
         }
 

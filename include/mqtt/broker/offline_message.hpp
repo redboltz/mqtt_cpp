@@ -49,7 +49,7 @@ public:
           tim_message_expiry_(force_move(tim_message_expiry))
     { }
 
-    void send(endpoint_t& ep) const {
+    bool send(endpoint_t& ep) const {
         auto props = props_;
         if (tim_message_expiry_) {
             auto d =
@@ -64,8 +64,19 @@ public:
                 )
             );
         }
-
-        ep.publish(topic_, contents_, pubopts_, force_move(props));
+        auto qos_value = pubopts_.get_qos();
+        if (qos_value == qos::at_least_once ||
+            qos_value == qos::exactly_once) {
+            if (auto pid = ep.acquire_unique_packet_id_no_except()) {
+                ep.publish(pid.value(), topic_, contents_, pubopts_, force_move(props));
+                return true;
+            }
+        }
+        else {
+            ep.publish(topic_, contents_, pubopts_, force_move(props));
+            return true;
+        }
+        return false;
     }
 
 private:
@@ -81,54 +92,27 @@ private:
 class offline_messages {
 public:
     void send_all(endpoint_t& ep) {
-        try {
-            auto& idx = messages_.get<tag_seq>();
-            while (!idx.empty()) {
-                idx.modify(
-                    idx.begin(),
-                    [&](auto& e) {
-                        e.send(ep);
-                    }
-                );
+        auto& idx = messages_.get<tag_seq>();
+        while (!idx.empty()) {
+            if (idx.front().send(ep)) {
                 idx.pop_front();
             }
-        }
-        catch (packet_id_exhausted_error const& e) {
-            MQTT_LOG("mqtt_broker", warning)
-                << MQTT_ADD_VALUE(address, &ep)
-                << e.what()
-                << " : send the rest messages later.";
-        }
-        for (auto const& oflm : messages_) {
-            oflm.send(ep);
+            else {
+                break;
+            }
         }
     }
 
     void send_by_packet_id_release(endpoint_t& ep) {
-        try {
-            auto& idx = messages_.get<tag_seq>();
-            bool finish = false;
-            while (!idx.empty() && !finish) {
-                idx.modify(
-                    idx.begin(),
-                    [&](auto& e) {
-                        auto qos_value = e.pubopts_.get_qos();
-                        e.send(ep);
-                        // if packet_id is consumed, then finish
-                        if (qos_value == qos::at_least_once ||
-                            qos_value == qos::exactly_once) {
-                            finish = true;
-                        }
-                    }
-                );
+        auto& idx = messages_.get<tag_seq>();
+        while (!idx.empty()) {
+            if (idx.front().send(ep)) {
+                // if packet_id is consumed, then finish
                 idx.pop_front();
             }
-        }
-        catch (packet_id_exhausted_error const& e) {
-            MQTT_LOG("mqtt_broker", fatal)
-                << MQTT_ADD_VALUE(address, &ep)
-                << "even if packet_id is released, got exception "
-                << e.what();
+            else {
+                break;
+            }
         }
     }
 

@@ -995,36 +995,29 @@ private:
                     if (send_will) {
                         // TODO: This should be triggered by the will delay
                         // Not sent immediately.
-                        try {
-                            auto props = force_move(session.will().value().props());
+                        auto props = force_move(session.will().value().props());
 
-                            if (session.get_tim_will_expiry()) {
-                                auto d =
-                                    std::chrono::duration_cast<std::chrono::seconds>(
-                                        session.get_tim_will_expiry()->expiry() - std::chrono::steady_clock::now()
-                                    ).count();
-                                if (d < 0) d = 0;
-                                set_property<v5::property::message_expiry_interval>(
-                                    props,
-                                    v5::property::message_expiry_interval(
-                                        static_cast<uint32_t>(d)
-                                    )
-                                );
-                            }
-
-                            do_publish(
-                                ep,
-                                force_move(session.will().value().topic()),
-                                force_move(session.will().value().message()),
-                                session.will().value().get_qos() | session.will().value().get_retain(),
-                                props
+                        if (session.get_tim_will_expiry()) {
+                            auto d =
+                                std::chrono::duration_cast<std::chrono::seconds>(
+                                    session.get_tim_will_expiry()->expiry() - std::chrono::steady_clock::now()
+                                ).count();
+                            if (d < 0) d = 0;
+                            set_property<v5::property::message_expiry_interval>(
+                                props,
+                                v5::property::message_expiry_interval(
+                                    static_cast<uint32_t>(d)
+                                )
                             );
                         }
-                        catch (packet_id_exhausted_error const& e) {
-                            MQTT_LOG("mqtt_broker", warning)
-                                << MQTT_ADD_VALUE(address, session.con().get())
-                                << e.what();
-                        }
+
+                        do_publish(
+                            ep,
+                            force_move(session.will().value().topic()),
+                            force_move(session.will().value().message()),
+                            session.will().value().get_qos() | session.will().value().get_retain(),
+                            props
+                        );
                     }
                     else {
                         session.reset_will();
