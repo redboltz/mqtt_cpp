@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
             ep.set_v5_subscribe_handler( // use v5 handler
                 [&subs, wp]
                 (packet_id_t packet_id,
-                 std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> entries,
+                 std::vector<MQTT_NS::subscribe_entry> entries,
                  MQTT_NS::v5::properties /*props*/) {
                     std::cout << "[server] subscribe received. packet_id: " << packet_id << std::endl;
                     std::vector<MQTT_NS::v5::suback_reason_code> res;
@@ -222,15 +222,12 @@ int main(int argc, char** argv) {
                     auto sp = wp.lock();
                     BOOST_ASSERT(sp);
                     for (auto const& e : entries) {
-                        MQTT_NS::buffer topic = std::get<0>(e);
-                        MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
-                        MQTT_NS::rap rap_value = std::get<1>(e).get_rap();
-                        std::cout << "[server] topic: " << topic
-                                  << " qos: " << qos_value
-                                  << " rap: " << rap_value
+                        std::cout << "[server] topic_filter: " << e.topic_filter
+                                  << " qos: " << e.subopts.get_qos()
+                                  << " rap: " << e.subopts.get_rap()
                                   << std::endl;
-                        res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(qos_value));
-                        subs.emplace(std::move(topic), sp, qos_value, rap_value);
+                        res.emplace_back(MQTT_NS::v5::qos_to_suback_reason_code(e.subopts.get_qos()));
+                        subs.emplace(std::move(e.topic_filter), sp, e.subopts.get_qos(), e.subopts.get_rap());
                     }
                     sp->suback(packet_id, res);
                     return true;
@@ -239,11 +236,11 @@ int main(int argc, char** argv) {
             ep.set_v5_unsubscribe_handler( // use v5 handler
                 [&subs, wp]
                 (packet_id_t packet_id,
-                 std::vector<MQTT_NS::buffer> topics,
+                 std::vector<MQTT_NS::unsubscribe_entry> entries,
                  MQTT_NS::v5::properties /*props*/) {
                     std::cout << "[server] unsubscribe received. packet_id: " << packet_id << std::endl;
-                    for (auto const& topic : topics) {
-                        subs.erase(topic);
+                    for (auto const& e : entries) {
+                        subs.erase(e.topic_filter);
                     }
                     auto sp = wp.lock();
                     BOOST_ASSERT(sp);
