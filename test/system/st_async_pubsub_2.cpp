@@ -598,6 +598,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
     do_combi_test_async(test);
 }
 
+#if 0 // temporary
+
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
@@ -829,6 +831,8 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
     };
     do_combi_test_async(test);
 }
+
+#endif
 
 BOOST_AUTO_TEST_CASE( publish_function ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
