@@ -5,13 +5,12 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 
-#if !defined(MQTT_BROKER_SHARED_SUBSCRIPTIONS_HPP)
-#define MQTT_BROKER_SHARED_SUBSCRIPTIONS_HPP
+#if !defined(MQTT_SHARED_SUBSCRIPTIONS_HPP)
+#define MQTT_SHARED_SUBSCRIPTIONS_HPP
 
 #include <mqtt/config.hpp>
 
-#include <tuple>
-
+#include <mqtt/namespace.hpp>
 #include <mqtt/buffer.hpp>
 #include <mqtt/move.hpp>
 
@@ -62,4 +61,4 @@ inline share_name_topic_filter parse_shared_subscription(buffer whole_topic_filt
 
 } // namespace MQTT_NS
 
-#endif // MQTT_BROKER_SHARED_SUBSCRIPTIONS_HPP
+#endif // MQTT_SHARED_SUBSCRIPTIONS_HPP

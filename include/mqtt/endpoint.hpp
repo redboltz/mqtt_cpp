@@ -7,7 +7,7 @@
 #if !defined(MQTT_ENDPOINT_HPP)
 #define MQTT_ENDPOINT_HPP
 
-#include <mqtt/variant.hpp> // should be top to configure variant limit
+#include <mqtt/config.hpp> // should be top to configure variant limit
 
 #include <string>
 #include <vector>
@@ -67,6 +67,8 @@
 #include <mqtt/log.hpp>
 #include <mqtt/variant_visit.hpp>
 #include <mqtt/topic_alias_recv.hpp>
+#include <mqtt/subscribe_entry.hpp>
+#include <mqtt/shared_subscriptions.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -347,12 +349,12 @@ private:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349801<BR>
      *        3.8.2 Variable header
      * @param entries
-     *        Collection of a pair of Topic Filter and QoS.<BR>
+     *        Collection of Share Name, Topic Filter, and QoS.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349802<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     virtual bool on_subscribe(packet_id_t packet_id,
-                              std::vector<std::tuple<buffer, subscribe_options>> entries) noexcept = 0;
+                              std::vector<subscribe_entry> entries) noexcept = 0;
 
     /**
      * @brief Suback handler
@@ -372,12 +374,12 @@ private:
      * @param packet_id packet identifier<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349810<BR>
      *        3.10.2 Variable header
-     * @param topics
-     *        Collection of Topic Filters<BR>
+     * @param entries
+     *        Collection of Share Name and Topic Filter<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800448<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_unsubscribe(packet_id_t packet_id, std::vector<buffer> topics) noexcept = 0;
+    virtual bool on_unsubscribe(packet_id_t packet_id, std::vector<unsubscribe_entry> entries) noexcept = 0;
 
     /**
      * @brief Unsuback handler
@@ -585,7 +587,7 @@ private:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901163<BR>
      *        3.8.2 Variable header
      * @param entries
-     *        Collection of a pair of Topic Filter and QoS.<BR>
+     *        Collection of Share Name, Topic Filter, and Subscribe Options.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901168<BR>
      * @param props
      *        Properties<BR>
@@ -594,7 +596,7 @@ private:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     virtual bool on_v5_subscribe(packet_id_t packet_id,
-                                 std::vector<std::tuple<buffer, subscribe_options>> entries,
+                                 std::vector<subscribe_entry> entries,
                                  v5::properties props) noexcept = 0;
 
     /**
@@ -621,8 +623,8 @@ private:
      * @param packet_id packet identifier<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901181<BR>
      *        3.10.2 Variable header
-     * @param topics
-     *        Collection of Topic Filters<BR>
+     * @param entries
+     *        Collection of Share Name and Topic Filter<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901185<BR>
      *        3.10.3 UNSUBSCRIBE Payload
      * @param props
@@ -632,7 +634,7 @@ private:
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     virtual bool on_v5_unsubscribe(packet_id_t packet_id,
-                                   std::vector<buffer> topics,
+                                   std::vector<unsubscribe_entry> entries,
                                    v5::properties props) noexcept = 0;
 
     /**
@@ -8083,7 +8085,7 @@ private:
     struct subscribe_info {
         packet_id_t packet_id;
         v5::properties props;
-        std::vector<std::tuple<buffer, subscribe_options>> entries;
+        std::vector<subscribe_entry> entries;
     };
 
     void process_subscribe(
@@ -8175,15 +8177,17 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (buffer topic_filter, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (buffer whole_topic_filter, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                    auto sn_tf = parse_shared_subscription(whole_topic_filter);
                     process_nbytes(
                         force_move(session_life_keeper),
                         force_move(buf),
-                        1, // requested_qos
+                        1, // subscribe options
                         [
                             this,
                             info = force_move(info),
-                            topic_filter = force_move(topic_filter)
+                            share_name = force_move(sn_tf.share_name),
+                            topic_filter = force_move(sn_tf.topic_filter)
                         ]
                         (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                             subscribe_options option(static_cast<std::uint8_t>(body[0]));
@@ -8194,7 +8198,7 @@ private:
                                 call_protocol_error_handlers();
                                 return;
                             }
-                            info.entries.emplace_back(force_move(topic_filter), option);
+                            info.entries.emplace_back(force_move(share_name), force_move(topic_filter), option);
                             if (remaining_length_ == 0) {
                                 process_subscribe_impl<subscribe_phase::finish>(
                                     force_move(session_life_keeper),
@@ -8423,7 +8427,7 @@ private:
     struct unsubscribe_info {
         packet_id_t packet_id;
         v5::properties props;
-        std::vector<buffer> entries;
+        std::vector<unsubscribe_entry> entries;
     };
 
     void process_unsubscribe(
@@ -8515,8 +8519,9 @@ private:
                     this,
                     info = force_move(info)
                 ]
-                (buffer topic_filter, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.entries.emplace_back(force_move(topic_filter));
+                (buffer whole_topic_filter, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                    auto sn_tf = parse_shared_subscription(whole_topic_filter);
+                    info.entries.emplace_back(force_move(sn_tf.share_name), force_move(sn_tf.topic_filter));
                     if (remaining_length_ == 0) {
                         process_unsubscribe_impl<unsubscribe_phase::finish>(
                             force_move(session_life_keeper),
