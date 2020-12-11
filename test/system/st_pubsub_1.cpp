@@ -1735,13 +1735,13 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
             // subscribe topic1 QoS0
             cont("h_suback"),
             // publish topic1 QoS2
-            cont("h_publish"),
             cont("h_pubrec"),
+            cont("h_pubcomp"),
+            deps("h_publish", "h_suback"),
             // pubrec send twice
             cont("h_pubrel1"),
             cont("h_pubrel2"),
-            cont("h_pubcomp"),
-            cont("h_unsuback"),
+            deps("h_unsuback", "h_pubcomp", "h_pubrel2"),
             // disconnect
             cont("h_close"),
         };

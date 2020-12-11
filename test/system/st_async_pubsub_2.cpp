@@ -598,8 +598,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
     do_combi_test_async(test);
 }
 
-#if 0 // temporary
-
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
@@ -613,17 +611,16 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
             // subscribe topic1 QoS0
             cont("h_suback"),
             // publish topic1 QoS2
-            cont("h_publish"),
             cont("h_pubrec"),
+            cont("h_pubcomp"),
+            deps("h_publish", "h_suback"),
             // pubrec send twice
             cont("h_pubrel1"),
             cont("h_pubrel2"),
-            deps("h_pubcomp", "h_pubrec"),
-            cont("h_unsuback"),
+            deps("h_unsuback", "h_pubcomp", "h_pubrel2"),
             // disconnect
             cont("h_close"),
         };
-
 
         auto g = MQTT_NS::shared_scope_guard(
             [&c] {
@@ -831,8 +828,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
     };
     do_combi_test_async(test);
 }
-
-#endif
 
 BOOST_AUTO_TEST_CASE( publish_function ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
