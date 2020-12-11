@@ -25,7 +25,6 @@
 #include <mqtt/broker/tags.hpp>
 #include <mqtt/broker/inflight_message.hpp>
 #include <mqtt/broker/offline_message.hpp>
-#include <mqtt/broker/shared_subscriptions.hpp>
 
 MQTT_BROKER_NS_BEGIN
 

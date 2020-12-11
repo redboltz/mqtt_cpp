@@ -210,13 +210,12 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349801<BR>
      *        3.8.2 Variable header
      * @param entries
-     *        Collection of a pair of Topic Filter and QoS.<BR>
+     *        Collection of Share Name, Topic Filter, and QoS.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349802<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_subscribe(packet_id_t packet_id,
-                                         std::vector<std::tuple<buffer,
-                                                                subscribe_options>> entries) noexcept override final {
+                                         std::vector<subscribe_entry> entries) noexcept override final {
         return    ! h_subscribe_
                || h_subscribe_(packet_id, force_move(entries));
     }
@@ -244,14 +243,14 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349810<BR>
      *        3.10.2 Variable header
      * @param topics
-     *        Collection of Topic Filters<BR>
+     *        Collection of Share Name and Topic Filter<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800448<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_unsubscribe(packet_id_t packet_id,
-                                           std::vector<buffer> topics) noexcept override final {
+                                           std::vector<unsubscribe_entry> entries) noexcept override final {
         return    ! h_unsubscribe_
-               || h_unsubscribe_(packet_id, force_move(topics));
+               || h_unsubscribe_(packet_id, force_move(entries));
     }
 
     /**
@@ -497,7 +496,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901163<BR>
      *        3.8.2 Variable header
      * @param entries
-     *        Collection of a pair of Topic Filter and QoS.<BR>
+     *        Collection of Share Name, Topic Filter, and QoS.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901168<BR>
      * @param props
      *        Properties<BR>
@@ -506,7 +505,7 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_subscribe(packet_id_t packet_id,
-                                            std::vector<std::tuple<buffer, subscribe_options>> entries,
+                                            std::vector<subscribe_entry> entries,
                                             v5::properties props) noexcept override final {
         return    ! h_v5_subscribe_
                || h_v5_subscribe_(packet_id, force_move(entries), force_move(props));
@@ -539,8 +538,8 @@ struct callable_overlay final : public Impl
      * @param packet_id packet identifier<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901181<BR>
      *        3.10.2 Variable header
-     * @param topics
-     *        Collection of Topic Filters<BR>
+     * @param entries
+     *        Collection of Share Name and Topic Filter<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901185<BR>
      *        3.10.3 UNSUBSCRIBE Payload
      * @param props
@@ -550,10 +549,10 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     MQTT_ALWAYS_INLINE bool on_v5_unsubscribe(packet_id_t packet_id,
-                                              std::vector<buffer> topics,
+                                              std::vector<unsubscribe_entry> entries,
                                               v5::properties props) noexcept override final {
         return    ! h_v5_unsubscribe_
-               || h_v5_unsubscribe_(packet_id, force_move(topics), force_move(props));
+               || h_v5_unsubscribe_(packet_id, force_move(entries), force_move(props));
     }
 
     /**
@@ -900,12 +899,12 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349801<BR>
      *        3.8.2 Variable header
      * @param entries
-     *        Collection of a pair of Topic Filter and QoS.<BR>
+     *        Collection of Share Name, Topic Filter, and QoS.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349802<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using subscribe_handler = std::function<bool(packet_id_t packet_id,
-                                                 std::vector<std::tuple<buffer, subscribe_options>> entries)>;
+                                                 std::vector<subscribe_entry> entries)>;
 
     /**
      * @brief Suback handler
@@ -926,13 +925,13 @@ struct callable_overlay final : public Impl
      * @param packet_id packet identifier<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349810<BR>
      *        3.10.2 Variable header
-     * @param topics
-     *        Collection of Topic Filters<BR>
+     * @param entries
+     *        Collection of Share Name and Topic Filter<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800448<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
     using unsubscribe_handler = std::function<bool(packet_id_t packet_id,
-                                                   std::vector<buffer> topics)>;
+                                                   std::vector<unsubscribe_entry> entries)>;
 
     /**
      * @brief Unsuback handler
@@ -1154,7 +1153,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901163<BR>
      *        3.8.2 Variable header
      * @param entries
-     *        Collection of a pair of Topic Filter and QoS.<BR>
+     *        Collection of Share Name, Topic Filter, and Subscribe Options.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901168<BR>
      * @param props
      *        Properties<BR>
@@ -1164,7 +1163,7 @@ struct callable_overlay final : public Impl
      */
     using v5_subscribe_handler = std::function<
         bool(packet_id_t packet_id,
-             std::vector<std::tuple<buffer, subscribe_options>> entries,
+             std::vector<subscribe_entry> entries,
              v5::properties props)
     >;
 
@@ -1194,8 +1193,8 @@ struct callable_overlay final : public Impl
      * @param packet_id packet identifier<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901181<BR>
      *        3.10.2 Variable header
-     * @param topics
-     *        Collection of Topic Filters<BR>
+     * @param entries
+     *        Collection of Share Name and Topic Filter<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901185<BR>
      *        3.10.3 UNSUBSCRIBE Payload
      * @param props
@@ -1206,7 +1205,7 @@ struct callable_overlay final : public Impl
      */
     using v5_unsubscribe_handler = std::function<
         bool(packet_id_t packet_id,
-             std::vector<buffer> topics,
+             std::vector<unsubscribe_entry> entries,
              v5::properties props)
     >;
 

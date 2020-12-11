@@ -194,18 +194,16 @@ int main(int argc, char** argv) {
             ep.set_subscribe_handler(
                 [&subs, wp]
                 (packet_id_t packet_id,
-                 std::vector<std::tuple<MQTT_NS::buffer, MQTT_NS::subscribe_options>> entries) {
+                 std::vector<MQTT_NS::subscribe_entry> entries) {
                     std::cout << "[server]subscribe received. packet_id: " << packet_id << std::endl;
                     std::vector<MQTT_NS::suback_return_code> res;
                     res.reserve(entries.size());
                     auto sp = wp.lock();
                     BOOST_ASSERT(sp);
                     for (auto const& e : entries) {
-                        MQTT_NS::buffer topic = std::get<0>(e);
-                        MQTT_NS::qos qos_value = std::get<1>(e).get_qos();
-                        std::cout << "[server] topic: " << topic  << " qos: " << qos_value << std::endl;
-                        res.emplace_back(MQTT_NS::qos_to_suback_return_code(qos_value));
-                        subs.emplace(std::move(topic), sp, qos_value);
+                        std::cout << "[server] topic_filter: " << e.topic_filter  << " qos: " << e.subopts.get_qos() << std::endl;
+                        res.emplace_back(MQTT_NS::qos_to_suback_return_code(e.subopts.get_qos()));
+                        subs.emplace(std::move(e.topic_filter), sp, e.subopts.get_qos());
                     }
                     sp->suback(packet_id, res);
                     return true;
@@ -214,10 +212,10 @@ int main(int argc, char** argv) {
             ep.set_unsubscribe_handler(
                 [&subs, wp]
                 (packet_id_t packet_id,
-                 std::vector<MQTT_NS::buffer> topics) {
+                 std::vector<MQTT_NS::unsubscribe_entry> entries) {
                     std::cout << "[server]unsubscribe received. packet_id: " << packet_id << std::endl;
-                    for (auto const& topic : topics) {
-                        subs.erase(topic);
+                    for (auto const& e : entries) {
+                        subs.erase(e.topic_filter);
                     }
                     auto sp = wp.lock();
                     BOOST_ASSERT(sp);

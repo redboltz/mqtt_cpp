@@ -23,7 +23,6 @@
 #include <mqtt/broker/retained_messages.hpp>
 
 #include <mqtt/broker/retained_topic_map.hpp>
-#include <mqtt/broker/shared_subscriptions.hpp>
 #include <mqtt/broker/shared_target_impl.hpp>
 
 MQTT_BROKER_NS_BEGIN
@@ -556,7 +555,7 @@ public:
         ep.set_subscribe_handler(
             [this, wp]
             (packet_id_t packet_id,
-             std::vector<std::tuple<buffer, subscribe_options>> entries) {
+             std::vector<subscribe_entry> entries) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return subscribe_handler(
@@ -570,7 +569,7 @@ public:
         ep.set_v5_subscribe_handler(
             [this, wp]
             (packet_id_t packet_id,
-             std::vector<std::tuple<buffer, subscribe_options>> entries,
+             std::vector<subscribe_entry> entries,
              v5::properties props
             ) {
                 con_sp_t sp = wp.lock();
@@ -586,13 +585,13 @@ public:
         ep.set_unsubscribe_handler(
             [this, wp]
             (packet_id_t packet_id,
-             std::vector<buffer> topics) {
+             std::vector<unsubscribe_entry> entries) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 return unsubscribe_handler(
                     force_move(sp),
                     packet_id,
-                    force_move(topics),
+                    force_move(entries),
                     v5::properties{}
                 );
             }
@@ -600,7 +599,7 @@ public:
         ep.set_v5_unsubscribe_handler(
             [this, wp]
             (packet_id_t packet_id,
-             std::vector<buffer> topics,
+             std::vector<unsubscribe_entry> entries,
              v5::properties props
             ) {
                 con_sp_t sp = wp.lock();
@@ -608,7 +607,7 @@ public:
                 return unsubscribe_handler(
                     force_move(sp),
                     packet_id,
-                    force_move(topics),
+                    force_move(entries),
                     force_move(props)
                 );
             }
@@ -1270,7 +1269,7 @@ private:
     bool subscribe_handler(
         con_sp_t spep,
         packet_id_t packet_id,
-        std::vector<std::tuple<buffer, subscribe_options>> entries,
+        std::vector<subscribe_entry> entries,
         v5::properties props) {
 
         auto& ep = *spep;
@@ -1336,20 +1335,18 @@ private:
         case protocol_version::v3_1_1: {
             std::vector<suback_return_code> res;
             res.reserve(entries.size());
-            for (auto const& e : entries) {
-                auto sn_tf = parse_shared_subscription(std::get<0>(e));
-                subscribe_options subopts = std::get<1>(e);
-                res.emplace_back(qos_to_suback_return_code(subopts.get_qos())); // converts to granted_qos_x
+            for (auto& e : entries) {
+                res.emplace_back(qos_to_suback_return_code(e.subopts.get_qos())); // converts to granted_qos_x
                 ssr.get().subscribe(
-                    force_move(sn_tf.share_name),
-                    sn_tf.topic_filter,
-                    subopts,
+                    force_move(e.share_name),
+                    e.topic_filter,
+                    e.subopts,
                     [&] {
                         retains_.find(
-                            sn_tf.topic_filter,
+                            e.topic_filter,
                             [&](retain_t const& r) {
                                 retain_deliver.emplace_back(
-                                    [&publish_proc, &r, qos_value = subopts.get_qos(), sid] {
+                                    [&publish_proc, &r, qos_value = e.subopts.get_qos(), sid] {
                                         publish_proc(r, qos_value, sid);
                                     }
                                 );
@@ -1370,20 +1367,18 @@ private:
 
             std::vector<v5::suback_reason_code> res;
             res.reserve(entries.size());
-            for (auto const& e : entries) {
-                auto sn_tf = parse_shared_subscription(std::get<0>(e));
-                subscribe_options subopts = std::get<1>(e);
-                res.emplace_back(v5::qos_to_suback_reason_code(subopts.get_qos())); // converts to granted_qos_x
+            for (auto& e : entries) {
+                res.emplace_back(v5::qos_to_suback_reason_code(e.subopts.get_qos())); // converts to granted_qos_x
                 ssr.get().subscribe(
-                    force_move(sn_tf.share_name),
-                    sn_tf.topic_filter,
-                    subopts,
+                    force_move(e.share_name),
+                    e.topic_filter,
+                    e.subopts,
                     [&] {
                         retains_.find(
-                            sn_tf.topic_filter,
+                            e.topic_filter,
                             [&](retain_t const& r) {
                                 retain_deliver.emplace_back(
-                                    [&publish_proc, &r, qos_value = subopts.get_qos(), sid] {
+                                    [&publish_proc, &r, qos_value = e.subopts.get_qos(), sid] {
                                         publish_proc(r, qos_value, sid);
                                     }
                                 );
@@ -1411,7 +1406,7 @@ private:
     bool unsubscribe_handler(
         con_sp_t spep,
         packet_id_t packet_id,
-        std::vector<buffer> topic_filters,
+        std::vector<unsubscribe_entry> entries,
         v5::properties props) {
 
         auto& ep = *spep;
@@ -1439,9 +1434,8 @@ private:
         // For each subscription that this connection has
         // Compare against the list of topic filters, and remove
         // the subscription if the topic filter is in the list.
-        for (auto const& whole_topic_filter : topic_filters) {
-            auto sn_tf = parse_shared_subscription(whole_topic_filter);
-            ssr.get().unsubscribe(sn_tf.share_name, sn_tf.topic_filter);
+        for (auto const& e : entries) {
+            ssr.get().unsubscribe(e.share_name, e.topic_filter);
         }
 
         switch (ep.get_protocol_version()) {
@@ -1453,7 +1447,7 @@ private:
             ep.unsuback(
                 packet_id,
                 std::vector<v5::unsuback_reason_code>(
-                    topic_filters.size(),
+                    entries.size(),
                     v5::unsuback_reason_code::success
                 ),
                 unsuback_props_
@@ -1516,7 +1510,8 @@ private:
                 }
             };
 
-        std::set<share_name_topic_filter> sent;
+        //                  share_name   topic_filter
+        std::set<std::tuple<string_view, string_view>> sent;
 
         subs_map_.modify(
             topic,
