@@ -94,8 +94,13 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     // send pubrec twice
-                    c->async_pubrec(*packet_id);
-                    c->async_pubrec(*packet_id);
+                    c->async_pubrec(
+                        *packet_id
+                        [&c]
+                        (MQTT_NS::error_code) {
+                            c->async_pubrec(*packet_id);
+                        }            
+                    );
                     return true;
                 });
             c->set_pubrel_handler(
