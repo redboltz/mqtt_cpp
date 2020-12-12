@@ -12,6 +12,7 @@ on:
 jobs:
   macos:
     runs-on: macos-latest
+    timeout-minutes: 10
     strategy:
       matrix:
         pattern:
