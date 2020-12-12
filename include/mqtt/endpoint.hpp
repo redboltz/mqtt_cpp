@@ -9483,7 +9483,7 @@ private:
             << "do_sync_write";
 
         auto bytes = socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
-        total_bytes_sent_ += beytes;
+        total_bytes_sent_ += bytes;
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "do_sync_write: " << ec.message() << " " << "bytes:" << bytes;
