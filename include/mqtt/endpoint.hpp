@@ -9182,6 +9182,10 @@ private:
                     }
                 }
 
+                MQTT_LOG("mqtt_api", info)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "send_pubrel";
+
                 (this->*serialize)(msg);
                 do_sync_write(force_move(msg));
             };
@@ -9455,6 +9459,11 @@ private:
         boost::system::error_code ec;
         if (!connected_) return;
         on_pre_send();
+
+        MQTT_LOG("mqtt_api", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "do_sync_write";
+
         total_bytes_sent_ += socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
         // If ec is set as error, the error will be handled by async_read.
         // If `handle_error(ec);` is called here, error_handler would be called twice.
