@@ -35,8 +35,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
             // subscribe topic1 QoS0
             cont("h_suback"),
             // publish topic1 QoS2
-            cont("h_pubrec"),
-            cont("h_pubcomp"),
             deps("h_publish", "h_suback"),
             // pubrec send twice
             cont("h_pubrel1"),
@@ -63,26 +61,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     auto pid_sub = c->acquire_unique_packet_id();
                     c->async_subscribe(pid_sub, "topic1", MQTT_NS::qos::exactly_once);
-                    return true;
-                });
-            c->set_puback_handler(
-                []
-                (std::uint16_t) {
-                    BOOST_CHECK(false);
-                    return true;
-                });
-            c->set_pubrec_handler(
-                [&chk, &c]
-                (packet_id_t packet_id) {
-                    MQTT_CHK("h_pubrec");
-                    c->async_pubrel(packet_id);
-                    return true;
-                });
-            c->set_pubcomp_handler(
-                [&chk, g]
-                (packet_id_t) mutable {
-                    MQTT_CHK("h_pubcomp");
-                    g.reset();
                     return true;
                 });
             c->set_suback_handler(
@@ -149,26 +127,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     auto pid_sub = c->acquire_unique_packet_id();
                     c->async_subscribe(pid_sub, "topic1", MQTT_NS::qos::exactly_once);
-                    return true;
-                });
-            c->set_v5_puback_handler(
-                []
-                (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
-                    BOOST_CHECK(false);
-                    return true;
-                });
-            c->set_v5_pubrec_handler(
-                [&chk, &c]
-                (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
-                    MQTT_CHK("h_pubrec");
-                    c->async_pubrel(packet_id);
-                    return true;
-                });
-            c->set_v5_pubcomp_handler(
-                [&chk, g]
-                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) mutable {
-                    MQTT_CHK("h_pubcomp");
-                    g.reset();
                     return true;
                 });
             c->set_v5_suback_handler(
