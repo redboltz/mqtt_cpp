@@ -8,6 +8,8 @@
 #define MQTT_GLOBAL_FIXTURE_HPP
 
 #include <string>
+#include <iostream>
+
 #include <boost/test/unit_test.hpp>
 
 #include <mqtt/setup_log.hpp>
@@ -37,6 +39,7 @@ struct global_fixture {
                         return MQTT_NS::severity_level::debug;
                     }
                     else if (sevstr == "trace") {
+                        std::cout << "trace" << std::endl;
                         return MQTT_NS::severity_level::trace;
                     }
                 }
