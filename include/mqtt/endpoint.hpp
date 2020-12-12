@@ -9481,12 +9481,15 @@ private:
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "do_sync_write";
-
-        auto bytes = socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
-        total_bytes_sent_ += bytes;
-        MQTT_LOG("mqtt_api", info)
-            << MQTT_ADD_VALUE(address, this)
-            << "do_sync_write: " << ec.message() << " " << "bytes:" << bytes;
+        std::size_t sent = 0;
+        auto size = size<PacketIdBytes>(std::forward<MessageVariant>(mv));
+        while (sent < size) {
+            sent += socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
+            MQTT_LOG("mqtt_api", info)
+                << MQTT_ADD_VALUE(address, this)
+                << "do_sync_write: " << ec.message() << " " << "bytes:" << bytes;
+        }
+        total_bytes_sent_ += sent;
         // If ec is set as error, the error will be handled by async_read.
         // If `handle_error(ec);` is called here, error_handler would be called twice.
     }
