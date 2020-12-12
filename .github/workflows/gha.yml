@@ -39,7 +39,7 @@ jobs:
       working-directory: ${{ runner.temp }}
       run: |
         test/system/st_async_pubsub_2 --log_level=all -- trace
-        
+        timeout-minutes: 1
   linux:
     runs-on: ubuntu-latest
     strategy:
