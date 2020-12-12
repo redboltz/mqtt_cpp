@@ -42,7 +42,7 @@ struct global_fixture {
                 }
                 return MQTT_NS::severity_level::warning;
             } ();
-        MQTT_NS::setup_log(MQTT_NS::severity_level::trace);
+        MQTT_NS::setup_log(sev);
     }
     void teardown() {
     }
