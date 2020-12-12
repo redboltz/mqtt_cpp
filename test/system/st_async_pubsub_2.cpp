@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
 
 BOOST_AUTO_TEST_SUITE(st_async_pubsub_2)
 
@@ -20,6 +21,9 @@ using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        std::cout << "cout" << std::endl;
+        std::cerr << "cerr" << std::endl;
+        std::clog << "clog" << std::endl;
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
