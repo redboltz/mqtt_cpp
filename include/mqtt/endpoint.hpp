@@ -5123,7 +5123,9 @@ private:
             }
             break;
         case control_packet_type::pubrel:
+            std::cout << "pubrel received" << std::endl;
             if (mqtt_connected_) {
+                std::cout << "process pubrel" << std::endl;
                 process_pubrel(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             else {
