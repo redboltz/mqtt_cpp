@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
                     // send pubrec twice
                     c->async_pubrec(
                         *packet_id,
-                        [&c]
+                        [&c, packet_id]
                         (MQTT_NS::error_code) {
                             c->async_pubrec(*packet_id);
                         }            
