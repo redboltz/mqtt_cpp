@@ -9,8 +9,6 @@ trigger:
   branches:
     include:
       - master
-pr:
-  - '*'
 
 pool:
   vmImage: 'windows-2019'

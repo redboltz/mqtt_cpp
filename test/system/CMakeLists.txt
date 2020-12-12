@@ -59,13 +59,6 @@ ENDIF ()
 IF (MQTT_TEST_7)
     LIST (APPEND check_PROGRAMS
         st_async_pubsub_2.cpp
-        st_issue_749.cpp
-        st_broker_offline_message.cpp
-        st_remaining_length.cpp
-        st_utf8string_validate.cpp
-        st_resend_serialize.cpp
-        st_length_check.cpp
-        st_resend_serialize_ptr_size.cpp
     )
 ENDIF ()
 
