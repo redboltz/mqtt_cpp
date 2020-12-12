@@ -38,4 +38,4 @@ jobs:
     - name: Test
       working-directory: ${{ runner.temp }}
       run: |
-        CTEST_ARGS="--log_level=all -- trace" ctest -VV
+        CTEST_ARGS="--log_level=all -- trace " ctest -VV
