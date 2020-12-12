@@ -4992,7 +4992,7 @@ private:
 
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
-            << "handle_control_packet_type ";
+            << "handle_control_packet_type "
             << std::hex << static_cast<int>(fixed_header_);
 
         remaining_length_ = 0;
