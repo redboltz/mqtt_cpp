@@ -4798,12 +4798,20 @@ protected:
     }
 
     void async_read_control_packet_type(any session_life_keeper) {
+        MQTT_LOG("mqtt_api", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "async_read_control_packet_type";
         socket_->async_read(
             as::buffer(buf_.data(), 1),
             [this, self = this->shared_from_this(), session_life_keeper = force_move(session_life_keeper)](
                 error_code ec,
                 std::size_t bytes_transferred) mutable {
                 this->total_bytes_received_ += bytes_transferred;
+
+                MQTT_LOG("mqtt_api", info)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "async_read_control_packet_type cb";
+
                 if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                 handle_control_packet_type(force_move(session_life_keeper), force_move(self));
             }
@@ -4980,10 +4988,13 @@ private:
     >;
 
     void handle_control_packet_type(any session_life_keeper, this_type_sp self) {
+        fixed_header_ = static_cast<std::uint8_t>(buf_.front());
+
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
-            << "handle_control_packet_type";
-        fixed_header_ = static_cast<std::uint8_t>(buf_.front());
+            << "handle_control_packet_type ";
+            << std::hex << static_cast<int>(fixed_header_);
+
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
         socket_->async_read(
