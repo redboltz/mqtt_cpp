@@ -4980,6 +4980,9 @@ private:
     >;
 
     void handle_control_packet_type(any session_life_keeper, this_type_sp self) {
+        MQTT_LOG("mqtt_api", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "handle_control_packet_type";
         fixed_header_ = static_cast<std::uint8_t>(buf_.front());
         remaining_length_ = 0;
         remaining_length_multiplier_ = 1;
@@ -5123,9 +5126,13 @@ private:
             }
             break;
         case control_packet_type::pubrel:
-            std::cout << "pubrel received" << std::endl;
+            MQTT_LOG("mqtt_api", info)
+                << MQTT_ADD_VALUE(address, this)
+                << "receive pubrel";
             if (mqtt_connected_) {
-                std::cout << "process pubrel" << std::endl;
+                MQTT_LOG("mqtt_api", info)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "process pubrel";
                 process_pubrel(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
             }
             else {
