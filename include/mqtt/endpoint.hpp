@@ -9192,7 +9192,7 @@ private:
                                 e = store(
                                     packet_id,
                                     control_packet_type::pubcomp,
-                                    force_move(msg),
+                                    msg,
                                     life_keeper
                                 );
                             }
@@ -9734,7 +9734,7 @@ private:
                                 e = store(
                                     packet_id,
                                     control_packet_type::pubcomp,
-                                    force_move(msg),
+                                    msg,
                                     life_keeper
                                 );
                             }
