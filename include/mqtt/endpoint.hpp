@@ -9481,8 +9481,8 @@ private:
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "do_sync_write";
-        auto buf_size = size<PacketIdBytes>(std::forward<MessageVariant>(mv));
-        auto sent = socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
+        auto buf_size = size<PacketIdBytes>(mv);
+        auto sent = socket_->write(const_buffer_sequence<PacketIdBytes>(mv), ec);
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "do_sync_write: " << ec.message() << " " << "size:" << buf_size << " sent:" << sent;
