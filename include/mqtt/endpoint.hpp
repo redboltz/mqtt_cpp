@@ -4549,7 +4549,7 @@ public:
                         store_msg,
                         force_move(life_keeper)
                     );
-                    (this->*serialize)(msg);
+                    (this->*serialize)(force_move(store_msg));
                 }
                 do_sync_write(force_move(msg));
             };
@@ -4624,7 +4624,7 @@ public:
                         store_msg,
                         force_move(life_keeper)
                     );
-                    (this->*serialize)(msg);
+                    (this->*serialize)(force_move(store_msg));
                 }
                 do_async_write(force_move(msg), force_move(func));
             };
@@ -9062,10 +9062,10 @@ private:
                         pubopts.get_qos() == qos::at_least_once
                              ? control_packet_type::puback
                              : control_packet_type::pubrec,
-                        store_msg,
+                        force_move(store_msg),
                         force_move(life_keeper)
                     );
-                    (this->*serialize_publish)(store_msg);
+                    (this->*serialize_publish)(msg);
                 }
                 do_sync_write(force_move(msg));
             };
@@ -9172,7 +9172,7 @@ private:
                                 e = store(
                                     packet_id,
                                     control_packet_type::pubcomp,
-                                    force_move(msg),
+                                    msg,
                                     life_keeper
                                 );
                             }
@@ -9453,7 +9453,7 @@ private:
         boost::system::error_code ec;
         if (!connected_) return;
         on_pre_send();
-        total_bytes_sent_ += socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
+        total_bytes_sent_ += socket_->write(const_buffer_sequence<PacketIdBytes>(mv), ec);
         // If ec is set as error, the error will be handled by async_read.
         // If `handle_error(ec);` is called here, error_handler would be called twice.
     }
@@ -9566,7 +9566,7 @@ private:
                         BOOST_ASSERT(ret.second);
                     }
 
-                    (this->*serialize_publish)(store_msg);
+                    (this->*serialize_publish)(force_move(store_msg));
                 }
                 do_async_write(
                     force_move(msg),
@@ -9701,7 +9701,7 @@ private:
                                 e = store(
                                     packet_id,
                                     control_packet_type::pubcomp,
-                                    force_move(msg),
+                                    msg,
                                     life_keeper
                                 );
                             }
