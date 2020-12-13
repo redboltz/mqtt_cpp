@@ -42,7 +42,7 @@ jobs:
     - name: Test
       working-directory: ${{ runner.temp }}
       run: |
-        ctest -VV
+        CTEST_ARGS="--log_level=all" ctest -VV
   linux:
     runs-on: ubuntu-latest
     strategy:
