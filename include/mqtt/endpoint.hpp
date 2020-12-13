@@ -9166,6 +9166,10 @@ private:
                     // implementation.
                     // In this case, overwrite store_.
                     if (!ret.second) {
+                        MQTT_LOG("mqtt_impl", warning)
+                            << MQTT_ADD_VALUE(address, this)
+                            << "overwrite pubrel"
+                            << " packet_id:" << packet_id;
                         store_.modify(
                             ret.first,
                             [&] (auto& e) {
@@ -9695,6 +9699,10 @@ private:
                     // implementation.
                     // In this case, overwrite store_.
                     if (!ret.second) {
+                        MQTT_LOG("mqtt_impl", warning)
+                            << MQTT_ADD_VALUE(address, this)
+                            << "overwrite pubrel"
+                            << " packet_id:" << packet_id;
                         store_.modify(
                             ret.first,
                             [&] (auto& e) {
