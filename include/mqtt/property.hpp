@@ -177,7 +177,7 @@ struct string_property : binary_property {
 };
 
 struct variable_property {
-    variable_property(property::id id, std::size_t value)
+    variable_property(property::id id, variable_integer_t value)
         :id_(id)  {
         variable_push(value_, value);
     }
@@ -221,8 +221,8 @@ struct variable_property {
         return 2;
     }
 
-    constexpr std::size_t val() const {
-        return std::get<0>(variable_length(value_));
+    constexpr variable_integer_t val() const {
+        return static_cast<variable_integer_t>(std::get<0>(variable_length(value_)));
     }
 
     static constexpr ostream_format const of_ = ostream_format::direct;
@@ -296,7 +296,7 @@ class subscription_identifier : public detail::variable_property {
 public:
     using recv = subscription_identifier;
     using store = subscription_identifier;
-    subscription_identifier(std::size_t subscription_id)
+    subscription_identifier(subscription_identifier_t subscription_id)
         : detail::variable_property(id::subscription_identifier, subscription_id) {}
 };
 
