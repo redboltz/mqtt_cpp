@@ -25,6 +25,13 @@ struct subscribe_entry {
           subopts { subopts }
         {}
 
+    subscribe_entry(
+        buffer topic_filter,
+        subscribe_options subopts)
+        : topic_filter { force_move(topic_filter) },
+          subopts { subopts }
+        {}
+
     // empty share name means no share name
     // $share//topic_filter is protocol error
     //
@@ -42,6 +49,11 @@ struct unsubscribe_entry {
         buffer topic_filter)
         : share_name { force_move(share_name) },
           topic_filter { force_move(topic_filter) }
+        {}
+
+    unsubscribe_entry(
+        buffer topic_filter)
+        : topic_filter { force_move(topic_filter) }
         {}
 
     buffer share_name;
