@@ -1330,8 +1330,8 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name
-     *        A topic name to subscribe
+     * @param topic_filter
+     *        A topic filter to subscribe
      * @param option
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
@@ -1345,7 +1345,7 @@ public:
      */
     void subscribe(
         packet_id_t packet_id,
-        string_view topic_name,
+        string_view topic_filter,
         subscribe_options option,
         v5::properties props = {}
     ) {
@@ -1353,14 +1353,16 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "subscribe"
             << " pid:" << packet_id
-            << " topic:" << topic_name
+            << " topic:" << topic_filter
             << " qos:" << option.get_qos()
             << " rh:" << option.get_retain_handling()
             << " nl:" << option.get_nl()
             << " rap:" << option.get_rap();
 
         send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { as::buffer(topic_name.data(), topic_name.size()), option } },
+            std::vector<std::tuple<as::const_buffer, subscribe_options>>{
+                { as::buffer(topic_filter.data(), topic_filter.size()), option }
+            },
             packet_id,
             force_move(props)
         );
@@ -1371,8 +1373,8 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name
-     *        A topic name to subscribe
+     * @param topic_filter
+     *        A topic filter to subscribe
      * @param option
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
@@ -1386,7 +1388,7 @@ public:
      */
     void subscribe(
         packet_id_t packet_id,
-        as::const_buffer topic_name,
+        as::const_buffer topic_filter,
         subscribe_options option,
         v5::properties props = {}
     ) {
@@ -1394,14 +1396,14 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "subscribe"
             << " pid:" << packet_id
-            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
+            << " topic:" << string_view(get_pointer(topic_filter), get_size(topic_filter))
             << " qos:" << option.get_qos()
             << " rh:" << option.get_retain_handling()
             << " nl:" << option.get_nl()
             << " rap:" << option.get_rap();
 
         send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_name, option } },
+            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter, option } },
             packet_id,
             force_move(props)
         );
@@ -1443,7 +1445,7 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param params a vector of the topic_filter and qos pair.
+     * @param params a vector of the subscribe_entry.
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
@@ -1474,8 +1476,8 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name
-     *        A topic name to unsubscribe
+     * @param topic_filter
+     *        A topic filter to unsubscribe
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
@@ -1485,16 +1487,22 @@ public:
      */
     void unsubscribe(
         packet_id_t packet_id,
-        string_view topic_name,
+        string_view topic_filter,
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "unsubscribe"
             << " pid:" << packet_id
-            << " topic:" << topic_name;
+            << " topic:" << topic_filter;
 
-        send_unsubscribe(std::vector<as::const_buffer>{ as::buffer(topic_name.data(), topic_name.size()) }, packet_id, force_move(props));
+        send_unsubscribe(
+            std::vector<as::const_buffer> {
+                as::buffer(topic_filter.data(), topic_filter.size())
+            },
+            packet_id,
+            force_move(props)
+        );
     }
 
     /**
@@ -1502,8 +1510,8 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name
-     *        A topic name to unsubscribe
+     * @param topic_filter
+     *        A topic filter to unsubscribe
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
@@ -1513,16 +1521,16 @@ public:
      */
     void unsubscribe(
         packet_id_t packet_id,
-        as::const_buffer topic_name,
+        as::const_buffer topic_filter,
         v5::properties props = {}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "unsubscribe"
             << " pid:" << packet_id
-            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name));
+            << " topic:" << string_view(get_pointer(topic_filter), get_size(topic_filter));
 
-        send_unsubscribe(std::vector<as::const_buffer>{ topic_name }, packet_id, force_move(props));
+        send_unsubscribe(std::vector<as::const_buffer>{ topic_filter }, packet_id, force_move(props));
     }
 
     /**
@@ -2569,58 +2577,8 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param option
-     *        subscription options<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
-     *        3.8.3.1 Subscription Options
-     * @param args
-     *        The format of args is `[topic_name, option, topicname, option, ...,][props,][func]`<BR>
-     *        args should be zero or more pairs of topic_name and option.
-     *        You can set props optionally.
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
-     *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
-     */
-    void async_subscribe(
-        packet_id_t packet_id,
-        std::string topic_name,
-        subscribe_options option,
-        async_handler_t func = {}
-    ) {
-        MQTT_LOG("mqtt_api", info)
-            << MQTT_ADD_VALUE(address, this)
-            << "async_subscribe"
-            << " pid:" << packet_id
-            << " topic:" << topic_name
-            << " qos:" << option.get_qos()
-            << " rh:" << option.get_retain_handling()
-            << " nl:" << option.get_nl()
-            << " rap:" << option.get_rap();
-
-        auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
-        auto topic_name_buf = as::buffer(*sp_topic_name);
-
-        async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_name_buf, option } },
-            packet_id,
-            v5::properties{},
-            [life_keeper = force_move(sp_topic_name), func = force_move(func)]
-            (error_code ec) {
-                if(func) func(ec);
-            }
-        );
-    }
-
-    /**
-     * @brief Subscribe
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
-     * @param topic_name
-     *        A topic name to subscribe
+     * @param topic_filter
+     *        A topic filter to subscribe
      * @param option
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
@@ -2636,29 +2594,28 @@ public:
      */
     void async_subscribe(
         packet_id_t packet_id,
-        std::string topic_name,
+        std::string topic_filter,
         subscribe_options option,
-        v5::properties props,
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id
-            << " topic:" << topic_name
+            << " topic:" << topic_filter
             << " qos:" << option.get_qos()
             << " rh:" << option.get_retain_handling()
             << " nl:" << option.get_nl()
             << " rap:" << option.get_rap();
 
-        auto sp_topic_name  = std::make_shared<std::string>(force_move(topic_name));
-        auto topic_name_buf = as::buffer(*sp_topic_name);
+        auto sp_topic_filter  = std::make_shared<std::string>(force_move(topic_filter));
+        auto topic_filter_buf = as::buffer(*sp_topic_filter);
 
         async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_name_buf, option } },
+            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter_buf, option } },
             packet_id,
-            force_move(props),
-            [life_keeper = force_move(sp_topic_name), func = force_move(func)]
+            v5::properties{},
+            [life_keeper = force_move(sp_topic_filter), func = force_move(func)]
             (error_code ec) {
                 if(func) func(ec);
             }
@@ -2670,21 +2627,72 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name
-     *        A topic name to subscribe
+     * @param topic_filter
+     *        A topic filter to subscribe
+     * @param option
+     *        subscription options<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
+     *        3.8.3.1 Subscription Options
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
+     *        3.8.2.1 SUBSCRIBE Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
+     */
+    void async_subscribe(
+        packet_id_t packet_id,
+        std::string topic_filter,
+        subscribe_options option,
+        v5::properties props,
+        async_handler_t func = {}
+    ) {
+        MQTT_LOG("mqtt_api", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "async_subscribe"
+            << " pid:" << packet_id
+            << " topic:" << topic_filter
+            << " qos:" << option.get_qos()
+            << " rh:" << option.get_retain_handling()
+            << " nl:" << option.get_nl()
+            << " rap:" << option.get_rap();
+
+        auto sp_topic_filter  = std::make_shared<std::string>(force_move(topic_filter));
+        auto topic_filter_buf = as::buffer(*sp_topic_filter);
+
+        async_send_subscribe(
+            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter_buf, option } },
+            packet_id,
+            force_move(props),
+            [life_keeper = force_move(sp_topic_filter), func = force_move(func)]
+            (error_code ec) {
+                if(func) func(ec);
+            }
+        );
+    }
+
+    /**
+     * @brief Subscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param topic_filter
+     *        A topic filter to subscribe
      * @param option
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     *        This object should hold the lifetime of the buffers for topic_name.
+     *        This object should hold the lifetime of the buffers for topic_filter.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     void async_subscribe(
         packet_id_t packet_id,
-        as::const_buffer topic_name,
+        as::const_buffer topic_filter,
         subscribe_options option,
         async_handler_t func
     ) {
@@ -2692,14 +2700,14 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id
-            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
+            << " topic:" << string_view(get_pointer(topic_filter), get_size(topic_filter))
             << " qos:" << option.get_qos()
             << " rh:" << option.get_retain_handling()
             << " nl:" << option.get_nl()
             << " rap:" << option.get_rap();
 
         async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_name, option } },
+            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter, option } },
             packet_id,
             v5::properties{},
             force_move(func)
@@ -2711,8 +2719,8 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name
-     *        A topic name to subscribe
+     * @param topic_filter
+     *        A topic filter to subscribe
      * @param option
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
@@ -2723,13 +2731,13 @@ public:
      *        3.8.2.1 SUBSCRIBE Properties
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     *        This object should hold the lifetime of the buffers for topic_name, and properties.
+     *        This object should hold the lifetime of the buffers for topic_filter, and properties.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     void async_subscribe(
         packet_id_t packet_id,
-        as::const_buffer topic_name,
+        as::const_buffer topic_filter,
         subscribe_options option,
         v5::properties props,
         async_handler_t func
@@ -2738,14 +2746,14 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id
-            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name))
+            << " topic:" << string_view(get_pointer(topic_filter), get_size(topic_filter))
             << " qos:" << option.get_qos()
             << " rh:" << option.get_retain_handling()
             << " nl:" << option.get_nl()
             << " rap:" << option.get_rap();
 
         async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_name, option } },
+            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter, option } },
             packet_id,
             force_move(props),
             force_move(func)
@@ -2757,8 +2765,8 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name
-     *        A topic name to subscribe
+     * @param topic_filter
+     *        A topic filter to subscribe
      * @param option
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
@@ -2770,7 +2778,7 @@ public:
      */
     void async_subscribe(
         packet_id_t packet_id,
-        buffer topic_name,
+        buffer topic_filter,
         subscribe_options option,
         async_handler_t func = {}
     ) {
@@ -2778,18 +2786,18 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id
-            << " topic:" << topic_name
+            << " topic:" << topic_filter
             << " qos:" << option.get_qos()
             << " rh:" << option.get_retain_handling()
             << " nl:" << option.get_nl()
             << " rap:" << option.get_rap();
 
-        auto topic_name_buf = as::buffer(topic_name);
+        auto topic_filter_buf = as::buffer(topic_filter);
         async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_name_buf, option } },
+            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter_buf, option } },
             packet_id,
             v5::properties{},
-            [life_keeper = force_move(topic_name), func = force_move(func)]
+            [life_keeper = force_move(topic_filter), func = force_move(func)]
             (error_code ec) {
                 if(func) func(ec);
             }
@@ -2801,8 +2809,8 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name
-     *        A topic name to subscribe
+     * @param topic_filter
+     *        A topic filter to subscribe
      * @param option
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
@@ -2818,7 +2826,7 @@ public:
      */
     void async_subscribe(
         packet_id_t packet_id,
-        buffer topic_name,
+        buffer topic_filter,
         subscribe_options option,
         v5::properties props,
         async_handler_t func = {}
@@ -2827,18 +2835,18 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id
-            << " topic:" << topic_name
+            << " topic:" << topic_filter
             << " qos:" << option.get_qos()
             << " rh:" << option.get_retain_handling()
             << " nl:" << option.get_nl()
             << " rap:" << option.get_rap();
 
-        auto topic_name_buf = as::buffer(topic_name);
+        auto topic_filter_buf = as::buffer(topic_filter);
         async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_name_buf, option } },
+            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter_buf, option } },
             packet_id,
             force_move(props),
-            [life_keeper = force_move(topic_name), func = force_move(func)]
+            [life_keeper = force_move(topic_filter), func = force_move(func)]
             (error_code ec) {
                 if(func) func(ec);
             }
@@ -2851,7 +2859,7 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params
-     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        A collection of the pair of topic_filter and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
      * @param func
@@ -2876,9 +2884,9 @@ public:
         life_keepers.reserve(params.size());
 
         for (auto&& e : params) {
-            auto sp_topic_name = std::make_shared<std::string>(force_move(std::get<0>(e)));
-            cb_params.emplace_back(as::buffer(*sp_topic_name), std::get<1>(e));
-            life_keepers.emplace_back(force_move(sp_topic_name));
+            auto sp_topic_filter = std::make_shared<std::string>(force_move(std::get<0>(e)));
+            cb_params.emplace_back(as::buffer(*sp_topic_filter), std::get<1>(e));
+            life_keepers.emplace_back(force_move(sp_topic_filter));
         }
 
         async_send_subscribe(
@@ -2898,7 +2906,7 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params
-     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        A collection of the pair of topic_filter and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
      * @param props
@@ -2928,9 +2936,9 @@ public:
         life_keepers.reserve(params.size());
 
         for (auto&& e : params) {
-            auto sp_topic_name = std::make_shared<std::string>(force_move(std::get<0>(e)));
-            cb_params.emplace_back(as::buffer(*sp_topic_name), std::get<1>(e));
-            life_keepers.emplace_back(force_move(sp_topic_name));
+            auto sp_topic_filter = std::make_shared<std::string>(force_move(std::get<0>(e)));
+            cb_params.emplace_back(as::buffer(*sp_topic_filter), std::get<1>(e));
+            life_keepers.emplace_back(force_move(sp_topic_filter));
         }
         async_send_subscribe(
             force_move(cb_params),
@@ -2948,7 +2956,7 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params A collection of the pair of topic_filter and qos to subscribe.
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      *        This object should hold the lifetime of the buffers for params.
@@ -2979,7 +2987,7 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params
-     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        A collection of the pair of topic_filter and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
      * @param func
@@ -3012,7 +3020,7 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param params A collection of the pair of topic_name and qos to subscribe.
+     * @param params A collection of the pair of topic_filter and qos to subscribe.
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
@@ -3055,7 +3063,7 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params
-     *        A collection of the pair of topic_name and option to subscribe.<BR>
+     *        A collection of the pair of topic_filter and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
      * @param func
@@ -3100,7 +3108,7 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name topic_name
+     * @param topic_filter topic_filter
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
@@ -3108,22 +3116,22 @@ public:
      */
     void async_unsubscribe(
         packet_id_t packet_id,
-        std::string topic_name,
+        std::string topic_filter,
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id
-            << " topic:" << topic_name;
+            << " topic:" << topic_filter;
 
-        auto sp_topic_name = std::make_shared<std::string>(force_move(topic_name));
-        auto topic_name_buf = as::buffer(*sp_topic_name);
+        auto sp_topic_filter = std::make_shared<std::string>(force_move(topic_filter));
+        auto topic_filter_buf = as::buffer(*sp_topic_filter);
         async_send_unsubscribe(
-            std::vector<as::const_buffer>{ topic_name_buf },
+            std::vector<as::const_buffer>{ topic_filter_buf },
             packet_id,
             v5::properties{},
-            [life_keeper = force_move(sp_topic_name), func = force_move(func)]
+            [life_keeper = force_move(sp_topic_filter), func = force_move(func)]
             (error_code ec) {
                 if(func) func(ec);
             }
@@ -3135,25 +3143,25 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name topic_name
+     * @param topic_filter topic_filter
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     *        This object should hold the lifetime of the buffer for topic_name.
+     *        This object should hold the lifetime of the buffer for topic_filter.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     void async_unsubscribe(
         packet_id_t packet_id,
-        as::const_buffer topic_name,
+        as::const_buffer topic_filter,
         async_handler_t func
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id
-            << " topic:" << string_view(get_pointer(topic_name), get_size(topic_name));
+            << " topic:" << string_view(get_pointer(topic_filter), get_size(topic_filter));
 
-        async_send_unsubscribe(std::vector<as::const_buffer>{ topic_name }, packet_id, v5::properties{}, force_move(func));
+        async_send_unsubscribe(std::vector<as::const_buffer>{ topic_filter }, packet_id, v5::properties{}, force_move(func));
     }
 
     /**
@@ -3161,7 +3169,7 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name topic_name
+     * @param topic_filter topic_filter
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
@@ -3169,20 +3177,20 @@ public:
      */
     void async_unsubscribe(
         packet_id_t packet_id,
-        buffer topic_name,
+        buffer topic_filter,
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id
-            << " topic:" << topic_name;
+            << " topic:" << topic_filter;
 
-        auto topic_name_buf = as::buffer(topic_name);
-        async_send_unsubscribe(std::vector<as::const_buffer>{ topic_name_buf },
+        auto topic_filter_buf = as::buffer(topic_filter);
+        async_send_unsubscribe(std::vector<as::const_buffer>{ topic_filter_buf },
                                packet_id,
                                v5::properties{},
-                               [life_keeper = force_move(topic_name), func = force_move(func)]
+                               [life_keeper = force_move(topic_filter), func = force_move(func)]
                                (error_code ec) {
                                    if(func) func(ec);
                                });
@@ -3193,7 +3201,7 @@ public:
      * @param packet_id
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
-     * @param topic_name topic_name
+     * @param topic_filter topic_filter
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
@@ -3205,7 +3213,7 @@ public:
      */
     void async_unsubscribe(
         packet_id_t packet_id,
-        buffer topic_name,
+        buffer topic_filter,
         v5::properties props,
         async_handler_t func = {}
     ) {
@@ -3213,13 +3221,13 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id
-            << " topic:" << topic_name;
+            << " topic:" << topic_filter;
 
-        auto topic_name_buf = as::buffer(topic_name);
-        async_send_unsubscribe(std::vector<as::const_buffer>{ topic_name_buf },
+        auto topic_filter_buf = as::buffer(topic_filter);
+        async_send_unsubscribe(std::vector<as::const_buffer>{ topic_filter_buf },
                                packet_id,
                                force_move(props),
-                               [life_keeper = force_move(topic_name), func = force_move(func)]
+                               [life_keeper = force_move(topic_filter), func = force_move(func)]
                                (error_code ec) {
                                    if(func) func(ec);
                                });
@@ -3231,7 +3239,7 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of the packet_id moves to the library.
      * @param params
-     *        A collection of the topic name to unsubscribe
+     *        A collection of the topic filter to unsubscribe
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
@@ -3275,7 +3283,7 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params
-     *        A collection of the topic name to unsubscribe
+     *        A collection of the topic filter to unsubscribe
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
@@ -3329,10 +3337,10 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params
-     *        A collection of the topic name to unsubscribe
+     *        A collection of the topic filter to unsubscribe
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
-     *        This object may hold the lifetime of the buffers for topic_name and contents.
+     *        This object may hold the lifetime of the buffers for topic_filter and contents.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
@@ -3360,7 +3368,7 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params
-     *        A collection of the topic name to unsubscribe
+     *        A collection of the topic filter to unsubscribe
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
@@ -3396,7 +3404,7 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params
-     *        A collection of the topic name to unsubscribe
+     *        A collection of the topic filter to unsubscribe
      * @param func
      *        functor object who's operator() will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
@@ -3435,7 +3443,7 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params
-     *        A collection of the topic name to unsubscribe
+     *        A collection of the topic filter to unsubscribe
      * @param props
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
@@ -8178,7 +8186,16 @@ private:
                     info = force_move(info)
                 ]
                 (buffer whole_topic_filter, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    auto sn_tf = parse_shared_subscription(whole_topic_filter);
+                    auto sn_tf_opt = parse_shared_subscription(whole_topic_filter);
+                    if (!sn_tf_opt) {
+                        MQTT_LOG("mqtt_impl", error)
+                            << MQTT_ADD_VALUE(address, this)
+                            << "topic_filter parse error"
+                            << " whole_topic_filter: "
+                            << whole_topic_filter;
+                        call_protocol_error_handlers();
+                        return;
+                    }
                     process_nbytes(
                         force_move(session_life_keeper),
                         force_move(buf),
@@ -8186,8 +8203,8 @@ private:
                         [
                             this,
                             info = force_move(info),
-                            share_name = force_move(sn_tf.share_name),
-                            topic_filter = force_move(sn_tf.topic_filter)
+                            share_name = force_move(sn_tf_opt.value().share_name),
+                            topic_filter = force_move(sn_tf_opt.value().topic_filter)
                         ]
                         (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                             subscribe_options option(static_cast<std::uint8_t>(body[0]));
@@ -8520,8 +8537,20 @@ private:
                     info = force_move(info)
                 ]
                 (buffer whole_topic_filter, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    auto sn_tf = parse_shared_subscription(whole_topic_filter);
-                    info.entries.emplace_back(force_move(sn_tf.share_name), force_move(sn_tf.topic_filter));
+                    auto sn_tf_opt = parse_shared_subscription(whole_topic_filter);
+                    if (!sn_tf_opt) {
+                        MQTT_LOG("mqtt_impl", error)
+                            << MQTT_ADD_VALUE(address, this)
+                            << "topic_filter parse error"
+                            << " whole_topic_filter: "
+                            << whole_topic_filter;
+                        call_protocol_error_handlers();
+                        return;
+                    }
+                    info.entries.emplace_back(
+                        force_move(sn_tf_opt.value().share_name),
+                        force_move(sn_tf_opt.value().topic_filter)
+                    );
                     if (remaining_length_ == 0) {
                         process_unsubscribe_impl<unsubscribe_phase::finish>(
                             force_move(session_life_keeper),
