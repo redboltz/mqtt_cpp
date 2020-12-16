@@ -4295,10 +4295,22 @@ public:
             "Iterators provided to restore_serialized_message() must be random access iterators."
         );
 
+        MQTT_LOG("mqtt_api", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "restore_serialized_message(b, e)";
+
         if (b == e) return;
 
         auto fixed_header = static_cast<std::uint8_t>(*b);
-        switch (get_control_packet_type(fixed_header)) {
+        auto cpt_opt = get_control_packet_type_with_check(fixed_header);
+        if (!cpt_opt) {
+            MQTT_LOG("mqtt_api", error)
+                << MQTT_ADD_VALUE(address, this)
+                << "invalid fixed_header ignored. "
+                << std::hex << static_cast<int>(fixed_header);
+            throw protocol_error();
+        }
+        switch (cpt_opt.value()) {
         case control_packet_type::publish: {
             auto buf = allocate_buffer(b, e);
             restore_serialized_message(
@@ -4320,6 +4332,10 @@ public:
             );
         } break;
         default:
+            MQTT_LOG("mqtt_api", error)
+                << MQTT_ADD_VALUE(address, this)
+                << "invalid control packet type. "
+                << std::hex << static_cast<int>(fixed_header);
             throw protocol_error();
             break;
         }
@@ -4410,7 +4426,15 @@ public:
         if (b == e) return;
 
         auto fixed_header = static_cast<std::uint8_t>(*b);
-        switch (get_control_packet_type(fixed_header)) {
+        auto cpt_opt = get_control_packet_type_with_check(fixed_header);
+        if (!cpt_opt) {
+            MQTT_LOG("mqtt_api", error)
+                << MQTT_ADD_VALUE(address, this)
+                << "invalid fixed_header ignored. "
+                << std::hex << static_cast<int>(fixed_header);
+            throw protocol_error();
+        }
+        switch (cpt_opt.value()) {
         case control_packet_type::publish: {
             auto buf = allocate_buffer(b, e);
             restore_v5_serialized_message(
@@ -4426,6 +4450,10 @@ public:
             );
         } break;
         default:
+            MQTT_LOG("mqtt_api", error)
+                << MQTT_ADD_VALUE(address, this)
+                << "invalid control packet type. "
+                << std::hex << static_cast<int>(fixed_header);
             throw protocol_error();
             break;
         }
@@ -5033,9 +5061,14 @@ private:
             );
         }
         else {
+            auto cpt_opt = get_control_packet_type_with_check(fixed_header_);
+            if (!cpt_opt) {
+                call_protocol_error_handlers();
+                return;
+            }
+            auto cpt = cpt_opt.value();
             auto check =
                 [&]() -> bool {
-                    auto cpt = get_control_packet_type(fixed_header_);
                     switch (version_) {
                     case protocol_version::v3_1_1:
                         switch (cpt) {
@@ -5433,9 +5466,14 @@ private:
             force_move(session_life_keeper),
             force_move(buf),
             [
+                this,
                 handler = force_move(handler)
             ]
             (std::size_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                if (packet_id == 0) {
+                    call_protocol_error_handlers();
+                    return;
+                }
                 handler(static_cast<packet_id_t>(packet_id), force_move(buf), force_move(session_life_keeper), force_move(self));
             },
             force_move(self)
