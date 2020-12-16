@@ -11,6 +11,7 @@
 #include <ostream>
 
 #include <mqtt/namespace.hpp>
+#include <mqtt/optional.hpp>
 
 namespace MQTT_NS {
 
@@ -33,7 +34,7 @@ enum class control_packet_type : std::uint8_t {
     disconnect  = 0b11100000, // 14
     auth        = 0b11110000, // 15
 
-}; // namespace control_packet_type
+};
 
 constexpr control_packet_type get_control_packet_type(std::uint8_t v) {
     return static_cast<control_packet_type>(v & 0b11110000);
@@ -66,6 +67,68 @@ std::ostream& operator<<(std::ostream& os, control_packet_type val)
 {
     os << control_packet_type_to_str(val);
     return os;
+}
+
+enum class control_packet_reserved_bits : std::uint8_t {
+    connect     = 0b00000000,
+    connack     = 0b00000000,
+ // publish     = dup qos retain,
+    puback      = 0b00000000,
+    pubrec      = 0b00000000,
+    pubrel      = 0b00000010,
+    pubcomp     = 0b00000000,
+    subscribe   = 0b00000010,
+    suback      = 0b00000000,
+    unsubscribe = 0b00000010,
+    unsuback    = 0b00000000,
+    pingreq     = 0b00000000,
+    pingresp    = 0b00000000,
+    disconnect  = 0b00000000,
+    auth        = 0b00000000,
+};
+
+inline optional<control_packet_type> get_control_packet_type_with_check(std::uint8_t v) {
+    auto cpt = static_cast<control_packet_type>(v & 0b11110000);
+    auto valid =
+        [&] {
+            auto rsv = static_cast<control_packet_reserved_bits>(v & 0b00001111);
+            switch (cpt) {
+            case control_packet_type::connect:
+                return rsv == control_packet_reserved_bits::connect;
+            case control_packet_type::connack:
+                return rsv == control_packet_reserved_bits::connack;
+            case control_packet_type::publish:
+                return true;
+            case control_packet_type::puback:
+                return rsv == control_packet_reserved_bits::puback;
+            case control_packet_type::pubrec:
+                return rsv == control_packet_reserved_bits::pubrec;
+            case control_packet_type::pubrel:
+                return rsv == control_packet_reserved_bits::pubrel;
+            case control_packet_type::pubcomp:
+                return rsv == control_packet_reserved_bits::pubcomp;
+            case control_packet_type::subscribe:
+                return rsv == control_packet_reserved_bits::subscribe;
+            case control_packet_type::suback:
+                return rsv == control_packet_reserved_bits::suback;
+            case control_packet_type::unsubscribe:
+                return rsv == control_packet_reserved_bits::unsubscribe;
+            case control_packet_type::unsuback:
+                return rsv == control_packet_reserved_bits::unsuback;
+            case control_packet_type::pingreq:
+                return rsv == control_packet_reserved_bits::pingreq;
+            case control_packet_type::pingresp:
+                return rsv == control_packet_reserved_bits::pingresp;
+            case control_packet_type::disconnect:
+                return rsv == control_packet_reserved_bits::disconnect;
+            case control_packet_type::auth:
+                return rsv == control_packet_reserved_bits::auth;
+            default:
+                return false;
+            }
+        } ();
+    if (valid) return cpt;
+    return nullopt;
 }
 
 } // namespace MQTT_NS
