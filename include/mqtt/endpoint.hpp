@@ -806,7 +806,7 @@ public:
      * @return clean session
      */
     bool clean_session() const {
-        return clean_session_;
+        return clean_start();
     }
 
     /**
@@ -818,7 +818,7 @@ public:
      * @return clean start
      */
     bool clean_start() const {
-        return clean_session();
+        return clean_start_;
     }
 
     /**
@@ -6695,7 +6695,7 @@ private:
             info.connect_flag = buf[i++];
 
             info.keep_alive = make_uint16_t(buf[i], buf[i + 1]);
-            clean_session_ = connect_flags::has_clean_session(info.connect_flag);
+            clean_start_ = connect_flags::has_clean_start(info.connect_flag);
 
             buf.remove_prefix(info.header_len); // consume buffer
             if(version_ == protocol_version::v5) {
@@ -6946,7 +6946,7 @@ private:
                                          force_move(info.will_payload),
                                          connect_flags::has_will_retain(info.connect_flag) | connect_flags::will_qos(info.connect_flag))
                         : optional<will>(nullopt),
-                        clean_session_,
+                        clean_session(),
                         info.keep_alive
                     )
                 ) {
@@ -6965,7 +6965,7 @@ private:
                                          connect_flags::has_will_retain(info.connect_flag) | connect_flags::will_qos(info.connect_flag),
                                          force_move(info.will_props))
                         : optional<will>(nullopt),
-                        clean_session_,
+                        clean_start(),
                         info.keep_alive,
                         force_move(info.props)
                     )
@@ -7099,7 +7099,7 @@ private:
                 ) mutable {
                     switch (version_) {
                     case protocol_version::v3_1_1:
-                        if(on_connack(info.session_present,
+                        if (on_connack(info.session_present,
                                       variant_get<connect_return_code>(info.reason_code))) {
                             on_mqtt_message_processed(force_move(session_life_keeper));
                         }
@@ -7122,11 +7122,42 @@ private:
             if (   (   (0 == variant_idx(info.reason_code))
                     && (connect_return_code::accepted == variant_get<connect_return_code>(info.reason_code)))
                 || (   (1 == variant_idx(info.reason_code))
-                    && (v5::connect_reason_code::success == variant_get<v5::connect_reason_code>(info.reason_code)))) {
-                if (clean_session_) {
-                    clear_session_data();
-                }
-                else {
+                       && (v5::connect_reason_code::success == variant_get<v5::connect_reason_code>(info.reason_code)))) {
+
+                // If session_present is false, then call clear_session_data().
+                // Here is the reason why it works well.
+                // ---
+                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901078
+                //
+                // If the Server accepts a connection with Clean Start set to 1, the Server
+                // MUST set Session Present to 0 in the CONNACK packet in addition to setting
+                // a 0x00 (Success) Reason Code in the CONNACK packet [MQTT-3.2.2-2].
+                //
+                //
+                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901048
+                //
+                // The Client can avoid implementing its own Session expiry and instead rely on
+                // the Session Present flag returned from the Server to determine if the Session
+                // had expired. If the Client does implement its own Session expiry, it needs to
+                // store the time at which the Session State will be deleted as part of its
+                // Session State.
+                // ---
+                //
+                // Also it can  avoid the following client side and broker side session state
+                // mismatch autonatically.
+                //
+                // ---
+                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901078
+                //
+                // If the Client does not have Session State and receives Session Present
+                // set to 1 it MUST close the Network Connection [MQTT-3.2.2-4]. If it
+                // wishes to restart with a new Session the Client can reconnect using
+                // Clean Start set to 1.
+                // If the Client does have Session State and receives Session Present set
+                // to 0 it MUST discard its Session State if it continues with the Network
+                // Connection [MQTT-3.2.2-5].
+                // ---
+                if (info.session_present) {
                     if (async_send_store_) {
                         // Until all stored messages are written to internal send buffer,
                         // disable further async reading of incoming packets..
@@ -7149,6 +7180,9 @@ private:
                         return;
                     }
                     send_store();
+                }
+                else {
+                    clear_session_data();
                 }
             }
             connack_proc(force_move(session_life_keeper), force_move(info));
@@ -9050,7 +9084,7 @@ private:
                 v3_1_1::connect_message(
                     keep_alive_sec,
                     force_move(client_id),
-                    clean_session_,
+                    clean_session(),
                     force_move(w),
                     force_move(user_name),
                     force_move(password)
@@ -9062,7 +9096,7 @@ private:
                 v5::connect_message(
                     keep_alive_sec,
                     force_move(client_id),
-                    clean_session_,
+                    clean_start(),
                     force_move(w),
                     force_move(user_name),
                     force_move(password),
@@ -9546,7 +9580,7 @@ private:
                 v3_1_1::connect_message(
                     keep_alive_sec,
                     force_move(client_id),
-                    clean_session_,
+                    clean_session(),
                     w,
                     force_move(user_name),
                     force_move(password)
@@ -9559,7 +9593,7 @@ private:
                 v5::connect_message(
                     keep_alive_sec,
                     force_move(client_id),
-                    clean_session_,
+                    clean_start(),
                     w,
                     force_move(user_name),
                     force_move(password),
@@ -10322,7 +10356,7 @@ protected:
     ~endpoint() = default;
 
 protected:
-    bool clean_session_{false};
+    bool clean_start_{false};
 
 private:
     optional<MQTT_NS::socket> socket_;

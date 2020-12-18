@@ -355,7 +355,6 @@ struct callable_overlay final : public Impl
     MQTT_ALWAYS_INLINE bool on_v5_connack(bool session_present,
                                           v5::connect_reason_code reason_code,
                                           v5::properties props) noexcept override final {
-        if (!base::on_v5_connack(session_present, reason_code, props)) return false;
         return    ! h_v5_connack_
                || h_v5_connack_(session_present, reason_code, force_move(props));
     }
