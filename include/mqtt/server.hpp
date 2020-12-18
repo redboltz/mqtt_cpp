@@ -29,7 +29,6 @@ class server_endpoint : public endpoint<Mutex, LockGuard, PacketIdBytes> {
 public:
     using endpoint<Mutex, LockGuard, PacketIdBytes>::endpoint;
 protected:
-    bool on_v5_connack(bool, v5::connect_reason_code, v5::properties) noexcept override { return true; }
     void on_pre_send() noexcept override {}
     void on_close() noexcept override {}
     void on_error(error_code /*ec*/) noexcept override {}

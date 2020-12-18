@@ -16,6 +16,7 @@ namespace MQTT_NS {
 namespace connect_flags {
 
 constexpr char const clean_session  = 0b00000010;
+constexpr char const clean_start    = 0b00000010;
 constexpr char const will_flag      = 0b00000100;
 constexpr char const will_retain    = 0b00100000;
 constexpr char const password_flag  = 0b01000000;
@@ -23,6 +24,10 @@ constexpr char const user_name_flag = static_cast<char>(0b10000000u);
 
 constexpr bool has_clean_session(char v) {
     return (v & clean_session) != 0;
+}
+
+constexpr bool has_clean_start(char v) {
+    return (v & clean_start) != 0;
 }
 
 constexpr bool has_will_flag(char v) {

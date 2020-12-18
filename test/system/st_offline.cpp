@@ -13,8 +13,8 @@ BOOST_AUTO_TEST_SUITE(st_offline)
 
 template <typename Client>
 inline void connect_no_clean(Client& c) {
-    c->set_clean_session(false);
     if (c->get_protocol_version() == MQTT_NS::protocol_version::v5) {
+        c->set_clean_start(false);
         c->connect(
             MQTT_NS::v5::properties{
                 MQTT_NS::v5::property::session_expiry_interval(
@@ -24,14 +24,15 @@ inline void connect_no_clean(Client& c) {
         );
     }
     else {
+        c->set_clean_session(false);
         c->connect();
     }
 }
 
 template <typename Client>
 inline void async_connect_no_clean(Client& c) {
-    c->set_clean_session(false);
     if (c->get_protocol_version() == MQTT_NS::protocol_version::v5) {
+        c->set_clean_start(false);
         c->async_connect(
             std::vector<MQTT_NS::v5::property_variant>{
                 MQTT_NS::v5::property::session_expiry_interval(
@@ -41,6 +42,7 @@ inline void async_connect_no_clean(Client& c) {
         );
     }
     else {
+        c->set_clean_session(false);
         c->async_connect();
     }
 }
@@ -84,7 +86,8 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                         "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            BOOST_TEST(sp == false);
+                            // Offline publish is enabled only if session is not expired in the broker
+                            BOOST_TEST(sp == true);
                         }
                     );
                     BOOST_TEST(ret);
@@ -114,9 +117,8 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                         "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            // The previous connection is not set Session Expiry Interval.
-                            // That means session state is cleared on close.
-                            BOOST_TEST(sp == false);
+                            // Offline publish is enabled only if session is not expired in the broker
+                            BOOST_TEST(sp == true);
                         }
                     );
                     BOOST_TEST(ret);
@@ -161,7 +163,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 BOOST_CHECK(false);
             });
         MQTT_CHK("start");
-        c->connect();
+        connect_no_clean(c);
         ioc.run();
         BOOST_TEST(chk.all());
     };
@@ -208,7 +210,8 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                         "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            BOOST_TEST(sp == false);
+                            // Offline publish is enabled only if session is not expired in the broker
+                            BOOST_TEST(sp == true);
                         }
                     );
                     BOOST_TEST(ret);
@@ -245,9 +248,8 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                         "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            // The previous connection is not set Session Expiry Interval.
-                            // That means session state is cleared on close.
-                            BOOST_TEST(sp == false);
+                            // Offline publish is enabled only if session is not expired in the broker
+                            BOOST_TEST(sp == true);
                         }
                     );
                     BOOST_TEST(ret);
@@ -299,7 +301,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 BOOST_CHECK(false);
             });
         MQTT_CHK("start");
-        c->connect();
+        connect_no_clean(c);
         ioc.run();
         BOOST_TEST(chk.all());
     };
@@ -348,7 +350,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                         "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            BOOST_TEST(sp == false);
+                            // Offline publish is enabled only if session is not expired in the broker
+                            BOOST_TEST(sp == true);
                         }
                     );
                     BOOST_TEST(ret);
@@ -389,9 +392,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                         "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            // The previous connection is not set Session Expiry Interval.
-                            // That means session state is cleared on close.
-                            BOOST_TEST(sp == false);
+                            // Offline publish is enabled only if session is not expired in the broker
+                            BOOST_TEST(sp == true);
                         }
                     );
                     BOOST_TEST(ret);
@@ -448,7 +450,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 BOOST_CHECK(false);
             });
         MQTT_CHK("start");
-        c->connect();
+        connect_no_clean(c);
         ioc.run();
         BOOST_TEST(chk.all());
     };
@@ -495,7 +497,8 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                         "h_pub_finish",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            BOOST_TEST(sp == false);
+                            // Offline publish is enabled only if session is not expired in the broker
+                            BOOST_TEST(sp == true);
                         }
                     );
                     BOOST_TEST(ret);
@@ -525,9 +528,8 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                         "h_pub_finish",
                         [&] {
                             MQTT_CHK("h_connack2");
-                            // The previous connection is not set Session Expiry Interval.
-                            // That means session state is cleared on close.
-                            BOOST_TEST(sp == false);
+                            // Offline publish is enabled only if session is not expired in the broker
+                            BOOST_TEST(sp == true);
                         }
                     );
                     BOOST_TEST(ret);
@@ -582,7 +584,7 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                 BOOST_CHECK(false);
             });
         MQTT_CHK("start");
-        c->async_connect();
+        async_connect_no_clean(c);
         ioc.run();
         BOOST_TEST(chk.all());
     };

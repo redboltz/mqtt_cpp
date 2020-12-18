@@ -1302,7 +1302,6 @@ BOOST_AUTO_TEST_CASE( connect_prop ) {
             () {
                 MQTT_CHK("h_close");
                 BOOST_TEST(c->connected() == false);
-                c->cancel_session_expiry_timer();
                 finish();
             });
         c->set_error_handler(
@@ -1404,7 +1403,6 @@ BOOST_AUTO_TEST_CASE( disconnect_prop ) {
             () {
                 MQTT_CHK("h_close");
                 BOOST_TEST(c->connected() == false);
-                c->cancel_session_expiry_timer();
                 finish();
             });
         c->set_error_handler(

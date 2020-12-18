@@ -103,7 +103,7 @@ public:
     connect_message(
         std::uint16_t keep_alive_sec,
         buffer client_id,
-        bool clean_session,
+        bool clean_start,
         optional<will> w,
         optional<buffer> user_name,
         optional<buffer> password,
@@ -179,7 +179,7 @@ public:
         remaining_length_ += property_length_buf_.size() + property_length_;
 
         utf8string_check(client_id_);
-        if (clean_session) connect_flags_ |= connect_flags::clean_session;
+        if (clean_start) connect_flags_ |= connect_flags::clean_start;
         if (user_name) {
             utf8string_check(user_name.value());
             connect_flags_ |= connect_flags::user_name_flag;
