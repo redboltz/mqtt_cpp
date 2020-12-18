@@ -330,10 +330,6 @@ public:
                     if (sp->connected()) {
                         sp->disconnect(v5::disconnect_reason_code::protocol_error);
                     }
-                    else if (sp->underlying_connected()){
-                        // underlying layer connected, mqtt connecting
-                        sp->connack(false, v5::connect_reason_code::protocol_error);
-                    }
                 }
                 close_proc(force_move(sp), true);
             });
