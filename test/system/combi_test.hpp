@@ -16,6 +16,7 @@
 #include "test_server_no_tls.hpp"
 #if defined(MQTT_USE_TLS)
 #include "test_server_tls.hpp"
+#include "test_ctx_init.hpp"
 #endif // defined(MQTT_USE_TLS)
 
 #if defined(MQTT_USE_WS)
@@ -91,7 +92,7 @@ inline void do_tls_test(
     auto f = p.get_future();
     std::thread th(
         [&] {
-            s.emplace(iocb, b);
+            s.emplace(iocb, test_ctx_init(), b);
             p.set_value();
             iocb.run();
         }
@@ -193,7 +194,7 @@ inline void do_tls_ws_test(
     auto f = p.get_future();
     std::thread th(
         [&] {
-            s.emplace(iocb, b);
+            s.emplace(iocb, test_ctx_init(), b);
             p.set_value();
             iocb.run();
         }

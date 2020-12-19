@@ -7,6 +7,7 @@
 #if !defined(MQTT_TEST_SERVER_NO_TLS_WS_HPP)
 #define MQTT_TEST_SERVER_NO_TLS_WS_HPP
 
+#if defined(MQTT_USE_WS)
 #include <mqtt_server_cpp.hpp>
 
 #include <mqtt/broker/broker.hpp>
@@ -15,13 +16,12 @@
 namespace mi = boost::multi_index;
 namespace as = boost::asio;
 
-
 class test_server_no_tls_ws {
 public:
-    test_server_no_tls_ws(as::io_context& ioc, MQTT_NS::broker::broker_t& b)
+    test_server_no_tls_ws(as::io_context& ioc, MQTT_NS::broker::broker_t& b, uint16_t port = broker_notls_ws_port)
         : server_(
             as::ip::tcp::endpoint(
-                as::ip::tcp::v4(), broker_notls_ws_port
+                as::ip::tcp::v4(), port
             ),
             ioc,
             ioc,
@@ -55,5 +55,7 @@ private:
     MQTT_NS::server_ws<> server_;
     MQTT_NS::broker::broker_t& b_;
 };
+
+#endif // defined(MQTT_USE_WS)
 
 #endif // MQTT_TEST_SERVER_NO_TLS_WS_HPP

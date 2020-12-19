@@ -87,12 +87,11 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
     as::io_context ioc;
 
     // server
-    ctx_init ci;
     MQTT_NS::server_tls_ws<> server(
         as::ip::tcp::endpoint(
             as::ip::tcp::v4(),
             broker_tls_ws_port),
-        std::move(ci.ctx),
+        test_ctx_init(),
         ioc);
 
     server.set_accept_handler(
@@ -153,12 +152,11 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
     as::io_context ioc;
 
     // server
-    ctx_init ci;
     MQTT_NS::server_tls_ws<> server(
         as::ip::tcp::endpoint(
             as::ip::tcp::v4(),
             broker_tls_ws_port),
-        std::move(ci.ctx),
+        test_ctx_init(),
         ioc);
 
     server.set_accept_handler(
@@ -236,12 +234,11 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
     as::io_context ioc;
 
     // server
-    ctx_init ci;
     MQTT_NS::server_tls<> server(
         as::ip::tcp::endpoint(
             as::ip::tcp::v4(),
             broker_tls_port),
-        std::move(ci.ctx),
+        test_ctx_init(),
         ioc);
 
     server.set_accept_handler(
