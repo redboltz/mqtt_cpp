@@ -326,9 +326,52 @@ public:
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
                 auto ver = sp->get_protocol_version();
-                MQTT_LOG("mqtt_broker", error)
+                MQTT_LOG("mqtt_broker", info)
                     << MQTT_ADD_VALUE(address, this)
                     << " error_handler is called. ec:" << ec.message() << " protocol_version:" << ver;
+
+                auto send_response =
+                    [&](auto ec) {
+                        if (sp->connected()) {
+                            auto rc =
+                                [&] () -> MQTT_NS::optional<v5::disconnect_reason_code> {
+                                    if (ec == boost::system::errc::protocol_error) {
+                                        return MQTT_NS::v5::disconnect_reason_code::protocol_error;
+                                    }
+                                    else if (ec == boost::system::errc::bad_message) {
+                                        return MQTT_NS::v5::disconnect_reason_code::malformed_packet;
+                                    }
+                                    return MQTT_NS::nullopt;
+                                }();
+                            if (rc) {
+                                MQTT_LOG("mqtt_broker", trace)
+                                    << MQTT_ADD_VALUE(address, this)
+                                    << "send DISCONNECT reason_code:" << rc.value();
+                                sp->disconnect(rc.value());
+                            }
+                        }
+                        else if (sp->underlying_connected()){
+                            // underlying layer connected, mqtt connecting
+                            // and protocol_version has already been determind as v5
+                            auto rc =
+                                [&] () -> MQTT_NS::optional<v5::connect_reason_code> {
+                                    if (ec ==boost::system::errc::protocol_error) {
+                                        return MQTT_NS::v5::connect_reason_code::protocol_error;
+                                    }
+                                    else if (ec == boost::system::errc::bad_message) {
+                                        return MQTT_NS::v5::connect_reason_code::malformed_packet;
+                                    }
+                                    return MQTT_NS::nullopt;
+                                }();
+                            if (rc) {
+                                MQTT_LOG("mqtt_broker", trace)
+                                    << MQTT_ADD_VALUE(address, this)
+                                    << "send CONNACK reason_code:" << rc.value();
+                                sp->connack(false, rc.value());
+                            }
+                        }
+                    };
+
                 switch (ver) {
                 case MQTT_NS::protocol_version::v5:
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#S4_13_Errors
@@ -337,22 +380,7 @@ public:
                     //
                     // The DISCONNECT packet is the final MQTT Control Packet sent from the Client or
                     // the Server.
-                    if (ec == boost::system::errc::protocol_error) {
-                        if (sp->connected()) {
-                            MQTT_LOG("mqtt_broker", trace)
-                                << MQTT_ADD_VALUE(address, this)
-                                << " protocol_version is v5. send DISCONNECT with protocol_error";
-                            sp->disconnect(v5::disconnect_reason_code::protocol_error);
-                        }
-                        else if (sp->underlying_connected()){
-                            // underlying layer connected, mqtt connecting
-                            // and protocol_version has already been determind as v5
-                            MQTT_LOG("mqtt_broker", trace)
-                                << MQTT_ADD_VALUE(address, this)
-                                << " protocol_version is v5. send CONNACK with protocol_error";
-                            sp->connack(false, v5::connect_reason_code::protocol_error);
-                        }
-                    }
+                    send_response(ec);
                     break;
                 case MQTT_NS::protocol_version::v3_1_1:
                     // DISCONNECT can't be sent by broker on v3.1.1
