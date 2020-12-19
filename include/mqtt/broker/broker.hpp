@@ -325,14 +325,54 @@ public:
             (error_code ec){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#S4_13_Errors
-                if (ec == boost::system::errc::protocol_error) {
-                    if (sp->connected()) {
-                        sp->disconnect(v5::disconnect_reason_code::protocol_error);
+                auto ver = sp->get_protocol_version();
+                MQTT_LOG("mqtt_broker", error)
+                    << MQTT_ADD_VALUE(address, this)
+                    << " error_handler is called. ec:" << ec.message() << " protocol_version:" << ver;
+                switch (ver) {
+                case MQTT_NS::protocol_version::v5:
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#S4_13_Errors
+
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205
+                    //
+                    // The DISCONNECT packet is the final MQTT Control Packet sent from the Client or
+                    // the Server.
+                    if (ec == boost::system::errc::protocol_error) {
+                        if (sp->connected()) {
+                            MQTT_LOG("mqtt_broker", trace)
+                                << MQTT_ADD_VALUE(address, this)
+                                << " protocol_version is v5. send DISCONNECT with protocol_error";
+                            sp->disconnect(v5::disconnect_reason_code::protocol_error);
+                        }
+                        else if (sp->underlying_connected()){
+                            // underlying layer connected, mqtt connecting
+                            // and protocol_version has already been determind as v5
+                            MQTT_LOG("mqtt_broker", trace)
+                                << MQTT_ADD_VALUE(address, this)
+                                << " protocol_version is v5. send CONNACK with protocol_error";
+                            sp->connack(false, v5::connect_reason_code::protocol_error);
+                        }
                     }
+                    break;
+                case MQTT_NS::protocol_version::v3_1_1:
+                    // DISCONNECT can't be sent by broker on v3.1.1
+                    //
+                    // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090
+                    //
+                    // The DISCONNECT Packet is the final Control Packet sent from the Client to the Server.
+                    // It indicates that the Client is disconnecting cleanly.
+                    //
+                    // At the MQTT connecting, there is no appropriate Connect Return Code on v3.1.1
+                    // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718035
+                    break;
+                default:
+                    // The protocol_version is in the CONNECT packet.
+                    // Protocol error could happen before the protocol_version is parsed.
+                    break;
                 }
                 close_proc(force_move(sp), true);
-            });
+            }
+        );
 
         // set MQTT level handlers
         ep.set_connect_handler(
