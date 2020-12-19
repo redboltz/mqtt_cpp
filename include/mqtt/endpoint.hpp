@@ -4308,7 +4308,7 @@ public:
                 << MQTT_ADD_VALUE(address, this)
                 << "invalid fixed_header ignored. "
                 << std::hex << static_cast<int>(fixed_header);
-            throw protocol_error();
+            throw malformed_packet_error();
         }
         switch (cpt_opt.value()) {
         case control_packet_type::publish: {
@@ -4432,7 +4432,7 @@ public:
                 << MQTT_ADD_VALUE(address, this)
                 << "invalid fixed_header ignored. "
                 << std::hex << static_cast<int>(fixed_header);
-            throw protocol_error();
+            throw malformed_packet_error();
         }
         switch (cpt_opt.value()) {
         case control_packet_type::publish: {
@@ -5039,7 +5039,7 @@ private:
 
     void handle_remaining_length(any session_life_keeper, this_type_sp self) {
         if (!calc_variable_length(remaining_length_, remaining_length_multiplier_, buf_.front())) {
-            call_protocol_error_handlers();
+            call_bad_message_error_handlers();
             return;
         }
         if (buf_.front() & variable_length_continue_flag) {
@@ -5063,7 +5063,7 @@ private:
         else {
             auto cpt_opt = get_control_packet_type_with_check(fixed_header_);
             if (!cpt_opt) {
-                call_protocol_error_handlers();
+                call_bad_message_error_handlers();
                 return;
             }
             auto cpt = cpt_opt.value();
@@ -5530,7 +5530,7 @@ private:
             (buffer str, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                 auto r = utf8string::validate_contents(str);
                 if (r != utf8string::validation::well_formed) {
-                    call_protocol_error_handlers();
+                    call_bad_message_error_handlers();
                     return;
                 }
                 handler(force_move(str), force_move(buf), force_move(session_life_keeper), force_move(self));
@@ -7250,7 +7250,7 @@ private:
                     if (qos_value != qos::at_most_once &&
                         qos_value != qos::at_least_once &&
                         qos_value != qos::exactly_once) {
-                        call_protocol_error_handlers();
+                        call_bad_message_error_handlers();
                         return;
                     }
                      if(qos_value == qos::at_most_once) {
@@ -8284,7 +8284,7 @@ private:
                             if (requested_qos != qos::at_most_once &&
                                 requested_qos != qos::at_least_once &&
                                 requested_qos != qos::exactly_once) {
-                                call_protocol_error_handlers();
+                                call_bad_message_error_handlers();
                                 return;
                             }
                             info.entries.emplace_back(force_move(share_name), force_move(topic_filter), option);

@@ -24,6 +24,12 @@ struct protocol_error : std::exception {
     }
 };
 
+struct malformed_packet_error : std::exception {
+    char const* what() const noexcept override final {
+        return "malformed packet error";
+    }
+};
+
 struct remaining_length_error : std::exception {
     char const* what() const noexcept override final {
         return "remaining length error";
