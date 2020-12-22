@@ -94,3 +94,70 @@ jobs:
         lcov --list coverage.info # debug info
         # Uploading report to CodeCov
         bash <(curl -s https://codecov.io/bash) -f coverage.info || echo "Codecov did not collect coverage reports"
+  linux-release:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Configure
+      env:
+        CC: gcc -flto -ffunction-sections -fdata-sections
+        S_CFLAGS:
+        S_CXXFLAGS: -flto -ffunction-sections -fdata-sections
+        S_LDFLAGS: -Wl,-gc-sections -static -static-libgcc -static-libstdc++
+      run: |
+        sudo apt-get install upx-ucl build-essential
+        mkdir ${{ runner.temp }}/openssl
+        cd ${{ runner.temp }}/openssl && wget https://www.openssl.org/source/openssl-1.1.1i.tar.gz
+        cd ${{ runner.temp }}/openssl && tar xzf openssl-1.1.1i.tar.gz
+        cd ${{ runner.temp }}/openssl/openssl-1.1.1i && ./config -no-zlib no-dso no-comp no-shared no-tests
+        cd ${{ runner.temp }}/openssl/openssl-1.1.1i && make -j $(sysctl -n hw.ncpu)
+        export CFLAGS=${S_CFLAGS} && export CXXFLAGS=${S_CXXFLAGS} && export LDFLAGS=${S_LDFLAGS}
+        FLAGS="-DCMAKE_CXX_COMPILER=g++ -DMQTT_USE_STATIC_BOOST=ON -DMQTT_USE_STATIC_OPENSSL=ON -DMQTT_USE_ZLIB=OFF -DMQTT_TEST_1=OFF  -DMQTT_TEST_2=OFF  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=Release -DMQTT_USE_WS=ON -DMQTT_USE_TLS=ON -DMQTT_USE_STR_CHECK=OFF  -DMQTT_USE_LOG=ON  -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF"
+         BOOST_ROOT=$BOOST_ROOT_1_72_0 cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${FLAGS} -DOPENSSL_ROOT_DIR=${{ runner.temp }}/openssl/openssl-1.1.1i -DCMAKE_C_FLAGS="${CFLAGS}" -DCMAKE_CXX_FLAGS="${CXXFLAGS}" -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
+    - name: Check Header Dependencies
+      run: |
+        cmake --build ${{ runner.temp }} --parallel $(nproc) --clean-first --target check_deps
+    - name: Compile
+      run: |
+        VERBOSE=1 cmake --build ${{ runner.temp }} --clean-first --target broker        
+        upx-ucl --ultra-brute ${{ runner.temp }}/example/broker
+    - name: 'Upload Broker'
+      uses: actions/upload-artifact@v2
+      with:
+        name: linux-static-broker
+        path: ${{ runner.temp }}/example/broker
+
+  macos-release:
+    runs-on: macos-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install Dependencies
+      run: |
+        brew install boost upx
+        mkdir ${{ runner.temp }}/openssl
+        export CC="gcc -flto -ffunction-sections -fdata-sections "
+        cd ${{ runner.temp }}/openssl && wget https://www.openssl.org/source/openssl-1.1.1i.tar.gz
+        cd ${{ runner.temp }}/openssl && tar xzf openssl-1.1.1i.tar.gz
+        cd ${{ runner.temp }}/openssl/openssl-1.1.1i && ./config -no-zlib no-dso no-comp no-shared no-tests
+        cd ${{ runner.temp }}/openssl/openssl-1.1.1i && make -j $(sysctl -n hw.ncpu)
+    - name: Configure              
+      run: |
+        cmake -S ${{ github.workspace }} -B ${{ runner.temp }} ${{ matrix.pattern }} -DOPENSSL_ROOT_DIR=${{ runner.temp }}/openssl/openssl-1.1.1i -DCMAKE_CXX_COMPILER=g++ -DMQTT_USE_STATIC_BOOST=ON -DMQTT_USE_STATIC_OPENSSL=ON -DMQTT_USE_ZLIB=OFF -DMQTT_TEST_1=OFF  -DMQTT_TEST_2=OFF  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=Release -DMQTT_USE_WS=ON -DMQTT_USE_TLS=ON -DMQTT_USE_STR_CHECK=OFF  -DMQTT_USE_LOG=ON  -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF
+    - name: Check Header Dependencies
+      run: |
+        cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first --target check_deps
+    - name: Compile
+      env:
+        CXXFLAGS: -flto -ffunction-sections -fdata-sections
+        LDFLAGS: -Wl,-gc-sections -static -static-libgcc -static-libstdc++
+      run: |
+        cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first --target broker
+        upx --ultra-brute ${{ runner.temp }}/example/broker
+    - name: 'Upload Broker'
+      uses: actions/upload-artifact@v2
+      with:
+        name: macos-broker
+        path: ${{ runner.temp }}/example/broker
+
