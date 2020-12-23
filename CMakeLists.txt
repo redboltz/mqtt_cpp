@@ -106,6 +106,15 @@ ENDIF ()
 IF (MQTT_USE_STATIC_BOOST)
     MESSAGE (STATUS "Staticly linking with Boost")
     SET (Boost_USE_STATIC_LIBS TRUE)
+
+    IF (MSVC)
+        add_compile_options(
+            $<$<CONFIG:>:/MT> #---------|
+            $<$<CONFIG:Debug>:/MTd> #---|-- Statically link the runtime libraries
+            $<$<CONFIG:Release>:/MT> #--|
+        )
+        SET (Boost_USE_STATIC_RUNTIME TRUE)
+    ENDIF ()
 ELSE ()
     MESSAGE (STATUS "Dynamically linking with Boost")
     SET (Boost_USE_STATIC_LIBS FALSE)
@@ -131,7 +140,7 @@ ELSE ()
 ENDIF ()
 
 IF (MQTT_USE_TLS)
-    FIND_PACKAGE (OpenSSL REQUIRED)
+    FIND_PACKAGE (OpenSSL REQUIRED)    
     IF (MQTT_USE_STATIC_OPENSSL AND MQTT_USE_ZLIB)
         FIND_PACKAGE (ZLIB REQUIRED)
     ENDIF ()

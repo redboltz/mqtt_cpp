@@ -112,7 +112,7 @@ FOREACH (source_file ${check_PROGRAMS})
     ELSE ()
         ADD_TEST (NAME ${source_file_we} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../args_provider.sh ${CMAKE_CURRENT_BINARY_DIR}/${source_file_we})
     ENDIF ()
-    set_tests_properties(${source_file_we} PROPERTIES TIMEOUT 300)
+    set_tests_properties(${source_file_we} PROPERTIES TIMEOUT 600)
 ENDFOREACH ()
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")

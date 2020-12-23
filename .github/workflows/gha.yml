@@ -43,6 +43,38 @@ jobs:
       working-directory: ${{ runner.temp }}
       run: |
         CTEST_ARGS="--log_level=all" ctest -VV
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        pattern:
+          - '-DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=OFF -DMQTT_USE_LOG=OFF -DMQTT_USE_STATIC_BOOST=ON'
+          - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=ON  -DMQTT_TEST_4=ON  -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=OFF -DMQTT_USE_LOG=OFF -DMQTT_USE_STATIC_BOOST=ON'
+          - '-DMQTT_TEST_1=ON  -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=ON  -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON  -DMQTT_USE_LOG=ON -DMQTT_USE_STATIC_BOOST=ON'
+          - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_USE_LOG=OFF -DMQTT_USE_STATIC_BOOST=ON'
+          - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON  -DMQTT_USE_LOG=OFF -DMQTT_USE_STATIC_BOOST=ON'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install Dependencies
+      run: |
+        choco install --confirm --limitoutput --no-progress openssl
+    - name: Configure      
+      run: |
+        $env:CXXFLAGS="/D_WIN32_WINNT#0x0601 /DBOOST_THREAD_VERSION#3 /DBOOST_ALLOW_DEPRECATED_HEADERS /DBOOST_ASIO_NO_DEPRECATED"
+        $env:BOOST_ROOT=$env:BOOST_ROOT_1_72_0
+        cmake -A x64 -S ${{ github.workspace }} -B ${{ runner.temp }} ${{ matrix.pattern }}
+    - name: Compile
+      run: |
+        cmake --build ${{ runner.temp }} --parallel 1  --config Release --clean-first
+    - name: Test
+      working-directory: ${{ runner.temp }}
+      run: |
+        $env:CTEST_ARGS="--log_level=all"
+        ctest -VV -C Release
+
+
   linux:
     runs-on: ubuntu-latest
     strategy:
@@ -121,7 +153,7 @@ jobs:
     - name: Compile
       run: |
         VERBOSE=1 cmake --build ${{ runner.temp }} --clean-first --target broker        
-        upx-ucl --ultra-brute ${{ runner.temp }}/example/broker
+        upx-ucl -9 ${{ runner.temp }}/example/broker
     - name: 'Upload Broker'
       uses: actions/upload-artifact@v2
       with:
@@ -154,10 +186,44 @@ jobs:
         LDFLAGS: -Wl,-gc-sections -static -static-libgcc -static-libstdc++
       run: |
         cmake --build ${{ runner.temp }} --parallel $(sysctl -n hw.ncpu) --clean-first --target broker
-        upx --ultra-brute ${{ runner.temp }}/example/broker
+        upx -9 ${{ runner.temp }}/example/broker
     - name: 'Upload Broker'
       uses: actions/upload-artifact@v2
       with:
         name: macos-broker
         path: ${{ runner.temp }}/example/broker
 
+  windows-release:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Download openssl
+      run: |
+        choco install --confirm --limitoutput --no-progress upx
+        choco install --confirm --limitoutput --no-progress nasm --% -ia INSTALLDIR="c:\ProgramData\chocolatey\lib\nasm\tools"
+        mkdir ${{ runner.temp }}\openssl
+        cd ${{ runner.temp }}\openssl && Invoke-WebRequest -Uri "https://www.openssl.org/source/openssl-1.1.1i.tar.gz" -OutFile "openssl-1.1.1i.tar.gz"
+        cd ${{ runner.temp }}\openssl && tar xzf openssl-1.1.1i.tar.gz
+    - name: Build openssl
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        set path=%path%;"C:\Program Files\NASM"
+        cd ${{ runner.temp }}\openssl\openssl-1.1.1i && perl Configure -no-zlib no-dso no-comp no-shared no-tests no-capieng -GL -LTCG VC-WIN64A
+        cd ${{ runner.temp }}\openssl\openssl-1.1.1i && nmake
+    - name: Install Dependencies
+      run: |
+        $env:CXXFLAGS="/GL /D_WIN32_WINNT#0x0601 /DBOOST_THREAD_VERSION#3 /DBOOST_ALLOW_DEPRECATED_HEADERS /DBOOST_ASIO_NO_DEPRECATED"
+        $env:LDFLAGS="/LTCG"
+        $env:BOOST_ROOT=$env:BOOST_ROOT_1_72_0
+        cmake -A x64 -S ${{ github.workspace }} -B ${{ runner.temp }} -DMQTT_USE_STATIC_BOOST=ON -DMQTT_USE_ZLIB=OFF -DMQTT_USE_STATIC_OPENSSL=ON -DMQTT_USE_ZLIB=OFF -DMQTT_TEST_1=OFF  -DMQTT_TEST_2=OFF  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_BUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=Release -DMQTT_USE_WS=ON -DMQTT_USE_TLS=ON -DMQTT_USE_STR_CHECK=OFF  -DMQTT_USE_LOG=ON  -DMQTT_STD_ANY=OFF -DMQTT_STD_OPTIONAL=OFF -DMQTT_STD_VARIANT=OFF -DMQTT_STD_STRING_VIEW=OFF -DMQTT_STD_SHARED_PTR_ARRAY=OFF -DOPENSSL_ROOT_DIR=${{ runner.temp }}/openssl/openssl-1.1.1i
+    - name: Compile
+      run: |
+        cmake --build ${{ runner.temp }} --parallel 1 --clean-first --config Release --target broker
+        upx -9 ${{ runner.temp }}\example\Release\broker.exe
+    - name: 'Upload Broker'
+      uses: actions/upload-artifact@v2
+      with:
+        name: windows-static-broker
+        path: ${{ runner.temp }}\example\Release\broker.exe
