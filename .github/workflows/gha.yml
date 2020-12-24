@@ -49,11 +49,11 @@ jobs:
     strategy:
       matrix:
         pattern:
-          - '-DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=OFF -DMQTT_USE_LOG=OFF -DMQTT_USE_STATIC_BOOST=ON'
-          - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=ON  -DMQTT_TEST_4=ON  -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=OFF -DMQTT_USE_LOG=OFF -DMQTT_USE_STATIC_BOOST=ON'
-          - '-DMQTT_TEST_1=ON  -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=ON  -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON  -DMQTT_USE_LOG=ON -DMQTT_USE_STATIC_BOOST=ON'
-          - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_USE_LOG=OFF -DMQTT_USE_STATIC_BOOST=ON'
-          - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON  -DMQTT_USE_LOG=OFF -DMQTT_USE_STATIC_BOOST=ON'
+          - '-DMQTT_TEST_1=ON  -DMQTT_TEST_2=ON  -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=OFF -DMQTT_USE_LOG=OFF'
+          - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=ON  -DMQTT_TEST_4=ON  -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=OFF -DMQTT_USE_LOG=OFF'
+          - '-DMQTT_TEST_1=ON  -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=ON  -DMQTT_TEST_6=OFF -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=OFF -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON  -DMQTT_USE_LOG=ON'
+          - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=ON  -DMQTT_TEST_7=OFF -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=ON  -DMQTT_USE_WS=ON  -DMQTT_USE_STR_CHECK=ON  -DMQTT_USE_LOG=OFF'
+          - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON  -DMQTT_USE_LOG=OFF'
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -67,13 +67,13 @@ jobs:
         cmake -A x64 -S ${{ github.workspace }} -B ${{ runner.temp }} ${{ matrix.pattern }}
     - name: Compile
       run: |
-        cmake --build ${{ runner.temp }} --parallel 1  --config Release --clean-first
+        cmake --build ${{ runner.temp }} --config Release --clean-first
     - name: Test
       working-directory: ${{ runner.temp }}
       run: |
+        $env:PATH="$env:BOOST_ROOT_1_72_0\lib;"+$env:PATH
         $env:CTEST_ARGS="--log_level=all"
         ctest -VV -C Release
-
 
   linux:
     runs-on: ubuntu-latest
@@ -126,6 +126,7 @@ jobs:
         lcov --list coverage.info # debug info
         # Uploading report to CodeCov
         bash <(curl -s https://codecov.io/bash) -f coverage.info || echo "Codecov did not collect coverage reports"
+
   linux-release:
     runs-on: ubuntu-latest
     steps:
@@ -197,7 +198,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v2      
     - name: Download openssl
       run: |
         choco install --confirm --limitoutput --no-progress upx
@@ -212,7 +213,7 @@ jobs:
         set path=%path%;"C:\Program Files\NASM"
         cd ${{ runner.temp }}\openssl\openssl-1.1.1i && perl Configure -no-zlib no-dso no-comp no-shared no-tests no-capieng -GL -LTCG VC-WIN64A
         cd ${{ runner.temp }}\openssl\openssl-1.1.1i && nmake
-    - name: Install Dependencies
+    - name: Configure
       run: |
         $env:CXXFLAGS="/GL /D_WIN32_WINNT#0x0601 /DBOOST_THREAD_VERSION#3 /DBOOST_ALLOW_DEPRECATED_HEADERS /DBOOST_ASIO_NO_DEPRECATED"
         $env:LDFLAGS="/LTCG"

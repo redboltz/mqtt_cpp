@@ -1,4 +1,5 @@
 LIST (APPEND exec_PROGRAMS
+    broker.cpp
     no_tls_client.cpp
     no_tls_async_client.cpp
     no_tls_server.cpp
@@ -7,8 +8,7 @@ LIST (APPEND exec_PROGRAMS
     v5_no_tls_server.cpp
     v5_no_tls_both.cpp
     v5_no_tls_prop.cpp
-    redirect.cpp
-    broker.cpp
+    redirect.cpp    
 )
 
 IF (MQTT_USE_TLS)
@@ -53,6 +53,10 @@ FOREACH (source_file ${exec_PROGRAMS})
     IF (MQTT_USE_LOG)
         TARGET_COMPILE_DEFINITIONS (${source_file_we} PUBLIC $<IF:$<BOOL:${MQTT_USE_STATIC_BOOST}>,,BOOST_LOG_DYN_LINK>)
         TARGET_LINK_LIBRARIES (${source_file_we} Boost::log)
+    ENDIF ()
+
+    IF (MQTT_USE_PRECOMP)
+        TARGET_PRECOMPILE_HEADERS(${source_file_we} REUSE_FROM precomp_target)
     ENDIF ()
 ENDFOREACH ()
 
