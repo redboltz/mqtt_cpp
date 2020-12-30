@@ -7,6 +7,7 @@
 #if !defined(MQTT_TEST_SERVER_TLS_HPP)
 #define MQTT_TEST_SERVER_TLS_HPP
 
+#if defined(MQTT_USE_TLS)
 #include <set>
 
 #include <boost/lexical_cast.hpp>
@@ -14,22 +15,22 @@
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/identity.hpp>
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include <mqtt_server_cpp.hpp>
-#include "test_settings.hpp"
-#include "test_ctx_init.hpp"
 
 namespace mi = boost::multi_index;
 namespace as = boost::asio;
 
-class test_server_tls : ctx_init {
+class test_server_tls {
 public:
-    test_server_tls(as::io_context& ioc, MQTT_NS::broker::broker_t& b)
+    test_server_tls(as::io_context& ioc, boost::asio::ssl::context&& ctx, MQTT_NS::broker::broker_t& b, uint16_t port = broker_tls_port)
         : server_(
             as::ip::tcp::endpoint(
-                as::ip::tcp::v4(), broker_tls_port
+                as::ip::tcp::v4(), port
             ),
-            std::move(ctx),
+            MQTT_NS::force_move(ctx),
             ioc,
             ioc,
             [](auto& acceptor) {
@@ -62,5 +63,7 @@ private:
     MQTT_NS::server_tls<> server_;
     MQTT_NS::broker::broker_t& b_;
 };
+
+#endif
 
 #endif // MQTT_TEST_SERVER_TLS_HPP
