@@ -56,6 +56,10 @@ FOREACH (source_file ${exec_PROGRAMS})
     ENDIF ()
     TARGET_COMPILE_DEFINITIONS (${source_file_we} PUBLIC $<IF:$<BOOL:${MQTT_USE_STATIC_BOOST}>,,BOOST_PROGRAM_OPTIONS_DYN_LINK>)
     TARGET_LINK_LIBRARIES (${source_file_we} Boost::program_options)
+
+    IF (MQTT_USE_PRECOMP)
+           TARGET_PRECOMPILE_HEADERS(${source_file_we} REUSE_FROM precomp_target)
+    ENDIF ()
 ENDFOREACH ()
 
 FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../example/broker.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

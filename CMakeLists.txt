@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED (VERSION 3.13.0)
+CMAKE_MINIMUM_REQUIRED (VERSION 3.16.0)
 PROJECT (mqtt_cpp_iface)
 
 SET(CMAKE_CXX_STANDARD 14)
@@ -16,6 +16,7 @@ OPTION(MQTT_USE_TLS "Enable building TLS code" OFF)
 OPTION(MQTT_USE_WS "Enable building WebSockets code" OFF)
 OPTION(MQTT_USE_STR_CHECK "Enable UTF8 String check" ON)
 OPTION(MQTT_USE_LOG "Enable building logging code" OFF)
+OPTION(MQTT_USE_PRECOMP "Enable use of precompiled header" OFF)
 OPTION(MQTT_STD_VARIANT "Use std::variant from C++17 instead of boost::variant" OFF)
 OPTION(MQTT_STD_OPTIONAL "Use std::optional from C++17 instead of boost::optional" OFF)
 OPTION(MQTT_STD_STRING_VIEW "Use std::string_view from C++17 instead of boost::string_view" OFF)
@@ -137,6 +138,22 @@ IF (MQTT_USE_TLS)
 ENDIF ()
 
 ADD_SUBDIRECTORY (include)
+
+# Without this setting added, azure pipelines completely fails to find the boost libraries. No idea why.
+IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
+ENDIF ()
+
+IF (MQTT_USE_PRECOMP)
+    add_executable(precomp_target helper/precomp.cpp)
+    target_precompile_headers(precomp_target PUBLIC ${PROJECT_SOURCE_DIR}/include/mqtt_client_cpp.hpp ${PROJECT_SOURCE_DIR}/include/mqtt_server_cpp.hpp)
+
+    TARGET_LINK_LIBRARIES (precomp_target mqtt_cpp_iface)
+    IF (MQTT_USE_LOG)
+        TARGET_COMPILE_DEFINITIONS (precomp_target PUBLIC $<IF:$<BOOL:${MQTT_USE_STATIC_BOOST}>,,BOOST_LOG_DYN_LINK>)
+        TARGET_LINK_LIBRARIES (precomp_target Boost::log)
+    ENDIF ()
+ENDIF ()
 
 IF (MQTT_BUILD_TESTS)
     MESSAGE(STATUS "Tests enabled")
