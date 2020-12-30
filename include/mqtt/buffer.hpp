@@ -122,7 +122,8 @@ inline buffer allocate_buffer(Iterator b, Iterator e) {
     auto size = static_cast<std::size_t>(std::distance(b, e));
     auto spa = make_shared_ptr_array(size);
     std::copy(b, e, spa.get());
-    return buffer(string_view(spa.get(), size), spa);
+    auto view = string_view(spa.get(), size);
+    return buffer(view, force_move(spa));
 }
 
 /**
