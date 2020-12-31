@@ -55,10 +55,10 @@ jobs:
       env:
         S_CFLAGS:   -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -fsanitize=address
         S_CXXFLAGS: -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -fsanitize=address -pedantic -Wno-noexcept-type -DBOOST_ASIO_NO_DEPRECATED -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING
-        S_LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -fsanitize=address
+        S_LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fno-omit-frame-pointer -fsanitize=address -fuse-ld=gold
         NS_CFLAGS:   -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion
         NS_CXXFLAGS: -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -pedantic -Wno-noexcept-type -DBOOST_ASIO_NO_DEPRECATED -DBOOST_MULTI_INDEX_ENABLE_SAFE_MODE -DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION -DBOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING
-        NS_LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion
+        NS_LDFLAGS:  -Werror -g -Wall -Wextra -Wno-ignored-qualifiers -Wconversion -fuse-ld=gold
       run: |
         [ ${{ matrix.pattern }} == 1 ] || [ ${{ matrix.pattern }} == 2 ] || [ ${{ matrix.pattern }} == 3 ] && \
         export CFLAGS=${S_CFLAGS} && export CXXFLAGS=${S_CXXFLAGS} && export LDFLAGS=${S_LDFLAGS}
