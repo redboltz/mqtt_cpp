@@ -21,6 +21,7 @@ IF (MQTT_TEST_1)
         ut_shared_subscriptions.cpp
         ut_subscription_map_broker.cpp
         ut_retained_topic_map_broker.cpp
+        ut_value_allocator.cpp
     )
 ENDIF ()
 
