@@ -53,8 +53,8 @@ BOOST_AUTO_TEST_CASE( release_but_increment ) {
     BOOST_TEST(c->acquire_unique_packet_id() == 2);
     BOOST_TEST(c->acquire_unique_packet_id() == 3);
     c->release_packet_id(2);
+    BOOST_TEST(c->acquire_unique_packet_id() == 2);
     BOOST_TEST(c->acquire_unique_packet_id() == 4);
-    BOOST_TEST(c->acquire_unique_packet_id() == 5);
 }
 
 BOOST_AUTO_TEST_CASE( rotate ) {

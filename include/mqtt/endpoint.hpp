@@ -69,6 +69,7 @@
 #include <mqtt/topic_alias_recv.hpp>
 #include <mqtt/subscribe_entry.hpp>
 #include <mqtt/shared_subscriptions.hpp>
+#include <mqtt/packet_id_manager.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -4140,7 +4141,7 @@ public:
         auto& idx = store_.template get<tag_packet_id>();
         auto r = idx.equal_range(packet_id);
         idx.erase(std::get<0>(r), std::get<1>(r));
-        packet_id_.erase(packet_id);
+        pid_man_.release_id(packet_id);
     }
 
     /**
@@ -4216,41 +4217,7 @@ public:
      */
     optional<packet_id_t> acquire_unique_packet_id_no_except() {
         LockGuard<Mutex> lck (store_mtx_);
-        if (packet_id_.size() == std::numeric_limits<packet_id_t>::max()) return nullopt;
-        if (packet_id_master_ == std::numeric_limits<packet_id_t>::max()) {
-            packet_id_master_ = 1U;
-        }
-        else {
-            ++packet_id_master_;
-        }
-        auto ret = packet_id_.insert(packet_id_master_);
-        if (ret.second) return packet_id_master_;
-
-        auto last = packet_id_.end();
-        auto e = last;
-        --last;
-
-        if (*last != std::numeric_limits<packet_id_t>::max()) {
-            packet_id_master_ = static_cast<packet_id_t>(*last + 1U);
-            packet_id_.insert(e, packet_id_master_);
-            return packet_id_master_;
-        }
-
-        auto b = packet_id_.begin();
-        auto prev = *b;
-        if (prev != 1U) {
-            packet_id_master_ = 1U;
-            packet_id_.insert(b, packet_id_master_);
-            return packet_id_master_;
-        }
-        ++b;
-        while (*b - 1U == prev && b != e) {
-            prev = *b;
-            ++b;
-        }
-        packet_id_master_ = static_cast<packet_id_t>(prev + 1U);
-        packet_id_.insert(b, packet_id_master_);
-        return packet_id_master_;
+        return pid_man_.acquire_unique_id();
     }
 
     /**
@@ -4261,9 +4228,8 @@ public:
      * @return If packet_id is successfully registerd then return true, otherwise return false.
      */
     bool register_packet_id(packet_id_t packet_id) {
-        if (packet_id == 0) return false;
         LockGuard<Mutex> lck (store_mtx_);
-        return packet_id_.insert(packet_id).second;
+        return pid_man_.register_id(packet_id);
     }
 
     /**
@@ -4271,11 +4237,10 @@ public:
      * @param packet_id packet id to release.
      *                   only the packet_id gotten by acquire_unique_packet_id, or
      *                   register_packet_id is permitted.
-     * @return If packet_id is successfully released then return true, otherwise return false.
      */
-    bool release_packet_id(packet_id_t packet_id) {
+    void release_packet_id(packet_id_t packet_id) {
         LockGuard<Mutex> lck (store_mtx_);
-        return packet_id_.erase(packet_id);
+        pid_man_.release_id(packet_id);
     }
 
     /**
@@ -4352,7 +4317,7 @@ public:
         auto packet_id = msg.packet_id();
         qos qos_value = msg.get_qos();
         LockGuard<Mutex> lck (store_mtx_);
-        if (packet_id_.insert(packet_id).second) {
+        if (pid_man_.register_id(packet_id)) {
             auto ret = store_.emplace(
                 packet_id,
                 ((qos_value == qos::at_least_once) ? control_packet_type::puback
@@ -4388,7 +4353,7 @@ public:
     void restore_serialized_message(basic_pubrel_message<PacketIdBytes> msg, any life_keeper = {}) {
         auto packet_id = msg.packet_id();
         LockGuard<Mutex> lck (store_mtx_);
-        if (packet_id_.insert(packet_id).second) {
+        if (pid_man_.register_id(packet_id)) {
             auto ret = store_.emplace(
                 packet_id,
                 control_packet_type::pubcomp,
@@ -4470,7 +4435,7 @@ public:
         auto packet_id = msg.packet_id();
         auto qos = msg.get_qos();
         LockGuard<Mutex> lck (store_mtx_);
-        if (packet_id_.insert(packet_id).second) {
+        if (pid_man_.register_id(packet_id)) {
             auto ret = store_.emplace(
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
@@ -4508,7 +4473,7 @@ public:
     void restore_v5_serialized_message(v5::basic_pubrel_message<PacketIdBytes> msg, any life_keeper = {}) {
         auto packet_id = msg.packet_id();
         LockGuard<Mutex> lck (store_mtx_);
-        if (packet_id_.insert(packet_id).second) {
+        if (pid_man_.register_id(packet_id)) {
             auto ret = store_.emplace(
                 packet_id,
                 control_packet_type::pubcomp,
@@ -4574,9 +4539,9 @@ public:
                     store_msg.set_dup(true);
 
                     LockGuard<Mutex> lck (store_mtx_);
-                    auto ret = packet_id_.insert(packet_id);
+                    auto ret = pid_man_.register_id(packet_id);
                     (void)ret;
-                    BOOST_ASSERT(ret.second);
+                    BOOST_ASSERT(ret);
                     store_.emplace(
                         packet_id,
                         qos_value == qos::at_least_once
@@ -4595,7 +4560,7 @@ public:
                 auto packet_id = msg.packet_id();
 
                 LockGuard<Mutex> lck (store_mtx_);
-                packet_id_.insert(packet_id);
+                pid_man_.register_id(packet_id);
                 auto ret = store_.emplace(
                     packet_id,
                     control_packet_type::pubcomp,
@@ -4649,9 +4614,9 @@ public:
                     store_msg.set_dup(true);
 
                     LockGuard<Mutex> lck (store_mtx_);
-                    auto ret = packet_id_.insert(packet_id);
+                    auto ret = pid_man_.register_id(packet_id);
                     (void)ret;
-                    BOOST_ASSERT(ret.second);
+                    BOOST_ASSERT(ret);
                     store_.emplace(
                         packet_id,
                         qos_value == qos::at_least_once
@@ -4670,7 +4635,7 @@ public:
                 auto packet_id = msg.packet_id();
 
                 LockGuard<Mutex> lck (store_mtx_);
-                packet_id_.insert(packet_id);
+                pid_man_.register_id(packet_id);
                 auto ret = store_.emplace(
                     packet_id,
                     control_packet_type::pubcomp,
@@ -4882,7 +4847,7 @@ protected:
         {
             LockGuard<Mutex> lck (store_mtx_);
             store_.clear();
-            packet_id_.clear();
+            pid_man_.clear();
         }
         {
             LockGuard<Mutex> lck (topic_alias_recv_mtx_);
@@ -7597,7 +7562,7 @@ private:
                 auto& idx = store_.template get<tag_packet_id_type>();
                 auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::puback));
                 idx.erase(std::get<0>(r), std::get<1>(r));
-                packet_id_.erase(info.packet_id);
+                pid_man_.release_id(info.packet_id);
             }
             on_serialize_remove(info.packet_id);
             switch (version_) {
@@ -8132,7 +8097,7 @@ private:
                 auto& idx = store_.template get<tag_packet_id_type>();
                 auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::pubcomp));
                 idx.erase(std::get<0>(r), std::get<1>(r));
-                packet_id_.erase(info.packet_id);
+                pid_man_.release_id(info.packet_id);
             }
             on_serialize_remove(info.packet_id);
             switch (version_) {
@@ -8437,7 +8402,7 @@ private:
                     {
                         LockGuard<Mutex> lck_store (store_mtx_);
                         LockGuard<Mutex> lck_sub_unsub (sub_unsub_inflight_mtx_);
-                        packet_id_.erase(info.packet_id);
+                        pid_man_.release_id(info.packet_id);
                         sub_unsub_inflight_.erase(info.packet_id);
                     }
                     switch (version_) {
@@ -8719,7 +8684,7 @@ private:
                     {
                         LockGuard<Mutex> lck_store (store_mtx_);
                         LockGuard<Mutex> lck_sub_unsub (sub_unsub_inflight_mtx_);
-                        packet_id_.erase(info.packet_id);
+                        pid_man_.release_id(info.packet_id);
                         sub_unsub_inflight_.erase(info.packet_id);
                     }
                     switch (version_) {
@@ -8777,7 +8742,7 @@ private:
                     {
                         LockGuard<Mutex> lck_store (store_mtx_);
                         LockGuard<Mutex> lck_sub_unsub (sub_unsub_inflight_mtx_);
-                        packet_id_.erase(info.packet_id);
+                        pid_man_.release_id(info.packet_id);
                         sub_unsub_inflight_.erase(info.packet_id);
                     }
 
@@ -9252,7 +9217,7 @@ private:
                     LockGuard<Mutex> lck (store_mtx_);
 
                     // insert if not registerd (start from pubrel sending case)
-                    packet_id_.insert(packet_id);
+                    pid_man_.register_id(packet_id);
 
                     auto ret = store_.emplace(
                         packet_id,
@@ -9321,7 +9286,7 @@ private:
                     LockGuard<Mutex> lck (store_mtx_);
 
                     // insert if not registerd (start from pubrel sending case)
-                    packet_id_.insert(packet_id);
+                    pid_man_.register_id(packet_id);
 
                     auto ret = store_.emplace(
                         packet_id,
@@ -9785,7 +9750,7 @@ private:
                     LockGuard<Mutex> lck (store_mtx_);
 
                     // insert if not registerd (start from pubrel sending case)
-                    packet_id_.insert(packet_id);
+                    pid_man_.register_id(packet_id);
 
                     auto ret = store_.emplace(
                         packet_id,
@@ -10293,7 +10258,7 @@ private:
         LockGuard<Mutex> lck_store (store_mtx_);
         LockGuard<Mutex> lck_sub_unsub (sub_unsub_inflight_mtx_);
         for (auto packet_id : sub_unsub_inflight_) {
-            packet_id_.erase(packet_id);
+            pid_man_.release_id(packet_id);
         }
     }
 
@@ -10373,8 +10338,9 @@ private:
     mi_store store_;
     std::set<packet_id_t> qos2_publish_handled_;
     std::deque<async_packet> queue_;
-    packet_id_t packet_id_master_{0};
-    std::set<packet_id_t> packet_id_;
+
+    packet_id_manager<packet_id_t> pid_man_;
+
     Mutex sub_unsub_inflight_mtx_;
     std::set<packet_id_t> sub_unsub_inflight_;
     bool auto_pub_response_{true};
