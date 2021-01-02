@@ -253,7 +253,6 @@ public:
         for (auto const& e : pool_) {
             o << e;
         }
-        o << std::endl;
         return o;
     }
 private:
