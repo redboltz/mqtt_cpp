@@ -26,8 +26,18 @@ boost::asio::ssl::context init_ctx(boost::program_options::variables_map const& 
     ctx.set_options(
         boost::asio::ssl::context::default_workarounds |
         boost::asio::ssl::context::single_dh_use);
-    ctx.use_certificate_file(vm["certificate"].as<std::string>(), boost::asio::ssl::context::pem);
-    ctx.use_private_key_file(vm["private_key"].as<std::string>(), boost::asio::ssl::context::pem);
+
+    boost::system::error_code ec;
+    ctx.use_certificate_file(vm["certificate"].as<std::string>(), boost::asio::ssl::context::pem, ec);
+    if (ec) {
+        throw std::runtime_error("Failed to load certificate file:: " + ec.message());
+    }
+
+    ctx.use_private_key_file(vm["private_key"].as<std::string>(), boost::asio::ssl::context::pem, ec);
+    if (ec) {
+        throw std::runtime_error("Failed to load private key file: " + ec.message());
+    }
+
     return ctx;
 }
 #endif // defined(MQTT_USE_TLS)

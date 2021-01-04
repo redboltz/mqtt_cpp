@@ -83,6 +83,10 @@ FOREACH (source_file ${check_PROGRAMS})
     TARGET_LINK_LIBRARIES (
         ${source_file_we} mqtt_cpp_iface Boost::unit_test_framework
     )
+    IF (MSVC AND MQTT_USE_STATIC_OPENSSL)
+        TARGET_LINK_LIBRARIES (${source_file_we} Crypt32)
+    ENDIF ()
+
     IF (MQTT_USE_LOG)
         TARGET_COMPILE_DEFINITIONS (${source_file_we} PUBLIC $<IF:$<BOOL:${MQTT_USE_STATIC_BOOST}>,,BOOST_LOG_DYN_LINK>)
         TARGET_LINK_LIBRARIES (
