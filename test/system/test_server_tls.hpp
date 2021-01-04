@@ -59,6 +59,22 @@ public:
         server_.close();
     }
 
+    /**
+     * @brief Get boost asio ssl context.
+     * @return ssl context
+     */
+    MQTT_NS::tls::context& get_ssl_context() {
+        return server_.get_ssl_context();
+    }
+
+    /**
+     * @brief Get boost asio ssl context.
+     * @return ssl context
+     */
+    MQTT_NS::tls::context const& get_ssl_context() const {
+        return server_.get_ssl_context();
+    }
+
 private:
     MQTT_NS::server_tls<> server_;
     MQTT_NS::broker::broker_t& b_;
