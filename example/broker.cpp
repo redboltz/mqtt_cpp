@@ -16,19 +16,78 @@
 #include <fstream>
 
 #if defined(MQTT_USE_TLS)
-boost::asio::ssl::context init_ctx(boost::program_options::variables_map const& vm)
+boost::asio::ssl::context init_ctx()
+{
+    boost::asio::ssl::context ctx(boost::asio::ssl::context::tlsv12);
+    ctx.set_options(
+        boost::asio::ssl::context::default_workarounds |
+        boost::asio::ssl::context::single_dh_use);
+    return ctx;
+}
+
+template<typename Server>
+void reload_ctx(Server& server, boost::asio::steady_timer& reload_timer,
+                std::string const& certificate_filename,
+                std::string const& key_filename,
+                unsigned int certificate_reload_interval,
+                char const* name, bool first_load = true)
+{
+    MQTT_LOG("mqtt_broker", info) << "Reloading certificates for server " << name;
+
+    if (certificate_reload_interval > 0) {
+        reload_timer.expires_after(std::chrono::hours(certificate_reload_interval));
+        reload_timer.async_wait(
+            [&server, &reload_timer, certificate_filename, key_filename, certificate_reload_interval, name]
+            (boost::system::error_code const& e) {
+
+            BOOST_ASSERT(!e || e == boost::asio::error::operation_aborted);
+
+            if (!e) {
+                reload_ctx(server, reload_timer, certificate_filename, key_filename, certificate_reload_interval, name, false);
+            }
+        });
+    }
+
+    auto context = init_ctx();
+
+    boost::system::error_code ec;
+    context.use_certificate_file(certificate_filename, boost::asio::ssl::context::pem, ec);
+    if (ec) {
+        auto message = "Failed to load certificate file: " + ec.message();
+        if (first_load) {
+            throw std::runtime_error(message);
+        }
+
+        MQTT_LOG("mqtt_broker", warning) << message;
+        return;
+    }
+
+    context.use_private_key_file(key_filename, boost::asio::ssl::context::pem, ec);
+    if (ec) {
+        auto message = "Failed to load private key file: " + ec.message();
+        if (first_load) {
+            throw std::runtime_error(message);
+        }
+
+        MQTT_LOG("mqtt_broker", warning) << message;
+        return;
+    }
+
+    server.get_ssl_context() = std::move(context);
+}
+
+template<typename Server>
+void load_ctx(Server& server, boost::asio::steady_timer& reload_timer, boost::program_options::variables_map const& vm, char const* name)
 {
     if (vm.count("certificate") == 0 && vm.count("private_key") == 0) {
         throw std::runtime_error("TLS requested but certificate and/or private_key not specified");
     }
 
-    boost::asio::ssl::context ctx(boost::asio::ssl::context::tlsv12);
-    ctx.set_options(
-        boost::asio::ssl::context::default_workarounds |
-        boost::asio::ssl::context::single_dh_use);
-    ctx.use_certificate_file(vm["certificate"].as<std::string>(), boost::asio::ssl::context::pem);
-    ctx.use_private_key_file(vm["private_key"].as<std::string>(), boost::asio::ssl::context::pem);
-    return ctx;
+    reload_ctx(server, reload_timer,
+           vm["certificate"].as<std::string>(),
+           vm["private_key"].as<std::string>(),
+           vm["certificate_reload_interval"].as<unsigned int>(),
+           name, true);
 }
 #endif // defined(MQTT_USE_TLS)
 
@@ -38,32 +97,39 @@ void run_broker(boost::program_options::variables_map const& vm)
         boost::asio::io_context ioc;
         MQTT_NS::broker::broker_t b(ioc);
 
-        std::unique_ptr<test_server_no_tls> s;
+        MQTT_NS::optional<test_server_no_tls> s;
         if (vm.count("tcp.port")) {
-            s = std::make_unique<test_server_no_tls>(ioc, b, vm["tcp.port"].as<uint16_t>());
+            s.emplace(ioc, b, vm["tcp.port"].as<uint16_t>());
         }
 
 #if defined(MQTT_USE_WS)
-        std::unique_ptr<test_server_no_tls_ws> s_ws;
+        MQTT_NS::optional<test_server_no_tls_ws> s_ws;
         if (vm.count("ws.port")) {
-            s_ws = std::make_unique<test_server_no_tls_ws>(ioc, b, vm["ws.port"].as<uint16_t>());
+            s_ws.emplace(ioc, b, vm["ws.port"].as<uint16_t>());
         }
 #endif // defined(MQTT_USE_WS)
 
 #if defined(MQTT_USE_TLS)
-        std::unique_ptr<test_server_tls> s_tls;
+        MQTT_NS::optional<test_server_tls> s_tls;
+        MQTT_NS::optional<boost::asio::steady_timer> s_lts_timer;
+
         if (vm.count("tls.port")) {
-            s_tls = std::make_unique<test_server_tls>(ioc, init_ctx(vm), b, vm["tls.port"].as<uint16_t>());
+            s_tls.emplace(ioc, init_ctx(), b, vm["tls.port"].as<uint16_t>());
+            s_lts_timer.emplace(ioc);
+            load_ctx(s_tls.value(), s_lts_timer.value(), vm, "TLS");
         }
 #endif // defined(MQTT_USE_TLS)
 
 #if defined(MQTT_USE_TLS) && defined(MQTT_USE_WS)
-        std::unique_ptr<test_server_tls_ws> s_tls_ws;
+        MQTT_NS::optional<test_server_tls_ws> s_tls_ws;
+        MQTT_NS::optional<boost::asio::steady_timer> s_tls_ws_timer;
+
         if (vm.count("wss.port")) {
-            s_tls_ws = std::make_unique<test_server_tls_ws>(ioc, init_ctx(vm), b, vm["wss.port"].as<uint16_t>());
+            s_tls_ws.emplace(ioc, init_ctx(), b, vm["wss.port"].as<uint16_t>());
+            s_tls_ws_timer.emplace(ioc);
+            load_ctx(s_tls_ws.value(), s_tls_ws_timer.value(), vm, "WSS");
         }
 #endif // defined(MQTT_USE_TLS) && defined(MQTT_USE_WS)
-
 
         ioc.run();
     } catch(std::exception &e) {
@@ -84,7 +150,8 @@ int main(int argc, char **argv) {
 #endif // defined(MQTT_USE_LOG)
             ("certificate", boost::program_options::value<std::string>(), "Certificate file for TLS connections")
             ("private_key", boost::program_options::value<std::string>(), "Private key file for TLS connections")
-        ;
+            ("certificate_reload_interval", boost::program_options::value<unsigned int>()->default_value(0), "Reload interval for the certificate and private key files (hours)\n 0 - Disabled")
+            ;
 
         boost::program_options::options_description notls_desc("TCP Server options");
         notls_desc.add_options()
