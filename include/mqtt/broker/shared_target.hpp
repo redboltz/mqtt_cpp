@@ -19,10 +19,10 @@
 
 #include <mqtt/buffer.hpp>
 #include <mqtt/optional.hpp>
+#include <mqtt/time_point_t.hpp>
 
 #include <mqtt/broker/broker_namespace.hpp>
 #include <mqtt/broker/session_state_fwd.hpp>
-#include <mqtt/broker/time_point_t.hpp>
 #include <mqtt/broker/tags.hpp>
 
 MQTT_BROKER_NS_BEGIN

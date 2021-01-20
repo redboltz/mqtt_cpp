@@ -66,6 +66,7 @@
 #include <mqtt/error_code.hpp>
 #include <mqtt/log.hpp>
 #include <mqtt/variant_visit.hpp>
+#include <mqtt/topic_alias_send.hpp>
 #include <mqtt/topic_alias_recv.hpp>
 #include <mqtt/subscribe_entry.hpp>
 #include <mqtt/shared_subscriptions.hpp>
@@ -850,6 +851,10 @@ public:
         auto_pub_response_async_ = async;
     }
 
+    void set_auto_replace_topic_alias_send(bool b = true) {
+        auto_replace_topic_alias_send_ = b;
+    }
+
     void set_packet_bulk_read_limit(std::size_t size) {
         packet_bulk_read_limit_ = size;
     }
@@ -996,6 +1001,15 @@ public:
             << "force_disconnect";
 
         shutdown(socket());
+
+        {
+            LockGuard<Mutex> lck (topic_alias_send_mtx_);
+            if (topic_alias_send_) topic_alias_send_.value().clear();
+        }
+        {
+            LockGuard<Mutex> lck (topic_alias_recv_mtx_);
+            topic_alias_recv_.clear();
+        }
     }
 
     /**
@@ -4384,6 +4398,7 @@ public:
      *        This function shouold be called before connect.
      * @param b         iterator begin of the message
      * @param e         iterator end of the message
+     * Empty topic_name on MQTT v5 publish message is prohibited.
      */
     template <typename Iterator>
     std::enable_if_t< std::is_convertible<typename Iterator::value_type, char>::value >
@@ -4427,11 +4442,12 @@ public:
     /**
      * @brief Restore serialized publish message.
      *        This function shouold be called before connect.
-     * @param msg         publish message.
+     * @param msg  publish message. Empty topic_name is prohibited.
      * @param life_keeper
      *        An object that stays alive (but is moved with force_move()) until the stored message is sent.
      */
     void restore_v5_serialized_message(v5::basic_publish_message<PacketIdBytes> msg, any life_keeper = {}) {
+        BOOST_ASSERT(!msg.topic().empty());
         auto packet_id = msg.packet_id();
         auto qos = msg.get_qos();
         LockGuard<Mutex> lck (store_mtx_);
@@ -4532,26 +4548,12 @@ public:
     void send_store_message(basic_store_message_variant<PacketIdBytes> msg, any life_keeper) {
         auto publish_proc =
             [&](auto msg, auto const& serialize) {
-                auto qos_value = msg.get_qos();
-                if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
-                    auto store_msg = msg;
-                    auto packet_id = msg.packet_id();
-                    store_msg.set_dup(true);
-
-                    LockGuard<Mutex> lck (store_mtx_);
-                    auto ret = pid_man_.register_id(packet_id);
-                    (void)ret;
-                    BOOST_ASSERT(ret);
-                    store_.emplace(
-                        packet_id,
-                        qos_value == qos::at_least_once
-                            ? control_packet_type::puback
-                            : control_packet_type::pubrec,
-                        store_msg,
-                        force_move(life_keeper)
-                    );
-                    (this->*serialize)(force_move(store_msg));
-                }
+                store_publish_message(
+                    msg,
+                    life_keeper,
+                    serialize,
+                    true // register packet_id
+                );
                 do_sync_write(force_move(msg));
             };
 
@@ -4607,26 +4609,12 @@ public:
     void async_send_store_message(basic_store_message_variant<PacketIdBytes> msg, any life_keeper, async_handler_t func) {
         auto publish_proc =
             [&](auto msg, auto const& serialize) {
-                auto qos_value = msg.get_qos();
-                if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
-                    auto store_msg = msg;
-                    auto packet_id = msg.packet_id();
-                    store_msg.set_dup(true);
-
-                    LockGuard<Mutex> lck (store_mtx_);
-                    auto ret = pid_man_.register_id(packet_id);
-                    (void)ret;
-                    BOOST_ASSERT(ret);
-                    store_.emplace(
-                        packet_id,
-                        qos_value == qos::at_least_once
-                            ? control_packet_type::puback
-                            : control_packet_type::pubrec,
-                        store_msg,
-                        force_move(life_keeper)
-                    );
-                    (this->*serialize)(force_move(store_msg));
-                }
+                store_publish_message(
+                    msg,
+                    life_keeper,
+                    serialize,
+                    true // register packet_id
+                );
                 do_async_write(force_move(msg), force_move(func));
             };
 
@@ -4766,28 +4754,6 @@ public:
         pingresp_timeout_ = force_move(tim);
     }
 
-    /**
-     * @brief get topic alias recv container.
-     * @return a copy of topic alias recv container
-     *
-     * This function for dump/restore topic alias recv container.
-     */
-    topic_alias_recv_map_t get_topic_alias_recv_container() const {
-        LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-        return topic_alias_recv_;
-    }
-
-    /**
-     * @brief restore topic alias recv container.
-     * @param con topic alias recv container to restore
-     *
-     * This function for dump/restore topic alias recv container.
-     */
-    void restore_topic_alias_recv_container(topic_alias_recv_map_t con) {
-        LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-        topic_alias_recv_ = force_move(con);
-    }
-
 protected:
 
     /**
@@ -4821,6 +4787,14 @@ protected:
                 socket_->close(ignored_ec);
             }
         }
+        {
+            LockGuard<Mutex> lck (topic_alias_send_mtx_);
+            if (topic_alias_send_) topic_alias_send_.value().clear();
+        }
+        {
+            LockGuard<Mutex> lck (topic_alias_recv_mtx_);
+            topic_alias_recv_.clear();
+        }
         if (disconnect_requested_) {
             disconnect_requested_ = false;
             connect_requested_ = false;
@@ -4844,15 +4818,9 @@ protected:
     }
 
     void clear_session_data() {
-        {
-            LockGuard<Mutex> lck (store_mtx_);
-            store_.clear();
-            pid_man_.clear();
-        }
-        {
-            LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-            clear_topic_alias(topic_alias_recv_);
-        }
+        LockGuard<Mutex> lck (store_mtx_);
+        store_.clear();
+        pid_man_.clear();
     }
 
 private:
@@ -7070,6 +7038,11 @@ private:
                         }
                         break;
                     case protocol_version::v5:
+                        if (auto ta_opt = get_topic_alias_maximum_from_props(info.props)) {
+                            if (ta_opt.value() > 0) {
+                                topic_alias_send_.emplace(ta_opt.value());
+                            }
+                        }
                         if (on_v5_connack(info.session_present,
                                           variant_get<v5::connect_reason_code>(info.reason_code),
                                           force_move(info.props))) {
@@ -7323,10 +7296,10 @@ private:
                                 break;
                             case protocol_version::v5:
                                 if (info.topic_name.empty()) {
-                                    if (auto topic_alias = get_topic_alias_by_props(info.props)) {
+                                    if (auto topic_alias = get_topic_alias_from_props(info.props)) {
                                         auto topic_name = [&] {
                                             LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-                                            return find_topic_by_alias(topic_alias_recv_, topic_alias.value());
+                                            return topic_alias_recv_.find(topic_alias.value());
                                         }();
                                         if (topic_name.empty()) {
                                             MQTT_LOG("mqtt_cb", error)
@@ -7342,9 +7315,9 @@ private:
                                     }
                                 }
                                 else {
-                                    if (auto topic_alias = get_topic_alias_by_props(info.props)) {
+                                    if (auto topic_alias = get_topic_alias_from_props(info.props)) {
                                         LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-                                        register_topic_alias(topic_alias_recv_, info.topic_name, topic_alias.value());
+                                        topic_alias_recv_.insert_or_update(info.topic_name, topic_alias.value());
                                     }
                                 }
                                 if (on_v5_publish(
@@ -9104,6 +9077,120 @@ private:
         }
     }
 
+    template <typename PublishMessage>
+    std::enable_if_t<
+        std::is_same<
+            PublishMessage,
+            v5::basic_publish_message<PacketIdBytes>
+        >::value
+    >
+    store_topic_alias(
+        PublishMessage& msg,
+        any& life_keeper
+    ) {
+        if (msg.topic().empty()) {
+            auto qos_value = msg.get_qos();
+            if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
+                // Recover topic alias for store
+                if (auto ta_opt = get_topic_alias_from_props(msg.props())) {
+                    LockGuard<Mutex> lck (topic_alias_send_mtx_);
+                    std::string t;
+                    if (topic_alias_send_) t = topic_alias_send_.value().find(ta_opt.value());
+                    if (t.empty()) {
+                        MQTT_LOG("mqtt_impl", error)
+                            << MQTT_ADD_VALUE(address, this)
+                            << "publish topic_name is empty, topic alias " << ta_opt.value()
+                            << " is not registered." ;
+                        throw protocol_error();
+                    }
+                    else {
+                        MQTT_LOG("mqtt_impl", trace)
+                            << MQTT_ADD_VALUE(address, this)
+                            << "topia alias : " << t << " - " << ta_opt.value() << " is recovered for store." ;
+                        auto topic_name_buf = allocate_buffer(t);
+                        msg.set_topic_name(as::buffer(topic_name_buf));
+                        life_keeper = std::make_tuple(force_move(life_keeper), force_move(topic_name_buf));
+                        msg.remove_prop(v5::property::id::topic_alias);
+                    }
+                }
+                else {
+                    MQTT_LOG("mqtt_impl", error)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "publish topic_name is empty, no topic alias set.";
+                    throw protocol_error();
+                }
+            }
+        }
+        else {
+            if (auto ta_opt = get_topic_alias_from_props(msg.props())) {
+                MQTT_LOG("mqtt_impl", trace)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "topia alias : " << msg.topic() << " - " << ta_opt.value() << " is registered." ;
+                LockGuard<Mutex> lck (topic_alias_send_mtx_);
+                if (topic_alias_send_) {
+                    topic_alias_send_.value().insert_or_update(
+                        msg.topic(),
+                        ta_opt.value()
+                    );
+                }
+            }
+            else if (auto_replace_topic_alias_send_) {
+                LockGuard<Mutex> lck (topic_alias_send_mtx_);
+                if (topic_alias_send_) {
+                    if (auto ta_opt = topic_alias_send_.value().find(msg.topic())) {
+                        MQTT_LOG("mqtt_impl", trace)
+                            << MQTT_ADD_VALUE(address, this)
+                            << "topia alias : " << msg.topic() << " - " << ta_opt.value() << " is found." ;
+                        auto topic_name_buf = buffer();
+                        msg.set_topic_name(as::buffer(topic_name_buf));
+                        life_keeper = std::make_tuple(force_move(life_keeper), force_move(topic_name_buf));
+                        msg.add_prop(v5::property::topic_alias(ta_opt.value()));
+                    }
+                }
+            }
+        }
+    }
+
+    template <typename PublishMessage>
+    std::enable_if_t<
+        !std::is_same<
+            PublishMessage,
+            v5::basic_publish_message<PacketIdBytes>
+        >::value
+    >
+    store_topic_alias(PublishMessage&, any&) {}
+
+    template <typename PublishMessage, typename SerializePublish>
+    void store_publish_message(
+        PublishMessage msg,
+        any life_keeper,
+        SerializePublish const& serialize_publish,
+        bool register_pid = false
+    ) {
+        store_topic_alias(msg, life_keeper);
+        auto qos_value = msg.get_qos();
+        if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
+            msg.set_dup(true);
+            auto packet_id = msg.packet_id();
+
+            LockGuard<Mutex> lck (store_mtx_);
+            if (register_pid) {
+                auto ret = pid_man_.register_id(packet_id);
+                (void)ret;
+                BOOST_ASSERT(ret);
+            }
+            store_.emplace(
+                packet_id,
+                qos_value == qos::at_least_once
+                ? control_packet_type::puback
+                : control_packet_type::pubrec,
+                msg,
+                force_move(life_keeper)
+            );
+            (this->*serialize_publish)(force_move(msg));
+        }
+    }
+
     template <typename ConstBufferSequence>
     typename std::enable_if<
         as::is_const_buffer_sequence<ConstBufferSequence>::value
@@ -9118,21 +9205,11 @@ private:
 
         auto do_send_publish =
             [&](auto msg, auto const& serialize_publish) {
-
-                if (pubopts.get_qos() == qos::at_least_once || pubopts.get_qos() == qos::exactly_once) {
-                    auto store_msg = msg;
-                    store_msg.set_dup(true);
-                    LockGuard<Mutex> lck (store_mtx_);
-                    store_.emplace(
-                        packet_id,
-                        pubopts.get_qos() == qos::at_least_once
-                             ? control_packet_type::puback
-                             : control_packet_type::pubrec,
-                        force_move(store_msg),
-                        force_move(life_keeper)
-                    );
-                    (this->*serialize_publish)(msg);
-                }
+                store_publish_message(
+                    msg,
+                    life_keeper,
+                    serialize_publish
+                );
                 do_sync_write(force_move(msg));
             };
 
@@ -9620,24 +9697,11 @@ private:
     ) {
         auto do_async_send_publish =
             [&](auto msg, auto const& serialize_publish) {
-                if (pubopts.get_qos() == qos::at_least_once || pubopts.get_qos() == qos::exactly_once) {
-                    auto store_msg = msg;
-                    store_msg.set_dup(true);
-                    {
-                        LockGuard<Mutex> lck (store_mtx_);
-                        auto ret = store_.emplace(
-                            packet_id,
-                            pubopts.get_qos() == qos::at_least_once ? control_packet_type::puback
-                                                                    : control_packet_type::pubrec,
-                            store_msg,
-                            life_keeper
-                        );
-                        (void)ret;
-                        BOOST_ASSERT(ret.second);
-                    }
-
-                    (this->*serialize_publish)(force_move(store_msg));
-                }
+                store_publish_message(
+                    msg,
+                    life_keeper,
+                    serialize_publish
+                );
                 do_async_write(
                     force_move(msg),
                     [life_keeper = force_move(life_keeper), func = force_move(func)](error_code ec) {
@@ -10289,7 +10353,30 @@ private:
         );
     }
 
-    static optional<topic_alias_t> get_topic_alias_by_prop(v5::property_variant const& prop) {
+    static optional<topic_alias_t> get_topic_alias_maximum_from_prop(v5::property_variant const& prop) {
+        optional<topic_alias_t> val;
+        MQTT_NS::visit(
+            make_lambda_visitor(
+                [&val](v5::property::topic_alias_maximum const& p) {
+                    val = p.val();
+                },
+                [](auto&&) {
+                }
+            ), prop
+        );
+        return val;
+    }
+
+    static optional<topic_alias_t> get_topic_alias_maximum_from_props(v5::properties const& props) {
+        for (auto const& prop : props) {
+            if (auto val = get_topic_alias_maximum_from_prop(prop)) {
+                return val;
+            }
+        }
+        return nullopt;
+    }
+
+    static optional<topic_alias_t> get_topic_alias_from_prop(v5::property_variant const& prop) {
         optional<topic_alias_t> val;
         MQTT_NS::visit(
             make_lambda_visitor(
@@ -10303,9 +10390,9 @@ private:
         return val;
     }
 
-    static optional<topic_alias_t> get_topic_alias_by_props(v5::properties const& props) {
+    static optional<topic_alias_t> get_topic_alias_from_props(v5::properties const& props) {
         for (auto const& prop : props) {
-            if (auto val = get_topic_alias_by_prop(prop)) {
+            if (auto val = get_topic_alias_from_prop(prop)) {
                 return val;
             }
         }
@@ -10362,8 +10449,12 @@ private:
     as::steady_timer tim_pingresp_;
     bool tim_pingresp_set_ = false;
 
+    bool auto_replace_topic_alias_send_ = false;
+    mutable Mutex topic_alias_send_mtx_;
+    optional<topic_alias_send> topic_alias_send_;
+
     mutable Mutex topic_alias_recv_mtx_;
-    topic_alias_recv_map_t topic_alias_recv_;
+    topic_alias_recv topic_alias_recv_{topic_alias_max};
 };
 
 } // namespace MQTT_NS

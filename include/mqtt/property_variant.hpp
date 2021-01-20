@@ -63,6 +63,13 @@ struct add_const_buffer_sequence_visitor {
     std::vector<as::const_buffer>& v;
 };
 
+struct id_visitor {
+    template <typename T>
+    id operator()(T const& t) const {
+        return t.id();
+    }
+};
+
 struct size_visitor {
     template <typename T>
     std::size_t operator()(T&& t) const {
@@ -101,6 +108,10 @@ inline fill_visitor<Iterator> make_fill_visitor(Iterator b, Iterator e) {
 
 inline void add_const_buffer_sequence(std::vector<as::const_buffer>& v, property_variant const& pv) {
     MQTT_NS::visit(property::detail::add_const_buffer_sequence_visitor(v), pv);
+}
+
+inline property::id id(property_variant const& pv) {
+    return MQTT_NS::visit(property::detail::id_visitor(), pv);
 }
 
 inline std::size_t size(property_variant const& pv) {

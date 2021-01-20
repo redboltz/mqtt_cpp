@@ -120,6 +120,18 @@ public:
     }
 
     /**
+     * @brief Get the first vacant value.
+     * @return If allocator has at least one vacant value, then returns lowest value, otherwise return nullopt.
+     */
+    optional<value_type> first_vacant() const {
+        if (pool_.empty()) return nullopt;
+
+        // The smallest interval is the target.
+        auto it = pool_.begin();
+        return it->low();
+    }
+
+    /**
      * @brief Dellocate one value.
      * @param value value to deallocate. The value must be gotten by allocate() or declared by use().
      */

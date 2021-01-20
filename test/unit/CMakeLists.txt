@@ -14,6 +14,7 @@ IF (MQTT_TEST_1)
     LIST (APPEND check_PROGRAMS
         ut_utf8string_validate.cpp
         ut_packet_id.cpp
+        ut_topic_alias.cpp
         ut_message.cpp
         ut_property.cpp
         ut_subscription_map.cpp

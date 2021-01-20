@@ -15,7 +15,7 @@ IF (MQTT_TEST_2)
         st_connect.cpp
         st_underlying_timeout.cpp
         st_as_buffer_sub.cpp
-        st_topic_alias_recv.cpp
+        st_topic_alias.cpp
         st_as_buffer_pubsub.cpp
         st_shared_sub.cpp
     )

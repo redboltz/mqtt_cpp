@@ -36,6 +36,7 @@
 #include <mqtt/reason_code.hpp>
 #include <mqtt/packet_id_type.hpp>
 #include <mqtt/move.hpp>
+#include <mqtt/variant_visit.hpp>
 
 #if !defined(MQTT_ALWAYS_SEND_REASON_CODE)
 #define MQTT_ALWAYS_SEND_REASON_CODE false
@@ -887,11 +888,81 @@ public:
     }
 
     /**
-     * @brief Get properties
-     * @return properties
+     * @brief Add property
+     * @param p property to add
      */
-    properties& props() {
-        return props_;
+    void add_prop(property_variant p) {
+        props_.push_back(force_move(p));
+        auto add_size = v5::size(p);
+        property_length_ += add_size;
+        property_length_buf_.clear();
+        auto pb = variable_bytes(property_length_);
+        for (auto e : pb) {
+            property_length_buf_.push_back(e);
+        }
+
+        remaining_length_buf_.clear();
+        remaining_length_ += add_size;
+        auto rb = remaining_bytes(remaining_length_);
+        for (auto e : rb) {
+            remaining_length_buf_.push_back(e);
+        }
+    }
+
+    /**
+     * @brief Update property
+     *        Only fixed size property can be updated.
+     * @param p property to update
+     */
+    template <typename Property>
+    std::enable_if_t<
+        std::is_base_of<property::detail::n_bytes_property<1>, Property>::value ||
+        std::is_base_of<property::detail::n_bytes_property<2>, Property>::value ||
+        std::is_base_of<property::detail::n_bytes_property<4>, Property>::value
+    >
+    update_prop(Property update_prop) {
+        for (auto& p : props_) {
+            MQTT_NS::visit(
+                make_lambda_visitor(
+                    [&update_prop](Property& t) { t = std::forward<Property>(update_prop); },
+                    [](auto&) { }
+                ),
+                p
+            );
+        }
+    }
+
+    /**
+     * @brief Remove property
+     * @param id property::id to remove
+     */
+    void remove_prop(v5::property::id id) {
+        std::size_t removed_size = 0;
+        auto it = props_.begin();
+        auto end = props_.begin();
+        while (it != end) {
+            if (v5::id(*it) == id) {
+                removed_size += v5::size(*it);
+                it = props_.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
+
+        property_length_ -= removed_size;
+        property_length_buf_.clear();
+        auto pb = variable_bytes(property_length_);
+        for (auto e : pb) {
+            property_length_buf_.push_back(e);
+        }
+
+        remaining_length_buf_.clear();
+        remaining_length_ -= removed_size;
+        auto rb = remaining_bytes(remaining_length_);
+        for (auto e : rb) {
+            remaining_length_buf_.push_back(e);
+        }
     }
 
     /**
@@ -900,6 +971,25 @@ public:
      */
     constexpr void set_dup(bool dup) {
         publish::set_dup(fixed_header_, dup);
+    }
+
+    /**
+     * @brief Set topic name
+     * @param topic_name value to set
+     */
+    void set_topic_name(as::const_buffer topic_name) {
+        auto prev_topic_name_size = get_size(topic_name_);
+        topic_name_ = force_move(topic_name);
+        topic_name_length_buf_ = boost::container::static_vector<char, 2>{
+            num_to_2bytes(boost::numeric_cast<std::uint16_t>(get_size(topic_name)))
+        };
+
+        remaining_length_buf_.clear();
+        remaining_length_ =  remaining_length_ - prev_topic_name_size + get_size(topic_name);
+        auto rb = remaining_bytes(remaining_length_);
+        for (auto e : rb) {
+            remaining_length_buf_.push_back(e);
+        }
     }
 
 private:

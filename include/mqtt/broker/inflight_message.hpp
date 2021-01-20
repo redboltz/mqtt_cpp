@@ -56,15 +56,12 @@ public:
                 make_lambda_visitor(
                     [&](v5::basic_publish_message<sizeof(packet_id_t)> const& m) {
                         auto updated_msg = m;
-                        auto& props = updated_msg.props();
-
                         auto d =
                             std::chrono::duration_cast<std::chrono::seconds>(
                                 tim_message_expiry_->expiry() - std::chrono::steady_clock::now()
                             ).count();
                         if (d < 0) d = 0;
-                        set_property<v5::property::message_expiry_interval>(
-                            props,
+                        updated_msg.update_prop(
                             v5::property::message_expiry_interval(
                                 static_cast<uint32_t>(d)
                             )
