@@ -12,7 +12,7 @@
 
 #include <mqtt/optional.hpp>
 
-BOOST_AUTO_TEST_SUITE(st_topic_alias_recv)
+BOOST_AUTO_TEST_SUITE(st_topic_alias)
 
 using namespace MQTT_NS::literals;
 
@@ -94,6 +94,156 @@ BOOST_AUTO_TEST_CASE( pubsub ) {
                         MQTT_NS::v5::properties {
                             MQTT_NS::v5::property::topic_alias(0x1U)
                         }
+                    );
+                    return true;
+                });
+            c->set_v5_unsuback_handler(
+                [&chk, &c]
+                (packet_id_t, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_unsuback");
+                    BOOST_TEST(reasons.size() == 1U);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
+                    c->disconnect();
+                    return true;
+                });
+            c->set_v5_publish_handler(
+                [&chk, &c]
+                (MQTT_NS::optional<packet_id_t> packet_id,
+                 MQTT_NS::publish_options pubopts,
+                 MQTT_NS::buffer topic,
+                 MQTT_NS::buffer contents,
+                 MQTT_NS::v5::properties /*props*/) {
+                    auto ret = chk.match(
+                        "h_suback",
+                        [&] {
+                            MQTT_CHK("h_publsh1");
+                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_most_once);
+                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                            BOOST_CHECK(!packet_id);
+                            BOOST_TEST(topic == "topic1");
+                            BOOST_TEST(contents == "topic1_contents_1");
+                        },
+                        "h_publsh1",
+                        [&] {
+                            MQTT_CHK("h_publish2");
+                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_most_once);
+                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                            BOOST_CHECK(!packet_id);
+                            BOOST_TEST(topic == "topic1");
+                            BOOST_TEST(contents == "topic1_contents_2");
+                            c->unsubscribe("topic1");
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+
+        c->set_close_handler(
+            [&chk, &finish]
+            () {
+                MQTT_CHK("h_close");
+                finish();
+            });
+        c->set_error_handler(
+            []
+            (MQTT_NS::error_code) {
+                BOOST_CHECK(false);
+            });
+        c->set_pub_res_sent_handler(
+            []
+            (packet_id_t) {
+                BOOST_CHECK(false);
+            });
+        c->connect();
+        ioc.run();
+        BOOST_TEST(chk.all());
+    };
+    do_combi_test_sync(test);
+}
+
+BOOST_AUTO_TEST_CASE( auto_replace ) {
+    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
+        }
+
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
+        c->set_clean_session(true);
+        c->set_auto_replace_topic_alias_send();
+        
+        checker chk = {
+            // connect
+            cont("h_connack"),
+            // subscribe topic1 QoS0
+            cont("h_suback"),
+            // publish topic1 alias1 QoS0
+            // publish alias1 QoS0
+            cont("h_publsh1"),
+            cont("h_publish2"),
+            cont("h_unsuback"),
+            // disconnect
+            cont("h_close"),
+        };
+
+        switch (c->get_protocol_version()) {
+        case MQTT_NS::protocol_version::v5:
+            c->set_v5_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_connack");
+                    BOOST_TEST(sp == false);
+                    BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
+                    c->subscribe("topic1", MQTT_NS::qos::at_most_once);
+                    return true;
+                });
+            c->set_v5_puback_handler(
+                []
+                (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    BOOST_CHECK(false);
+                    return true;
+                });
+            c->set_v5_pubrec_handler(
+                []
+                (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    BOOST_CHECK(false);
+                    return true;
+                });
+            c->set_v5_pubcomp_handler(
+                []
+                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    BOOST_CHECK(false);
+                    return true;
+                });
+            c->set_v5_suback_handler(
+                [&chk, &c]
+                (packet_id_t, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_suback");
+                    BOOST_TEST(reasons.size() == 1U);
+                    BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
+                    // register topic alias
+                    c->publish(
+                        "topic1",
+                        "topic1_contents_1",
+                        MQTT_NS::qos::at_most_once,
+                        MQTT_NS::v5::properties {
+                            MQTT_NS::v5::property::topic_alias(0x1U)
+                        }
+                    );
+                    // use topic alias automatically
+                    c->publish(
+                        "topic1",
+                        "topic1_contents_2",
+                        MQTT_NS::qos::at_most_once
                     );
                     return true;
                 });

@@ -84,6 +84,14 @@ struct n_bytes_property {
     }
 
     /**
+     * @brief Get property::id
+     * @return id
+     */
+    property::id id() const {
+        return id_;
+    }
+
+    /**
      * @brief Get whole size of sequence
      * @return whole size
      */
@@ -138,6 +146,14 @@ struct binary_property {
         std::copy(length_.begin(), length_.end(), b);
         std::advance(b, static_cast<dt>(length_.size()));
         std::copy(buf_.begin(), buf_.end(), b);
+    }
+
+    /**
+     * @brief Get property::id
+     * @return id
+     */
+    property::id id() const {
+        return id_;
     }
 
     /**
@@ -203,6 +219,14 @@ struct variable_property {
         BOOST_ASSERT(static_cast<std::size_t>(std::distance(b, e)) >= size());
         *b++ = static_cast<typename std::iterator_traits<It>::value_type>(id_);
         std::copy(value_.begin(), value_.end(), b);
+    }
+
+    /**
+     * @brief Get property::id
+     * @return id
+     */
+    property::id id() const {
+        return id_;
     }
 
     /**
@@ -547,6 +571,14 @@ public:
             std::copy(ptr, std::next(ptr, static_cast<dt>(size)), b);
             std::advance(b, static_cast<dt>(size));
         }
+    }
+
+    /**
+     * @brief Get property::id
+     * @return id
+     */
+    property::id id() const {
+        return id_;
     }
 
     /**

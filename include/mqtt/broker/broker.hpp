@@ -854,11 +854,22 @@ private:
                     );
                     break;
                 case protocol_version::v5:
-                    ep.connack(
-                        session_present,
-                        v5::connect_reason_code::success,
-                        connack_props_
-                    );
+                    if (connack_props_.empty()) {
+                        ep.connack(
+                            session_present,
+                            v5::connect_reason_code::success,
+                            v5::properties{
+                                v5::property::topic_alias_maximum{topic_alias_max}
+                            }
+                        );
+                    }
+                    else {
+                        ep.connack(
+                            session_present,
+                            v5::connect_reason_code::success,
+                            connack_props_
+                        );
+                    }
                     break;
                 default:
                     BOOST_ASSERT(false);
@@ -930,7 +941,6 @@ private:
                         it,
                         [&](auto& e) {
                             e.reset_con(spep);
-                            e.restore_topic_alias_recv();
                             e.update_will(ioc_, force_move(will), will_expiry_interval);
                             // TODO: e.will_delay = force_move(will_delay);
                             e.renew_session_expiry(force_move(session_expiry_interval));
@@ -995,7 +1005,6 @@ private:
                     it,
                     [&](auto& e) {
                         e.reset_con(spep);
-                        e.restore_topic_alias_recv();
                         e.update_will(ioc_, force_move(will), will_expiry_interval);
                         // TODO: e.will_delay = force_move(will_delay);
                         e.renew_session_expiry(force_move(session_expiry_interval));

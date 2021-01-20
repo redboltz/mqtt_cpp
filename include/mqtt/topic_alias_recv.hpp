@@ -8,7 +8,7 @@
 #define MQTT_TOPIC_ALIAS_RECV_HPP
 
 #include <string>
-#include <map>
+#include <unordered_map>
 #include <array>
 
 #include <boost/multi_index_container.hpp>
@@ -19,52 +19,85 @@
 #include <mqtt/string_view.hpp>
 #include <mqtt/constant.hpp>
 #include <mqtt/type.hpp>
+#include <mqtt/move.hpp>
 #include <mqtt/log.hpp>
 
 namespace MQTT_NS {
 
-using topic_alias_recv_map_t = std::map<topic_alias_t, std::string>;
+namespace mi = boost::multi_index;
 
-inline void register_topic_alias(topic_alias_recv_map_t& m,  string_view topic, topic_alias_t alias) {
-    BOOST_ASSERT(alias > 0); //alias <= topic_alias_max is always true
+class topic_alias_recv {
+public:
+    topic_alias_recv(topic_alias_t max)
+        :max_{max} {}
 
-    MQTT_LOG("mqtt_impl", info)
-        << MQTT_ADD_VALUE(address, &m)
-        << "register_topic_alias"
-        << " topic:" << topic
-        << " alias:" << alias;
+    void insert_or_update(string_view topic, topic_alias_t alias) {
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "topic_alias_recv insert"
+            << " topic:" << topic
+            << " alias:" << alias;
+        BOOST_ASSERT(!topic.empty() && alias >= min_ && alias <= max_);
+        auto it = aliases_.lower_bound(alias);
+        if (it == aliases_.end() || it->alias != alias) {
+            aliases_.emplace_hint(it, std::string(topic), alias);
+        }
+        else {
+            aliases_.modify(
+                it,
+                [&](entry& e) {
+                    e.topic = std::string{topic};
+                },
+                [](auto&) { BOOST_ASSERT(false); }
+            );
 
-    if (topic.empty()) {
-        m.erase(alias);
+        }
     }
-    else {
-        m[alias] = std::string(topic); // overwrite
+
+    std::string find(topic_alias_t alias) const {
+        BOOST_ASSERT(alias >= min_ && alias <= max_);
+        std::string topic;
+        auto it = aliases_.find(alias);
+        if (it != aliases_.end()) topic = it->topic;
+
+        MQTT_LOG("mqtt_impl", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "find_topic_by_alias"
+            << " alias:" << alias
+            << " topic:" << topic;
+
+        return topic;
     }
-}
 
-inline std::string find_topic_by_alias(topic_alias_recv_map_t const& m,  topic_alias_t alias) {
-    BOOST_ASSERT(alias > 0); //alias <= topic_alias_max is always true
+    void clear() {
+        MQTT_LOG("mqtt_impl", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "clear_topic_alias";
+        aliases_.clear();
+    }
 
-    std::string topic;
-    auto it = m.find(alias);
-    if (it != m.end()) topic = it->second;
+private:
+    static constexpr topic_alias_t min_ = 1;
+    topic_alias_t max_;
 
-    MQTT_LOG("mqtt_impl", info)
-        << MQTT_ADD_VALUE(address, &m)
-        << "find_topic_by_alias"
-        << " alias:" << alias
-        << " topic:" << topic;
+    struct entry {
+        entry(std::string topic, topic_alias_t alias)
+            : topic{force_move(topic)}, alias{alias} {}
 
-    return topic;
-}
+        std::string topic;
+        topic_alias_t alias;
+    };
+    using mi_topic_alias = mi::multi_index_container<
+        entry,
+        mi::indexed_by<
+            mi::ordered_unique<
+                BOOST_MULTI_INDEX_MEMBER(entry, topic_alias_t, alias)
+            >
+        >
+    >;
 
-inline void clear_topic_alias(topic_alias_recv_map_t& m) {
-    MQTT_LOG("mqtt_impl", info)
-        << MQTT_ADD_VALUE(address, &m)
-        << "clear_topic_alias";
-
-    m.clear();
-}
+    mi_topic_alias aliases_;
+};
 
 } // namespace MQTT_NS
 

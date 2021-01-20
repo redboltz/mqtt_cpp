@@ -127,11 +127,6 @@ struct session_state {
             }
         );
 
-        // TopicAlias lifetime is the same as Session lifetime
-        // It is different from MQTT v5 spec but practical choice.
-        // See
-        // https://lists.oasis-open.org/archives/mqtt-comment/202009/msg00000.html
-        topic_alias_recv_ = con_->get_topic_alias_recv_container();
         reset_con();
 
         if (session_expiry_interval_ &&
@@ -237,7 +232,6 @@ struct session_state {
     }
 
     void clean() {
-        topic_alias_recv_ = nullopt;
         inflight_messages_.clear();
         offline_messages_.clear();
         qos2_publish_processed_.clear();
@@ -412,14 +406,6 @@ struct session_state {
 
     std::shared_ptr<as::steady_timer>& get_tim_will_expiry() { return tim_will_expiry_; }
 
-    void restore_topic_alias_recv() {
-        BOOST_ASSERT(con_);
-        if (topic_alias_recv_) {
-            con_->restore_topic_alias_recv_container(force_move(topic_alias_recv_.value()));
-            topic_alias_recv_ = nullopt;
-        }
-    }
-
 private:
     friend class session_states;
 
@@ -435,7 +421,6 @@ private:
     optional<std::chrono::steady_clock::duration> will_delay_;
     optional<std::chrono::steady_clock::duration> session_expiry_interval_;
     std::shared_ptr<as::steady_timer> tim_session_expiry_;
-    optional<topic_alias_recv_map_t> topic_alias_recv_;
 
     inflight_messages inflight_messages_;
     std::set<packet_id_t> qos2_publish_processed_;
