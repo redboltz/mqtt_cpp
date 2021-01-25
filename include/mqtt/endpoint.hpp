@@ -8843,12 +8843,24 @@ private:
                 ]
                 (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
                     info.reason_code = static_cast<v5::disconnect_reason_code>(body[0]);
-                    process_disconnect_impl<disconnect_phase::properties>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901210
+                    // If the Remaining Length is 0, there is no property length and the value of 0 is used
+                    if (remaining_length_ == 0) {
+                        process_disconnect_impl<disconnect_phase::finish>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
+                    else {
+                        process_disconnect_impl<disconnect_phase::properties>(
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            force_move(info),
+                            force_move(self)
+                        );
+                    }
                 },
                 force_move(self)
             );
