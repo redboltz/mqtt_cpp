@@ -7,6 +7,7 @@ LIST (APPEND exec_PROGRAMS
     v5_no_tls_server.cpp
     v5_no_tls_both.cpp
     v5_no_tls_prop.cpp
+    long_lived_client.cpp
     redirect.cpp
     broker.cpp
 )
