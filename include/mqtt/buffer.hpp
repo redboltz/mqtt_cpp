@@ -83,6 +83,15 @@ public:
         return buffer(string_view::substr(offset, length), force_move(lifetime_));
     }
 
+    /**
+     * @brief check the buffer has lifetime.
+     * @return true  the buffer has lifetime.
+     *         false the buffer doesn't have lifetime, This means the buffer is a pure view.
+     */
+    bool has_life() const {
+        return lifetime_.get();
+    }
+
 private:
     const_shared_ptr_array lifetime_;
 };
