@@ -224,47 +224,63 @@ BOOST_AUTO_TEST_CASE( interval_management ) {
 
     {
         auto ca = a;
+        // fully allocated
         ca.deallocate(0);
         BOOST_TEST(ca.interval_count() == 1);
+        // .....v no concat
         ca.deallocate(4);
         BOOST_TEST(ca.interval_count() == 2);
+        // ..v.. no concat
         ca.deallocate(2);
         BOOST_TEST(ca.interval_count() == 3);
+        // ..v.. concat both
         ca.deallocate(1);
         BOOST_TEST(ca.interval_count() == 2);
-        // concat both
+        // ..v.. concat both
         ca.deallocate(3);
         BOOST_TEST(ca.interval_count() == 1);
     }
     {
         auto ca = a;
+        // fully allocated
         ca.deallocate(3);
         BOOST_TEST(ca.interval_count() == 1);
-        // end concat right
+        // v.... no concat
+        ca.deallocate(0);
+        BOOST_TEST(ca.interval_count() == 2);
+        // ....v concat left
         ca.deallocate(4);
-        BOOST_TEST(ca.interval_count() == 1);
+        BOOST_TEST(ca.interval_count() == 2);
     }
     {
         auto ca = a;
+        // fully allocated
+        ca.deallocate(3);
+        BOOST_TEST(ca.interval_count() == 1);
+        // v.... concat right
         ca.deallocate(2);
         BOOST_TEST(ca.interval_count() == 1);
-        // concat right
-        ca.deallocate(3);
-        BOOST_TEST(ca.interval_count() == 1);
     }
     {
         auto ca = a;
-        ca.deallocate(1);
-        BOOST_TEST(ca.interval_count() == 1);
-        // begin concat left
+        // fully allocated
         ca.deallocate(0);
         BOOST_TEST(ca.interval_count() == 1);
+        // ....v no concat
+        ca.deallocate(4);
+        BOOST_TEST(ca.interval_count() == 2);
+        // ..v.. concat right
+        ca.deallocate(3);
+        BOOST_TEST(ca.interval_count() == 2);
+        // ..v.. concat left
+        ca.deallocate(1);
+        BOOST_TEST(ca.interval_count() == 2);
     }
     {
         auto ca = a;
         ca.deallocate(2);
         BOOST_TEST(ca.interval_count() == 1);
-        // concat left
+        // v.... concat left
         ca.deallocate(1);
         BOOST_TEST(ca.interval_count() == 1);
     }
