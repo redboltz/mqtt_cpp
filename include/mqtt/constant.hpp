@@ -12,8 +12,8 @@
 
 namespace MQTT_NS {
 
-static constexpr session_expiry_interval_t const session_never_expire = 0xffffffffUL;
-static constexpr topic_alias_t const topic_alias_max = 0xffff;
+static constexpr session_expiry_interval_t session_never_expire = 0xffffffffUL;
+static constexpr topic_alias_t topic_alias_max = 0xffff;
 
 } // namespace MQTT_NS
 
