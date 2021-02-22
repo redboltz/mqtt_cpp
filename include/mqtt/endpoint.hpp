@@ -124,6 +124,8 @@ struct std::is_constructible<std::_Head_base<0, std::any, false>, std::_Head_bas
 #undef MQTT_LIBSTDCXX_GCC_910
 #undef MQTT_LIBSTDCXX_GCC_920
 
+#include <boost/asio/yield.hpp>
+
 namespace MQTT_NS {
 
 namespace detail {
@@ -5067,14 +5069,17 @@ private:
         auto control_packet_type = get_control_packet_type(fixed_header_);
         switch (control_packet_type) {
         case control_packet_type::connect:
-            process_connect(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+            (*std::make_shared<process_connect>(*this, remaining_length_ < packet_bulk_read_limit_))
+                (force_move(self), force_move(session_life_keeper));
             break;
         case control_packet_type::connack:
-            process_connack(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+            (*std::make_shared<process_connack>(*this, remaining_length_ < packet_bulk_read_limit_))
+                (force_move(self), force_move(session_life_keeper));
             break;
         case control_packet_type::publish:
             if (mqtt_connected_) {
-                process_publish(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                (*std::make_shared<process_publish>(*this, remaining_length_ < packet_bulk_read_limit_))
+                    (force_move(self), force_move(session_life_keeper));
             }
             else {
                 call_protocol_error_handlers();
@@ -5082,7 +5087,8 @@ private:
             break;
         case control_packet_type::puback:
             if (mqtt_connected_) {
-                process_puback(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                (*std::make_shared<process_puback>(*this, remaining_length_ < packet_bulk_read_limit_))
+                    (force_move(self), force_move(session_life_keeper));
             }
             else {
                 call_protocol_error_handlers();
@@ -5090,7 +5096,8 @@ private:
             break;
         case control_packet_type::pubrec:
             if (mqtt_connected_) {
-                process_pubrec(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                (*std::make_shared<process_pubrec>(*this, remaining_length_ < packet_bulk_read_limit_))
+                    (force_move(self), force_move(session_life_keeper));
             }
             else {
                 call_protocol_error_handlers();
@@ -5098,7 +5105,8 @@ private:
             break;
         case control_packet_type::pubrel:
             if (mqtt_connected_) {
-                process_pubrel(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                (*std::make_shared<process_pubrel>(*this, remaining_length_ < packet_bulk_read_limit_))
+                    (force_move(self), force_move(session_life_keeper));
             }
             else {
                 call_protocol_error_handlers();
@@ -5106,7 +5114,8 @@ private:
             break;
         case control_packet_type::pubcomp:
             if (mqtt_connected_) {
-                process_pubcomp(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                (*std::make_shared<process_pubcomp>(*this, remaining_length_ < packet_bulk_read_limit_))
+                    (force_move(self), force_move(session_life_keeper));
             }
             else {
                 call_protocol_error_handlers();
@@ -5114,7 +5123,8 @@ private:
             break;
         case control_packet_type::subscribe:
             if (mqtt_connected_) {
-                process_subscribe(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                (*std::make_shared<process_subscribe>(*this, remaining_length_ < packet_bulk_read_limit_))
+                    (force_move(self), force_move(session_life_keeper));
             }
             else {
                 call_protocol_error_handlers();
@@ -5122,7 +5132,8 @@ private:
             break;
         case control_packet_type::suback:
             if (mqtt_connected_) {
-                process_suback(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                (*std::make_shared<process_suback>(*this, remaining_length_ < packet_bulk_read_limit_))
+                    (force_move(self), force_move(session_life_keeper));
             }
             else {
                 call_protocol_error_handlers();
@@ -5130,7 +5141,8 @@ private:
             break;
         case control_packet_type::unsubscribe:
             if (mqtt_connected_) {
-                process_unsubscribe(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                (*std::make_shared<process_unsubscribe>(*this, remaining_length_ < packet_bulk_read_limit_))
+                    (force_move(self), force_move(session_life_keeper));
             }
             else {
                 call_protocol_error_handlers();
@@ -5138,7 +5150,8 @@ private:
             break;
         case control_packet_type::unsuback:
             if (mqtt_connected_) {
-                process_unsuback(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+                (*std::make_shared<process_unsuback>(*this, remaining_length_ < packet_bulk_read_limit_))
+                    (force_move(self), force_move(session_life_keeper));
             }
             else {
                 call_protocol_error_handlers();
@@ -5161,23 +5174,43 @@ private:
             }
             break;
         case control_packet_type::disconnect:
-            process_disconnect(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+            (*std::make_shared<process_disconnect>(*this, remaining_length_ < packet_bulk_read_limit_))
+                (force_move(self), force_move(session_life_keeper));
             break;
         case control_packet_type::auth:
-            process_auth(force_move(session_life_keeper), remaining_length_ < packet_bulk_read_limit_, force_move(self));
+            (*std::make_shared<process_auth>(*this, remaining_length_ < packet_bulk_read_limit_))
+                (force_move(self), force_move(session_life_keeper));
             break;
         default:
             break;
         }
     }
 
+    using parse_handler_variant =
+        variant<
+        std::conditional_t<sizeof(std::size_t) == 4, std::nullptr_t, std::size_t>,
+        std::uint32_t,
+        std::uint16_t,
+        buffer,
+        v5::properties
+    >;
+    using parse_handler =
+        std::function<
+            void(
+                this_type_sp&& spep,
+                any&& session_life_keeper,
+                parse_handler_variant,
+                buffer
+            )
+        >;
+
     // primitive read functions
     void process_nbytes(
-        any session_life_keeper,
+        this_type_sp&& self,
+        any&& session_life_keeper,
         buffer buf,
         std::size_t size,
-        std::function<void(buffer, buffer, any, this_type_sp)> handler,
-        this_type_sp self
+        parse_handler&& handler
     ) {
         if (remaining_length_ < size) {
             call_protocol_error_handlers();
@@ -5202,10 +5235,10 @@ private:
                     this->total_bytes_received_ += bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, buf.size())) return;
                     handler(
-                        force_move(buf),
-                        buffer(),
+                        force_move(self),
                         force_move(session_life_keeper),
-                        force_move(self)
+                        force_move(buf),
+                        buffer()
                     );
                 }
             );
@@ -5216,20 +5249,20 @@ private:
                 return;
             }
             handler(
-                buf.substr(0, size),
-                buf.substr(size),
+                force_move(self),
                 force_move(session_life_keeper),
-                force_move(self)
+                buf.substr(0, size),
+                buf.substr(size)
             );
         }
     }
 
     template <std::size_t Bytes>
     void process_fixed_length(
-        any session_life_keeper,
+        this_type_sp&& self,
+        any&& session_life_keeper,
         buffer buf,
-        std::function<void(std::size_t, buffer, any, this_type_sp)> handler,
-        this_type_sp self
+        parse_handler&& handler
     ) {
         if (remaining_length_ < Bytes) {
             call_protocol_error_handlers();
@@ -5252,57 +5285,58 @@ private:
                     this->total_bytes_received_ += bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, Bytes)) return;
                     handler(
-                        make_packet_id<Bytes>::apply(
+                        force_move(self),
+                        force_move(session_life_keeper),
+                        make_two_or_four_byte<Bytes>::apply(
                             buf_.data(),
                             std::next(buf_.data(), boost::numeric_cast<buffer::difference_type>(Bytes))
                         ),
-                        buffer(),
-                        force_move(session_life_keeper),
-                        force_move(self)
+                        buffer()
                     );
                 }
             );
         }
         else {
-            auto packet_id =
-                make_packet_id<Bytes>::apply(
+            auto val =
+                make_two_or_four_byte<Bytes>::apply(
                     buf.data(),
                     std::next(buf.data(), boost::numeric_cast<buffer::difference_type>(Bytes))
                 );
             buf.remove_prefix(Bytes);
             handler(
-                packet_id,
-                force_move(buf),
+                force_move(self),
                 force_move(session_life_keeper),
-                force_move(self)
+                val,
+                force_move(buf)
+
             );
         }
     }
 
     // This function isn't used for remaining lengh.
     void process_variable_length(
-        any session_life_keeper,
+        this_type_sp&& self,
+        any&& session_life_keeper,
         buffer buf,
-        std::function<void(std::size_t, buffer, any, this_type_sp)> handler,
-        this_type_sp self
+        parse_handler&& handler
     ) {
         process_variable_length_impl(
+            force_move(self),
             force_move(session_life_keeper),
             force_move(buf),
             force_move(handler),
             0,
-            1,
-            force_move(self)
+            1
         );
     }
 
     void process_variable_length_impl(
-        any session_life_keeper,
+        this_type_sp&& self,
+        any&& session_life_keeper,
         buffer buf,
-        std::function<void(std::size_t, buffer, any, this_type_sp)> handler,
+        parse_handler&& handler,
         std::size_t size,
-        std::size_t multiplier,
-        this_type_sp self
+        std::size_t multiplier
     ) {
         if (remaining_length_ == 0) {
             call_protocol_error_handlers();
@@ -5316,12 +5350,12 @@ private:
         auto proc =
             [this]
             (
+                this_type_sp&& self,
                 any&& session_life_keeper,
                 buffer&& buf,
-                std::function<void(std::size_t, buffer, any, this_type_sp)>&& handler,
+                auto&& handler,
                 std::size_t size,
-                std::size_t multiplier,
-                this_type_sp&& self
+                std::size_t multiplier
             ) mutable {
                 if (!calc_variable_length(size, multiplier, buf.front())) {
                     call_protocol_error_handlers();
@@ -5331,21 +5365,21 @@ private:
                     BOOST_ASSERT(!buf.empty());
                     buf.remove_prefix(1);
                     process_variable_length_impl(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
-                        force_move(handler),
+                        std::forward<decltype(handler)>(handler),
                         size,
-                        multiplier,
-                        force_move(self)
+                        multiplier
                     );
                 }
                 else {
                     buf.remove_prefix(1);
                     handler(
-                        size,
-                        force_move(buf),
+                        force_move(self),
                         force_move(session_life_keeper),
-                        force_move(self)
+                        size,
+                        force_move(buf)
                     );
                 }
             };
@@ -5367,132 +5401,149 @@ private:
                     this->total_bytes_received_ += bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                     proc(
+                        force_move(self),
                         force_move(session_life_keeper),
                         buffer(string_view(buf_.data(), 1)), // buf_'s lifetime is handled by `self`
                         force_move(handler),
                         size,
-                        multiplier,
-                        force_move(self)
+                        multiplier
                     );
                 }
             );
         }
         else {
             proc(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 force_move(handler),
                 size,
-                multiplier,
-                force_move(self)
+                multiplier
             );
         }
     }
 
     void process_packet_id(
-        any session_life_keeper,
+        this_type_sp&& self,
+        any&& session_life_keeper,
         buffer buf,
-        std::function<void(packet_id_t, buffer, any, this_type_sp)> handler,
-        this_type_sp self
+        parse_handler&& handler
     ) {
         process_fixed_length<sizeof(packet_id_t)>(
+            force_move(self),
             force_move(session_life_keeper),
             force_move(buf),
             [
                 this,
                 handler = force_move(handler)
             ]
-            (std::size_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+            (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                auto packet_id = variant_get<packet_id_t>(var);
                 if (packet_id == 0) {
                     call_protocol_error_handlers();
                     return;
                 }
-                handler(static_cast<packet_id_t>(packet_id), force_move(buf), force_move(session_life_keeper), force_move(self));
-            },
-            force_move(self)
+                handler(
+                    force_move(self),
+                    force_move(session_life_keeper),
+                    static_cast<packet_id_t>(packet_id),
+                    force_move(buf)
+                );
+            }
         );
     }
 
     void process_binary(
-        any session_life_keeper,
+        this_type_sp&& self,
+        any&& session_life_keeper,
         buffer buf,
-        std::function<void(buffer, buffer, any, this_type_sp)> handler,
-        this_type_sp self
+        parse_handler&& handler
     ) {
         if (remaining_length_ < 2) {
             call_protocol_error_handlers();
             return;
         }
         process_fixed_length<2>(
+            force_move(self),
             force_move(session_life_keeper),
             force_move(buf),
             [
                 this,
                 handler = force_move(handler)
             ]
-            (std::size_t size,
-             buffer buf,
-             any session_life_keeper,
-             this_type_sp self) mutable {
+            (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                auto size = variant_get<typename two_or_four_byte_type<2>::type>(var);
                 if (remaining_length_ < size) {
                     call_protocol_error_handlers();
                     return;
                 }
                 process_nbytes(
+                    force_move(self),
                     force_move(session_life_keeper),
                     force_move(buf),
                     size,
-                    force_move(handler),
-                    force_move(self)
+                    force_move(handler)
                 );
-            },
-            force_move(self)
+            }
         );
     }
 
     void process_string(
-        any session_life_keeper,
+        this_type_sp&& self,
+        any&& session_life_keeper,
         buffer buf,
-        std::function<void(buffer, buffer, any, this_type_sp)> handler,
-        this_type_sp self
+        parse_handler&& handler
     ) {
         process_binary(
+            force_move(self),
             force_move(session_life_keeper),
             force_move(buf),
             [this, handler = force_move(handler)]
-            (buffer str, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+            (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                auto& str = variant_get<buffer>(var);
                 auto r = utf8string::validate_contents(str);
                 if (r != utf8string::validation::well_formed) {
                     call_bad_message_error_handlers();
                     return;
                 }
-                handler(force_move(str), force_move(buf), force_move(session_life_keeper), force_move(self));
-            },
-            force_move(self)
+                handler(
+                    force_move(self),
+                    force_move(session_life_keeper),
+                    force_move(str),
+                    force_move(buf)
+                );
+            }
         );
     }
 
 
     void process_properties(
-        any session_life_keeper,
+        this_type_sp&& self,
+        any&& session_life_keeper,
         buffer buf,
-        std::function<void(v5::properties, buffer, any, this_type_sp)> handler,
-        this_type_sp self
+        parse_handler&& handler
     ) {
         process_variable_length(
+            force_move(self),
             force_move(session_life_keeper),
             force_move(buf),
             [
                 this,
                 handler = force_move(handler)
             ]
-            (std::size_t property_length, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+            (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                auto property_length = variant_get<std::size_t>(var);
                 if (property_length > remaining_length_) {
                     call_protocol_error_handlers();
                     return;
                 }
                 if (property_length == 0) {
-                    handler(v5::properties(), force_move(buf), force_move(session_life_keeper), force_move(self));
+                    handler(
+                        force_move(self),
+                        force_move(session_life_keeper),
+                        v5::properties(),
+                        force_move(buf)
+                    );
                     return;
                 }
 
@@ -5525,9 +5576,9 @@ private:
                         as::buffer(result.address, result.len),
                         [
                             this,
+                            handler = force_move(handler),
                             self = force_move(self),
                             session_life_keeper = force_move(session_life_keeper),
-                            handler = force_move(handler),
                             property_length,
                             result
                         ]
@@ -5535,42 +5586,46 @@ private:
                             this->total_bytes_received_ += bytes_transferred;
                             if (!check_error_and_transferred_length(ec, bytes_transferred, result.len)) return;
                             process_property_id(
+                                force_move(self),
                                 force_move(session_life_keeper),
                                 buffer(string_view(result.address, result.len), result.spa),
                                 property_length,
                                 v5::properties(),
-                                force_move(handler),
-                                force_move(self)
+                                force_move(handler)
                             );
                         }
                     );
                 }
                 else {
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         property_length,
                         v5::properties(),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
                 }
-            },
-            force_move(self)
+            }
         );
     }
 
     void process_property_id(
-        any session_life_keeper,
+        this_type_sp&& self,
+        any&& session_life_keeper,
         buffer buf,
         std::size_t property_length_rest,
         v5::properties props,
-        std::function<void(v5::properties, buffer, any, this_type_sp)> handler,
-        this_type_sp self
+        parse_handler&& handler
     ) {
 
         if (property_length_rest == 0) {
-            handler(force_move(props), force_move(buf), force_move(session_life_keeper), force_move(self));
+            handler(
+                force_move(self),
+                force_move(session_life_keeper),
+                force_move(props),
+                force_move(buf)
+            );
             return;
         }
 
@@ -5591,13 +5646,13 @@ private:
                     this->total_bytes_received_ += bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, 1)) return;
                     process_property_body(
+                        force_move(self),
                         force_move(session_life_keeper),
                         buffer(),
                         static_cast<v5::property::id>(buf_.front()),
                         property_length_rest - 1,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
                 }
             );
@@ -5606,25 +5661,25 @@ private:
             auto id = static_cast<v5::property::id>(buf.front());
             buf.remove_prefix(1);
             process_property_body(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 id,
                 property_length_rest - 1,
                 force_move(props),
-                force_move(handler),
-                force_move(self)
+                force_move(handler)
             );
         }
     }
 
     void process_property_body(
-        any session_life_keeper,
+        this_type_sp&& self,
+        any&& session_life_keeper,
         buffer buf,
         v5::property::id id,
         std::size_t property_length_rest,
         v5::properties props,
-        std::function<void(v5::properties, buffer, any, this_type_sp)> handler,
-        this_type_sp self
+        parse_handler&& handler
     ) {
 
         static constexpr std::size_t length_bytes = 2;
@@ -5642,6 +5697,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -5651,20 +5707,20 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::payload_format_indicator(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::message_expiry_interval: {
@@ -5674,6 +5730,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -5683,24 +5740,25 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::message_expiry_interval(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::content_type: {
             process_string(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 [
@@ -5709,25 +5767,26 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::content_type(force_move(body), true)
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::response_topic: {
             process_string(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 [
@@ -5736,25 +5795,26 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::response_topic(force_move(body), true)
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::correlation_data: {
             process_string(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 [
@@ -5763,25 +5823,26 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::correlation_data(force_move(body), true)
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::subscription_identifier: {
             process_variable_length(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 [
@@ -5791,22 +5852,22 @@ private:
                     property_length_rest,
                     remaining_length_before = remaining_length_
                 ]
-                (std::size_t size, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto size = variant_get<std::size_t>(var);
                     auto consumed = remaining_length_before - remaining_length_;
                     auto rest = property_length_rest - consumed;
                     props.emplace_back(
                         v5::property::subscription_identifier(size)
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::session_expiry_interval: {
@@ -5816,6 +5877,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -5825,24 +5887,25 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::session_expiry_interval(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::assigned_client_identifier: {
             process_string(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 [
@@ -5851,21 +5914,21 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::assigned_client_identifier(force_move(body), true)
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
 
         } break;
@@ -5876,6 +5939,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -5885,24 +5949,25 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::server_keep_alive(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::authentication_method: {
             process_string(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 [
@@ -5911,25 +5976,26 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::authentication_method(force_move(body), true)
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::authentication_data: {
             process_binary(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 [
@@ -5938,21 +6004,21 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::authentication_data(force_move(body))
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::request_problem_information: {
@@ -5962,6 +6028,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -5971,20 +6038,20 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::request_problem_information(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::will_delay_interval: {
@@ -5994,6 +6061,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -6003,20 +6071,20 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::will_delay_interval(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::request_response_information: {
@@ -6026,6 +6094,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -6035,24 +6104,25 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::request_response_information(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::response_information: {
             process_string(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 [
@@ -6061,25 +6131,26 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::response_information(force_move(body), true)
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::server_reference: {
             process_string(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 [
@@ -6088,25 +6159,26 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::server_reference(force_move(body), true)
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::reason_string: {
             process_string(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 [
@@ -6115,21 +6187,21 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
                         v5::property::reason_string(force_move(body), true)
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::receive_maximum: {
@@ -6139,6 +6211,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -6148,20 +6221,20 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::receive_maximum(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::topic_alias_maximum: {
@@ -6171,6 +6244,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -6180,20 +6254,20 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::topic_alias_maximum(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::topic_alias: {
@@ -6203,6 +6277,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -6212,20 +6287,20 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::topic_alias(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::maximum_qos: {
@@ -6235,6 +6310,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -6244,20 +6320,20 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::maximum_qos(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::retain_available: {
@@ -6267,6 +6343,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -6276,24 +6353,25 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::retain_available(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::user_property: {
             process_string(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 [
@@ -6302,9 +6380,11 @@ private:
                     handler = force_move(handler),
                     property_length_rest
                 ]
-                (buffer key, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& key = variant_get<buffer>(var);
                     auto rest = property_length_rest - length_bytes - key.size();
                     process_string(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         [
@@ -6314,7 +6394,8 @@ private:
                             key = force_move(key),
                             property_length_rest = rest
                         ]
-                        (buffer val, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                        (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                            auto& val = variant_get<buffer>(var);
                             auto rest = property_length_rest - length_bytes - val.size();
                             props.emplace_back(
                                 v5::property::user_property(
@@ -6325,18 +6406,16 @@ private:
                                 )
                             );
                             process_property_id(
+                                force_move(self),
                                 force_move(session_life_keeper),
                                 force_move(buf),
                                 rest,
                                 force_move(props),
-                                force_move(handler),
-                                force_move(self)
+                                force_move(handler)
                             );
-                        },
-                        force_move(self)
+                        }
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::maximum_packet_size: {
@@ -6346,6 +6425,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -6355,20 +6435,20 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::maximum_packet_size(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::wildcard_subscription_available: {
@@ -6378,6 +6458,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -6387,20 +6468,20 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::wildcard_subscription_available(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::subscription_identifier_available: {
@@ -6410,6 +6491,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -6419,20 +6501,20 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::subscription_identifier_available(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         case v5::property::id::shared_subscription_available: {
@@ -6442,6 +6524,7 @@ private:
                 return;
             }
             process_nbytes(
+                force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
                 len,
@@ -6451,20 +6534,20 @@ private:
                     handler = force_move(handler),
                     rest = property_length_rest - len
                 ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
+                (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
+                    auto& body = variant_get<buffer>(var);
                     props.emplace_back(
                         v5::property::shared_subscription_available(body.begin(), body.end())
                     );
                     process_property_id(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
                         rest,
                         force_move(props),
-                        force_move(handler),
-                        force_move(self)
+                        force_move(handler)
                     );
-                },
-                force_move(self)
+                }
             );
         } break;
         }
@@ -6472,14 +6555,12 @@ private:
 
     // process common
 
-    template <typename InfoType,
-              void (this_type::*NextFunc)(any, buffer, InfoType&&, this_type_sp)>
     void process_header(
-        any session_life_keeper,
+        this_type_sp&& self,
+        any&& session_life_keeper,
         bool all_read,
         std::size_t header_len,
-        InfoType&& info,
-        this_type_sp self
+        parse_handler&& handler
     ) {
 
         if (all_read) {
@@ -6489,19 +6570,19 @@ private:
                 as::buffer(ptr, remaining_length_),
                 [
                     this,
+                    self = force_move(self),
                     session_life_keeper = force_move(session_life_keeper),
                     buf = buffer(string_view(ptr, remaining_length_), force_move(spa)),
-                    info = std::forward<InfoType>(info),
-                    self = force_move(self)
+                    handler = force_move(handler)
                 ]
                 (error_code ec, std::size_t bytes_transferred) mutable {
                     this->total_bytes_received_ += bytes_transferred;
                     if (!check_error_and_transferred_length(ec, bytes_transferred, remaining_length_)) return;
-                    (this->*NextFunc)(
+                    handler(
+                        force_move(self),
                         force_move(session_life_keeper),
                         force_move(buf),
-                        force_move(info),
-                        force_move(self)
+                        buffer()
                     );
                 }
             );
@@ -6509,11 +6590,11 @@ private:
         }
 
         if (header_len == 0) {
-            (this->*NextFunc)(
+            force_move(handler)(
+                force_move(self),
                 force_move(session_life_keeper),
                 buffer(),
-                force_move(info),
-                force_move(self)
+                buffer()
             );
             return;
         }
@@ -6522,20 +6603,20 @@ private:
             as::buffer(buf_.data(), header_len),
             [
                 this,
+                self = force_move(self),
                 session_life_keeper = force_move(session_life_keeper),
                 header_len,
-                info = std::forward<InfoType>(info),
-                self = force_move(self)
+                handler = force_move(handler)
             ]
             (error_code ec,
              std::size_t bytes_transferred) mutable {
                 this->total_bytes_received_ += bytes_transferred;
                 if (!check_error_and_transferred_length(ec, bytes_transferred, header_len)) return;
-                (this->*NextFunc)(
+                handler(
+                    force_move(self),
                     force_move(session_life_keeper),
                     buffer(string_view(buf_.data(), header_len)),
-                    force_move(info),
-                    force_move(self)
+                    buffer()
                 );
             }
         );
@@ -6543,792 +6624,609 @@ private:
 
     // process connect
 
-    enum class connect_phase {
-        header,
-        properties,
-        client_id,
-        will,
-        user_name,
-        password,
-        finish,
-    };
+    struct process_connect : as::coroutine, std::enable_shared_from_this<process_connect> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_connect;
+        using process_type_sp = std::shared_ptr<process_type>;
 
-    struct connect_info {
-        std::size_t header_len;
-        char connect_flag;
-        std::uint16_t keep_alive;
-        v5::properties props;
-        buffer client_id;
-        v5::properties will_props;
-        buffer will_topic;
-        buffer will_payload;
-        optional<buffer> user_name;
-        optional<buffer> password;
-    };
+        process_connect(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer remain_buf = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.remaining_length_ < header_len_) {
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
+                // header
+                yield ep_.process_header(
+                    force_move(spep),
+                    std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                    all_read_,
+                    header_len_,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
 
-    void process_connect(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        static constexpr std::size_t header_len =
+                yield {
+                    auto& buf = variant_get<buffer>(var);
+
+                    static constexpr char protocol_name[] = { 0x00, 0x04, 'M', 'Q', 'T', 'T' };
+                    if (std::memcmp(buf.data(), protocol_name, sizeof(protocol_name)) != 0) {
+                        ep_.call_protocol_error_handlers();
+                        return;
+                    }
+                    std::size_t i = sizeof(protocol_name);
+                    auto version = static_cast<protocol_version>(buf[i++]);
+                    if (version != protocol_version::v3_1_1 && version != protocol_version::v5) {
+                        ep_.call_protocol_error_handlers();
+                        return;
+                    }
+
+                    if (ep_.version_ == protocol_version::undetermined) {
+                        ep_.version_ = version;
+                    }
+                    else if (ep_.version_ != version) {
+                        ep_.call_protocol_error_handlers();
+                        return;
+                    }
+
+                    connect_flag_ = buf[i++];
+
+                    keep_alive_ = make_uint16_t(buf[i], buf[i + 1]);
+                    ep_.clean_start_ = connect_flags::has_clean_start(connect_flag_);
+
+                    buf.remove_prefix(header_len_); // consume buffer
+                    if (ep_.version_ == protocol_version::v5) {
+                        // properties
+                        ep_.process_properties(
+                            force_move(spep),
+                            force_move(session_life_keeper),
+                            force_move(buf),
+                            [this]
+                            (auto&&... args ) {
+                                (*this)(std::forward<decltype(args)>(args)...);
+                            }
+                        );
+                    }
+                    else {
+                        (*this)(force_move(spep), force_move(session_life_keeper), v5::properties(), force_move(buf));
+                    }
+                }
+                props_ = force_move(variant_get<v5::properties>(var));
+
+                // client_id
+                yield ep_.process_string(
+                    force_move(spep),
+                    force_move(session_life_keeper),
+                    force_move(remain_buf),
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
+                client_id_ = force_move(variant_get<buffer>(var));
+                if (connect_flags::has_will_flag(connect_flag_)) {
+                    if (ep_.version_ == protocol_version::v5) {
+                        // will properties
+                        yield ep_.process_properties(
+                            force_move(spep),
+                            force_move(session_life_keeper),
+                            force_move(remain_buf),
+                            [this]
+                            (auto&&... args ) {
+                                (*this)(std::forward<decltype(args)>(args)...);
+                            }
+                        );
+                        will_props_ = force_move(variant_get<v5::properties>(var));
+                    }
+                    // will topic
+                    yield ep_.process_string(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    will_topic_ = force_move(variant_get<buffer>(var));
+                    // will payload
+                    yield ep_.process_binary(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    will_payload_ = force_move(variant_get<buffer>(var));
+                }
+                if (connect_flags::has_user_name_flag(connect_flag_)) {
+                    yield ep_.process_string(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    user_name_ = force_move(variant_get<buffer>(var));
+                }
+                if (connect_flags::has_password_flag(connect_flag_)) {
+                    yield ep_.process_binary(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    password_ = force_move(variant_get<buffer>(var));
+                }
+                ep_.mqtt_connected_ = true;
+                switch (ep_.version_) {
+                case protocol_version::v3_1_1:
+                    if (ep_.on_connect(
+                            force_move(client_id_),
+                            force_move(user_name_),
+                            force_move(password_),
+                            connect_flags::has_will_flag(connect_flag_)
+                            ? optional<will>(in_place_init,
+                                             force_move(will_topic_),
+                                             force_move(will_payload_),
+                                             connect_flags::has_will_retain(connect_flag_) | connect_flags::will_qos(connect_flag_))
+                            : optional<will>(nullopt),
+                            ep_.clean_session(),
+                            keep_alive_
+                        )
+                    ) {
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
+                                )
+                            )
+                        );
+                    }
+                    break;
+                case protocol_version::v5:
+                    if (ep_.on_v5_connect(
+                            force_move(client_id_),
+                            force_move(user_name_),
+                            force_move(password_),
+                            connect_flags::has_will_flag(connect_flag_)
+                            ? optional<will>(in_place_init,
+                                             force_move(will_topic_),
+                                             force_move(will_payload_),
+                                             connect_flags::has_will_retain(connect_flag_) | connect_flags::will_qos(connect_flag_),
+                                             force_move(will_props_))
+                            : optional<will>(nullopt),
+                            ep_.clean_start(),
+                            keep_alive_,
+                            force_move(props_)
+                        )
+                    ) {
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
+                                )
+                            )
+                        );
+                    }
+                    break;
+                default:
+                    BOOST_ASSERT(false);
+                }
+            }
+        }
+
+    private:
+        static constexpr std::size_t header_len_ =
             2 +  // string length
             4 +  // "MQTT" string
             1 +  // ProtocolVersion
             1 +  // ConnectFlag
             2;   // KeepAlive
 
-        if (remaining_length_ < header_len) {
-            call_protocol_error_handlers();
-            return;
-        }
+        ep_t& ep_;
+        bool all_read_;
 
-        connect_info info;
-        info.header_len = header_len;
-
-        process_header<connect_info,
-                       &this_type::process_connect_impl<connect_phase::header>>(
-            force_move(session_life_keeper),
-            all_read,
-            header_len,
-            force_move(info),
-            force_move(self)
-        );
-    }
-
-    template<connect_phase Phase>
-    void process_connect_impl(
-        any session_life_keeper,
-        buffer buf,
-        connect_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case connect_phase::header: {
-            static constexpr char protocol_name[] = { 0x00, 0x04, 'M', 'Q', 'T', 'T' };
-            if (std::memcmp(buf.data(), protocol_name, sizeof(protocol_name)) != 0) {
-                call_protocol_error_handlers();
-                return;
-            }
-            std::size_t i = sizeof(protocol_name);
-            auto version = static_cast<protocol_version>(buf[i++]);
-            if (version != protocol_version::v3_1_1 && version != protocol_version::v5) {
-                call_protocol_error_handlers();
-                return;
-            }
-
-            if (version_ == protocol_version::undetermined) {
-                version_ = version;
-            }
-            else if (version_ != version) {
-                call_protocol_error_handlers();
-                return;
-            }
-
-            info.connect_flag = buf[i++];
-
-            info.keep_alive = make_uint16_t(buf[i], buf[i + 1]);
-            clean_start_ = connect_flags::has_clean_start(info.connect_flag);
-
-            buf.remove_prefix(info.header_len); // consume buffer
-            if(version_ == protocol_version::v5) {
-                process_connect_impl<connect_phase::properties>(
-                    force_move(session_life_keeper),
-                    force_move(buf),
-                    force_move(info),
-                    force_move(self)
-                );
-            }
-            else {
-                process_connect_impl<connect_phase::client_id>(
-                    force_move(session_life_keeper),
-                    force_move(buf),
-                    force_move(info),
-                    force_move(self)
-                );
-            }
-        } break;
-        case connect_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (
-                    v5::properties props,
-                    buffer buf,
-                    any session_life_keeper,
-                    this_type_sp self
-                ) mutable {
-                    info.props = force_move(props);
-                    process_connect_impl<connect_phase::client_id>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
-                },
-                force_move(self)
-            );
-            break;
-        case connect_phase::client_id:
-            process_string(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer client_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.client_id = force_move(client_id);
-                    auto connect_flag = info.connect_flag;
-                    if (connect_flags::has_will_flag(connect_flag)) {
-                        process_connect_impl<connect_phase::will>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                    else if (connect_flags::has_user_name_flag(connect_flag)) {
-                        process_connect_impl<connect_phase::user_name>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                    else if (connect_flags::has_password_flag(connect_flag)) {
-                        process_connect_impl<connect_phase::password>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                    else {
-                        process_connect_impl<connect_phase::finish>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                },
-                force_move(self)
-            );
-            break;
-        case connect_phase::will: {
-            // I use rvalue reference parameter to reduce move constructor calling.
-            // This is a local lambda expression invoked from this function, so
-            // I can control all callers.
-            auto topic_message_proc =
-                [this]
-                (
-                    any&& session_life_keeper,
-                    buffer&& buf,
-                    connect_info&& info,
-                    this_type_sp&& self
-                ) mutable {
-                    process_string(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        [
-                            this,
-                            info = force_move(info)
-                        ]
-                        (buffer will_topic, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                            info.will_topic = force_move(will_topic);
-                            process_binary(
-                                force_move(session_life_keeper),
-                                force_move(buf),
-                                [
-                                    this,
-                                    info = force_move(info)
-                                ]
-                                (buffer will_payload, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                                    info.will_payload = force_move(will_payload);
-                                    if (connect_flags::has_user_name_flag(info.connect_flag)) {
-                                        process_connect_impl<connect_phase::user_name>(
-                                            force_move(session_life_keeper),
-                                            force_move(buf),
-                                            force_move(info),
-                                            force_move(self)
-                                        );
-                                    }
-                                    else if (connect_flags::has_password_flag(info.connect_flag)) {
-                                        process_connect_impl<connect_phase::password>(
-                                            force_move(session_life_keeper),
-                                            force_move(buf),
-                                            force_move(info),
-                                            force_move(self)
-                                        );
-                                    }
-                                    else {
-                                        process_connect_impl<connect_phase::finish>(
-                                            force_move(session_life_keeper),
-                                            force_move(buf),
-                                            force_move(info),
-                                            force_move(self)
-                                        );
-                                    }
-                                },
-                                force_move(self)
-                            );
-                        },
-                        force_move(self)
-                    );
-                };
-
-            if (version_ == protocol_version::v5) {
-                process_properties(
-                    force_move(session_life_keeper),
-                    force_move(buf),
-                    [
-                        info = force_move(info),
-                        topic_message_proc
-                    ]
-                    (
-                         v5::properties will_props,
-                         buffer buf,
-                         any session_life_keeper,
-                         this_type_sp self
-                    ) mutable {
-                        info.will_props = force_move(will_props);
-                        topic_message_proc(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    },
-                    force_move(self)
-                );
-                return;
-            }
-            topic_message_proc(
-                force_move(session_life_keeper),
-                force_move(buf),
-                force_move(info),
-                force_move(self)
-            );
-        } break;
-        case connect_phase::user_name:
-            process_string(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer user_name, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.user_name = force_move(user_name);
-                    if (connect_flags::has_password_flag(info.connect_flag)) {
-                        process_connect_impl<connect_phase::password>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                    else {
-                        process_connect_impl<connect_phase::finish>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                },
-                force_move(self)
-            );
-            break;
-        case connect_phase::password:
-            process_binary(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer password, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.password = force_move(password);
-                    process_connect_impl<connect_phase::finish>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
-                },
-                force_move(self)
-            );
-            break;
-        case connect_phase::finish:
-            mqtt_connected_ = true;
-            switch (version_) {
-            case protocol_version::v3_1_1:
-                if (on_connect(
-                        force_move(info.client_id),
-                        force_move(info.user_name),
-                        force_move(info.password),
-                          connect_flags::has_will_flag(info.connect_flag)
-                        ? optional<will>(in_place_init,
-                                         force_move(info.will_topic),
-                                         force_move(info.will_payload),
-                                         connect_flags::has_will_retain(info.connect_flag) | connect_flags::will_qos(info.connect_flag))
-                        : optional<will>(nullopt),
-                        clean_session(),
-                        info.keep_alive
-                    )
-                ) {
-                    on_mqtt_message_processed(force_move(session_life_keeper));
-                }
-                break;
-            case protocol_version::v5:
-                if (on_v5_connect(
-                        force_move(info.client_id),
-                        force_move(info.user_name),
-                        force_move(info.password),
-                          connect_flags::has_will_flag(info.connect_flag)
-                        ? optional<will>(in_place_init,
-                                         force_move(info.will_topic),
-                                         force_move(info.will_payload),
-                                         connect_flags::has_will_retain(info.connect_flag) | connect_flags::will_qos(info.connect_flag),
-                                         force_move(info.will_props))
-                        : optional<will>(nullopt),
-                        clean_start(),
-                        info.keep_alive,
-                        force_move(info.props)
-                    )
-                ) {
-                    on_mqtt_message_processed(force_move(session_life_keeper));
-                }
-                break;
-            default:
-                BOOST_ASSERT(false);
-            }
-            break;
-        }
-    }
+        char connect_flag_;
+        std::uint16_t keep_alive_;
+        v5::properties props_;
+        buffer client_id_;
+        v5::properties will_props_;
+        buffer will_topic_;
+        buffer will_payload_;
+        optional<buffer> user_name_;
+        optional<buffer> password_;
+    };
+    friend struct process_connect;
 
     // process connack
 
-    enum class connack_phase {
-        header,
-        properties,
-        finish,
-    };
+    struct process_connack : as::coroutine, std::enable_shared_from_this<process_connack> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_connack;
+        using process_type_sp = std::shared_ptr<process_type>;
 
-    struct connack_info {
-        std::size_t header_len;
-        bool session_present;
-        variant<connect_return_code, v5::connect_reason_code> reason_code;
-        v5::properties props;
-    };
-
-    void process_connack(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        static constexpr std::size_t header_len =
-            1 +  // Connect Acknowledge Flags
-            1;   // Reason Code
-
-        if (remaining_length_ < header_len) {
-            call_protocol_error_handlers();
-            return;
-        }
-
-        connack_info info;
-        info.header_len = header_len;
-
-        process_header<connack_info,
-                       &this_type::process_connack_impl<connack_phase::header>>(
-            force_move(session_life_keeper),
-            all_read,
-            header_len,
-            force_move(info),
-            force_move(self)
-        );
-    }
-
-    template<connack_phase Phase>
-    void process_connack_impl(
-        any session_life_keeper,
-        buffer buf,
-        connack_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case connack_phase::header:
-            info.session_present = is_session_present(buf[0]);
-            switch (version_) {
-            case protocol_version::v3_1_1:
-                info.reason_code = static_cast<connect_return_code>(buf[1]);
-                break;
-            case protocol_version::v5:
-                info.reason_code = static_cast<v5::connect_reason_code>(buf[1]);
-                break;
-            default:
-                BOOST_ASSERT(false);
-            }
-
-            buf.remove_prefix(info.header_len); // consume buffer
-            if (version_ == protocol_version::v5) {
-                process_connack_impl<connack_phase::properties>(
-                    force_move(session_life_keeper),
-                    force_move(buf),
-                    force_move(info),
-                    force_move(self)
+        process_connack(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer /*remain_buf*/ = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.remaining_length_ < header_len_) {
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
+                // header
+                yield ep_.process_header(
+                    force_move(spep),
+                    std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                    all_read_,
+                    header_len_,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
                 );
-            }
-            else {
-                process_connack_impl<connack_phase::finish>(
-                    force_move(session_life_keeper),
-                    force_move(buf),
-                    force_move(info),
-                    force_move(self)
-                );
-            }
-            break;
-        case connack_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (
-                    v5::properties props,
-                    buffer buf,
-                    any session_life_keeper,
-                    this_type_sp self
-                ) mutable {
-                    info.props = force_move(props);
-                    process_connack_impl<connack_phase::finish>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
-                },
-                force_move(self)
-            );
-            break;
-        case connack_phase::finish: {
-            mqtt_connected_ = true;
-            // I use rvalue reference parameter to reduce move constructor calling.
-            // This is a local lambda expression invoked from this function, so
-            // I can control all callers.
-            auto connack_proc =
-                [this]
-                (
-                    any&& session_life_keeper,
-                    connack_info&& info
-                ) mutable {
-                    switch (version_) {
+
+                yield {
+                    auto& buf = variant_get<buffer>(var);
+                    session_present_ = is_session_present(buf[0]);
+                    switch (ep_.version_) {
                     case protocol_version::v3_1_1:
-                        if (on_connack(info.session_present,
-                                      variant_get<connect_return_code>(info.reason_code))) {
-                            on_mqtt_message_processed(force_move(session_life_keeper));
-                        }
+                        reason_code_ = static_cast<connect_return_code>(buf[1]);
                         break;
                     case protocol_version::v5:
-                        if (auto ta_opt = get_topic_alias_maximum_from_props(info.props)) {
-                            if (ta_opt.value() > 0) {
-                                topic_alias_send_.emplace(ta_opt.value());
-                            }
-                        }
-                        if (on_v5_connack(info.session_present,
-                                          variant_get<v5::connect_reason_code>(info.reason_code),
-                                          force_move(info.props))) {
-                            on_mqtt_message_processed(force_move(session_life_keeper));
-                        }
+                        reason_code_ = static_cast<v5::connect_reason_code>(buf[1]);
                         break;
                     default:
                         BOOST_ASSERT(false);
                     }
-                };
-
-            // Note: boost:variant has no featue to query if the variant currently holds a specific type.
-            // MQTT_CPP could create a type traits function to match the provided type to the index in
-            // the boost::variant type list, but for now it does not appear to be needed.
-            if (   (   (0 == variant_idx(info.reason_code))
-                    && (connect_return_code::accepted == variant_get<connect_return_code>(info.reason_code)))
-                || (   (1 == variant_idx(info.reason_code))
-                       && (v5::connect_reason_code::success == variant_get<v5::connect_reason_code>(info.reason_code)))) {
-
-                // If session_present is false, then call clear_session_data().
-                // Here is the reason why it works well.
-                // ---
-                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901078
-                //
-                // If the Server accepts a connection with Clean Start set to 1, the Server
-                // MUST set Session Present to 0 in the CONNACK packet in addition to setting
-                // a 0x00 (Success) Reason Code in the CONNACK packet [MQTT-3.2.2-2].
-                //
-                //
-                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901048
-                //
-                // The Client can avoid implementing its own Session expiry and instead rely on
-                // the Session Present flag returned from the Server to determine if the Session
-                // had expired. If the Client does implement its own Session expiry, it needs to
-                // store the time at which the Session State will be deleted as part of its
-                // Session State.
-                // ---
-                //
-                // Also it can  avoid the following client side and broker side session state
-                // mismatch autonatically.
-                //
-                // ---
-                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901078
-                //
-                // If the Client does not have Session State and receives Session Present
-                // set to 1 it MUST close the Network Connection [MQTT-3.2.2-4]. If it
-                // wishes to restart with a new Session the Client can reconnect using
-                // Clean Start set to 1.
-                // If the Client does have Session State and receives Session Present set
-                // to 0 it MUST discard its Session State if it continues with the Network
-                // Connection [MQTT-3.2.2-5].
-                // ---
-                if (info.session_present) {
-                    if (async_send_store_) {
-                        // Until all stored messages are written to internal send buffer,
-                        // disable further async reading of incoming packets..
-                        async_read_on_message_processed_ = false;
-                        auto async_connack_proc =
-                            [
-                                this,
-                                self = force_move(self),
-                                session_life_keeper = force_move(session_life_keeper),
-                                connack_proc = force_move(connack_proc),
-                                info = force_move(info)
-                            ]
-                            () mutable {
-                                // All stored messages are sent, so re-enable reading of incoming packets.
-                                // and notify the end user code that the connack packet was received.
-                                async_read_on_message_processed_ = true;
-                                connack_proc(force_move(session_life_keeper), force_move(info));
-                            };
-                        async_send_store(force_move(async_connack_proc));
-                        return;
-                    }
-                    send_store();
-                }
-                else {
-                    clear_session_data();
-                }
-            }
-            connack_proc(force_move(session_life_keeper), force_move(info));
-        } break;
-        }
-    }
-
-    // process publish
-
-    enum class publish_phase {
-        topic_name,
-        packet_id,
-        properties,
-        payload,
-    };
-
-    struct publish_info {
-        buffer topic_name;
-        optional<packet_id_t> packet_id;
-        v5::properties props;
-    };
-
-    void process_publish(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        static constexpr std::size_t min_len =
-            2; // topic name length
-
-        if (remaining_length_ < min_len) {
-            call_protocol_error_handlers();
-            return;
-        }
-
-        process_header<publish_info,
-                       &this_type::process_publish_impl<publish_phase::topic_name>>(
-            force_move(session_life_keeper),
-            all_read,
-            0,
-            publish_info(),
-            force_move(self)
-        );
-    }
-
-    template<publish_phase Phase>
-    void process_publish_impl(
-        any session_life_keeper,
-        buffer buf,
-        publish_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case publish_phase::topic_name:
-            process_string(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer topic_name, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.topic_name = force_move(topic_name);
-                    qos qos_value = publish::get_qos(fixed_header_);
-                    if (qos_value != qos::at_most_once &&
-                        qos_value != qos::at_least_once &&
-                        qos_value != qos::exactly_once) {
-                        call_bad_message_error_handlers();
-                        return;
-                    }
-                     if(qos_value == qos::at_most_once) {
-                         if(version_ == protocol_version::v5) {
-                             process_publish_impl<publish_phase::properties>(
-                                 force_move(session_life_keeper),
-                                 force_move(buf),
-                                 force_move(info),
-                                 force_move(self)
-                             );
-                         }
-                         else {
-                             process_publish_impl<publish_phase::payload>(
-                                 force_move(session_life_keeper),
-                                 force_move(buf),
-                                 force_move(info),
-                                 force_move(self)
-                             );
-                         }
-                     }
-                     else {
-                         process_publish_impl<publish_phase::packet_id>(
-                             force_move(session_life_keeper),
-                             force_move(buf),
-                             force_move(info),
-                             force_move(self)
-                         );
-                     }
-                },
-                force_move(self)
-            );
-            break;
-        case publish_phase::packet_id:
-            process_packet_id(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.packet_id = packet_id;
-                    if (version_ == protocol_version::v5) {
-                        process_publish_impl<publish_phase::properties>(
+                    buf.remove_prefix(header_len_); // consume buffer
+                    if (ep_.version_ == protocol_version::v5) {
+                        // properties
+                        ep_.process_properties(
+                            force_move(spep),
                             force_move(session_life_keeper),
                             force_move(buf),
-                            force_move(info),
-                            force_move(self)
+                            [this]
+                            (auto&&... args ) {
+                                (*this)(std::forward<decltype(args)>(args)...);
+                            }
                         );
                     }
                     else {
-                        process_publish_impl<publish_phase::payload>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
+                        (*this)(force_move(spep), force_move(session_life_keeper), v5::properties(), force_move(buf));
                     }
-                },
-                force_move(self)
-            );
-            break;
-        case publish_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.props = force_move(props);
-                    process_publish_impl<publish_phase::payload>(
+                }
+                props_ = force_move(variant_get<v5::properties>(var));
+                ep_.mqtt_connected_ = true;
+
+                {
+                    auto connack_proc =
+                        [this]
+                        (any&& session_life_keeper) mutable {
+                            switch (ep_.version_) {
+                            case protocol_version::v3_1_1:
+                                if (ep_.on_connack(
+                                        session_present_,
+                                        variant_get<connect_return_code>(reason_code_)
+                                    )
+                                ) {
+                                    ep_.on_mqtt_message_processed(
+                                        force_move(
+                                            std::get<0>(
+                                                any_cast<
+                                                    std::tuple<any, process_type_sp>
+                                                >(session_life_keeper)
+                                            )
+                                        )
+                                    );
+                                }
+                                break;
+                            case protocol_version::v5:
+                                if (auto ta_opt = get_topic_alias_maximum_from_props(props_)) {
+                                    if (ta_opt.value() > 0) {
+                                        ep_.topic_alias_send_.emplace(ta_opt.value());
+                                    }
+                                }
+                                if (ep_.on_v5_connack(
+                                        session_present_,
+                                        variant_get<v5::connect_reason_code>(reason_code_),
+                                        force_move(props_)
+                                    )
+                                ) {
+                                    ep_.on_mqtt_message_processed(
+                                        force_move(
+                                            std::get<0>(
+                                                any_cast<
+                                                    std::tuple<any, process_type_sp>
+                                                >(session_life_keeper)
+                                            )
+                                        )
+                                    );
+                                }
+                                break;
+                            default:
+                                BOOST_ASSERT(false);
+                            }
+                        };
+
+                    // Note: boost:variant has no featue to query if the variant currently holds a specific type.
+                    // MQTT_CPP could create a type traits function to match the provided type to the index in
+                    // the boost::variant type list, but for now it does not appear to be needed.
+                    if (   (   (0 == variant_idx(reason_code_))
+                               && (connect_return_code::accepted == variant_get<connect_return_code>(reason_code_)))
+                           || (   (1 == variant_idx(reason_code_))
+                                  && (v5::connect_reason_code::success == variant_get<v5::connect_reason_code>(reason_code_)))) {
+
+                        // If session_present is false, then call clear_session_data().
+                        // Here is the reason why it works well.
+                        // ---
+                        // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901078
+                        //
+                        // If the Server accepts a connection with Clean Start set to 1, the Server
+                        // MUST set Session Present to 0 in the CONNACK packet in addition to setting
+                        // a 0x00 (Success) Reason Code in the CONNACK packet [MQTT-3.2.2-2].
+                        //
+                        //
+                        // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901048
+                        //
+                        // The Client can avoid implementing its own Session expiry and instead rely on
+                        // the Session Present flag returned from the Server to determine if the Session
+                        // had expired. If the Client does implement its own Session expiry, it needs to
+                        // store the time at which the Session State will be deleted as part of its
+                        // Session State.
+                        // ---
+                        //
+                        // Also it can  avoid the following client side and broker side session state
+                        // mismatch autonatically.
+                        //
+                        // ---
+                        // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901078
+                        //
+                        // If the Client does not have Session State and receives Session Present
+                        // set to 1 it MUST close the Network Connection [MQTT-3.2.2-4]. If it
+                        // wishes to restart with a new Session the Client can reconnect using
+                        // Clean Start set to 1.
+                        // If the Client does have Session State and receives Session Present set
+                        // to 0 it MUST discard its Session State if it continues with the Network
+                        // Connection [MQTT-3.2.2-5].
+                        // ---
+                        if (session_present_) {
+                            if (ep_.async_send_store_) {
+                                // Until all stored messages are written to internal send buffer,
+                                // disable further async reading of incoming packets..
+                                ep_.async_read_on_message_processed_ = false;
+                                auto async_connack_proc =
+                                    [
+                                        this,
+                                        spep = force_move(spep),
+                                        session_life_keeper = force_move(session_life_keeper),
+                                        connack_proc = force_move(connack_proc)
+                                    ]
+                                    () mutable {
+                                        // All stored messages are sent, so re-enable reading of incoming packets.
+                                        // and notify the end user code that the connack packet was received.
+                                        ep_.async_read_on_message_processed_ = true;
+                                        connack_proc(force_move(session_life_keeper));
+                                    };
+                                ep_.async_send_store(force_move(async_connack_proc));
+                                return;
+                            }
+                            ep_.send_store();
+                        }
+                        else {
+                            ep_.clear_session_data();
+                        }
+                    }
+                    connack_proc(force_move(session_life_keeper));
+                }
+            }
+        }
+
+    private:
+        static constexpr std::size_t header_len_ =
+            1 +  // Connect Acknowledge Flags
+            1;   // Reason Code
+
+        ep_t& ep_;
+        bool all_read_;
+
+        bool session_present_;
+        variant<connect_return_code, v5::connect_reason_code> reason_code_;
+        v5::properties props_;
+    };
+    friend struct process_connack;
+
+    // process publish
+
+    struct process_publish : as::coroutine, std::enable_shared_from_this<process_publish> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_publish;
+        using process_type_sp = std::shared_ptr<process_type>;
+
+        process_publish(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer remain_buf = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.remaining_length_ < min_len_) {
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
+                // header
+                yield ep_.process_header(
+                    force_move(spep),
+                    std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                    all_read_,
+                    0,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
+
+                // topic_name
+                yield ep_.process_string(
+                    force_move(spep),
+                    force_move(session_life_keeper),
+                    force_move(variant_get<buffer>(var)),
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
+                topic_name_ = force_move(variant_get<buffer>(var));
+
+                qos_value_ = publish::get_qos(ep_.fixed_header_);
+                if (qos_value_ != qos::at_most_once &&
+                    qos_value_ != qos::at_least_once &&
+                    qos_value_ != qos::exactly_once) {
+                    ep_.call_bad_message_error_handlers();
+                    return;
+                }
+
+                if (qos_value_ == qos::at_least_once ||
+                    qos_value_ == qos::exactly_once) {
+                    yield ep_.process_packet_id(
+                        force_move(spep),
                         force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
                     );
-                },
-                force_move(self)
-            );
-            break;
-        case publish_phase::payload:
-            process_nbytes(
-                force_move(session_life_keeper),
-                force_move(buf),
-                remaining_length_,
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer payload, buffer /*buf*/, any session_life_keeper, this_type_sp /*self*/) mutable {
+                    packet_id_ = force_move(variant_get<packet_id_t>(var));
+                }
+                if (ep_.version_ == protocol_version::v5) {
+                    yield ep_.process_properties(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    props_ = force_move(variant_get<v5::properties>(var));
+                }
+                yield ep_.process_nbytes(
+                    force_move(spep),
+                    force_move(session_life_keeper),
+                    force_move(remain_buf),
+                    ep_.remaining_length_,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
+                {
                     auto handler_call =
                         [&] {
-                            switch (version_) {
+                            switch (ep_.version_) {
                             case protocol_version::v3_1_1:
-                                if (on_publish(
-                                            info.packet_id,
-                                            publish_options(fixed_header_),
-                                            force_move(info.topic_name),
-                                            force_move(payload))) {
-                                    on_mqtt_message_processed(force_move(session_life_keeper));
+                                if (ep_.on_publish(
+                                        packet_id_,
+                                        publish_options(ep_.fixed_header_),
+                                        force_move(topic_name_),
+                                        force_move(force_move(variant_get<buffer>(var))))) {
+                                    ep_.on_mqtt_message_processed(
+                                        force_move(
+                                            std::get<0>(
+                                                any_cast<
+                                                    std::tuple<any, process_type_sp>
+                                                >(session_life_keeper)
+                                            )
+                                        )
+                                    );
                                     return true;
                                 }
                                 break;
                             case protocol_version::v5:
-                                if (info.topic_name.empty()) {
-                                    if (auto topic_alias = get_topic_alias_from_props(info.props)) {
+                                if (topic_name_.empty()) {
+                                    if (auto topic_alias = get_topic_alias_from_props(props_)) {
                                         auto topic_name = [&] {
-                                            LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-                                            return topic_alias_recv_.find(topic_alias.value());
+                                            LockGuard<Mutex> lck (ep_.topic_alias_recv_mtx_);
+                                            return ep_.topic_alias_recv_.find(topic_alias.value());
                                         }();
                                         if (topic_name.empty()) {
                                             MQTT_LOG("mqtt_cb", error)
-                                                << MQTT_ADD_VALUE(address, this)
+                                                << MQTT_ADD_VALUE(address, &ep_)
                                                 << "no matching topic alias: "
                                                 << topic_alias.value();
-                                            call_protocol_error_handlers();
+                                            ep_.call_protocol_error_handlers();
                                             return false;
                                         }
                                         else {
-                                            info.topic_name = allocate_buffer(topic_name);
+                                            topic_name_ = allocate_buffer(topic_name);
                                         }
                                     }
                                 }
                                 else {
-                                    if (auto topic_alias = get_topic_alias_from_props(info.props)) {
-                                        LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-                                        topic_alias_recv_.insert_or_update(info.topic_name, topic_alias.value());
+                                    if (auto topic_alias = ep_.get_topic_alias_from_props(props_)) {
+                                        LockGuard<Mutex> lck (ep_.topic_alias_recv_mtx_);
+                                        ep_.topic_alias_recv_.insert_or_update(topic_name_, topic_alias.value());
                                     }
                                 }
-                                if (on_v5_publish(
-                                            info.packet_id,
-                                            publish_options(fixed_header_),
-                                            force_move(info.topic_name),
-                                            force_move(payload),
-                                            force_move(info.props)
+                                if (ep_.on_v5_publish(
+                                        packet_id_,
+                                        publish_options(ep_.fixed_header_),
+                                        force_move(topic_name_),
+                                        force_move(variant_get<buffer>(var)),
+                                        force_move(props_)
                                     )
                                 ) {
-                                    on_mqtt_message_processed(force_move(session_life_keeper));
+                                    ep_.on_mqtt_message_processed(
+                                        force_move(
+                                            std::get<0>(
+                                                any_cast<
+                                                    std::tuple<any, process_type_sp>
+                                                >(session_life_keeper)
+                                            )
+                                        )
+                                    );
                                     return true;
                                 }
                                 break;
@@ -7337,27 +7235,29 @@ private:
                             }
                             return false;
                         };
-                    switch (publish::get_qos(fixed_header_)) {
+                    switch (qos_value_) {
                     case qos::at_most_once:
                         handler_call();
                         break;
                     case qos::at_least_once:
                         if (handler_call()) {
-                            auto_pub_response(
-                                [this, &info] {
-                                    if (connected_) {
-                                        send_puback(*info.packet_id,
-                                                    v5::puback_reason_code::success,
-                                                    v5::properties{});
+                            ep_.auto_pub_response(
+                                [this] {
+                                    if (ep_.connected_) {
+                                        ep_.send_puback(
+                                            *packet_id_,
+                                            v5::puback_reason_code::success,
+                                            v5::properties{}
+                                        );
                                     }
                                 },
-                                [this, &info, &session_life_keeper] {
-                                    if (connected_) {
-                                        async_send_puback(
-                                            *info.packet_id,
+                                [this] {
+                                    if (ep_.connected_) {
+                                        ep_.async_send_puback(
+                                            *packet_id_,
                                             v5::puback_reason_code::success,
                                             v5::properties{},
-                                            [session_life_keeper](auto){}
+                                            [](auto){}
                                         );
                                     }
                                 }
@@ -7366,22 +7266,24 @@ private:
                         break;
                     case qos::exactly_once:
                         if (handler_call()) {
-                            qos2_publish_handled_.emplace(*info.packet_id);
-                            auto_pub_response(
-                                [this, &info] {
-                                    if (connected_) {
-                                        send_pubrec(*info.packet_id,
-                                                    v5::pubrec_reason_code::success,
-                                                    v5::properties{});
+                            ep_.qos2_publish_handled_.emplace(*packet_id_);
+                            ep_.auto_pub_response(
+                                [this] {
+                                    if (ep_.connected_) {
+                                        ep_.send_pubrec(
+                                            *packet_id_,
+                                            v5::pubrec_reason_code::success,
+                                            v5::properties{}
+                                        );
                                     }
                                 },
-                                [this, &info, &session_life_keeper] {
-                                    if (connected_) {
-                                        async_send_pubrec(
-                                            *info.packet_id,
+                                [this] {
+                                    if (ep_.connected_) {
+                                        ep_.async_send_pubrec(
+                                            *packet_id_,
                                             v5::pubrec_reason_code::success,
                                             v5::properties{},
-                                            [session_life_keeper](auto){}
+                                            [](auto){}
                                         );
                                     }
                                 }
@@ -7389,1002 +7291,899 @@ private:
                         }
                         break;
                     }
-                },
-                force_move(self)
-            );
-            break;
+                }
+            }
         }
-    }
+
+    private:
+        static constexpr std::size_t min_len_ = 2; // topic name length
+
+        ep_t& ep_;
+        bool all_read_;
+
+        buffer topic_name_;
+        qos qos_value_;
+        optional<packet_id_t> packet_id_;
+        v5::properties props_;
+        buffer payload_;
+    };
+    friend struct process_publish;
 
     // process puback
 
-    enum class puback_phase {
-        packet_id,
-        reason_code,
-        properties,
-        finish,
-    };
+    struct process_puback : as::coroutine, std::enable_shared_from_this<process_puback> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_puback;
+        using process_type_sp = std::shared_ptr<process_type>;
 
-    struct puback_info {
-        packet_id_t packet_id;
-        v5::puback_reason_code reason_code;
-        v5::properties props;
-    };
+        process_puback(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer remain_buf = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.remaining_length_ < header_len_) {
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
+                // header
+                yield ep_.process_header(
+                    force_move(spep),
+                    std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                    all_read_,
+                    header_len_,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
 
-    void process_puback(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        static constexpr std::size_t header_len =
-            sizeof(packet_id_t);    // Packet Id
+                // packet_id
+                yield ep_.process_packet_id(
+                    force_move(spep),
+                    force_move(session_life_keeper),
+                    force_move(variant_get<buffer>(var)),
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
+                packet_id_ = force_move(variant_get<packet_id_t>(var));
 
-        if (remaining_length_ < header_len) {
-            call_protocol_error_handlers();
-            return;
-        }
-
-        process_header<puback_info,
-                       &this_type::process_puback_impl<puback_phase::packet_id>>(
-            force_move(session_life_keeper),
-            all_read,
-            header_len,
-            puback_info(),
-            force_move(self)
-        );
-    }
-
-    template<puback_phase Phase>
-    void process_puback_impl(
-        any session_life_keeper,
-        buffer buf,
-        puback_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case puback_phase::packet_id:
-            process_packet_id(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.packet_id = packet_id;
+                if (ep_.remaining_length_ == 0) {
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901126
                     // If the Remaining Length is 0, there is no reason code & property length
                     // the value of success is used for reason code, the value of 0 is used for property length
-                    if (remaining_length_ == 0) {
-                        info.reason_code = v5::puback_reason_code::success;
-                        process_puback_impl<puback_phase::finish>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                    else {
-                        process_puback_impl<puback_phase::reason_code>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                },
-                force_move(self)
-            );
-            break;
-        case puback_phase::reason_code:
-            process_nbytes(
-                force_move(session_life_keeper),
-                force_move(buf),
-                1, // reason_code
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.reason_code = static_cast<v5::puback_reason_code>(body[0]);
+                    reason_code_ = v5::puback_reason_code::success;
+                }
+                else {
+                    // reason_code
+                    yield ep_.process_nbytes(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(remain_buf),
+                        1,
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    reason_code_ = static_cast<v5::puback_reason_code>(variant_get<buffer>(var)[0]);
+
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901126
                     // If the Remaining Length is 0, there is no property length and the value of 0 is used
-                    if (remaining_length_ == 0) {
-                        process_puback_impl<puback_phase::finish>(
+
+                    if (ep_.remaining_length_ > 0) {
+                        // properties
+                        yield ep_.process_properties(
+                            force_move(spep),
                             force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
+                            force_move(remain_buf),
+                            [this]
+                            (auto&&... args ) {
+                                (*this)(std::forward<decltype(args)>(args)...);
+                            }
+                        );
+                        props_ = force_move(variant_get<v5::properties>(var));
+                    }
+                }
+                {
+                    LockGuard<Mutex> lck (ep_.store_mtx_);
+                    auto& idx = ep_.store_.template get<tag_packet_id_type>();
+                    auto r = idx.equal_range(std::make_tuple(packet_id_, control_packet_type::puback));
+                    idx.erase(std::get<0>(r), std::get<1>(r));
+                    ep_.pid_man_.release_id(packet_id_);
+                }
+                ep_.on_serialize_remove(packet_id_);
+                switch (ep_.version_) {
+                case protocol_version::v3_1_1:
+                    if (ep_.on_puback(packet_id_)) {
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
+                                )
+                            )
                         );
                     }
-                    else {
-                        process_puback_impl<puback_phase::properties>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
+                    break;
+                case protocol_version::v5:
+                    if (ep_.on_v5_puback(packet_id_, reason_code_, force_move(props_))) {
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
+                                )
+                            )
                         );
                     }
-                },
-                force_move(self)
-            );
-            break;
-        case puback_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.props = force_move(props);
-                    process_puback_impl<puback_phase::finish>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
-                },
-                force_move(self)
-            );
-            break;
-        case puback_phase::finish:
-            {
-                LockGuard<Mutex> lck (store_mtx_);
-                auto& idx = store_.template get<tag_packet_id_type>();
-                auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::puback));
-                idx.erase(std::get<0>(r), std::get<1>(r));
-                pid_man_.release_id(info.packet_id);
-            }
-            on_serialize_remove(info.packet_id);
-            switch (version_) {
-            case protocol_version::v3_1_1:
-                if (on_puback(info.packet_id)) {
-                    on_mqtt_message_processed(force_move(session_life_keeper));
+                    break;
+                default:
+                    BOOST_ASSERT(false);
                 }
-                break;
-            case protocol_version::v5:
-                if (on_v5_puback(info.packet_id, info.reason_code, force_move(info.props))) {
-                    on_mqtt_message_processed(force_move(session_life_keeper));
-                }
-                break;
-            default:
-                BOOST_ASSERT(false);
+
+
             }
-            break;
         }
-    }
+
+    private:
+        static constexpr std::size_t header_len_ = sizeof(packet_id_t);    // Packet Id
+
+        ep_t& ep_;
+        bool all_read_;
+
+        packet_id_t packet_id_;
+        v5::puback_reason_code reason_code_;
+        v5::properties props_;
+    };
+    friend struct process_puback;
 
     // process pubrec
 
-    enum class pubrec_phase {
-        packet_id,
-        reason_code,
-        properties,
-        finish,
-    };
+    struct process_pubrec : as::coroutine, std::enable_shared_from_this<process_pubrec> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_pubrec;
+        using process_type_sp = std::shared_ptr<process_type>;
 
-    struct pubrec_info {
-        packet_id_t packet_id;
-        v5::pubrec_reason_code reason_code;
-        v5::properties props;
-    };
+        process_pubrec(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer remain_buf = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.remaining_length_ < header_len_) {
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
+                // header
+                yield ep_.process_header(
+                    force_move(spep),
+                    std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                    all_read_,
+                    header_len_,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
 
-    void process_pubrec(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        static constexpr std::size_t header_len =
-            sizeof(packet_id_t);    // Packet Id
+                // packet_id
+                yield ep_.process_packet_id(
+                    force_move(spep),
+                    force_move(session_life_keeper),
+                    force_move(variant_get<buffer>(var)),
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
+                packet_id_ = force_move(variant_get<packet_id_t>(var));
 
-        if (remaining_length_ < header_len) {
-            call_protocol_error_handlers();
-            return;
-        }
-
-        process_header<pubrec_info,
-                       &this_type::process_pubrec_impl<pubrec_phase::packet_id>>(
-            force_move(session_life_keeper),
-            all_read,
-            header_len,
-            pubrec_info(),
-            force_move(self)
-        );
-    }
-
-    template<pubrec_phase Phase>
-    void process_pubrec_impl(
-        any session_life_keeper,
-        buffer buf,
-        pubrec_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case pubrec_phase::packet_id:
-            process_packet_id(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.packet_id = packet_id;
+                if (ep_.remaining_length_ == 0) {
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901136
                     // If the Remaining Length is 0, there is no reason code & property length
                     // the value of success is used for reason code, the value of 0 is used for property length
-                    if(remaining_length_ == 0) {
-                        info.reason_code = v5::pubrec_reason_code::success;
-                        process_pubrec_impl<pubrec_phase::finish>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                    else {
-                        process_pubrec_impl<pubrec_phase::reason_code>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                },
-                force_move(self)
-            );
-            break;
-        case pubrec_phase::reason_code:
-            process_nbytes(
-                force_move(session_life_keeper),
-                force_move(buf),
-                1, // reason_code
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.reason_code = static_cast<v5::pubrec_reason_code>(body[0]);
+                    reason_code_ = v5::pubrec_reason_code::success;
+                }
+                else {
+                    // reason_code
+                    yield ep_.process_nbytes(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(remain_buf),
+                        1,
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    reason_code_ = static_cast<v5::pubrec_reason_code>(variant_get<buffer>(var)[0]);
+
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901136
                     // If the Remaining Length is 0, there is no property length and the value of 0 is used
-                    if(remaining_length_ == 0) {
-                        process_pubrec_impl<pubrec_phase::finish>(
+
+                    if (ep_.remaining_length_ > 0) {
+                        // properties
+                        yield ep_.process_properties(
+                            force_move(spep),
                             force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
+                            force_move(remain_buf),
+                            [this]
+                            (auto&&... args ) {
+                                (*this)(std::forward<decltype(args)>(args)...);
+                            }
                         );
+                        props_ = force_move(variant_get<v5::properties>(var));
                     }
-                    else {
-                        process_pubrec_impl<pubrec_phase::properties>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                },
-                force_move(self)
-            );
-            break;
-        case pubrec_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.props = force_move(props);
-                    process_pubrec_impl<pubrec_phase::finish>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
-                },
-                force_move(self)
-            );
-            break;
-        case pubrec_phase::finish: {
-            {
-                LockGuard<Mutex> lck (store_mtx_);
-                auto& idx = store_.template get<tag_packet_id_type>();
-                auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::pubrec));
-                idx.erase(std::get<0>(r), std::get<1>(r));
-                // packet_id shouldn't be erased here.
-                // It is reused for pubrel/pubcomp.
-            }
-            auto res =
-                [&] {
-                    auto_pub_response(
+                }
+                {
+                    LockGuard<Mutex> lck (ep_.store_mtx_);
+                    auto& idx = ep_.store_.template get<tag_packet_id_type>();
+                    auto r = idx.equal_range(std::make_tuple(packet_id_, control_packet_type::pubrec));
+                    idx.erase(std::get<0>(r), std::get<1>(r));
+                    // packet_id shouldn't be erased here.
+                    // It is reused for pubrel/pubcomp.
+                }
+                {
+                    auto res =
                         [&] {
-                            if (connected_) {
-                                send_pubrel(info.packet_id,
+                            ep_.auto_pub_response(
+                                [&] {
+                                    if (ep_.connected_) {
+                                        ep_.send_pubrel(
+                                            packet_id_,
                                             v5::pubrel_reason_code::success,
                                             v5::properties{},
-                                            any{});
-                            }
-                            else {
-                                store_pubrel(info.packet_id,
-                                             v5::pubrel_reason_code::success,
-                                             v5::properties{},
-                                             any{});
-                            }
-                        },
-                        [&] {
-                            if (connected_) {
-                                async_send_pubrel(
-                                    info.packet_id,
-                                    v5::pubrel_reason_code::success,
-                                    v5::properties{},
-                                    any{},
-                                    [session_life_keeper](auto){}
-                                );
-                            }
-                            else {
-                                store_pubrel(info.packet_id,
-                                             v5::pubrel_reason_code::success,
-                                             v5::properties{},
-                                             any{});
-                            }
+                                            any{}
+                                        );
+                                    }
+                                    else {
+                                        ep_.store_pubrel(
+                                            packet_id_,
+                                            v5::pubrel_reason_code::success,
+                                            v5::properties{},
+                                            any{}
+                                        );
+                                    }
+                                },
+                                [&] {
+                                    if (ep_.connected_) {
+                                        ep_.async_send_pubrel(
+                                            packet_id_,
+                                            v5::pubrel_reason_code::success,
+                                            v5::properties{},
+                                            any{},
+                                            [](auto){}
+                                        );
+                                    }
+                                    else {
+                                        ep_.store_pubrel(
+                                            packet_id_,
+                                            v5::pubrel_reason_code::success,
+                                            v5::properties{},
+                                            any{}
+                                        );
+                                    }
+                                }
+                            );
+                        };
+                    switch (ep_.version_) {
+                    case protocol_version::v3_1_1:
+                        if (ep_.on_pubrec(packet_id_)) {
+                            res();
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                            std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
+                                    )
+                                )
+                            );
                         }
-                    );
-                };
-            switch (version_) {
-            case protocol_version::v3_1_1:
-                if (on_pubrec(info.packet_id)) {
-                    res();
-                    on_mqtt_message_processed(force_move(session_life_keeper));
+                        break;
+                    case protocol_version::v5:
+                        if (ep_.on_v5_pubrec(packet_id_, reason_code_, force_move(props_))) {
+                            res();
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                            std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
+                                    )
+                                )
+                            );
+                        }
+                        break;
+                    default:
+                        BOOST_ASSERT(false);
+                    }
                 }
-                break;
-            case protocol_version::v5:
-                if (on_v5_pubrec(info.packet_id, info.reason_code, force_move(info.props))) {
-                    res();
-                    on_mqtt_message_processed(force_move(session_life_keeper));
-                }
-                break;
-            default:
-                BOOST_ASSERT(false);
             }
-        } break;
-        }
-    }
-
-    // process pubrel
-
-    enum class pubrel_phase {
-        packet_id,
-        reason_code,
-        properties,
-        finish,
-    };
-
-    struct pubrel_info {
-        packet_id_t packet_id;
-        v5::pubrel_reason_code reason_code;
-        v5::properties props;
-    };
-
-    void process_pubrel(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        static constexpr std::size_t header_len =
-            sizeof(packet_id_t);    // Packet Id
-
-        if (remaining_length_ < header_len) {
-            call_protocol_error_handlers();
-            return;
         }
 
-        process_header<pubrel_info,
-                       &this_type::process_pubrel_impl<pubrel_phase::packet_id>>(
-            force_move(session_life_keeper),
-            all_read,
-            header_len,
-            pubrel_info(),
-            force_move(self)
-        );
-    }
+    private:
+        static constexpr std::size_t header_len_ = sizeof(packet_id_t);    // Packet Id
 
-    template<pubrel_phase Phase>
-    void process_pubrel_impl(
-        any session_life_keeper,
-        buffer buf,
-        pubrel_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case pubrel_phase::packet_id:
-            process_packet_id(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.packet_id = packet_id;
+        ep_t& ep_;
+        bool all_read_;
+
+        packet_id_t packet_id_;
+        v5::pubrec_reason_code reason_code_;
+        v5::properties props_;
+    };
+    friend struct process_pubrec;
+
+    struct process_pubrel : as::coroutine, std::enable_shared_from_this<process_pubrel> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_pubrel;
+        using process_type_sp = std::shared_ptr<process_type>;
+
+        process_pubrel(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer remain_buf = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.remaining_length_ < header_len_) {
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
+                // header
+                yield ep_.process_header(
+                    force_move(spep),
+                    std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                    all_read_,
+                    header_len_,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
+
+                // packet_id
+                yield ep_.process_packet_id(
+                    force_move(spep),
+                    force_move(session_life_keeper),
+                    force_move(variant_get<buffer>(var)),
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
+                packet_id_ = force_move(variant_get<packet_id_t>(var));
+
+                if (ep_.remaining_length_ == 0) {
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901146
                     // If the Remaining Length is 0, there is no reason code & property length
                     // the value of success is used for reason code, the value of 0 is used for property length
-                    if (remaining_length_ == 0) {
-                        info.reason_code = v5::pubrel_reason_code::success;
-                        process_pubrel_impl<pubrel_phase::finish>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                    else {
-                        process_pubrel_impl<pubrel_phase::reason_code>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                },
-                force_move(self)
-            );
-            break;
-        case pubrel_phase::reason_code:
-            process_nbytes(
-                force_move(session_life_keeper),
-                force_move(buf),
-                1, // reason_code
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.reason_code = static_cast<v5::pubrel_reason_code>(body[0]);
-                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901146
-                    // If the Remaining Length is 0, there is no property length and the value of 0 is used
-                    if (remaining_length_ == 0) {
-                        process_pubrel_impl<pubrel_phase::finish>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                    else {
-                        process_pubrel_impl<pubrel_phase::properties>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                },
-                force_move(self)
-            );
-            break;
-        case pubrel_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.props = force_move(props);
-                    process_pubrel_impl<pubrel_phase::finish>(
+                    reason_code_ = v5::pubrel_reason_code::success;
+                }
+                else {
+                    // reason_code
+                    yield ep_.process_nbytes(
+                        force_move(spep),
                         force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
-                },
-                force_move(self)
-            );
-            break;
-        case pubrel_phase::finish: {
-            auto res =
-                [&] {
-                    auto_pub_response(
-                        [&] {
-                            if (connected_) {
-                                send_pubcomp(info.packet_id,
-                                             v5::pubcomp_reason_code::success,
-                                             v5::properties{});
-                            }
-                        },
-                        [&] {
-                            if (connected_) {
-                                async_send_pubcomp(
-                                    info.packet_id,
-                                    v5::pubcomp_reason_code::success,
-                                    v5::properties{},
-                                    [session_life_keeper](auto){}
-                                );
-                            }
+                        force_move(remain_buf),
+                        1,
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
                         }
                     );
-                };
-            qos2_publish_handled_.erase(info.packet_id);
-            switch (version_) {
-            case protocol_version::v3_1_1:
-                if (on_pubrel(info.packet_id)) {
-                    res();
-                    on_mqtt_message_processed(force_move(session_life_keeper));
+                    reason_code_ = static_cast<v5::pubrel_reason_code>(variant_get<buffer>(var)[0]);
+
+                    // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901146
+                    // If the Remaining Length is 0, there is no property length and the value of 0 is used
+
+                    if (ep_.remaining_length_ > 0) {
+                        // properties
+                        yield ep_.process_properties(
+                            force_move(spep),
+                            force_move(session_life_keeper),
+                            force_move(remain_buf),
+                            [this]
+                            (auto&&... args ) {
+                                (*this)(std::forward<decltype(args)>(args)...);
+                            }
+                        );
+                        props_ = force_move(variant_get<v5::properties>(var));
+                    }
                 }
-                break;
-            case protocol_version::v5:
-                if (on_v5_pubrel(info.packet_id, info.reason_code, force_move(info.props))) {
-                    res();
-                    on_mqtt_message_processed(force_move(session_life_keeper));
+
+                {
+                    auto res =
+                        [&] {
+                            ep_.auto_pub_response(
+                                [&] {
+                                    if (ep_.connected_) {
+                                        ep_.send_pubcomp(
+                                            packet_id_,
+                                            v5::pubcomp_reason_code::success,
+                                            v5::properties{}
+                                        );
+                                    }
+                                },
+                                [&] {
+                                    if (ep_.connected_) {
+                                        ep_.async_send_pubcomp(
+                                            packet_id_,
+                                            v5::pubcomp_reason_code::success,
+                                            v5::properties{},
+                                            [](auto){}
+                                        );
+                                    }
+                                }
+                            );
+                        };
+                    ep_.qos2_publish_handled_.erase(packet_id_);
+                    switch (ep_.version_) {
+                    case protocol_version::v3_1_1:
+                        if (ep_.on_pubrel(packet_id_)) {
+                            res();
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                            std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
+                                    )
+                                )
+                            );
+                        }
+                        break;
+                    case protocol_version::v5:
+                        if (ep_.on_v5_pubrel(packet_id_, reason_code_, force_move(props_))) {
+                            res();
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                            std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
+                                    )
+                                )
+                            );
+                        }
+                        break;
+                    default:
+                        BOOST_ASSERT(false);
+                    }
                 }
-                break;
-            default:
-                BOOST_ASSERT(false);
             }
-        } break;
         }
-    }
+
+    private:
+        static constexpr std::size_t header_len_ = sizeof(packet_id_t);    // Packet Id
+
+        ep_t& ep_;
+        bool all_read_;
+
+        packet_id_t packet_id_;
+        v5::pubrel_reason_code reason_code_;
+        v5::properties props_;
+    };
+    friend struct process_pubrel;
 
     // process pubcomp
 
-    enum class pubcomp_phase {
-        packet_id,
-        reason_code,
-        properties,
-        finish,
-    };
+    struct process_pubcomp : as::coroutine, std::enable_shared_from_this<process_pubcomp> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_pubcomp;
+        using process_type_sp = std::shared_ptr<process_type>;
 
-    struct pubcomp_info {
-        packet_id_t packet_id;
-        v5::pubcomp_reason_code reason_code;
-        v5::properties props;
-    };
+        process_pubcomp(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer remain_buf = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.remaining_length_ < header_len_) {
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
+                // header
+                yield ep_.process_header(
+                    force_move(spep),
+                    std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                    all_read_,
+                    header_len_,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
 
-    void process_pubcomp(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        static constexpr std::size_t header_len =
-            sizeof(packet_id_t);    // Packet Id
+                // packet_id
+                yield ep_.process_packet_id(
+                    force_move(spep),
+                    force_move(session_life_keeper),
+                    force_move(variant_get<buffer>(var)),
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
+                    }
+                );
+                packet_id_ = force_move(variant_get<packet_id_t>(var));
 
-        if (remaining_length_ < header_len) {
-            call_protocol_error_handlers();
-            return;
-        }
-
-        process_header<pubcomp_info,
-                       &this_type::process_pubcomp_impl<pubcomp_phase::packet_id>>(
-            force_move(session_life_keeper),
-            all_read,
-            header_len,
-            pubcomp_info(),
-            force_move(self)
-        );
-    }
-
-    template<pubcomp_phase Phase>
-    void process_pubcomp_impl(
-        any session_life_keeper,
-        buffer buf,
-        pubcomp_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case pubcomp_phase::packet_id:
-            process_packet_id(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.packet_id = packet_id;
+                if (ep_.remaining_length_ == 0) {
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901156
                     // If the Remaining Length is 0, there is no reason code & property length
                     // the value of success is used for reason code, the value of 0 is used for property length
-                    if (remaining_length_ == 0) {
-                        info.reason_code = v5::pubcomp_reason_code::success;
-                        process_pubcomp_impl<pubcomp_phase::finish>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                    else {
-                        process_pubcomp_impl<pubcomp_phase::reason_code>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                },
-                force_move(self)
-            );
-            break;
-        case pubcomp_phase::reason_code:
-            process_nbytes(
-                force_move(session_life_keeper),
-                force_move(buf),
-                1, // reason_code
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.reason_code = static_cast<v5::pubcomp_reason_code>(body[0]);
+                    reason_code_ = v5::pubcomp_reason_code::success;
+                }
+                else {
+                    // reason_code
+                    yield ep_.process_nbytes(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(remain_buf),
+                        1,
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    reason_code_ = static_cast<v5::pubcomp_reason_code>(variant_get<buffer>(var)[0]);
+
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901156
                     // If the Remaining Length is 0, there is no property length and the value of 0 is used
-                    if (remaining_length_ == 0) {
-                        process_pubcomp_impl<pubcomp_phase::finish>(
+
+                    if (ep_.remaining_length_ > 0) {
+                        // properties
+                        yield ep_.process_properties(
+                            force_move(spep),
                             force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
+                            force_move(remain_buf),
+                            [this]
+                            (auto&&... args ) {
+                                (*this)(std::forward<decltype(args)>(args)...);
+                            }
+                        );
+                        props_ = force_move(variant_get<v5::properties>(var));
+                    }
+                }
+                {
+                    LockGuard<Mutex> lck (ep_.store_mtx_);
+                    auto& idx = ep_.store_.template get<tag_packet_id_type>();
+                    auto r = idx.equal_range(std::make_tuple(packet_id_, control_packet_type::pubcomp));
+                    idx.erase(std::get<0>(r), std::get<1>(r));
+                    ep_.pid_man_.release_id(packet_id_);
+                }
+                ep_.on_serialize_remove(packet_id_);
+                switch (ep_.version_) {
+                case protocol_version::v3_1_1:
+                    if (ep_.on_pubcomp(packet_id_)) {
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
+                                )
+                            )
                         );
                     }
-                    else {
-                        process_pubcomp_impl<pubcomp_phase::properties>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
+                    break;
+                case protocol_version::v5:
+                    if (ep_.on_v5_pubcomp(packet_id_, reason_code_, force_move(props_))) {
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
+                                )
+                            )
                         );
                     }
-                },
-                force_move(self)
-            );
-            break;
-        case pubcomp_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.props = force_move(props);
-                    process_pubcomp_impl<pubcomp_phase::finish>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
-                    );
-                },
-                force_move(self)
-            );
-            break;
-        case pubcomp_phase::finish:
-            {
-                LockGuard<Mutex> lck (store_mtx_);
-                auto& idx = store_.template get<tag_packet_id_type>();
-                auto r = idx.equal_range(std::make_tuple(info.packet_id, control_packet_type::pubcomp));
-                idx.erase(std::get<0>(r), std::get<1>(r));
-                pid_man_.release_id(info.packet_id);
-            }
-            on_serialize_remove(info.packet_id);
-            switch (version_) {
-            case protocol_version::v3_1_1:
-                if (on_pubcomp(info.packet_id)) {
-                    on_mqtt_message_processed(force_move(session_life_keeper));
+                    break;
+                default:
+                    BOOST_ASSERT(false);
                 }
-                break;
-            case protocol_version::v5:
-                if (on_v5_pubcomp(info.packet_id, info.reason_code, force_move(info.props))) {
-                    on_mqtt_message_processed(force_move(session_life_keeper));
-                }
-                break;
-            default:
-                BOOST_ASSERT(false);
+
+
             }
-            break;
         }
-    }
+
+    private:
+        static constexpr std::size_t header_len_ = sizeof(packet_id_t);    // Packet Id
+
+        ep_t& ep_;
+        bool all_read_;
+
+        packet_id_t packet_id_;
+        v5::pubcomp_reason_code reason_code_;
+        v5::properties props_;
+    };
+    friend struct process_pubcomp;
 
     // process subscribe
 
-    enum class subscribe_phase {
-        packet_id,
-        properties,
-        topic,
-        finish,
-    };
+    struct process_subscribe : as::coroutine, std::enable_shared_from_this<process_subscribe> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_subscribe;
+        using process_type_sp = std::shared_ptr<process_type>;
 
-    struct subscribe_info {
-        packet_id_t packet_id;
-        v5::properties props;
-        std::vector<subscribe_entry> entries;
-    };
-
-    void process_subscribe(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        static constexpr std::size_t header_len =
-            sizeof(packet_id_t);    // Packet Id
-
-        if (remaining_length_ < header_len) {
-            call_protocol_error_handlers();
-            return;
-        }
-
-        process_header<subscribe_info,
-                       &this_type::process_subscribe_impl<subscribe_phase::packet_id>>(
-            force_move(session_life_keeper),
-            all_read,
-            header_len,
-            subscribe_info(),
-            force_move(self)
-        );
-    }
-
-    template<subscribe_phase Phase>
-    void process_subscribe_impl(
-        any session_life_keeper,
-        buffer buf,
-        subscribe_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case subscribe_phase::packet_id:
-            process_packet_id(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.packet_id = packet_id;
-                    if (version_ == protocol_version::v5) {
-                        process_subscribe_impl<subscribe_phase::properties>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
+        process_subscribe(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer remain_buf = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.remaining_length_ < header_len_) {
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
+                // header
+                yield ep_.process_header(
+                    force_move(spep),
+                    std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                    all_read_,
+                    header_len_,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
                     }
-                    else {
-                        process_subscribe_impl<subscribe_phase::topic>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
+                );
+
+                // packet_id
+                yield ep_.process_packet_id(
+                    force_move(spep),
+                    force_move(session_life_keeper),
+                    force_move(variant_get<buffer>(var)),
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
                     }
-                },
-                force_move(self)
-            );
-            break;
-        case subscribe_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.props = force_move(props);
-                    process_subscribe_impl<subscribe_phase::topic>(
+                );
+                packet_id_ = force_move(variant_get<packet_id_t>(var));
+
+                if (ep_.version_ == protocol_version::v5) {
+                    // properties
+                    yield ep_.process_properties(
+                        force_move(spep),
                         force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
                     );
-                },
-                force_move(self)
-            );
-            break;
-        case subscribe_phase::topic:
-            process_string(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer whole_topic_filter, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    auto sn_tf_opt = parse_shared_subscription(whole_topic_filter);
-                    if (!sn_tf_opt) {
+                    props_ = force_move(variant_get<v5::properties>(var));
+                }
+
+                while (true) {
+                    // topic_filter including share_name
+                    yield ep_.process_string(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    sn_tf_opt_ = parse_shared_subscription(variant_get<buffer>(var));
+                    if (!sn_tf_opt_) {
                         MQTT_LOG("mqtt_impl", error)
-                            << MQTT_ADD_VALUE(address, this)
+                            << MQTT_ADD_VALUE(address, &ep_)
                             << "topic_filter parse error"
                             << " whole_topic_filter: "
-                            << whole_topic_filter;
-                        call_protocol_error_handlers();
+                            << variant_get<buffer>(var);
+                        ep_.call_protocol_error_handlers();
                         return;
                     }
-                    process_nbytes(
+
+                    // subscribe options
+                    yield ep_.process_nbytes(
+                        force_move(spep),
                         force_move(session_life_keeper),
-                        force_move(buf),
-                        1, // subscribe options
-                        [
-                            this,
-                            info = force_move(info),
-                            share_name = force_move(sn_tf_opt.value().share_name),
-                            topic_filter = force_move(sn_tf_opt.value().topic_filter)
-                        ]
-                        (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                            subscribe_options option(static_cast<std::uint8_t>(body[0]));
-                            qos requested_qos = option.get_qos();
-                            if (requested_qos != qos::at_most_once &&
-                                requested_qos != qos::at_least_once &&
-                                requested_qos != qos::exactly_once) {
-                                call_bad_message_error_handlers();
-                                return;
-                            }
-                            info.entries.emplace_back(force_move(share_name), force_move(topic_filter), option);
-                            if (remaining_length_ == 0) {
-                                process_subscribe_impl<subscribe_phase::finish>(
-                                    force_move(session_life_keeper),
-                                    force_move(buf),
-                                    force_move(info),
-                                    force_move(self)
-                                );
-                            }
-                            else {
-                                process_subscribe_impl<subscribe_phase::topic>(
-                                    force_move(session_life_keeper),
-                                    force_move(buf),
-                                    force_move(info),
-                                    force_move(self)
-                                );
-                            }
-                        },
-                        force_move(self)
+                        force_move(remain_buf),
+                        1,
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
                     );
-                },
-                force_move(self)
-            );
-            break;
-        case subscribe_phase::finish:
-            switch (version_) {
-            case protocol_version::v3_1_1:
-                if (on_subscribe(info.packet_id, force_move(info.entries))) {
-                    on_mqtt_message_processed(force_move(session_life_keeper));
+                    sub_opts_opt_.emplace(static_cast<std::uint8_t>(variant_get<buffer>(var)[0]));
+                    if (sub_opts_opt_.value().get_qos() != qos::at_most_once &&
+                        sub_opts_opt_.value().get_qos() != qos::at_least_once &&
+                        sub_opts_opt_.value().get_qos() != qos::exactly_once) {
+                        ep_.call_bad_message_error_handlers();
+                        return;
+                    }
+
+                    entries_.emplace_back(
+                        force_move(sn_tf_opt_.value().share_name),
+                        force_move(sn_tf_opt_.value().topic_filter),
+                        sub_opts_opt_.value()
+                    );
+
+                    if (ep_.remaining_length_ == 0) {
+                        switch (ep_.version_) {
+                        case protocol_version::v3_1_1:
+                            if (ep_.on_subscribe(packet_id_, force_move(entries_))) {
+                                ep_.on_mqtt_message_processed(
+                                    force_move(
+                                        std::get<0>(
+                                            any_cast<
+                                                std::tuple<any, process_type_sp>
+                                            >(session_life_keeper)
+                                        )
+                                    )
+                                );
+                            }
+                            break;
+                        case protocol_version::v5:
+                            if (ep_.on_v5_subscribe(packet_id_, force_move(entries_), force_move(props_))) {
+                                ep_.on_mqtt_message_processed(
+                                    force_move(
+                                        std::get<0>(
+                                            any_cast<
+                                                std::tuple<any, process_type_sp>
+                                            >(session_life_keeper)
+                                        )
+                                    )
+                                );
+                            }
+                            break;
+                        default:
+                            BOOST_ASSERT(false);
+                        }
+                        return;
+                    }
                 }
-                break;
-            case protocol_version::v5:
-                if (on_v5_subscribe(info.packet_id, force_move(info.entries), force_move(info.props))) {
-                    on_mqtt_message_processed(force_move(session_life_keeper));
-                }
-                break;
-            default:
-                BOOST_ASSERT(false);
             }
-            break;
         }
-    }
+
+    private:
+        static constexpr std::size_t header_len_ = sizeof(packet_id_t);    // Packet Id
+
+        ep_t& ep_;
+        bool all_read_;
+
+        packet_id_t packet_id_;
+        v5::properties props_;
+        optional<share_name_topic_filter> sn_tf_opt_;
+        optional<subscribe_options> sub_opts_opt_;
+        std::vector<subscribe_entry> entries_;
+    };
+    friend struct process_subscribe;
 
     // process suback
 
-    enum class suback_phase {
-        packet_id,
-        properties,
-        reasons,
-    };
+    struct process_suback : as::coroutine, std::enable_shared_from_this<process_suback> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_suback;
+        using process_type_sp = std::shared_ptr<process_type>;
 
-    struct suback_info {
-        packet_id_t packet_id;
-        v5::properties props;
-    };
-
-    void process_suback(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        static constexpr std::size_t header_len =
-            sizeof(packet_id_t);    // Packet Id
-
-        if (remaining_length_ < header_len) {
-            call_protocol_error_handlers();
-            return;
-        }
-
-        process_header<suback_info,
-                       &this_type::process_suback_impl<suback_phase::packet_id>>(
-            force_move(session_life_keeper),
-            all_read,
-            header_len,
-            suback_info(),
-            force_move(self)
-        );
-    }
-
-    template<suback_phase Phase>
-    void process_suback_impl(
-        any session_life_keeper,
-        buffer buf,
-        suback_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case suback_phase::packet_id:
-            process_packet_id(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.packet_id = packet_id;
-                    if (version_ == protocol_version::v5) {
-                        process_suback_impl<suback_phase::properties>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
+        process_suback(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer remain_buf = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.remaining_length_ < header_len_) {
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
+                // header
+                yield ep_.process_header(
+                    force_move(spep),
+                    std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                    all_read_,
+                    header_len_,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
                     }
-                    else {
-                        process_suback_impl<suback_phase::reasons>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
+                );
+
+                // packet_id
+                yield ep_.process_packet_id(
+                    force_move(spep),
+                    force_move(session_life_keeper),
+                    force_move(variant_get<buffer>(var)),
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
                     }
-                },
-                force_move(self)
-            );
-            break;
-        case suback_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.props = force_move(props);
-                    process_suback_impl<suback_phase::reasons>(
+                );
+                packet_id_ = force_move(variant_get<packet_id_t>(var));
+
+                if (ep_.version_ == protocol_version::v5) {
+                    // properties
+                    yield ep_.process_properties(
+                        force_move(spep),
                         force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
                     );
-                },
-                force_move(self)
-            );
-            break;
-        case suback_phase::reasons:
-            process_nbytes(
-                force_move(session_life_keeper),
-                force_move(buf),
-                remaining_length_, // Reason Codes
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer body, buffer /*buf*/, any session_life_keeper, this_type_sp /*self*/) mutable {
-                    {
-                        LockGuard<Mutex> lck_store (store_mtx_);
-                        LockGuard<Mutex> lck_sub_unsub (sub_unsub_inflight_mtx_);
-                        pid_man_.release_id(info.packet_id);
-                        sub_unsub_inflight_.erase(info.packet_id);
+                    props_ = force_move(variant_get<v5::properties>(var));
+                }
+
+                // suback reason codes
+                yield ep_.process_nbytes(
+                    force_move(spep),
+                    force_move(session_life_keeper),
+                    force_move(remain_buf),
+                    ep_.remaining_length_,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
                     }
-                    switch (version_) {
-                    case protocol_version::v3_1_1:
+                );
+                {
+                    LockGuard<Mutex> lck_store (ep_.store_mtx_);
+                    LockGuard<Mutex> lck_sub_unsub (ep_.sub_unsub_inflight_mtx_);
+                    ep_.pid_man_.release_id(packet_id_);
+                    ep_.sub_unsub_inflight_.erase(packet_id_);
+                }
+                switch (ep_.version_) {
+                case protocol_version::v3_1_1:
                     {
                         // TODO: We can avoid an allocation by casting the raw bytes of the
                         // MQTT_NS::buffer that is being parsed, and instead call the suback
                         // handler with an std::span and the MQTT_NS::buffer (as lifekeeper)
                         std::vector<suback_return_code> results;
+                        auto& body = variant_get<buffer>(var);
                         results.resize(body.size());
                         std::transform(
                             body.begin(),
@@ -8400,17 +8199,26 @@ private:
                                 return static_cast<suback_return_code>(e);
                             }
                         );
-                        if (on_suback(info.packet_id, force_move(results))) {
-                            on_mqtt_message_processed(force_move(session_life_keeper));
+                        if (ep_.on_suback(packet_id_, force_move(results))) {
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                            std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
+                                    )
+                                )
+                            );
                         }
                         break;
                     }
-                    case protocol_version::v5:
+                case protocol_version::v5:
                     {
                         // TODO: We can avoid an allocation by casting the raw bytes of the
                         // MQTT_NS::buffer that is being parsed, and instead call the suback
                         // handler with an std::span and the MQTT_NS::buffer (as lifekeeper)
                         std::vector<v5::suback_reason_code> reasons;
+                        auto& body = variant_get<buffer>(var);
                         reasons.resize(body.size());
                         std::transform(
                             body.begin(),
@@ -8427,317 +8235,310 @@ private:
                                 return static_cast<v5::suback_reason_code>(e);
                             }
                         );
-                        if (on_v5_suback(info.packet_id, force_move(reasons), force_move(info.props))) {
-                            on_mqtt_message_processed(force_move(session_life_keeper));
+                        if (ep_.on_v5_suback(packet_id_, force_move(reasons), force_move(props_))) {
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                            std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
+                                    )
+                                )
+                            );
                         }
                         break;
                     }
-                    default:
-                        BOOST_ASSERT(false);
-                    }
-                },
-                force_move(self)
-            );
-            break;
+                default:
+                    BOOST_ASSERT(false);
+                }
+            }
         }
-    }
+
+    private:
+        static constexpr std::size_t header_len_ = sizeof(packet_id_t);    // Packet Id
+
+        ep_t& ep_;
+        bool all_read_;
+
+        packet_id_t packet_id_;
+        v5::properties props_;
+    };
+    friend struct process_suback;
 
     // process unsubscribe
 
-    enum class unsubscribe_phase {
-        packet_id,
-        properties,
-        topic,
-        finish,
-    };
+    struct process_unsubscribe : as::coroutine, std::enable_shared_from_this<process_unsubscribe> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_unsubscribe;
+        using process_type_sp = std::shared_ptr<process_type>;
 
-    struct unsubscribe_info {
-        packet_id_t packet_id;
-        v5::properties props;
-        std::vector<unsubscribe_entry> entries;
-    };
-
-    void process_unsubscribe(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        static constexpr std::size_t header_len =
-            sizeof(packet_id_t);    // Packet Id
-
-        if (remaining_length_ < header_len) {
-            call_protocol_error_handlers();
-            return;
-        }
-
-        process_header<unsubscribe_info,
-                       &this_type::process_unsubscribe_impl<unsubscribe_phase::packet_id>>(
-            force_move(session_life_keeper),
-            all_read,
-            header_len,
-            unsubscribe_info(),
-            force_move(self)
-        );
-    }
-
-    template<unsubscribe_phase Phase>
-    void process_unsubscribe_impl(
-        any session_life_keeper,
-        buffer buf,
-        unsubscribe_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case unsubscribe_phase::packet_id:
-            process_packet_id(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.packet_id = packet_id;
-                    if (version_ == protocol_version::v5) {
-                        process_unsubscribe_impl<unsubscribe_phase::properties>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
+        process_unsubscribe(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer remain_buf = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.remaining_length_ < header_len_) {
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
+                // header
+                yield ep_.process_header(
+                    force_move(spep),
+                    std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                    all_read_,
+                    header_len_,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
                     }
-                    else {
-                        process_unsubscribe_impl<unsubscribe_phase::topic>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
+                );
+
+                // packet_id
+                yield ep_.process_packet_id(
+                    force_move(spep),
+                    force_move(session_life_keeper),
+                    force_move(variant_get<buffer>(var)),
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
                     }
-                },
-                force_move(self)
-            );
-            break;
-        case unsubscribe_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.props = force_move(props);
-                    process_unsubscribe_impl<unsubscribe_phase::topic>(
+                );
+                packet_id_ = force_move(variant_get<packet_id_t>(var));
+
+                if (ep_.version_ == protocol_version::v5) {
+                    // properties
+                    yield ep_.process_properties(
+                        force_move(spep),
                         force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
                     );
-                },
-                force_move(self)
-            );
-            break;
-        case unsubscribe_phase::topic:
-            process_string(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer whole_topic_filter, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    auto sn_tf_opt = parse_shared_subscription(whole_topic_filter);
-                    if (!sn_tf_opt) {
+                    props_ = force_move(variant_get<v5::properties>(var));
+                }
+
+                while (true) {
+                    // topic_filter including share_name
+                    yield ep_.process_string(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    sn_tf_opt_ = parse_shared_subscription(variant_get<buffer>(var));
+                    if (!sn_tf_opt_) {
                         MQTT_LOG("mqtt_impl", error)
-                            << MQTT_ADD_VALUE(address, this)
+                            << MQTT_ADD_VALUE(address, &ep_)
                             << "topic_filter parse error"
                             << " whole_topic_filter: "
-                            << whole_topic_filter;
-                        call_protocol_error_handlers();
+                            << variant_get<buffer>(var);
+                        ep_.call_protocol_error_handlers();
                         return;
                     }
-                    info.entries.emplace_back(
-                        force_move(sn_tf_opt.value().share_name),
-                        force_move(sn_tf_opt.value().topic_filter)
+
+                    entries_.emplace_back(
+                        force_move(sn_tf_opt_.value().share_name),
+                        force_move(sn_tf_opt_.value().topic_filter)
                     );
-                    if (remaining_length_ == 0) {
-                        process_unsubscribe_impl<unsubscribe_phase::finish>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
+
+                    if (ep_.remaining_length_ == 0) {
+                        switch (ep_.version_) {
+                        case protocol_version::v3_1_1:
+                            if (ep_.on_unsubscribe(packet_id_, force_move(entries_))) {
+                                ep_.on_mqtt_message_processed(
+                                    force_move(
+                                        std::get<0>(
+                                            any_cast<
+                                                std::tuple<any, process_type_sp>
+                                            >(session_life_keeper)
+                                        )
+                                    )
+                                );
+                            }
+                            break;
+                        case protocol_version::v5:
+                            if (ep_.on_v5_unsubscribe(packet_id_, force_move(entries_), force_move(props_))) {
+                                ep_.on_mqtt_message_processed(
+                                    force_move(
+                                        std::get<0>(
+                                            any_cast<
+                                                std::tuple<any, process_type_sp>
+                                            >(session_life_keeper)
+                                        )
+                                    )
+                                );
+                            }
+                            break;
+                        default:
+                            BOOST_ASSERT(false);
+                        }
+                        return;
                     }
-                    else {
-                        process_unsubscribe_impl<unsubscribe_phase::topic>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                    }
-                },
-                force_move(self)
-            );
-            break;
-        case unsubscribe_phase::finish:
-            switch (version_) {
-            case protocol_version::v3_1_1:
-                if (on_unsubscribe(info.packet_id, force_move(info.entries))) {
-                    on_mqtt_message_processed(force_move(session_life_keeper));
                 }
-                break;
-            case protocol_version::v5:
-                if (on_v5_unsubscribe(info.packet_id, force_move(info.entries), force_move(info.props))) {
-                    on_mqtt_message_processed(force_move(session_life_keeper));
-                }
-                break;
-            default:
-                BOOST_ASSERT(false);
             }
-            break;
         }
-    }
+
+    private:
+        static constexpr std::size_t header_len_ = sizeof(packet_id_t);    // Packet Id
+
+        ep_t& ep_;
+        bool all_read_;
+
+        packet_id_t packet_id_;
+        v5::properties props_;
+        optional<share_name_topic_filter> sn_tf_opt_;
+        std::vector<unsubscribe_entry> entries_;
+    };
+    friend struct process_unsubscribe;
 
     // process unsuback
 
-    enum class unsuback_phase {
-        packet_id,
-        properties,
-        reasons,
-    };
+    struct process_unsuback : as::coroutine, std::enable_shared_from_this<process_unsuback> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_unsuback;
+        using process_type_sp = std::shared_ptr<process_type>;
 
-    struct unsuback_info {
-        packet_id_t packet_id;
-        v5::properties props;
-    };
-
-    void process_unsuback(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        static constexpr std::size_t header_len =
-            sizeof(packet_id_t);    // Packet Id
-
-        if (remaining_length_ < header_len) {
-            call_protocol_error_handlers();
-            return;
-        }
-
-        process_header<unsuback_info,
-                       &this_type::process_unsuback_impl<unsuback_phase::packet_id>>(
-            force_move(session_life_keeper),
-            all_read,
-            header_len,
-            unsuback_info(),
-            force_move(self)
-        );
-    }
-
-    template<unsuback_phase Phase>
-    void process_unsuback_impl(
-        any session_life_keeper,
-        buffer buf,
-        unsuback_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case unsuback_phase::packet_id:
-            process_packet_id(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (packet_id_t packet_id, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.packet_id = packet_id;
-                    {
-                        LockGuard<Mutex> lck_store (store_mtx_);
-                        LockGuard<Mutex> lck_sub_unsub (sub_unsub_inflight_mtx_);
-                        pid_man_.release_id(info.packet_id);
-                        sub_unsub_inflight_.erase(info.packet_id);
+        process_unsuback(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer remain_buf = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.remaining_length_ < header_len_) {
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
+                // header
+                yield ep_.process_header(
+                    force_move(spep),
+                    std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                    all_read_,
+                    header_len_,
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
                     }
-                    switch (version_) {
-                    case protocol_version::v3_1_1:
-                        if (on_unsuback(info.packet_id)) {
-                            on_mqtt_message_processed(force_move(session_life_keeper));
-                        }
-                        break;
-                    case protocol_version::v5:
-                        process_unsuback_impl<unsuback_phase::properties>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
-                        break;
-                    default:
-                        BOOST_ASSERT(false);
+                );
+
+                // packet_id
+                yield ep_.process_packet_id(
+                    force_move(spep),
+                    force_move(session_life_keeper),
+                    force_move(variant_get<buffer>(var)),
+                    [this]
+                    (auto&&... args ) {
+                        (*this)(std::forward<decltype(args)>(args)...);
                     }
-                },
-                force_move(self)
-            );
-            break;
-        case unsuback_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.props = force_move(props);
-                    process_unsuback_impl<unsuback_phase::reasons>(
+                );
+                packet_id_ = force_move(variant_get<packet_id_t>(var));
+
+                if (ep_.version_ == protocol_version::v5) {
+                    // properties
+                    yield ep_.process_properties(
+                        force_move(spep),
                         force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
                     );
-                },
-                force_move(self)
-            );
-            break;
-        case unsuback_phase::reasons:
-            process_nbytes(
-                force_move(session_life_keeper),
-                force_move(buf),
-                remaining_length_, // Reason Codes
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer body, buffer /*buf*/, any session_life_keeper, this_type_sp /*self*/) mutable {
-                    BOOST_ASSERT(version_ == protocol_version::v5);
-                    {
-                        LockGuard<Mutex> lck_store (store_mtx_);
-                        LockGuard<Mutex> lck_sub_unsub (sub_unsub_inflight_mtx_);
-                        pid_man_.release_id(info.packet_id);
-                        sub_unsub_inflight_.erase(info.packet_id);
-                    }
+                    props_ = force_move(variant_get<v5::properties>(var));
 
-                    std::vector<v5::unsuback_reason_code> reasons;
-                    reasons.resize(body.size());
+                    // unsuback reason codes
+                    yield ep_.process_nbytes(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(remain_buf),
+                        ep_.remaining_length_,
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    auto body = variant_get<buffer>(var);
+                    reasons_.resize(body.size());
                     std::transform(
                         body.begin(),
                         body.end(),
-                        reasons.begin(),
+                        reasons_.begin(),
                         [&](auto const& e) {
                             return static_cast<v5::unsuback_reason_code>(e);
                         }
                     );
-                    if (on_v5_unsuback(info.packet_id, force_move(reasons), force_move(info.props))) {
-                        on_mqtt_message_processed(force_move(session_life_keeper));
+                }
+                {
+                    LockGuard<Mutex> lck_store (ep_.store_mtx_);
+                    LockGuard<Mutex> lck_sub_unsub (ep_.sub_unsub_inflight_mtx_);
+                    ep_.pid_man_.release_id(packet_id_);
+                    ep_.sub_unsub_inflight_.erase(packet_id_);
+                }
+                switch (ep_.version_) {
+                case protocol_version::v3_1_1:
+                    if (ep_.on_unsuback(packet_id_)) {
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
+                                )
+                            )
+                        );
                     }
-                },
-                force_move(self)
-            );
-            break;
+                    break;
+                case protocol_version::v5:
+                    if (ep_.on_v5_unsuback(packet_id_, force_move(reasons_), force_move(props_))) {
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
+                                )
+                            )
+                        );
+                    }
+                    break;
+                default:
+                    BOOST_ASSERT(false);
+                }
+            }
         }
-    }
+
+    private:
+        static constexpr std::size_t header_len_ = sizeof(packet_id_t);    // Packet Id
+
+        ep_t& ep_;
+        bool all_read_;
+
+        packet_id_t packet_id_;
+        v5::properties props_;
+        std::vector<v5::unsuback_reason_code> reasons_;
+    };
+    friend struct process_unsuback;
 
     // process pingreq
 
@@ -8774,242 +8575,218 @@ private:
 
     // process disconnect
 
-    enum class disconnect_phase {
-        reason_code,
-        properties,
-        finish,
-    };
+    struct process_disconnect : as::coroutine, std::enable_shared_from_this<process_disconnect> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_disconnect;
+        using process_type_sp = std::shared_ptr<process_type>;
 
-    struct disconnect_info {
-        v5::disconnect_reason_code reason_code;
-        v5::properties props;
-    };
+        process_disconnect(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer remain_buf = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.remaining_length_ > 0) {
+                    if (ep_.version_ != protocol_version::v5) {
+                        ep_.call_protocol_error_handlers();
+                        return;
+                    }
 
-    void process_disconnect(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        if (remaining_length_ == 0) {
-            disconnect_info info { v5::disconnect_reason_code::normal_disconnection, v5::properties() };
-            process_disconnect_impl<disconnect_phase::finish>(
-                force_move(session_life_keeper),
-                buffer(),
-                force_move(info),
-                force_move(self)
-            );
-            return;
-        }
+                    // header
+                    yield ep_.process_header(
+                        force_move(spep),
+                        std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                        all_read_,
+                        header_len_,
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
 
-        if (version_ != protocol_version::v5) {
-            call_protocol_error_handlers();
-            return;
-        }
+                    // reason_code
+                    yield ep_.process_nbytes(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(variant_get<buffer>(var)),
+                        1,
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    reason_code_ = static_cast<v5::disconnect_reason_code>(variant_get<buffer>(var)[0]);
 
-        static constexpr std::size_t header_len =
-            1; // Reason Code
-
-        if (remaining_length_ < header_len) {
-            call_protocol_error_handlers();
-            return;
-        }
-
-        process_header<disconnect_info,
-                       &this_type::process_disconnect_impl<disconnect_phase::reason_code>>(
-            force_move(session_life_keeper),
-            all_read,
-            header_len,
-            disconnect_info(),
-            force_move(self)
-        );
-    }
-
-    template<disconnect_phase Phase>
-    void process_disconnect_impl(
-        any session_life_keeper,
-        buffer buf,
-        disconnect_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case disconnect_phase::reason_code:
-            process_nbytes(
-                force_move(session_life_keeper),
-                force_move(buf),
-                1, // reason_code
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.reason_code = static_cast<v5::disconnect_reason_code>(body[0]);
                     // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901210
                     // If the Remaining Length is 0, there is no property length and the value of 0 is used
-                    if (remaining_length_ == 0) {
-                        process_disconnect_impl<disconnect_phase::finish>(
+                    if (ep_.remaining_length_ > 0) {
+                        yield ep_.process_properties(
+                            force_move(spep),
                             force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
+                            force_move(remain_buf),
+                            [this]
+                            (auto&&... args ) {
+                                (*this)(std::forward<decltype(args)>(args)...);
+                            }
                         );
+                        props_ = force_move(variant_get<v5::properties>(var));
                     }
-                    else {
-                        process_disconnect_impl<disconnect_phase::properties>(
-                            force_move(session_life_keeper),
-                            force_move(buf),
-                            force_move(info),
-                            force_move(self)
-                        );
+                    switch (ep_.version_) {
+                    case protocol_version::v3_1_1:
+                        ep_.on_disconnect();
+                        break;
+                    case protocol_version::v5:
+                        ep_.on_v5_disconnect(reason_code_, force_move(props_));
+                        break;
+                    default:
+                        BOOST_ASSERT(false);
                     }
-                },
-                force_move(self)
-            );
-            break;
-        case disconnect_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.props = force_move(props);
-                    process_disconnect_impl<disconnect_phase::finish>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
+                    ep_.shutdown(*ep_.socket_);
+                    ep_.on_mqtt_message_processed(
+                        force_move(
+                            std::get<0>(
+                                any_cast<
+                                    std::tuple<any, process_type_sp>
+                                >(session_life_keeper)
+                            )
+                        )
                     );
-                },
-                force_move(self)
-            );
-            break;
-        case disconnect_phase::finish:
-            switch (version_) {
-            case protocol_version::v3_1_1:
-                on_disconnect();
-                break;
-            case protocol_version::v5:
-                on_v5_disconnect(info.reason_code, force_move(info.props));
-                break;
-            default:
-                BOOST_ASSERT(false);
+                    return;
+                }
+                switch (ep_.version_) {
+                case protocol_version::v3_1_1:
+                    ep_.on_disconnect();
+                    break;
+                case protocol_version::v5:
+                    ep_.on_v5_disconnect(reason_code_, force_move(props_));
+                    break;
+                default:
+                    BOOST_ASSERT(false);
+                }
+                ep_.shutdown(*ep_.socket_);
+                ep_.on_mqtt_message_processed(
+                    force_move(
+                        session_life_keeper
+                    )
+                );
             }
-            shutdown(*socket_);
-            on_mqtt_message_processed(force_move(session_life_keeper));
-            break;
         }
-    }
+
+    private:
+        static constexpr std::size_t header_len_ = sizeof(packet_id_t);    // Packet Id
+
+        ep_t& ep_;
+        bool all_read_;
+
+        v5::disconnect_reason_code reason_code_;
+        v5::properties props_;
+    };
+    friend struct process_disconnect;
 
     // process auth
 
-    enum class auth_phase {
-        reason_code,
-        properties,
-        finish,
-    };
+    struct process_auth : as::coroutine, std::enable_shared_from_this<process_auth> {
+        using ep_t = this_type;
+        using ep_t_sp = this_type_sp;
+        using process_type = process_auth;
+        using process_type_sp = std::shared_ptr<process_type>;
 
-    struct auth_info {
-        v5::auth_reason_code reason_code;
-        v5::properties props;
-    };
-
-    void process_auth(
-        any session_life_keeper,
-        bool all_read,
-        this_type_sp self
-    ) {
-        if (version_ != protocol_version::v5) {
-            call_protocol_error_handlers();
-            return;
-        }
-
-        if (remaining_length_ == 0) {
-            process_auth_impl<auth_phase::finish>(
-                force_move(session_life_keeper),
-                buffer(),
-                auth_info{ v5::auth_reason_code::success, v5::properties() },
-                force_move(self)
-            );
-            return;
-        }
-
-        static constexpr std::size_t header_len =
-            1; // Reason Code
-
-        if (remaining_length_ < header_len) {
-            call_protocol_error_handlers();
-            return;
-        }
-
-        process_header<auth_info,
-                       &this_type::process_auth_impl<auth_phase::reason_code>>(
-            force_move(session_life_keeper),
-            all_read,
-            header_len,
-            auth_info(),
-            force_move(self)
-        );
-    }
-
-    template<auth_phase Phase>
-    void process_auth_impl(
-        any session_life_keeper,
-        buffer buf,
-        auth_info&& info,
-        this_type_sp self
-    ) {
-        switch (Phase) {
-        case auth_phase::reason_code:
-            process_nbytes(
-                force_move(session_life_keeper),
-                force_move(buf),
-                1, // reason_code
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (buffer body, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.reason_code = static_cast<v5::auth_reason_code>(body[0]);
-                    process_auth_impl<auth_phase::properties>(
-                        force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
+        process_auth(
+            ep_t& ep,
+            bool all_read
+        ):ep_{ep},
+          all_read_{all_read} {
+          }
+        void operator()(
+            ep_t_sp spep,
+            any&& session_life_keeper,
+            parse_handler_variant var = std::size_t(0),
+            buffer remain_buf = buffer()
+        ) {
+            reenter(this) {
+                if (ep_.version_ != protocol_version::v5) {
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
+                if (ep_.remaining_length_ > 0) {
+                    // header
+                    yield ep_.process_header(
+                        force_move(spep),
+                        std::make_tuple(force_move(session_life_keeper), this->shared_from_this()),
+                        all_read_,
+                        header_len_,
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
                     );
-                },
-                force_move(self)
-            );
-            break;
-        case auth_phase::properties:
-            process_properties(
-                force_move(session_life_keeper),
-                force_move(buf),
-                [
-                    this,
-                    info = force_move(info)
-                ]
-                (v5::properties props, buffer buf, any session_life_keeper, this_type_sp self) mutable {
-                    info.props = force_move(props);
-                    process_auth_impl<auth_phase::finish>(
+
+                    // reason_code
+                    yield ep_.process_nbytes(
+                        force_move(spep),
                         force_move(session_life_keeper),
-                        force_move(buf),
-                        force_move(info),
-                        force_move(self)
+                        force_move(variant_get<buffer>(var)),
+                        1,
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
                     );
-                },
-                force_move(self)
-            );
-            break;
-        case auth_phase::finish:
-            BOOST_ASSERT(version_ == protocol_version::v5);
-            if (on_v5_auth(info.reason_code, force_move(info.props))) {
-                on_mqtt_message_processed(force_move(session_life_keeper));
+                    reason_code_ = static_cast<v5::auth_reason_code>(variant_get<buffer>(var)[0]);
+
+                    yield ep_.process_properties(
+                        force_move(spep),
+                        force_move(session_life_keeper),
+                        force_move(remain_buf),
+                        [this]
+                        (auto&&... args ) {
+                            (*this)(std::forward<decltype(args)>(args)...);
+                        }
+                    );
+                    props_ = force_move(variant_get<v5::properties>(var));
+                    BOOST_ASSERT(ep_.version_ == protocol_version::v5);
+                    if (ep_.on_v5_auth(reason_code_, force_move(props_))) {
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
+                                )
+                            )
+                        );
+                    }
+                    return;
+                }
+                BOOST_ASSERT(ep_.version_ == protocol_version::v5);
+                if (ep_.on_v5_auth(reason_code_, force_move(props_))) {
+                    ep_.on_mqtt_message_processed(
+                        force_move(
+                            session_life_keeper
+                        )
+                    );
+                }
             }
-            break;
         }
-    }
+
+    private:
+        static constexpr std::size_t header_len_ = sizeof(packet_id_t);    // Packet Id
+
+        this_type& ep_;
+        bool all_read_;
+
+        v5::auth_reason_code reason_code_;
+        v5::properties props_;
+    };
+    friend struct process_auth;
 
     template <typename F, typename AF>
     void auto_pub_response(F const& f, AF const& af) {
@@ -10470,5 +10247,7 @@ private:
 };
 
 } // namespace MQTT_NS
+
+#include <boost/asio/unyield.hpp>
 
 #endif // MQTT_ENDPOINT_HPP
