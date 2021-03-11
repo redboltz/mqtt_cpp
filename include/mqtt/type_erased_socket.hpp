@@ -56,7 +56,11 @@ using socket = shared_any<
         has_lowest_layer<as::ip::tcp::socket::lowest_layer_type&()>,
         has_native_handle<any()>,
         has_close<void(boost::system::error_code&)>,
+#if BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
         has_get_executor<as::executor()>
+#else  // BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
+        has_get_executor<as::any_io_executor()>
+#endif // BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
     >
 >;
 
