@@ -71,8 +71,8 @@ inline constexpr null_log const& operator<<(null_log const& o, T const&) { retur
 
 // template arguments are defined in MQTT_NS
 // filter and formatter can distinguish mqtt_cpp's channel and severity by their types
-using global_logger_t = log::sources::severity_channel_logger_mt<severity_level, channel>;
-BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(logger, global_logger_t);
+using global_logger_t = log::sources::severity_channel_logger<severity_level, channel>;
+thread_local global_logger_t logger;
 
 // Normal attributes
 BOOST_LOG_ATTRIBUTE_KEYWORD(file, "MqttFile", std::string)
@@ -83,7 +83,7 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(address, "MqttAddress", void const*)
 
 // Take any filterable parameters (FP)
 #define MQTT_LOG_FP(chan, sev)                                          \
-    BOOST_LOG_STREAM_CHANNEL_SEV(logger::get(), channel(chan), sev)     \
+    BOOST_LOG_STREAM_CHANNEL_SEV(logger, channel(chan), sev)     \
     << log::add_value(file, __FILE__)                                   \
     << log::add_value(line, __LINE__)                                   \
     << log::add_value(function, BOOST_CURRENT_FUNCTION)
