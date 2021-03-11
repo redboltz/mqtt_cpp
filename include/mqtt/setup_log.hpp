@@ -101,8 +101,8 @@ void setup_log(std::map<std::string, severity_level> threshold) {
             }
             return true;
         };
-    sink->set_filter(fil);
 
+    boost::log::core::get()->set_filter(fil);
     boost::log::core::get()->add_sink(sink);
 
     boost::log::add_common_attributes();
