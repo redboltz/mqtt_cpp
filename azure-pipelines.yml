@@ -159,8 +159,8 @@ steps:
     cd test
 
     # If you want to debug a specific test file with logs, do as follows instead of execute ctest
-    # Release\resend.exe --log_level=all
-    ctest -VV -C Release
+    system\Release\st_connect.exe --log_level=all
+    #ctest -VV -C Release
 
     if (!$?) {
       return Write-Error "ctest -VV failed"
