@@ -162,6 +162,7 @@ steps:
     system\Release\st_connect.exe --log_level=all
     #ctest -VV -C Release
 
+
     if (!$?) {
       return Write-Error "ctest -VV failed"
     }
