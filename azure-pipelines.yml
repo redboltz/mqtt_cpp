@@ -132,6 +132,12 @@ steps:
   displayName: 'install openssl'
 
 - powershell: |
+    $Url = "https://sourceforge.net/projects/boost/files/boost-binaries/1.72.0/boost_1_72_0-msvc-14.2-64.exe"
+    (New-Object System.Net.WebClient).DownloadFile($Url, "$env:TEMP\boost.exe")
+    Start-Process -Wait -FilePath "$env:TEMP\boost.exe" "/SILENT","/SP-","/SUPPRESSMSGBOXES","/DIR=C:\hostedtoolcache\windows\Boost\1.72.0\x86_64"
+  displayName: 'install boost'
+
+- powershell: |
     git submodule update --init --recursive
     if (!$?) {
       return Write-Error "git submodule update --init --recursive failed"
@@ -139,7 +145,7 @@ steps:
     mkdir build
     cd build
     $env:CL="/D_WIN32_WINNT#0x0601 /DBOOST_THREAD_VERSION#3 /DBOOST_ALLOW_DEPRECATED_HEADERS /DBOOST_ASIO_NO_DEPRECATED"
-    $env:BOOST_ROOT=$env:BOOST_ROOT_1_72_0
+    $env:BOOST_ROOT="C:\hostedtoolcache\windows\Boost\1.72.0\x86_64"
     $env:PATH="$env:BOOST_ROOT\lib;"+$env:PATH
 
     cmake -A x64 -DMQTT_USE_TLS=$(MQTT_USE_TLS) -DMQTT_USE_WS=$(MQTT_USE_WS) -DMQTT_USE_STR_CHECK=$(MQTT_USE_STR_CHECK) -DMQTT_TEST_1=$(MQTT_TEST_1) -DMQTT_TEST_2=$(MQTT_TEST_2) -DMQTT_TEST_3=$(MQTT_TEST_3) -DMQTT_TEST_4=$(MQTT_TEST_4) -DMQTT_TEST_5=$(MQTT_TEST_5) -DMQTT_TEST_6=$(MQTT_TEST_6) -DMQTT_TEST_7=$(MQTT_TEST_7) -DMQTT_BUILD_EXAMPLES=$(MQTT_BUILD_EXAMPLES) ..
