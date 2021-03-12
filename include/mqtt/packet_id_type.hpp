@@ -7,65 +7,18 @@
 #if !defined(MQTT_PACKET_ID_TYPE_HPP)
 #define MQTT_PACKET_ID_TYPE_HPP
 
-#include <cstdint>
-#include <cstdlib>
-
-#include <mqtt/namespace.hpp>
-#include <mqtt/two_byte_util.hpp>
-#include <mqtt/four_byte_util.hpp>
+#include <mqtt/two_or_four_byte_util.hpp>
 
 namespace MQTT_NS {
 
 template <std::size_t PacketIdBytes>
-struct packet_id_type;
-
-template <>
-struct packet_id_type<2> {
-    using type = std::uint16_t;
-};
-
-template <>
-struct packet_id_type<4> {
-    using type = std::uint32_t;
-};
+using packet_id_type = two_or_four_byte_type<PacketIdBytes>;
 
 template <std::size_t PacketIdBytes>
-struct make_packet_id;
-
-template <>
-struct make_packet_id<2> {
-    template <typename It>
-    static constexpr std::uint16_t apply(It b, It e) {
-        return make_uint16_t(b, e);
-    }
-};
-
-template <>
-struct make_packet_id<4> {
-    template <typename It>
-    static constexpr std::uint32_t apply(It b, It e) {
-        return make_uint32_t(b, e);
-    }
-};
+using make_packet_id = make_two_or_four_byte<PacketIdBytes>;
 
 template <std::size_t PacketIdBytes>
-struct add_packet_id_to_buf;
-
-template <>
-struct add_packet_id_to_buf<2> {
-    template <typename T>
-    static void apply(T& buf, std::uint16_t packet_id) {
-        add_uint16_t_to_buf(buf, packet_id);
-    }
-};
-
-template <>
-struct add_packet_id_to_buf<4> {
-    template <typename T>
-    static void apply(T& buf, std::uint32_t packet_id) {
-        add_uint32_t_to_buf(buf, packet_id);
-    }
-};
+using add_packet_id_to_buf = add_two_or_four_byte_to_buf<PacketIdBytes>;
 
 } // namespace MQTT_NS
 
