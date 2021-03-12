@@ -124,6 +124,11 @@ struct std::is_constructible<std::_Head_base<0, std::any, false>, std::_Head_bas
 #undef MQTT_LIBSTDCXX_GCC_910
 #undef MQTT_LIBSTDCXX_GCC_920
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif // defined(__GNUC__)
+
 #include <boost/asio/yield.hpp>
 
 namespace MQTT_NS {
@@ -10249,5 +10254,9 @@ private:
 } // namespace MQTT_NS
 
 #include <boost/asio/unyield.hpp>
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif // defined(__GNUC__)
 
 #endif // MQTT_ENDPOINT_HPP
