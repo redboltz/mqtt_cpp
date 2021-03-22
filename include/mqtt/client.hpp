@@ -234,6 +234,26 @@ public:
 #endif // defined(MQTT_USE_TLS)
 
     /**
+     * @brief Set host.
+     * @param host host to connect
+     *
+     * The host is used from the next connect() or async_connect() call.
+     */
+    void set_host(std::string host) {
+        host_ = force_move(host);
+    }
+
+    /**
+     * @brief Set port.
+     * @param port port tp connect
+     *
+     * The port is used from the next connect() or async_connect() call.
+     */
+    void set_port(std::string port) {
+        port_ = force_move(port);
+    }
+
+    /**
      * @brief Set client id.
      * @param id client id
      *
