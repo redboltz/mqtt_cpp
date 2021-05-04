@@ -209,22 +209,22 @@ int main(int argc, char **argv) {
 #if defined(MQTT_USE_LOG)
         switch (vm["verbose"].as<unsigned int>()) {
         case 5:
-            MQTT_NS::setup_log(mqtt::severity_level::trace);
+            MQTT_NS::setup_log(MQTT_NS::severity_level::trace);
             break;
         case 4:
-            MQTT_NS::setup_log(mqtt::severity_level::debug);
+            MQTT_NS::setup_log(MQTT_NS::severity_level::debug);
             break;
         case 3:
-            MQTT_NS::setup_log(mqtt::severity_level::info);
+            MQTT_NS::setup_log(MQTT_NS::severity_level::info);
             break;
         case 2:
-            MQTT_NS::setup_log(mqtt::severity_level::warning);
+            MQTT_NS::setup_log(MQTT_NS::severity_level::warning);
             break;
         default:
-            MQTT_NS::setup_log(mqtt::severity_level::error);
+            MQTT_NS::setup_log(MQTT_NS::severity_level::error);
             break;
         case 0:
-            MQTT_NS::setup_log(mqtt::severity_level::fatal);
+            MQTT_NS::setup_log(MQTT_NS::severity_level::fatal);
             break;
         }
 #else
