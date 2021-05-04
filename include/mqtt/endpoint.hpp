@@ -195,8 +195,7 @@ public:
      * @brief Constructor for server.
      *        socket should have already been connected with another endpoint.
      */
-    template <typename Socket>
-    explicit endpoint(as::io_context& ioc, std::shared_ptr<Socket> socket, protocol_version version = protocol_version::undetermined, bool async_send_store = false)
+    explicit endpoint(as::io_context& ioc, std::shared_ptr<MQTT_NS::socket> socket, protocol_version version = protocol_version::undetermined, bool async_send_store = false)
         :socket_(force_move(socket)),
          connected_(true),
          async_send_store_{async_send_store},
@@ -4736,15 +4735,15 @@ public:
     }
 
     MQTT_NS::socket const& socket() const {
-        return socket_.value();
+        return *socket_;
     }
 
     MQTT_NS::socket& socket() {
-        return socket_.value();
+        return *socket_;
     }
 
     auto get_executor() {
-        return socket_.value().get_executor();
+        return socket_->get_executor();
     }
 
     /**
@@ -4764,10 +4763,10 @@ public:
 protected:
 
     /**
-     * @brief Get shared_any of socket
-     * @return reference of shared_any socket
+     * @brief Get shared_ptr of socket
+     * @return reference of std::shared_ptr<socket>
      */
-    optional<MQTT_NS::socket>& socket_optional() {
+    std::shared_ptr<MQTT_NS::socket>& socket_sp_ref() {
         return socket_;
     }
 
@@ -10205,7 +10204,7 @@ protected:
     bool clean_start_{false};
 
 private:
-    optional<MQTT_NS::socket> socket_;
+    std::shared_ptr<MQTT_NS::socket> socket_;
     std::atomic<bool> connected_{false};
     std::atomic<bool> mqtt_connected_{false};
 

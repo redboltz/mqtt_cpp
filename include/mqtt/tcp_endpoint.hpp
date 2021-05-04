@@ -11,13 +11,16 @@
 #include <boost/asio/bind_executor.hpp>
 
 #include <mqtt/namespace.hpp>
+#include <mqtt/type_erased_socket.hpp>
+#include <mqtt/move.hpp>
+#include <mqtt/attributes.hpp>
 
 namespace MQTT_NS {
 
 namespace as = boost::asio;
 
 template <typename Socket, typename Strand>
-class tcp_endpoint {
+class tcp_endpoint : public socket {
 public:
     template <typename... Args>
     tcp_endpoint(as::io_context& ioc, Args&&... args)
@@ -25,25 +28,72 @@ public:
          strand_(ioc) {
     }
 
-    template <typename... Args>
-    void close(Args&&... args) {
-        tcp_.lowest_layer().close(std::forward<Args>(args)...);
+    MQTT_ALWAYS_INLINE void async_read(
+        as::mutable_buffer buffers,
+        std::function<void(error_code, std::size_t)> handler
+    ) override final {
+        as::async_read(
+            tcp_,
+            force_move(buffers),
+            as::bind_executor(
+                strand_,
+                force_move(handler)
+            )
+        );
     }
 
-    auto get_executor() {
-        return lowest_layer().get_executor();
+    MQTT_ALWAYS_INLINE void async_write(
+        std::vector<as::const_buffer> buffers,
+        std::function<void(error_code, std::size_t)> handler
+    ) override final {
+        as::async_write(
+            tcp_,
+            force_move(buffers),
+            as::bind_executor(
+                strand_,
+                force_move(handler)
+            )
+        );
     }
 
-    Socket& socket() { return tcp_; }
-    Socket const& socket() const { return tcp_; }
+    MQTT_ALWAYS_INLINE std::size_t write(
+        std::vector<as::const_buffer> buffers,
+        boost::system::error_code& ec
+    ) override final {
+        return as::write(tcp_,force_move(buffers), ec);
+    }
 
-    typename Socket::lowest_layer_type& lowest_layer() {
+    MQTT_ALWAYS_INLINE void post(std::function<void()> handler) override final {
+        as::post(
+            strand_,
+            force_move(handler)
+        );
+    }
+
+    MQTT_ALWAYS_INLINE as::ip::tcp::socket::lowest_layer_type& lowest_layer() override final {
         return tcp_.lowest_layer();
     }
 
-    typename Socket::native_handle_type native_handle() {
+    MQTT_ALWAYS_INLINE any native_handle() override final {
         return tcp_.native_handle();
     }
+
+    MQTT_ALWAYS_INLINE void close(boost::system::error_code& ec) override final {
+        tcp_.lowest_layer().close(ec);
+    }
+
+#if BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
+    MQTT_ALWAYS_INLINE as::executor get_executor() override final {
+        return lowest_layer().get_executor();
+    }
+#else  // BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
+    MQTT_ALWAYS_INLINE as::any_io_executor get_executor() override final {
+        return lowest_layer().get_executor();
+    }
+#endif // BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
+
+    auto& socket() { return tcp_; }
+    auto const& socket() const { return tcp_; }
 
     template <typename... Args>
     void set_option(Args&& ... args) {
@@ -69,82 +119,10 @@ public:
 
 #endif // defined(MQTT_USE_TLS)
 
-    template <typename MutableBufferSequence, typename ReadHandler>
-    void async_read(
-        MutableBufferSequence && buffers,
-        ReadHandler&& handler) {
-        as::async_read(
-            tcp_,
-            std::forward<MutableBufferSequence>(buffers),
-            as::bind_executor(
-                strand_,
-                std::forward<ReadHandler>(handler)
-            )
-        );
-    }
-
-    template <typename... Args>
-    std::size_t write(Args&& ... args) {
-        return as::write(tcp_, std::forward<Args>(args)...);
-    }
-
-    template <typename ConstBufferSequence, typename WriteHandler>
-    void async_write(
-        ConstBufferSequence && buffers,
-        WriteHandler&& handler) {
-        as::async_write(
-            tcp_,
-            std::forward<ConstBufferSequence>(buffers),
-            as::bind_executor(
-                strand_,
-                std::forward<WriteHandler>(handler)
-            )
-        );
-    }
-
-    template <typename PostHandler>
-    void post(PostHandler&& handler) {
-        as::post(
-            strand_,
-            std::forward<PostHandler>(handler)
-        );
-    }
-
 private:
     Socket tcp_;
     Strand strand_;
 };
-
-template <typename Socket, typename Strand, typename MutableBufferSequence, typename ReadHandler>
-inline void async_read(
-    tcp_endpoint<Socket, Strand>& ep,
-    MutableBufferSequence && buffers,
-    ReadHandler&& handler) {
-    ep.async_read(std::forward<MutableBufferSequence>(buffers), std::forward<ReadHandler>(handler));
-}
-
-template <typename Socket, typename Strand, typename ConstBufferSequence>
-inline std::size_t write(
-    tcp_endpoint<Socket, Strand>& ep,
-    ConstBufferSequence && buffers) {
-    return ep.write(std::forward<ConstBufferSequence>(buffers));
-}
-
-template <typename Socket, typename Strand, typename ConstBufferSequence>
-inline std::size_t write(
-    tcp_endpoint<Socket, Strand>& ep,
-    ConstBufferSequence && buffers,
-    boost::system::error_code& ec) {
-    return ep.write(std::forward<ConstBufferSequence>(buffers), ec);
-}
-
-template <typename Socket, typename Strand, typename ConstBufferSequence, typename WriteHandler>
-inline void async_write(
-    tcp_endpoint<Socket, Strand>& ep,
-    ConstBufferSequence && buffers,
-    WriteHandler&& handler) {
-    ep.async_write(std::forward<ConstBufferSequence>(buffers), std::forward<WriteHandler>(handler));
-}
 
 } // namespace MQTT_NS
 
