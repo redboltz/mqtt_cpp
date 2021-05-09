@@ -12,6 +12,9 @@
 #include <boost/asio/bind_executor.hpp>
 
 #include <mqtt/namespace.hpp>
+#include <mqtt/type_erased_socket.hpp>
+#include <mqtt/move.hpp>
+#include <mqtt/attributes.hpp>
 #include <mqtt/string_view.hpp>
 #include <mqtt/error_code.hpp>
 
@@ -20,7 +23,7 @@ namespace MQTT_NS {
 namespace as = boost::asio;
 
 template <typename Socket, typename Strand>
-class ws_endpoint {
+class ws_endpoint : public socket {
 public:
     template <typename... Args>
     ws_endpoint(as::io_context& ioc, Args&&... args)
@@ -36,7 +39,116 @@ public:
         );
     }
 
-    void close(boost::system::error_code& ec) {
+    MQTT_ALWAYS_INLINE void async_read(
+        as::mutable_buffer buffers,
+        std::function<void(error_code, std::size_t)> handler
+    ) override final {
+        auto req_size = as::buffer_size(buffers);
+
+        using beast_read_handler_t =
+            std::function<void(error_code ec, std::shared_ptr<void>)>;
+
+        std::shared_ptr<beast_read_handler_t> beast_read_handler;
+        if (req_size <= buffer_.size()) {
+            as::buffer_copy(buffers, buffer_.data(), req_size);
+            buffer_.consume(req_size);
+            handler(boost::system::errc::make_error_code(boost::system::errc::success), req_size);
+            return;
+        }
+
+        beast_read_handler.reset(
+            new beast_read_handler_t(
+                [this, req_size, buffers, handler = force_move(handler)]
+                (error_code ec, std::shared_ptr<void> const& v) mutable {
+                    if (ec) {
+                        force_move(handler)(ec, 0);
+                        return;
+                    }
+                    if (!ws_.got_binary()) {
+                        buffer_.consume(buffer_.size());
+                        force_move(handler)
+                            (boost::system::errc::make_error_code(boost::system::errc::bad_message), 0);
+                        return;
+                    }
+                    if (req_size > buffer_.size()) {
+                        auto beast_read_handler = std::static_pointer_cast<beast_read_handler_t>(v);
+                        ws_.async_read(
+                            buffer_,
+                            as::bind_executor(
+                                strand_,
+                                [beast_read_handler]
+                                (error_code ec, std::size_t) {
+                                    (*beast_read_handler)(ec, beast_read_handler);
+                                }
+                            )
+                        );
+                        return;
+                    }
+                    as::buffer_copy(buffers, buffer_.data(), req_size);
+                    buffer_.consume(req_size);
+                    force_move(handler)(boost::system::errc::make_error_code(boost::system::errc::success), req_size);
+                }
+            )
+        );
+        ws_.async_read(
+            buffer_,
+            as::bind_executor(
+                strand_,
+                [beast_read_handler]
+                (error_code ec, std::size_t) {
+                    (*beast_read_handler)(ec, beast_read_handler);
+                }
+            )
+        );
+    }
+
+    MQTT_ALWAYS_INLINE void async_write(
+        std::vector<as::const_buffer> buffers,
+        std::function<void(error_code, std::size_t)> handler
+    ) override final {
+        ws_.async_write(
+            buffers,
+            as::bind_executor(
+                strand_,
+                force_move(handler)
+            )
+        );
+    }
+
+    MQTT_ALWAYS_INLINE std::size_t write(
+        std::vector<as::const_buffer> buffers,
+        boost::system::error_code& ec
+    ) override final {
+        ws_.write(buffers, ec);
+        return as::buffer_size(buffers);
+    }
+
+    MQTT_ALWAYS_INLINE void post(std::function<void()> handler) override final {
+        as::post(
+            strand_,
+            force_move(handler)
+        );
+    }
+
+#if BOOST_VERSION >= 107000
+
+    MQTT_ALWAYS_INLINE as::ip::tcp::socket::lowest_layer_type& lowest_layer() override final {
+        return boost::beast::get_lowest_layer(ws_);
+    }
+
+#else  // BOOST_VERSION >= 107000
+
+    MQTT_ALWAYS_INLINE as::ip::tcp::socket::lowest_layer_type& lowest_layer() override final {
+        return ws_.lowest_layer();
+    }
+
+#endif // BOOST_VERSION >= 107000
+
+    MQTT_ALWAYS_INLINE any native_handle() override final {
+        return next_layer().native_handle();
+    }
+
+    MQTT_ALWAYS_INLINE void close(boost::system::error_code& ec) override final {
         ws_.close(boost::beast::websocket::close_code::normal, ec);
         if (ec) return;
         do {
@@ -47,30 +159,18 @@ public:
         ec = boost::system::errc::make_error_code(boost::system::errc::success);
     }
 
-    auto get_executor() {
+#if BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
+    MQTT_ALWAYS_INLINE as::executor get_executor() override final {
         return lowest_layer().get_executor();
     }
-
-#if BOOST_VERSION >= 107000
-
-    auto& lowest_layer() {
-        return boost::beast::get_lowest_layer(ws_);
+#else  // BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
+    MQTT_ALWAYS_INLINE as::any_io_executor get_executor() override final {
+        return lowest_layer().get_executor();
     }
-
-#else  // BOOST_VERSION >= 107000
-
-    typename boost::beast::websocket::stream<Socket>::lowest_layer_type& lowest_layer() {
-        return ws_.lowest_layer();
-    }
-
-#endif // BOOST_VERSION >= 107000
+#endif // BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
 
     typename boost::beast::websocket::stream<Socket>::next_layer_type& next_layer() {
         return ws_.next_layer();
-    }
-
-    auto native_handle() {
-        return next_layer().native_handle();
     }
 
     template <typename T>
@@ -103,69 +203,6 @@ public:
         ws_.handshake(std::forward<Args>(args)...);
     }
 
-    template <typename MutableBufferSequence, typename ReadHandler>
-    void async_read(
-        MutableBufferSequence const& buffers,
-        ReadHandler&& handler) {
-        auto req_size = as::buffer_size(buffers);
-
-        using beast_read_handler_t =
-            std::function<void(error_code ec, std::shared_ptr<void>)>;
-
-        std::shared_ptr<beast_read_handler_t> beast_read_handler;
-        if (req_size <= buffer_.size()) {
-            as::buffer_copy(buffers, buffer_.data(), req_size);
-            buffer_.consume(req_size);
-            handler(boost::system::errc::make_error_code(boost::system::errc::success), req_size);
-            return;
-        }
-
-        beast_read_handler.reset(
-            new beast_read_handler_t(
-                [this, req_size, buffers, handler = std::forward<ReadHandler>(handler)]
-                (error_code ec, std::shared_ptr<void> const& v) mutable {
-                    if (ec) {
-                        std::forward<ReadHandler>(handler)(ec, 0);
-                        return;
-                    }
-                    if (!ws_.got_binary()) {
-                        buffer_.consume(buffer_.size());
-                        std::forward<ReadHandler>(handler)
-                            (boost::system::errc::make_error_code(boost::system::errc::bad_message), 0);
-                        return;
-                    }
-                    if (req_size > buffer_.size()) {
-                        auto beast_read_handler = std::static_pointer_cast<beast_read_handler_t>(v);
-                        ws_.async_read(
-                            buffer_,
-                            as::bind_executor(
-                                strand_,
-                                [beast_read_handler]
-                                (error_code ec, std::size_t) {
-                                    (*beast_read_handler)(ec, beast_read_handler);
-                                }
-                            )
-                        );
-                        return;
-                    }
-                    as::buffer_copy(buffers, buffer_.data(), req_size);
-                    buffer_.consume(req_size);
-                    std::forward<ReadHandler>(handler)(boost::system::errc::make_error_code(boost::system::errc::success), req_size);
-                }
-            )
-        );
-        ws_.async_read(
-            buffer_,
-            as::bind_executor(
-                strand_,
-                [beast_read_handler]
-                (error_code ec, std::size_t) {
-                    (*beast_read_handler)(ec, beast_read_handler);
-                }
-            )
-        );
-    }
-
     template <typename ConstBufferSequence>
     std::size_t write(
         ConstBufferSequence const& buffers) {
@@ -173,71 +210,11 @@ public:
         return as::buffer_size(buffers);
     }
 
-    template <typename ConstBufferSequence>
-    std::size_t write(
-        ConstBufferSequence const& buffers,
-        boost::system::error_code& ec) {
-        ws_.write(buffers, ec);
-        return as::buffer_size(buffers);
-    }
-
-    template <typename ConstBufferSequence, typename WriteHandler>
-    void async_write(
-        ConstBufferSequence const& buffers,
-        WriteHandler&& handler) {
-        ws_.async_write(
-            buffers,
-            as::bind_executor(
-                strand_,
-                std::forward<WriteHandler>(handler)
-            )
-        );
-    }
-
-    template <typename PostHandler>
-    void post(PostHandler&& handler) {
-        as::post(
-            strand_,
-            std::forward<PostHandler>(handler)
-        );
-    }
-
 private:
     boost::beast::websocket::stream<Socket> ws_;
     boost::beast::flat_buffer buffer_;
     Strand strand_;
 };
-
-template <typename Socket, typename Strand, typename MutableBufferSequence, typename ReadHandler>
-inline void async_read(
-    ws_endpoint<Socket, Strand>& ep,
-    MutableBufferSequence const& buffers,
-    ReadHandler&& handler) {
-    ep.async_read(buffers, std::forward<ReadHandler>(handler));
-}
-
-template <typename Socket, typename Strand, typename ConstBufferSequence>
-inline std::size_t write(
-    ws_endpoint<Socket, Strand>& ep,
-    ConstBufferSequence const& buffers) {
-    return ep.write(buffers);
-}
-
-template <typename Socket, typename Strand, typename ConstBufferSequence>
-inline std::size_t write(
-    ws_endpoint<Socket, Strand>& ep,
-    ConstBufferSequence const& buffers,
-    boost::system::error_code& ec) {
-    return ep.write(buffers, ec);
-}
-
-template <typename Socket, typename Strand, typename ConstBufferSequence, typename WriteHandler>
-inline void async_write(
-    ws_endpoint<Socket, Strand>& ep,
-    ConstBufferSequence const& buffers,
-    WriteHandler&& handler) {
-    ep.async_write(buffers, std::forward<WriteHandler>(handler));
-}
 
 } // namespace MQTT_NS
 

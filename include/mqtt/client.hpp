@@ -508,7 +508,7 @@ public:
         v5::properties props,
         any session_life_keeper = any()) {
         socket_ = force_move(socket);
-        base::socket_optional().emplace(socket_);
+        base::socket_sp_ref() = socket_;
         connect_impl(force_move(props), force_move(session_life_keeper));
     }
 
@@ -529,7 +529,7 @@ public:
         boost::system::error_code& ec,
         any session_life_keeper = any()) {
         socket_ = force_move(socket);
-        base::socket_optional().emplace(socket_);
+        base::socket_sp_ref() = socket_;
         connect_impl(force_move(props), force_move(session_life_keeper), ec);
     }
 
@@ -725,7 +725,7 @@ public:
      */
     void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, any session_life_keeper, async_handler_t func) {
         socket_ = force_move(socket);
-        base::socket_optional().emplace(socket_);
+        base::socket_sp_ref() = socket_;
         async_connect_impl(force_move(props), force_move(session_life_keeper), force_move(func));
     }
 
@@ -973,14 +973,14 @@ private:
     template <typename Strand>
     void setup_socket(std::shared_ptr<tcp_endpoint<as::ip::tcp::socket, Strand>>& socket) {
         socket = std::make_shared<Socket>(ioc_);
-        base::socket_optional().emplace(socket);
+        base::socket_sp_ref() = socket;
     }
 
 #if defined(MQTT_USE_WS)
     template <typename Strand>
     void setup_socket(std::shared_ptr<ws_endpoint<as::ip::tcp::socket, Strand>>& socket) {
         socket = std::make_shared<Socket>(ioc_);
-        base::socket_optional().emplace(socket);
+        base::socket_sp_ref() = socket;
     }
 #endif // defined(MQTT_USE_WS)
 
@@ -988,14 +988,14 @@ private:
     template <typename Strand>
     void setup_socket(std::shared_ptr<tcp_endpoint<tls::stream<as::ip::tcp::socket>, Strand>>& socket) {
         socket = std::make_shared<Socket>(ioc_, ctx_);
-        base::socket_optional().emplace(socket);
+        base::socket_sp_ref() = socket;
     }
 
 #if defined(MQTT_USE_WS)
     template <typename Strand>
     void setup_socket(std::shared_ptr<ws_endpoint<tls::stream<as::ip::tcp::socket>, Strand>>& socket) {
         socket = std::make_shared<Socket>(ioc_, ctx_);
-        base::socket_optional().emplace(socket);
+        base::socket_sp_ref() = socket;
     }
 #endif // defined(MQTT_USE_WS)
 
