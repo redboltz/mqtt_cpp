@@ -892,8 +892,8 @@ public:
      * @param p property to add
      */
     void add_prop(property_variant p) {
-        props_.push_back(force_move(p));
         auto add_size = v5::size(p);
+        props_.push_back(force_move(p));
         property_length_ += add_size;
         property_length_buf_.clear();
         auto pb = variable_bytes(property_length_);
