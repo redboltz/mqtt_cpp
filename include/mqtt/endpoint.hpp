@@ -857,6 +857,26 @@ public:
         auto_pub_response_async_ = async;
     }
 
+    /**
+     * @brief Set topic alias send auto mapping enable flag
+     * @param b set value
+     *
+     * If set true then topic alias is automatically used.
+     * topic alias is allocated and reused by LRU algorithm.
+     * topic alias that is set manually can be used with this flag.
+     */
+    void set_auto_map_topic_alias_send(bool b = true) {
+        auto_map_topic_alias_send_ = b;
+    }
+
+    /**
+     * @brief Set topic alias send auto replacing enable flag
+     * @param b set value
+     *
+     * If set true when publish without topic alias and topic alias send
+     * map has corresponding entry, then use the alias.
+     * topic alias that is set manually can be used with this flag.
+     */
     void set_auto_replace_topic_alias_send(bool b = true) {
         auto_replace_topic_alias_send_ = b;
     }
@@ -4554,7 +4574,7 @@ public:
     void send_store_message(basic_store_message_variant<PacketIdBytes> msg, any life_keeper) {
         auto publish_proc =
             [&](auto msg, auto const& serialize) {
-                store_publish_message(
+                preprocess_publish_message(
                     msg,
                     life_keeper,
                     serialize,
@@ -4615,7 +4635,7 @@ public:
     void async_send_store_message(basic_store_message_variant<PacketIdBytes> msg, any life_keeper, async_handler_t func) {
         auto publish_proc =
             [&](auto msg, auto const& serialize) {
-                store_publish_message(
+                preprocess_publish_message(
                     msg,
                     life_keeper,
                     serialize,
@@ -8882,36 +8902,83 @@ private:
         any& life_keeper
     ) {
         if (msg.topic().empty()) {
-            auto qos_value = msg.get_qos();
-            if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
-                // Recover topic alias for store
-                if (auto ta_opt = get_topic_alias_from_props(msg.props())) {
-                    LockGuard<Mutex> lck (topic_alias_send_mtx_);
-                    std::string t;
-                    if (topic_alias_send_) t = topic_alias_send_.value().find(ta_opt.value());
-                    if (t.empty()) {
-                        MQTT_LOG("mqtt_impl", error)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "publish topic_name is empty, topic alias " << ta_opt.value()
-                            << " is not registered." ;
-                        throw protocol_error();
-                    }
-                    else {
-                        MQTT_LOG("mqtt_impl", trace)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "topia alias : " << t << " - " << ta_opt.value() << " is recovered for store." ;
-                        auto topic_name_buf = allocate_buffer(t);
-                        msg.set_topic_name(as::buffer(topic_name_buf));
-                        life_keeper = std::make_tuple(force_move(life_keeper), force_move(topic_name_buf));
-                        msg.remove_prop(v5::property::id::topic_alias);
-                    }
-                }
-                else {
+            // Recover topic alias for store
+            if (auto ta_opt = get_topic_alias_from_props(msg.props())) {
+                LockGuard<Mutex> lck (topic_alias_send_mtx_);
+                std::string t;
+                if (topic_alias_send_) t = topic_alias_send_.value().find(ta_opt.value());
+                if (t.empty()) {
                     MQTT_LOG("mqtt_impl", error)
                         << MQTT_ADD_VALUE(address, this)
-                        << "publish topic_name is empty, no topic alias set.";
+                        << "publish topic_name is empty, topic alias " << ta_opt.value()
+                        << " is not registered." ;
                     throw protocol_error();
                 }
+                else {
+                    MQTT_LOG("mqtt_impl", trace)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "topia alias : " << t << " - " << ta_opt.value() << " is recovered for store." ;
+                    auto topic_name_buf = allocate_buffer(t);
+                    msg.set_topic_name(as::buffer(topic_name_buf));
+                    life_keeper = std::make_tuple(force_move(life_keeper), force_move(topic_name_buf));
+                }
+            }
+            else {
+                MQTT_LOG("mqtt_impl", error)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "publish topic_name is empty, no topic alias set.";
+                throw protocol_error();
+            }
+        }
+        msg.remove_prop(v5::property::id::topic_alias);
+    }
+
+    template <typename PublishMessage>
+    std::enable_if_t<
+        !std::is_same<
+            PublishMessage,
+            v5::basic_publish_message<PacketIdBytes>
+        >::value
+    >
+    store_topic_alias(PublishMessage&, any&) {}
+
+    template <typename PublishMessage>
+    std::enable_if_t<
+        std::is_same<
+            PublishMessage,
+            v5::basic_publish_message<PacketIdBytes>
+        >::value
+    >
+    apply_topic_alias(PublishMessage& msg, any& life_keeper, bool checked) {
+        auto clear_topic_name_and_add_topic_alias =
+            [&](topic_alias_t ta) {
+                auto topic_name_buf = buffer();
+                msg.set_topic_name(as::buffer(topic_name_buf));
+                life_keeper = std::make_tuple(force_move(life_keeper), force_move(topic_name_buf));
+                msg.add_prop(v5::property::topic_alias(ta));
+            };
+
+        if (msg.topic().empty()) {
+            if (checked) return;
+
+            // Recover topic alias for store
+            if (auto ta_opt = get_topic_alias_from_props(msg.props())) {
+                LockGuard<Mutex> lck (topic_alias_send_mtx_);
+                std::string t;
+                if (topic_alias_send_) t = topic_alias_send_.value().find(ta_opt.value());
+                if (t.empty()) {
+                    MQTT_LOG("mqtt_impl", error)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "publish topic_name is empty, topic alias " << ta_opt.value()
+                        << " is not registered." ;
+                    throw protocol_error();
+                }
+            }
+            else {
+                MQTT_LOG("mqtt_impl", error)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "publish topic_name is empty, no topic alias set.";
+                throw protocol_error();
             }
         }
         else {
@@ -8927,6 +8994,23 @@ private:
                     );
                 }
             }
+            else if (auto_map_topic_alias_send_) {
+                LockGuard<Mutex> lck (topic_alias_send_mtx_);
+                if (topic_alias_send_) {
+                    auto lru_ta = topic_alias_send_.value().get_lru_alias();
+                    if (auto ta_opt = topic_alias_send_.value().find(msg.topic())) {
+                        MQTT_LOG("mqtt_impl", trace)
+                            << MQTT_ADD_VALUE(address, this)
+                            << "topia alias : " << msg.topic() << " - " << ta_opt.value() << " is found." ;
+                        topic_alias_send_.value().insert_or_update(msg.topic(), ta_opt.value()); // update ts
+                        clear_topic_name_and_add_topic_alias(ta_opt.value());
+                    }
+                    else {
+                        topic_alias_send_.value().insert_or_update(msg.topic(), lru_ta); // remap topic alias
+                        msg.add_prop(v5::property::topic_alias(lru_ta));
+                    }
+                }
+            }
             else if (auto_replace_topic_alias_send_) {
                 LockGuard<Mutex> lck (topic_alias_send_mtx_);
                 if (topic_alias_send_) {
@@ -8934,10 +9018,8 @@ private:
                         MQTT_LOG("mqtt_impl", trace)
                             << MQTT_ADD_VALUE(address, this)
                             << "topia alias : " << msg.topic() << " - " << ta_opt.value() << " is found." ;
-                        auto topic_name_buf = buffer();
-                        msg.set_topic_name(as::buffer(topic_name_buf));
-                        life_keeper = std::make_tuple(force_move(life_keeper), force_move(topic_name_buf));
-                        msg.add_prop(v5::property::topic_alias(ta_opt.value()));
+                        topic_alias_send_.value().insert_or_update(msg.topic(), ta_opt.value()); // update ts
+                        clear_topic_name_and_add_topic_alias(ta_opt.value());
                     }
                 }
             }
@@ -8951,20 +9033,23 @@ private:
             v5::basic_publish_message<PacketIdBytes>
         >::value
     >
-    store_topic_alias(PublishMessage&, any&) {}
+    apply_topic_alias(PublishMessage&, any&, bool) {}
 
     template <typename PublishMessage, typename SerializePublish>
-    void store_publish_message(
-        PublishMessage msg,
+    void preprocess_publish_message(
+        PublishMessage& msg,
         any life_keeper,
         SerializePublish const& serialize_publish,
         bool register_pid = false
     ) {
-        store_topic_alias(msg, life_keeper);
         auto qos_value = msg.get_qos();
+        bool checked = false;
         if (qos_value == qos::at_least_once || qos_value == qos::exactly_once) {
-            msg.set_dup(true);
-            auto packet_id = msg.packet_id();
+            auto store_msg = msg;
+            store_topic_alias(store_msg, life_keeper);
+            checked = true;
+            store_msg.set_dup(true);
+            auto packet_id = store_msg.packet_id();
 
             LockGuard<Mutex> lck (store_mtx_);
             if (register_pid) {
@@ -8977,11 +9062,12 @@ private:
                 qos_value == qos::at_least_once
                 ? control_packet_type::puback
                 : control_packet_type::pubrec,
-                msg,
+                store_msg,
                 force_move(life_keeper)
             );
-            (this->*serialize_publish)(force_move(msg));
+            (this->*serialize_publish)(force_move(store_msg));
         }
+        apply_topic_alias(msg, life_keeper, checked);
     }
 
     template <typename ConstBufferSequence>
@@ -8998,7 +9084,7 @@ private:
 
         auto do_send_publish =
             [&](auto msg, auto const& serialize_publish) {
-                store_publish_message(
+                preprocess_publish_message(
                     msg,
                     life_keeper,
                     serialize_publish
@@ -9490,7 +9576,7 @@ private:
     ) {
         auto do_async_send_publish =
             [&](auto msg, auto const& serialize_publish) {
-                store_publish_message(
+                preprocess_publish_message(
                     msg,
                     life_keeper,
                     serialize_publish
@@ -10242,6 +10328,7 @@ private:
     as::steady_timer tim_pingresp_;
     bool tim_pingresp_set_ = false;
 
+    bool auto_map_topic_alias_send_ = false;
     bool auto_replace_topic_alias_send_ = false;
     mutable Mutex topic_alias_send_mtx_;
     optional<topic_alias_send> topic_alias_send_;
