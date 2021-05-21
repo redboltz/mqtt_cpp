@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
                 [&subs, wp]
                 (packet_id_t packet_id,
                  std::vector<MQTT_NS::subscribe_entry> entries) {
-                    std::cout << "[server]subscribe received. packet_id: " << packet_id << std::endl;
+                    std::cout << "[server] subscribe received. packet_id: " << packet_id << std::endl;
                     std::vector<MQTT_NS::suback_return_code> res;
                     res.reserve(entries.size());
                     auto sp = wp.lock();
@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
                 [&subs, wp]
                 (packet_id_t packet_id,
                  std::vector<MQTT_NS::unsubscribe_entry> entries) {
-                    std::cout << "[server]unsubscribe received. packet_id: " << packet_id << std::endl;
+                    std::cout << "[server] unsubscribe received. packet_id: " << packet_id << std::endl;
                     for (auto const& e : entries) {
                         subs.erase(e.topic_filter);
                     }

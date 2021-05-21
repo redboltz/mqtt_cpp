@@ -17,6 +17,7 @@ IF (MQTT_USE_TLS)
         tls_client.cpp
         tls_server.cpp
         tls_both.cpp
+        tls_both_client_cert.cpp
     )
 ENDIF ()
 
@@ -68,6 +69,8 @@ FILE(COPY broker.conf DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" )
 FILE(COPY ../test/certs/mosquitto.org.crt DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" )
 FILE(COPY ../test/certs/server.crt.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" )
 FILE(COPY ../test/certs/server.key.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" )
+FILE(COPY ../test/certs/client.crt.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" )
+FILE(COPY ../test/certs/client.key.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" )
 FILE(COPY ../test/certs/cacert.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" )
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
@@ -75,12 +78,16 @@ IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
    FILE(COPY ../test/certs/mosquitto.org.crt DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Release")
    FILE(COPY ../test/certs/server.crt.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Release")
    FILE(COPY ../test/certs/server.key.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Release")
+   FILE(COPY ../test/certs/client.crt.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Release")
+   FILE(COPY ../test/certs/client.key.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Release")
    FILE(COPY ../test/certs/cacert.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Release")
 
    FILE(COPY broker.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug)
    FILE(COPY ../test/certs/mosquitto.org.crt DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
    FILE(COPY ../test/certs/server.crt.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
    FILE(COPY ../test/certs/server.key.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
+   FILE(COPY ../test/certs/client.crt.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
+   FILE(COPY ../test/certs/client.key.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
    FILE(COPY ../test/certs/cacert.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
 
  ENDIF ()

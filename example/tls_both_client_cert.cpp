@@ -1,4 +1,4 @@
-// Copyright Takatoshi Kondo 2017
+// Copyright Takatoshi Kondo 2021
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -24,6 +24,7 @@ void client_proc(
     Disconnect const& disconnect) {
 
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+
     // Setup client
     c->set_client_id("cid1");
     c->set_clean_session(true);
@@ -123,8 +124,9 @@ void client_proc(
 
 namespace mi = boost::multi_index;
 
-using con_t = MQTT_NS::server_ws<>::endpoint_t;
+using con_t = MQTT_NS::server_tls<>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
+using con_wp_t = std::weak_ptr<con_t>;
 
 struct sub_con {
     sub_con(MQTT_NS::buffer topic, con_sp_t con, MQTT_NS::qos qos_value)
@@ -329,16 +331,47 @@ int main(int argc, char** argv) {
 
     MQTT_NS::setup_log();
 
+    std::string path = argv[0];
+    std::size_t pos = path.find_last_of("/\\");
+    std::string base = (pos == std::string::npos) ? "./" : path.substr(0, pos + 1);
     boost::asio::io_context ioc;
     std::uint16_t port = boost::lexical_cast<std::uint16_t>(argv[1]);
 
     // server
+    boost::asio::ssl::context  ctx(boost::asio::ssl::context::tlsv12);
+    ctx.set_options(
+        boost::asio::ssl::context::default_workarounds |
+        boost::asio::ssl::context::single_dh_use);
+    ctx.use_certificate_file(base + "server.crt.pem", boost::asio::ssl::context::pem);
+    ctx.use_private_key_file(base + "server.key.pem", boost::asio::ssl::context::pem);
+    ctx.set_verify_mode(MQTT_NS::tls::verify_peer);
+    ctx.load_verify_file(base + "cacert.pem");
+    ctx.set_verify_callback(
+        []
+        (bool preverified,
+         boost::asio::ssl::verify_context& ctx) {
+            std::cout << "[clicrt] preverified:" << std::boolalpha <<  preverified << std::endl;
+            if (!preverified) return false;
+            int depth = X509_STORE_CTX_get_error_depth(ctx.native_handle());
+            std::cout << "[clicrt] depth:" << depth << std::endl;
+            if (depth > 0) return true;
+            X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+            X509_NAME* name = X509_get_subject_name(cert);
+            std::string cname;
+            cname.resize(0xffff);
+            auto size = X509_NAME_get_text_by_NID(name, NID_commonName, &cname[0], static_cast<int>(cname.size()));
+            cname.resize(static_cast<std::size_t>(size));
+            std::cout << "[clicrt] CNAME:" << cname << std::endl;
+            return true;
+        }
+    );
     boost::asio::io_context iocs;
-    auto s = MQTT_NS::server_ws<>(
+    auto s = MQTT_NS::server_tls<>(
         boost::asio::ip::tcp::endpoint(
             boost::asio::ip::tcp::v4(),
             port
         ),
+        std::move(ctx),
         iocs
     );
     std::set<con_sp_t> connections;
@@ -355,7 +388,10 @@ int main(int argc, char** argv) {
     std::uint16_t pid_sub1;
     std::uint16_t pid_sub2;
 
-    auto c = MQTT_NS::make_sync_client_ws(ioc, "localhost", port);
+    auto c = MQTT_NS::make_tls_sync_client(ioc, "localhost", port);
+    c->get_ssl_context().use_certificate_file(base + "client.crt.pem", boost::asio::ssl::context::pem);
+    c->get_ssl_context().use_private_key_file(base + "client.key.pem", boost::asio::ssl::context::pem);
+    c->get_ssl_context().load_verify_file(base + "cacert.pem");
 
     int count = 0;
     auto disconnect = [&] {
