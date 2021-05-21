@@ -289,7 +289,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 [&subs, wp]
                 (packet_id_t packet_id,
                  std::vector<MQTT_NS::subscribe_entry> entries) {
-                    locked_cout() << "[server]subscribe received. packet_id: " << packet_id << std::endl;
+                    locked_cout() << "[server] subscribe received. packet_id: " << packet_id << std::endl;
                     std::vector<MQTT_NS::suback_return_code> res;
                     res.reserve(entries.size());
                     auto sp = wp.lock();
@@ -307,7 +307,7 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                 [&subs, wp]
                 (packet_id_t packet_id,
                  std::vector<MQTT_NS::unsubscribe_entry> entries) {
-                    locked_cout() << "[server]unsubscribe received. packet_id: " << packet_id << std::endl;
+                    locked_cout() << "[server] unsubscribe received. packet_id: " << packet_id << std::endl;
                     for (auto const& e : entries) {
                         subs.erase(e.topic_filter);
                     }
