@@ -1,3 +1,7 @@
+## 11.0.0
+* Added examples. (#812)
+* Added automatic topic alias management. See https://github.com/redboltz/mqtt_cpp/wiki/automatic-topic-alias-management (#812)
+* <<<< breaking change >>>> Replaced boost type erasure with virtual functions with inline. (#810)
 ## 10.0.0
 * Fixed namespace qualifing. (#808)
 * Added host port setter. (#802)
