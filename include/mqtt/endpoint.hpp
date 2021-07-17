@@ -8858,21 +8858,7 @@ private:
             );
             break;
         case protocol_version::v5:
-            if (auto ta_max = get_topic_alias_maximum_from_props(props)) {
-                if (ta_max.value() == 0) {
-                    topic_alias_recv_ = nullopt;
-                }
-                else {
-                    topic_alias_recv_.emplace(ta_max.value());
-                }
-            }
-            else {
-                if (topic_alias_recv_&& topic_alias_recv_.value().max() != 0) {
-                    props.emplace_back(
-                        MQTT_NS::v5::property::topic_alias_maximum(topic_alias_recv_.value().max())
-                    );
-                }
-            }
+            update_topic_alias_maximum_recv(props);
             do_sync_write(
                 v5::connect_message(
                     keep_alive_sec,
@@ -8906,6 +8892,7 @@ private:
             );
             break;
         case protocol_version::v5:
+            update_topic_alias_maximum_recv(props);
             do_sync_write(
                 v5::connack_message(
                     session_present,
@@ -9540,21 +9527,7 @@ private:
             );
             break;
         case protocol_version::v5:
-            if (auto ta_max = get_topic_alias_maximum_from_props(props)) {
-                if (ta_max.value() == 0) {
-                    topic_alias_recv_ = nullopt;
-                }
-                else {
-                    topic_alias_recv_.emplace(ta_max.value());
-                }
-            }
-            else {
-                if (topic_alias_recv_&& topic_alias_recv_.value().max() != 0) {
-                    props.emplace_back(
-                        MQTT_NS::v5::property::topic_alias_maximum(topic_alias_recv_.value().max())
-                    );
-                }
-            }
+            update_topic_alias_maximum_recv(props);
             do_async_write(
                 v5::connect_message(
                     keep_alive_sec,
@@ -9591,6 +9564,7 @@ private:
             );
             break;
         case protocol_version::v5:
+            update_topic_alias_maximum_recv(props);
             do_async_write(
                 v5::connack_message(
                     session_present,
@@ -10275,6 +10249,24 @@ private:
                 }
             }
         );
+    }
+
+    void update_topic_alias_maximum_recv(v5::properties& props) {
+        if (auto ta_max = get_topic_alias_maximum_from_props(props)) {
+            if (ta_max.value() == 0) {
+                topic_alias_recv_ = nullopt;
+            }
+            else {
+                topic_alias_recv_.emplace(ta_max.value());
+            }
+        }
+        else {
+            if (topic_alias_recv_&& topic_alias_recv_.value().max() != 0) {
+                props.emplace_back(
+                    MQTT_NS::v5::property::topic_alias_maximum(topic_alias_recv_.value().max())
+                );
+            }
+        }
     }
 
     static optional<topic_alias_t> get_topic_alias_maximum_from_prop(v5::property_variant const& prop) {
