@@ -890,6 +890,16 @@ public:
     }
 
     /**
+     * @brief set topic alias maximum for receiving
+     * @param max maximum value
+     *
+     */
+    void set_topic_alias_maximum(topic_alias_t max) {
+        LockGuard<Mutex> lck (topic_alias_recv_mtx_);
+        topic_alias_recv_.emplace(max);
+    }
+
+    /**
      * @brief start session with a connected endpoint.
      * @param func finish handler that is called when the session is finished
      *
@@ -1034,7 +1044,7 @@ public:
         }
         {
             LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-            topic_alias_recv_.clear();
+            if (topic_alias_recv_) topic_alias_recv_.value().clear();
         }
     }
 
@@ -4819,7 +4829,7 @@ protected:
         }
         {
             LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-            topic_alias_recv_.clear();
+            if (topic_alias_recv_) topic_alias_recv_.value().clear();
         }
         if (disconnect_requested_) {
             disconnect_requested_ = false;
@@ -7213,7 +7223,10 @@ private:
                                     if (auto topic_alias = get_topic_alias_from_props(props_)) {
                                         auto topic_name = [&] {
                                             LockGuard<Mutex> lck (ep_.topic_alias_recv_mtx_);
-                                            return ep_.topic_alias_recv_.find(topic_alias.value());
+                                            if (ep_.topic_alias_recv_) {
+                                                return ep_.topic_alias_recv_.value().find(topic_alias.value());
+                                            }
+                                            return std::string();
                                         }();
                                         if (topic_name.empty()) {
                                             MQTT_LOG("mqtt_cb", error)
@@ -7231,7 +7244,9 @@ private:
                                 else {
                                     if (auto topic_alias = ep_.get_topic_alias_from_props(props_)) {
                                         LockGuard<Mutex> lck (ep_.topic_alias_recv_mtx_);
-                                        ep_.topic_alias_recv_.insert_or_update(topic_name_, topic_alias.value());
+                                        if (ep_.topic_alias_recv_) {
+                                            ep_.topic_alias_recv_.value().insert_or_update(topic_name_, topic_alias.value());
+                                        }
                                     }
                                 }
                                 if (ep_.on_v5_publish(
@@ -8843,6 +8858,21 @@ private:
             );
             break;
         case protocol_version::v5:
+            if (auto ta_max = get_topic_alias_maximum_from_props(props)) {
+                if (ta_max.value() == 0) {
+                    topic_alias_recv_ = nullopt;
+                }
+                else {
+                    topic_alias_recv_.emplace(ta_max.value());
+                }
+            }
+            else {
+                if (topic_alias_recv_&& topic_alias_recv_.value().max() != 0) {
+                    props.emplace_back(
+                        MQTT_NS::v5::property::topic_alias_maximum(topic_alias_recv_.value().max())
+                    );
+                }
+            }
             do_sync_write(
                 v5::connect_message(
                     keep_alive_sec,
@@ -9510,6 +9540,21 @@ private:
             );
             break;
         case protocol_version::v5:
+            if (auto ta_max = get_topic_alias_maximum_from_props(props)) {
+                if (ta_max.value() == 0) {
+                    topic_alias_recv_ = nullopt;
+                }
+                else {
+                    topic_alias_recv_.emplace(ta_max.value());
+                }
+            }
+            else {
+                if (topic_alias_recv_&& topic_alias_recv_.value().max() != 0) {
+                    props.emplace_back(
+                        MQTT_NS::v5::property::topic_alias_maximum(topic_alias_recv_.value().max())
+                    );
+                }
+            }
             do_async_write(
                 v5::connect_message(
                     keep_alive_sec,
@@ -10334,7 +10379,7 @@ private:
     optional<topic_alias_send> topic_alias_send_;
 
     mutable Mutex topic_alias_recv_mtx_;
-    topic_alias_recv topic_alias_recv_{topic_alias_max};
+    optional<topic_alias_recv> topic_alias_recv_;
 };
 
 } // namespace MQTT_NS

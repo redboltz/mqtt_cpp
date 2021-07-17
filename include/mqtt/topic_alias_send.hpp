@@ -111,6 +111,8 @@ public:
         return idx.begin()->alias;
     }
 
+    topic_alias_t max() const { return max_; }
+
 private:
     static constexpr topic_alias_t min_ = 1;
     topic_alias_t max_;

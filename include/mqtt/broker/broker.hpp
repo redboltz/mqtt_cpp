@@ -307,6 +307,7 @@ public:
 
         ep.socket().lowest_layer().set_option(as::ip::tcp::no_delay(true));
         ep.set_auto_pub_response(false);
+        ep.set_topic_alias_maximum(MQTT_NS::topic_alias_max);
         // Pass spep to keep lifetime.
         // It makes sure wp.lock() never return nullptr in the handlers below
         // including close_handler and error_handler.
