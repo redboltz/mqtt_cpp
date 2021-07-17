@@ -161,7 +161,11 @@ BOOST_AUTO_TEST_CASE( pubsub ) {
             (packet_id_t) {
                 BOOST_CHECK(false);
             });
-        c->connect();
+        c->connect(
+            MQTT_NS::v5::properties {
+                MQTT_NS::v5::property::topic_alias_maximum(10)
+            }
+        );
         ioc.run();
         BOOST_TEST(chk.all());
     };
