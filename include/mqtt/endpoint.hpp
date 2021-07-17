@@ -6841,6 +6841,12 @@ private:
                     }
                     break;
                 case protocol_version::v5:
+                    if (auto ta_opt = get_topic_alias_maximum_from_props(props_)) {
+                        if (ta_opt.value() > 0) {
+                            LockGuard<Mutex> lck (ep_.topic_alias_send_mtx_);
+                            ep_.topic_alias_send_.emplace(ta_opt.value());
+                        }
+                    }
                     if (ep_.on_v5_connect(
                             force_move(client_id_),
                             force_move(user_name_),
@@ -6992,6 +6998,7 @@ private:
                             case protocol_version::v5:
                                 if (auto ta_opt = get_topic_alias_maximum_from_props(props_)) {
                                     if (ta_opt.value() > 0) {
+                                        LockGuard<Mutex> lck (ep_.topic_alias_send_mtx_);
                                         ep_.topic_alias_send_.emplace(ta_opt.value());
                                     }
                                 }
