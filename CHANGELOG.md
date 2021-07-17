@@ -1,3 +1,6 @@
+## 11.1.0
+* Added Topic Alias Maximum setting functionality. (#816, #817, #818)
+
 ## 11.0.0
 * Added examples. (#812)
 * Added automatic topic alias management. See https://github.com/redboltz/mqtt_cpp/wiki/automatic-topic-alias-management (#812)
