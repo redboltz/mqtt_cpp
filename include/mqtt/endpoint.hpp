@@ -858,6 +858,17 @@ public:
     }
 
     /**
+     * @brief Set async error notify flag
+     * @param async send connack/disconnect if error happens
+     *
+     * MQTT protocol requests sending connack/disconnect packet with error reason code if some error happens.<BR>
+     * This function choose sync/async connack/disconnect.<BR>
+     */
+    void set_async_error_notify(bool async = true) {
+        async_error_notify_ = async;
+    }
+
+    /**
      * @brief Set topic alias send auto mapping enable flag
      * @param b set value
      *
@@ -896,7 +907,12 @@ public:
      */
     void set_topic_alias_maximum(topic_alias_t max) {
         LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-        topic_alias_recv_.emplace(max);
+        if (max == 0) {
+            topic_alias_recv_ = nullopt;
+        }
+        else {
+            topic_alias_recv_.emplace(max);
+        }
     }
 
     /**
@@ -1037,15 +1053,6 @@ public:
             << "force_disconnect";
 
         shutdown(socket());
-
-        {
-            LockGuard<Mutex> lck (topic_alias_send_mtx_);
-            if (topic_alias_send_) topic_alias_send_.value().clear();
-        }
-        {
-            LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-            if (topic_alias_recv_) topic_alias_recv_.value().clear();
-        }
     }
 
     /**
@@ -2192,7 +2199,7 @@ public:
      */
     void async_disconnect(
         v5::disconnect_reason_code reason,
-        v5::properties props,
+        v5::properties props = {},
         async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
@@ -4790,6 +4797,18 @@ public:
         pingresp_timeout_ = force_move(tim);
     }
 
+     /**
+     * @brief Set maximum packet size that endpoint can receive
+     * If the endpoint is client, then it sends as CONNECT packet property.
+     * If the endpoint is server, then it sends as CONNACK packet property.
+     * If property is manually set, then maximum_packet_size_recv_ is overwritten by the property.
+     *
+     * @param size maximum packet size
+     */
+    void set_maximum_packet_size_recv(std::size_t size) {
+        maximum_packet_size_recv_ = size;
+    }
+
 protected:
 
     /**
@@ -4823,14 +4842,6 @@ protected:
                 socket_->close(ignored_ec);
             }
         }
-        {
-            LockGuard<Mutex> lck (topic_alias_send_mtx_);
-            if (topic_alias_send_) topic_alias_send_.value().clear();
-        }
-        {
-            LockGuard<Mutex> lck (topic_alias_recv_mtx_);
-            if (topic_alias_recv_) topic_alias_recv_.value().clear();
-        }
         if (disconnect_requested_) {
             disconnect_requested_ = false;
             connect_requested_ = false;
@@ -4860,6 +4871,121 @@ protected:
     }
 
 private:
+    enum class connection_type {
+        client,
+        server
+    };
+
+    void update_values_and_props_on_start_connection(v5::properties& props) {
+        // Check properties and overwrite the values by properties
+        std::size_t topic_alias_maximum_count = 0;
+        std::size_t maximum_packet_size_count = 0;
+        v5::visit_props(
+            props,
+            [&](v5::property::topic_alias_maximum const& p) {
+                if (++topic_alias_maximum_count == 2) {
+                    throw protocol_error();
+                    return;
+                }
+                LockGuard<Mutex> lck (topic_alias_recv_mtx_);
+                if (p.val() == 0) {
+                    topic_alias_recv_ = nullopt;
+                }
+                else {
+                    topic_alias_recv_.emplace(p.val());
+                }
+            },
+            [&](v5::property::maximum_packet_size const& p) {
+                if (++maximum_packet_size_count == 2) {
+                    throw protocol_error();
+                    return;
+                }
+                if (p.val() == 0) {
+                    throw protocol_error();
+                    return;
+                }
+                maximum_packet_size_recv_ = p.val();
+            },
+            [](auto&&) {
+            }
+        );
+
+        // If property is not set, then set property automatically.
+        if (topic_alias_maximum_count == 0) {
+            LockGuard<Mutex> lck (topic_alias_recv_mtx_);
+            if (topic_alias_recv_ && topic_alias_recv_.value().max() != 0) {
+                props.emplace_back(
+                    MQTT_NS::v5::property::topic_alias_maximum(topic_alias_recv_.value().max())
+                );
+            }
+        }
+        if (maximum_packet_size_count == 0) {
+            if (maximum_packet_size_recv_ > 0) {
+                BOOST_ASSERT(maximum_packet_size_recv_ < 0x10000);
+                props.emplace_back(
+                    MQTT_NS::v5::property::maximum_packet_size(static_cast<std::uint32_t>(maximum_packet_size_recv_))
+                );
+            }
+        }
+    }
+
+    bool set_values_from_props_on_connection(connection_type type, v5::properties const& props) {
+
+#define MQTT_SEND_ERROR(rc) \
+        switch (type) {                                                 \
+        case connection_type::client:                                   \
+            send_error_disconnect(v5::disconnect_reason_code::rc);      \
+            break;                                                      \
+        case connection_type::server:                                   \
+            send_error_connack(v5::connect_reason_code::rc);            \
+            break;                                                      \
+        }
+
+        bool ret = true;
+        std::size_t topic_alias_maximum_count = 0;
+        std::size_t maximum_packet_size_count = 0;
+        v5::visit_props(
+            props,
+            [&](v5::property::topic_alias_maximum const& p) {
+                if (++topic_alias_maximum_count == 2) {
+                    MQTT_SEND_ERROR(protocol_error);
+                    ret = false;
+                    return;
+                }
+                if (topic_alias_maximum_count > 2) {
+                    ret = false;
+                    return;
+                }
+                if (p.val() > 0) {
+                    LockGuard<Mutex> lck (topic_alias_send_mtx_);
+                    topic_alias_send_.emplace(p.val());
+                }
+            },
+            [&](v5::property::maximum_packet_size const& p) {
+                if (++maximum_packet_size_count == 2) {
+                    MQTT_SEND_ERROR(protocol_error);
+                    ret = false;
+                    return;
+                }
+                if (maximum_packet_size_count > 2) {
+                    ret = false;
+                    return;
+                }
+                if (p.val() == 0) {
+                    MQTT_SEND_ERROR(protocol_error);
+                    ret = false;
+                    return;
+                }
+                maximum_packet_size_send_ = p.val();
+            },
+            [](auto&&) {
+            }
+        );
+#undef MQTT_SEND_ERROR
+
+        return ret;
+    }
+
     bool check_transferred_length(
         std::size_t bytes_transferred,
         std::size_t bytes_expected) {
@@ -4894,6 +5020,24 @@ private:
 
         boost::system::error_code ec;
         socket.lowest_layer().close(ec);
+    }
+
+    void send_error_disconnect(v5::disconnect_reason_code rc) {
+        if (async_error_notify_) {
+            async_disconnect(rc);
+        }
+        else {
+            disconnect(rc);
+        }
+    }
+
+    void send_error_connack(v5::connect_reason_code rc) {
+        if (async_error_notify_) {
+            async_connack(false, rc);
+        }
+        else {
+            connack(false, rc);
+        }
     }
 
     class send_buffer {
@@ -6841,12 +6985,7 @@ private:
                     }
                     break;
                 case protocol_version::v5:
-                    if (auto ta_opt = get_topic_alias_maximum_from_props(props_)) {
-                        if (ta_opt.value() > 0) {
-                            LockGuard<Mutex> lck (ep_.topic_alias_send_mtx_);
-                            ep_.topic_alias_send_.emplace(ta_opt.value());
-                        }
-                    }
+                    if (!ep_.set_values_from_props_on_connection(connection_type::server, props_)) return;
                     if (ep_.on_v5_connect(
                             force_move(client_id_),
                             force_move(user_name_),
@@ -6996,12 +7135,7 @@ private:
                                 }
                                 break;
                             case protocol_version::v5:
-                                if (auto ta_opt = get_topic_alias_maximum_from_props(props_)) {
-                                    if (ta_opt.value() > 0) {
-                                        LockGuard<Mutex> lck (ep_.topic_alias_send_mtx_);
-                                        ep_.topic_alias_send_.emplace(ta_opt.value());
-                                    }
-                                }
+                                if (!ep_.set_values_from_props_on_connection(connection_type::server, props_)) return;
                                 if (ep_.on_v5_connack(
                                         session_present_,
                                         variant_get<v5::connect_reason_code>(reason_code_),
@@ -8865,7 +8999,7 @@ private:
             );
             break;
         case protocol_version::v5:
-            update_topic_alias_maximum_recv(props);
+            update_values_and_props_on_start_connection(props);
             do_sync_write(
                 v5::connect_message(
                     keep_alive_sec,
@@ -8899,7 +9033,7 @@ private:
             );
             break;
         case protocol_version::v5:
-            update_topic_alias_maximum_recv(props);
+            update_values_and_props_on_start_connection(props);
             do_sync_write(
                 v5::connack_message(
                     session_present,
@@ -9502,6 +9636,9 @@ private:
     void do_sync_write(MessageVariant&& mv) {
         boost::system::error_code ec;
         if (!connected_) return;
+        if (maximum_packet_size_send_ != 0 && maximum_packet_size_send_ < size<PacketIdBytes>(mv)) {
+            throw protocol_error();
+        }
         on_pre_send();
         total_bytes_sent_ += socket_->write(const_buffer_sequence<PacketIdBytes>(mv), ec);
         // If ec is set as error, the error will be handled by async_read.
@@ -9534,7 +9671,7 @@ private:
             );
             break;
         case protocol_version::v5:
-            update_topic_alias_maximum_recv(props);
+            update_values_and_props_on_start_connection(props);
             do_async_write(
                 v5::connect_message(
                     keep_alive_sec,
@@ -9571,7 +9708,7 @@ private:
             );
             break;
         case protocol_version::v5:
-            update_topic_alias_maximum_recv(props);
+            update_values_and_props_on_start_connection(props);
             do_async_write(
                 v5::connack_message(
                     session_present,
@@ -10207,6 +10344,10 @@ private:
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                     return;
                 }
+                if (maximum_packet_size_send_ != 0 && maximum_packet_size_send_ < size<PacketIdBytes>(mv)) {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                    return;
+                }
                 queue_.emplace_back(force_move(mv), force_move(func));
                 // Only need to start async writes if there was nothing in the queue before the above item.
                 if (queue_.size() > 1) return;
@@ -10258,68 +10399,30 @@ private:
         );
     }
 
-    void update_topic_alias_maximum_recv(v5::properties& props) {
-        if (auto ta_max = get_topic_alias_maximum_from_props(props)) {
-            if (ta_max.value() == 0) {
-                topic_alias_recv_ = nullopt;
-            }
-            else {
-                topic_alias_recv_.emplace(ta_max.value());
-            }
-        }
-        else {
-            if (topic_alias_recv_&& topic_alias_recv_.value().max() != 0) {
-                props.emplace_back(
-                    MQTT_NS::v5::property::topic_alias_maximum(topic_alias_recv_.value().max())
-                );
-            }
-        }
-    }
-
-    static optional<topic_alias_t> get_topic_alias_maximum_from_prop(v5::property_variant const& prop) {
-        optional<topic_alias_t> val;
-        MQTT_NS::visit(
-            make_lambda_visitor(
-                [&val](v5::property::topic_alias_maximum const& p) {
-                    val = p.val();
-                },
-                [](auto&&) {
-                }
-            ), prop
-        );
-        return val;
-    }
-
-    static optional<topic_alias_t> get_topic_alias_maximum_from_props(v5::properties const& props) {
-        for (auto const& prop : props) {
-            if (auto val = get_topic_alias_maximum_from_prop(prop)) {
-                return val;
-            }
-        }
-        return nullopt;
-    }
-
     static optional<topic_alias_t> get_topic_alias_from_prop(v5::property_variant const& prop) {
         optional<topic_alias_t> val;
-        MQTT_NS::visit(
-            make_lambda_visitor(
-                [&val](v5::property::topic_alias const& p) {
-                    val = p.val();
-                },
-                [](auto&&) {
-                }
-            ), prop
+        v5::visit_prop(
+            prop,
+            [&val](v5::property::topic_alias const& p) {
+                val = p.val();
+            },
+            [](auto&&) {
+            }
         );
         return val;
     }
 
     static optional<topic_alias_t> get_topic_alias_from_props(v5::properties const& props) {
-        for (auto const& prop : props) {
-            if (auto val = get_topic_alias_from_prop(prop)) {
-                return val;
+        optional<topic_alias_t> val;
+        v5::visit_props(
+            props,
+            [&val](v5::property::topic_alias const& p) {
+                val = p.val();
+            },
+            [](auto&&) {
             }
-        }
-        return nullopt;
+        );
+        return val;
     }
 
 protected:
@@ -10355,6 +10458,7 @@ private:
     std::set<packet_id_t> sub_unsub_inflight_;
     bool auto_pub_response_{true};
     bool auto_pub_response_async_{false};
+    bool async_error_notify_{false};
     bool async_send_store_ { false };
     bool async_read_on_message_processed_ { true };
     bool disconnect_requested_{false};
@@ -10379,6 +10483,9 @@ private:
 
     mutable Mutex topic_alias_recv_mtx_;
     optional<topic_alias_recv> topic_alias_recv_;
+
+    std::size_t maximum_packet_size_send_ = packet_size_no_limit;
+    std::size_t maximum_packet_size_recv_ = packet_size_no_limit;
 };
 
 } // namespace MQTT_NS

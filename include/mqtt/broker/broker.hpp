@@ -414,16 +414,25 @@ public:
              std::uint16_t keep_alive) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return connect_handler(
-                    force_move(sp),
-                    force_move(client_id),
-                    force_move(username),
-                    force_move(password),
-                    force_move(will),
-                    clean_session,
-                    keep_alive,
-                    v5::properties{}
-                );
+                auto p = sp.get();
+                try {
+                    return connect_handler(
+                        force_move(sp),
+                        force_move(client_id),
+                        force_move(username),
+                        force_move(password),
+                        force_move(will),
+                        clean_session,
+                        keep_alive,
+                        v5::properties{}
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_v5_connect_handler(
@@ -437,16 +446,25 @@ public:
              v5::properties props) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return connect_handler(
-                    force_move(sp),
-                    force_move(client_id),
-                    force_move(username),
-                    force_move(password),
-                    force_move(will),
-                    clean_start,
-                    keep_alive,
-                    force_move(props)
-                );
+                auto p = sp.get();
+                try {
+                    return connect_handler(
+                        force_move(sp),
+                        force_move(client_id),
+                        force_move(username),
+                        force_move(password),
+                        force_move(will),
+                        clean_start,
+                        keep_alive,
+                        force_move(props)
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_disconnect_handler(
@@ -454,7 +472,15 @@ public:
             (){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return disconnect_handler(force_move(sp));
+                auto p = sp.get();
+                try {
+                    disconnect_handler(force_move(sp));
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                }
             }
         );
         ep.set_v5_disconnect_handler(
@@ -463,7 +489,15 @@ public:
                 if (h_disconnect_props_) h_disconnect_props_(force_move(props));
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return disconnect_handler(force_move(sp));
+                auto p = sp.get();
+                try {
+                    disconnect_handler(force_move(sp));
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                }
             }
         );
         ep.set_puback_handler(
@@ -471,12 +505,21 @@ public:
             (packet_id_t packet_id){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return puback_handler(
-                    force_move(sp),
-                    packet_id,
-                    v5::puback_reason_code::success,
-                    v5::properties{}
-                );
+                auto p = sp.get();
+                try {
+                    return puback_handler(
+                        force_move(sp),
+                        packet_id,
+                        v5::puback_reason_code::success,
+                        v5::properties{}
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_v5_puback_handler(
@@ -486,12 +529,21 @@ public:
              v5::properties props){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return puback_handler(
-                    force_move(sp),
-                    packet_id,
-                    reason_code,
-                    force_move(props)
-                );
+                auto p = sp.get();
+                try {
+                    return puback_handler(
+                        force_move(sp),
+                        packet_id,
+                        reason_code,
+                        force_move(props)
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_pubrec_handler(
@@ -499,12 +551,21 @@ public:
             (packet_id_t packet_id){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return pubrec_handler(
-                    force_move(sp),
-                    packet_id,
-                    v5::pubrec_reason_code::success,
-                    v5::properties{}
-                );
+                auto p = sp.get();
+                try {
+                    return pubrec_handler(
+                        force_move(sp),
+                        packet_id,
+                        v5::pubrec_reason_code::success,
+                        v5::properties{}
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_v5_pubrec_handler(
@@ -514,12 +575,21 @@ public:
              v5::properties props){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return pubrec_handler(
-                    force_move(sp),
-                    packet_id,
-                    reason_code,
-                    force_move(props)
-                );
+                auto p = sp.get();
+                try {
+                    return pubrec_handler(
+                        force_move(sp),
+                        packet_id,
+                        reason_code,
+                        force_move(props)
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_pubrel_handler(
@@ -527,12 +597,21 @@ public:
             (packet_id_t packet_id){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return pubrel_handler(
-                    force_move(sp),
-                    packet_id,
-                    v5::pubrel_reason_code::success,
-                    v5::properties{}
-                );
+                auto p = sp.get();
+                try {
+                    return pubrel_handler(
+                        force_move(sp),
+                        packet_id,
+                        v5::pubrel_reason_code::success,
+                        v5::properties{}
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_v5_pubrel_handler(
@@ -542,12 +621,21 @@ public:
              v5::properties props){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return pubrel_handler(
-                    force_move(sp),
-                    packet_id,
-                    reason_code,
-                    force_move(props)
-                );
+                auto p = sp.get();
+                try {
+                    return pubrel_handler(
+                        force_move(sp),
+                        packet_id,
+                        reason_code,
+                        force_move(props)
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_pubcomp_handler(
@@ -555,12 +643,21 @@ public:
             (packet_id_t packet_id){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return pubcomp_handler(
-                    force_move(sp),
-                    packet_id,
-                    v5::pubcomp_reason_code::success,
-                    v5::properties{}
-                );
+                auto p = sp.get();
+                try {
+                    return pubcomp_handler(
+                        force_move(sp),
+                        packet_id,
+                        v5::pubcomp_reason_code::success,
+                        v5::properties{}
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_v5_pubcomp_handler(
@@ -570,12 +667,21 @@ public:
              v5::properties props){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return pubcomp_handler(
-                    force_move(sp),
-                    packet_id,
-                    reason_code,
-                    force_move(props)
-                );
+                auto p = sp.get();
+                try {
+                    return pubcomp_handler(
+                        force_move(sp),
+                        packet_id,
+                        reason_code,
+                        force_move(props)
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_publish_handler(
@@ -586,14 +692,23 @@ public:
              buffer contents){
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return publish_handler(
-                    force_move(sp),
-                    packet_id,
-                    pubopts,
-                    force_move(topic_name),
-                    force_move(contents),
-                    v5::properties{}
-                );
+                auto p = sp.get();
+                try {
+                    return publish_handler(
+                        force_move(sp),
+                        packet_id,
+                        pubopts,
+                        force_move(topic_name),
+                        force_move(contents),
+                        v5::properties{}
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_v5_publish_handler(
@@ -607,14 +722,23 @@ public:
                 if (h_publish_props_) h_publish_props_(props);
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return publish_handler(
-                    force_move(sp),
-                    packet_id,
-                    pubopts,
-                    force_move(topic_name),
-                    force_move(contents),
-                    force_move(props)
-                );
+                auto p = sp.get();
+                try {
+                    return publish_handler(
+                        force_move(sp),
+                        packet_id,
+                        pubopts,
+                        force_move(topic_name),
+                        force_move(contents),
+                        force_move(props)
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_subscribe_handler(
@@ -623,12 +747,21 @@ public:
              std::vector<subscribe_entry> entries) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return subscribe_handler(
-                    force_move(sp),
-                    packet_id,
-                    force_move(entries),
-                    v5::properties{}
-                );
+                auto p = sp.get();
+                try {
+                    return subscribe_handler(
+                        force_move(sp),
+                        packet_id,
+                        force_move(entries),
+                        v5::properties{}
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_v5_subscribe_handler(
@@ -639,12 +772,21 @@ public:
             ) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return subscribe_handler(
-                    force_move(sp),
-                    packet_id,
-                    force_move(entries),
-                    force_move(props)
-                );
+                auto p = sp.get();
+                try {
+                    return subscribe_handler(
+                        force_move(sp),
+                        packet_id,
+                        force_move(entries),
+                        force_move(props)
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_unsubscribe_handler(
@@ -653,12 +795,21 @@ public:
              std::vector<unsubscribe_entry> entries) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return unsubscribe_handler(
-                    force_move(sp),
-                    packet_id,
-                    force_move(entries),
-                    v5::properties{}
-                );
+                auto p = sp.get();
+                try {
+                    return unsubscribe_handler(
+                        force_move(sp),
+                        packet_id,
+                        force_move(entries),
+                        v5::properties{}
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_v5_unsubscribe_handler(
@@ -669,12 +820,21 @@ public:
             ) {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                return unsubscribe_handler(
-                    force_move(sp),
-                    packet_id,
-                    force_move(entries),
-                    force_move(props)
-                );
+                auto p = sp.get();
+                try {
+                    return unsubscribe_handler(
+                        force_move(sp),
+                        packet_id,
+                        force_move(entries),
+                        force_move(props)
+                    );
+                }
+                catch (std::exception const& ex) {
+                    MQTT_LOG("mqtt_broker", error)
+                        << MQTT_ADD_VALUE(address, p)
+                        << ex.what();
+                    return true;
+                }
             }
         );
         ep.set_pingreq_handler(
