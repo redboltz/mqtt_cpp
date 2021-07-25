@@ -18,6 +18,7 @@ IF (MQTT_TEST_2)
         st_topic_alias.cpp
         st_as_buffer_pubsub.cpp
         st_shared_sub.cpp
+        st_maximum_packet_size.cpp
     )
 ENDIF ()
 

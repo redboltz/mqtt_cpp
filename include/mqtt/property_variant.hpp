@@ -129,6 +129,49 @@ inline void fill(property_variant const& pv, Iterator b, Iterator e) {
     MQTT_NS::visit(vis, pv);
 }
 
+template <typename... Visitors>
+inline
+void
+visit_prop(property_variant const& prop, Visitors&&... visitors) {
+    MQTT_NS::visit(
+        make_lambda_visitor(std::forward<Visitors>(visitors)...), prop
+    );
+}
+
+template <typename... Visitors>
+inline
+void
+visit_props(properties const& props, Visitors&&... visitors) {
+    for (auto const& prop : props) {
+        visit_prop(
+            prop,
+            std::forward<Visitors>(visitors)...
+        );
+    }
+}
+
+template <typename... Visitors>
+inline
+void
+visit_prop(property_variant&& prop, Visitors&&... visitors) {
+    MQTT_NS::visit(
+        make_lambda_visitor(std::forward<Visitors>(visitors)...), force_move(prop)
+    );
+}
+
+template <typename... Visitors>
+inline
+void
+visit_props(properties&& props, Visitors&&... visitors) {
+    for (auto&& prop : force_move(props)) {
+        visit_prop(
+            force_move(prop),
+            std::forward<Visitors>(visitors)...
+        );
+    }
+}
+
+
 } // namespace v5
 
 } // namespace MQTT_NS
