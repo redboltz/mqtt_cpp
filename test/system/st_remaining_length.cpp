@@ -7,6 +7,7 @@
 #include "../common/test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "../common/global_fixture.hpp"
 
 #include <mqtt/optional.hpp>
@@ -15,6 +16,7 @@ BOOST_AUTO_TEST_SUITE(st_remaining_length)
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -126,6 +128,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -239,6 +242,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;

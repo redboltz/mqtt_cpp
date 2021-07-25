@@ -7,6 +7,7 @@
 #include "../common/test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "../common/global_fixture.hpp"
 
 BOOST_AUTO_TEST_SUITE(st_connect)
@@ -15,6 +16,7 @@ using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( connect ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         c->set_client_id("cid1");
         c->set_user_name("dummy");
         c->set_password("dummy");
@@ -84,6 +86,7 @@ BOOST_AUTO_TEST_CASE( connect ) {
 
 BOOST_AUTO_TEST_CASE( connect_no_strand ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -142,6 +145,7 @@ BOOST_AUTO_TEST_CASE( connect_no_strand ) {
 
 BOOST_AUTO_TEST_CASE( keep_alive ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -207,6 +211,7 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
 
 BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -307,6 +312,7 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
 
 BOOST_AUTO_TEST_CASE( pingresp_timeout ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        clear_ordered();
         b.set_pingresp(false);
         c->set_pingresp_timeout(std::chrono::seconds(2));
         c->set_client_id("cid1");
@@ -366,6 +372,7 @@ BOOST_AUTO_TEST_CASE( pingresp_timeout ) {
 
 BOOST_AUTO_TEST_CASE( connect_again ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -447,6 +454,7 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
 
 BOOST_AUTO_TEST_CASE( nocid ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         c->set_clean_session(true);
 
         checker chk = {
@@ -504,6 +512,7 @@ BOOST_AUTO_TEST_CASE( nocid ) {
 
 BOOST_AUTO_TEST_CASE( nocid_noclean ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
 
         checker chk = {
             // connect
@@ -558,6 +567,7 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
 
 BOOST_AUTO_TEST_CASE( noclean ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         c->set_client_id("cid1");
 
         checker chk = {
@@ -701,6 +711,7 @@ BOOST_AUTO_TEST_CASE( noclean ) {
 
 BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -761,6 +772,7 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
 
 BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -821,6 +833,7 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
 
 BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -892,6 +905,7 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
 
 BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -974,6 +988,7 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
 
 BOOST_AUTO_TEST_CASE( async_keep_alive ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -1039,6 +1054,7 @@ BOOST_AUTO_TEST_CASE( async_keep_alive ) {
 
 BOOST_AUTO_TEST_CASE( async_keep_alive_and_send_control_packet ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
 
@@ -1139,6 +1155,7 @@ BOOST_AUTO_TEST_CASE( async_keep_alive_and_send_control_packet ) {
 
 BOOST_AUTO_TEST_CASE( async_pingresp_timeout ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        clear_ordered();
         b.set_pingresp(false);
         c->set_pingresp_timeout(std::chrono::seconds(2));
         c->set_client_id("cid1");
@@ -1198,6 +1215,7 @@ BOOST_AUTO_TEST_CASE( async_pingresp_timeout ) {
 
 BOOST_AUTO_TEST_CASE( connect_prop ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -1319,6 +1337,7 @@ BOOST_AUTO_TEST_CASE( connect_prop ) {
 
 BOOST_AUTO_TEST_CASE( disconnect_prop ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -1425,6 +1444,7 @@ BOOST_AUTO_TEST_CASE( disconnect_prop ) {
 
 BOOST_AUTO_TEST_CASE( connack_prop ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;

@@ -7,6 +7,7 @@
 #include "../common/test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "../common/global_fixture.hpp"
 
 #include <mqtt/optional.hpp>
@@ -20,6 +21,7 @@ using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -204,6 +206,7 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -401,6 +404,7 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -600,6 +604,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -699,13 +704,11 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
             c->set_pubrel_handler(
                 [&chk, &c, g]
                 (packet_id_t packet_id) mutable {
-                    auto ret = chk.match(
-                        "h_publish",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_pubrel1");
                             c->async_pubcomp(packet_id);
                         },
-                        "h_pubrel1",
                         [&] () {
                             MQTT_CHK("h_pubrel2");
                             c->async_pubcomp(packet_id);
@@ -788,13 +791,11 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
             c->set_v5_pubrel_handler(
                 [&chk, &c, g]
                 (packet_id_t packet_id, MQTT_NS::v5::pubrel_reason_code, MQTT_NS::v5::properties /*props*/) mutable {
-                    auto ret = chk.match(
-                        "h_publish",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_pubrel1");
                             c->async_pubcomp(packet_id);
                         },
-                        "h_pubrel1",
                         [&] () {
                             MQTT_CHK("h_pubrel2");
                             c->async_pubcomp(packet_id);
@@ -831,6 +832,7 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
 
 BOOST_AUTO_TEST_CASE( publish_function ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -1010,6 +1012,7 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
 
 BOOST_AUTO_TEST_CASE( publish_dup_function ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -1194,6 +1197,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function ) {
 
 BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -1378,6 +1382,7 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer ) {
 
 BOOST_AUTO_TEST_CASE( publish_function_buffer_sequence ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -1574,6 +1579,7 @@ BOOST_AUTO_TEST_CASE( publish_function_buffer_sequence ) {
 
 BOOST_AUTO_TEST_CASE( publish_function_const_buffer_sequence ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -1792,6 +1798,7 @@ BOOST_AUTO_TEST_CASE( publish_function_const_buffer_sequence ) {
 
 BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -1967,6 +1974,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
 
 BOOST_AUTO_TEST_CASE( puback_props ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -2136,6 +2144,7 @@ BOOST_AUTO_TEST_CASE( puback_props ) {
 
 BOOST_AUTO_TEST_CASE( pubrec_rel_comp_prop ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;

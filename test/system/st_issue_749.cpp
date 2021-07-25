@@ -7,6 +7,7 @@
 #include "../common/test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "test_util.hpp"
 #include "../common/global_fixture.hpp"
 

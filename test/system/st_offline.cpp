@@ -7,6 +7,7 @@
 #include "../common/test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "../common/global_fixture.hpp"
 
 BOOST_AUTO_TEST_SUITE(st_offline)
@@ -49,6 +50,7 @@ inline void async_connect_no_clean(Client& c) {
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -76,14 +78,12 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 [&chk, &c]
                 (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    auto ret = chk.match(
-                        "start",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_connack1");
                             BOOST_TEST(sp == false);
                             c->disconnect();
                         },
-                        "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
                             // Offline publish is enabled only if session is not expired in the broker
@@ -107,14 +107,12 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 [&chk, &c]
                 (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
-                    auto ret = chk.match(
-                        "start",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_connack1");
                             BOOST_TEST(sp == false);
                             c->disconnect();
                         },
-                        "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
                             // Offline publish is enabled only if session is not expired in the broker
@@ -141,15 +139,13 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
         c->set_close_handler(
             [&chk, &c, &pid_pub, &finish]
             () {
-                auto ret = chk.match(
-                    "h_connack1",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_close1");
                         // offline publish
                         pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
                         connect_no_clean(c);
                     },
-                    "h_puback",
                     [&] {
                         MQTT_CHK("h_close2");
                         finish();
@@ -172,6 +168,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -200,14 +197,12 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 [&chk, &c]
                 (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    auto ret = chk.match(
-                        "start",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_connack1");
                             BOOST_TEST(sp == false);
                             c->disconnect();
                         },
-                        "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
                             // Offline publish is enabled only if session is not expired in the broker
@@ -238,14 +233,12 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 [&chk, &c]
                 (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
-                    auto ret = chk.match(
-                        "start",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_connack1");
                             BOOST_TEST(sp == false);
                             c->disconnect();
                         },
-                        "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
                             // Offline publish is enabled only if session is not expired in the broker
@@ -279,15 +272,13 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         c->set_close_handler(
             [&chk, &c, &pid_pub, &finish]
             () {
-                auto ret = chk.match(
-                    "h_connack1",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_close1");
                         // offline publish
                         pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
                         connect_no_clean(c);
                     },
-                    "h_pubcomp",
                     [&] {
                         MQTT_CHK("h_close2");
                         finish();
@@ -310,6 +301,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -340,14 +332,12 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 [&chk, &c]
                 (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    auto ret = chk.match(
-                        "start",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_connack1");
                             BOOST_TEST(sp == false);
                             c->disconnect();
                         },
-                        "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
                             // Offline publish is enabled only if session is not expired in the broker
@@ -360,13 +350,11 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             c->set_puback_handler(
                 [&chk, &c, &pid_pub1, &pid_pub2]
                 (packet_id_t packet_id) {
-                    auto ret = chk.match(
-                        "h_connack2",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_puback1");
                             BOOST_TEST(packet_id == pid_pub1);
                         },
-                        "h_puback1",
                         [&] {
                             MQTT_CHK("h_puback2");
                             BOOST_TEST(packet_id == pid_pub2);
@@ -382,14 +370,12 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 [&chk, &c]
                 (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
-                    auto ret = chk.match(
-                        "start",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_connack1");
                             BOOST_TEST(sp == false);
                             c->disconnect();
                         },
-                        "h_close1",
                         [&] {
                             MQTT_CHK("h_connack2");
                             // Offline publish is enabled only if session is not expired in the broker
@@ -402,13 +388,11 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             c->set_v5_puback_handler(
                 [&chk, &c, &pid_pub1, &pid_pub2]
                 (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code /*reason*/, MQTT_NS::v5::properties /*props*/) {
-                    auto ret = chk.match(
-                        "h_connack2",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_puback1");
                             BOOST_TEST(packet_id == pid_pub1);
                         },
-                        "h_puback1",
                         [&] {
                             MQTT_CHK("h_puback2");
                             BOOST_TEST(packet_id == pid_pub2);
@@ -427,8 +411,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
         c->set_close_handler(
             [&chk, &c, &pid_pub1, &pid_pub2, &finish]
             () {
-                auto ret = chk.match(
-                    "h_connack1",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_close1");
                         // offline publish
@@ -436,7 +419,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                         pid_pub2 = c->publish(/*topic_base()*/ + "987/topic1", "topic1_contents2", MQTT_NS::qos::at_least_once);
                         connect_no_clean(c);
                     },
-                    "h_puback2",
                     [&] {
                         MQTT_CHK("h_close2");
                         finish();
@@ -459,6 +441,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
 
 BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -487,14 +470,12 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                 [&chk, &c]
                 (bool sp, MQTT_NS::connect_return_code connack_return_code) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    auto ret = chk.match(
-                        "start",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_connack1");
                             BOOST_TEST(sp == false);
                             c->async_disconnect();
                         },
-                        "h_pub_finish",
                         [&] {
                             MQTT_CHK("h_connack2");
                             // Offline publish is enabled only if session is not expired in the broker
@@ -518,14 +499,12 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                 [&chk, &c]
                 (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
-                    auto ret = chk.match(
-                        "start",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_connack1");
                             BOOST_TEST(sp == false);
                             c->async_disconnect();
                         },
-                        "h_pub_finish",
                         [&] {
                             MQTT_CHK("h_connack2");
                             // Offline publish is enabled only if session is not expired in the broker
@@ -552,8 +531,7 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
         c->set_close_handler(
             [&chk, &c, &pid_pub, &finish]
             () {
-                auto ret = chk.match(
-                    "h_connack1",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_close1");
                         // offline publish
@@ -570,7 +548,6 @@ BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
                         );
                         async_connect_no_clean(c);
                     },
-                    "h_puback",
                     [&] {
                         MQTT_CHK("h_close2");
                         finish();

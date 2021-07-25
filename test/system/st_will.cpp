@@ -10,6 +10,7 @@
 #include "test_settings.hpp"
 #include "test_server_no_tls.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "../common/global_fixture.hpp"
 
 #include <mqtt/client.hpp>
@@ -754,13 +755,11 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
             BOOST_TEST(packet_id == pid_sub2);
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
-            auto ret = chk.match(
-                "h_connack_2",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("h_suback1_2");
                     c1_force_disconnect();
                 },
-                "h_unsuback1_2",
                 [&] {
                     MQTT_CHK("h_suback2_2");
                 }
@@ -772,13 +771,11 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
         [&chk, &c2, &pid_unsub2, &pid_sub2]
         (packet_id_t packet_id) {
             BOOST_TEST(packet_id == pid_unsub2);
-            auto ret = chk.match(
-                "h_publish1_2",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("h_unsuback1_2");
                     pid_sub2 = c2->subscribe("topic1", MQTT_NS::qos::at_most_once);
                 },
-                "h_publish2_2",
                 [&] {
                     MQTT_CHK("h_unsuback2_2");
                     c2->disconnect();
@@ -799,13 +796,11 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
             pid_unsub2 = c2->unsubscribe("topic1");
-            auto ret = chk.match(
-                "h_suback1_2",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("h_publish1_2");
                     BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
                 },
-                "h_suback2_2",
                 [&] {
                     MQTT_CHK("h_publish2_2");
                     BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);

@@ -8,6 +8,7 @@
 #define MQTT_TEST_TEST_UTIL_HPP
 
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include <mqtt/sync_client.hpp>
 
 template <typename Client>

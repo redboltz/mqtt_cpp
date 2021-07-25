@@ -7,6 +7,7 @@
 #include "../common/test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "test_util.hpp"
 #include "../common/global_fixture.hpp"
 
@@ -18,6 +19,7 @@ using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( sync ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+        clear_ordered();
 
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
@@ -114,8 +116,7 @@ BOOST_AUTO_TEST_CASE( sync ) {
              MQTT_NS::buffer topic,
              MQTT_NS::buffer contents,
              MQTT_NS::v5::properties /*props*/) {
-                auto ret = chk.match(
-                    "h_suback",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_publish50");
                         BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
