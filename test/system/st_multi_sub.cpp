@@ -7,6 +7,7 @@
 #include "../common/test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "../common/global_fixture.hpp"
 
 #include <mqtt/optional.hpp>
@@ -17,6 +18,7 @@ using namespace std::literals::string_literals;
 
 BOOST_AUTO_TEST_CASE( multi_channel ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -118,15 +120,13 @@ BOOST_AUTO_TEST_CASE( multi_channel ) {
             BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_most_once);
             BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
                 BOOST_CHECK(!packet_id);
-                auto ret = chk.match(
-                    "h_suback",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_publish_topic1");
                         BOOST_TEST(topic == "topic1");
                         BOOST_TEST(contents == "topic1_contents");
                         c->publish("topic2", "topic2_contents", MQTT_NS::qos::at_most_once);
                     },
-                    "h_publish_topic1",
                     [&] {
                         MQTT_CHK("h_publish_topic2");
                         BOOST_TEST(topic == "topic2");
@@ -761,8 +761,7 @@ BOOST_AUTO_TEST_CASE( multi_client_nl ) {
          MQTT_NS::buffer topic,
          MQTT_NS::buffer contents,
          MQTT_NS::v5::properties /*props*/) {
-            auto ret = chk.match(
-                "h_suback_2",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("h_publish_2_1");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -773,7 +772,6 @@ BOOST_AUTO_TEST_CASE( multi_client_nl ) {
                     BOOST_TEST(contents == "topic1_contents1");
                     c2->publish("topic1", "topic1_contents2", MQTT_NS::qos::at_most_once);
                 },
-                "h_publish_2_1",
                 [&] {
                     MQTT_CHK("h_publish_2_2");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);

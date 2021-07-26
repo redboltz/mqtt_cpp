@@ -7,6 +7,7 @@
 #include "../common/test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "test_util.hpp"
 #include "../common/global_fixture.hpp"
 
@@ -100,15 +101,13 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v3_1_1 ) {
     c2->set_connack_handler(
         [&chk, &c2]
         (bool sp, MQTT_NS::connect_return_code connack_return_code) {
-            auto ret = chk.match(
-                "c1_h_connack",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("c2_h_connack1");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     c2->subscribe("topic1", MQTT_NS::qos::exactly_once);
                 },
-                "c2_h_connack1",
                 [&] {
                     MQTT_CHK("c2_h_connack2");
                     BOOST_TEST(sp == true);
@@ -132,15 +131,13 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v3_1_1 ) {
     c2->set_close_handler(
         [&chk, &c1, &finish]
         () {
-            auto ret = chk.match(
-                "c2_h_suback",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("c2_h_close1");
                     c1->publish("topic1", "topic1_contents1", MQTT_NS::qos::at_most_once);
                     c1->publish("topic1", "topic1_contents2", MQTT_NS::qos::at_least_once);
                     c1->publish("topic1", "topic1_contents3", MQTT_NS::qos::exactly_once);
                 },
-                "c2_h_close1",
                 [&] {
                     MQTT_CHK("c2_h_close2");
                     finish();
@@ -178,8 +175,7 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v3_1_1 ) {
          MQTT_NS::publish_options pubopts,
          MQTT_NS::buffer topic,
          MQTT_NS::buffer contents) {
-            auto ret = chk.match(
-                "c2_h_connack2",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("c2_h_publish1");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -189,7 +185,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v3_1_1 ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents1");
                 },
-                "c2_h_publish1",
                 [&] {
                     MQTT_CHK("c2_h_publish2");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -199,7 +194,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v3_1_1 ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents2");
                 },
-                "c2_h_publish2",
                 [&] {
                     MQTT_CHK("c2_h_publish3");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -353,15 +347,13 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
     c2->set_v5_connack_handler(
         [&chk, &c2]
         (bool sp, MQTT_NS::v5::connect_reason_code connack_reason_code, MQTT_NS::v5::properties /*props*/) {
-            auto ret = chk.match(
-                "c1_h_connack",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("c2_h_connack1");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_reason_code == MQTT_NS::v5::connect_reason_code::success);
                     c2->subscribe("topic1", MQTT_NS::qos::exactly_once);
                 },
-                "c2_h_connack1",
                 [&] {
                     MQTT_CHK("c2_h_connack2");
                     BOOST_TEST(sp == true);
@@ -385,15 +377,13 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
     c2->set_close_handler(
         [&chk, &c1, &finish, &ps]
         () {
-            auto ret = chk.match(
-                "c2_h_suback",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("c2_h_close1");
                     c1->publish("topic1", "topic1_contents1", MQTT_NS::qos::at_most_once, ps);
                     c1->publish("topic1", "topic1_contents2", MQTT_NS::qos::at_least_once, ps);
                     c1->publish("topic1", "topic1_contents3", MQTT_NS::qos::exactly_once, ps);
                 },
-                "c2_h_close1",
                 [&] {
                     MQTT_CHK("c2_h_close2");
                     finish();
@@ -489,8 +479,7 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
                 );
             }
 
-            auto ret = chk.match(
-                "c2_h_connack2",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("c2_h_publish1");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -500,7 +489,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents1");
                 },
-                "c2_h_publish1",
                 [&] {
                     MQTT_CHK("c2_h_publish2");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -510,7 +498,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents2");
                 },
-                "c2_h_publish2",
                 [&] {
                     MQTT_CHK("c2_h_publish3");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -664,15 +651,13 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5_timeout ) {
     c2->set_v5_connack_handler(
         [&chk, &c1, &c2, &timeout, &message_timeout]
         (bool sp, MQTT_NS::v5::connect_reason_code connack_reason_code, MQTT_NS::v5::properties /*props*/) {
-            auto ret = chk.match(
-                "c1_h_connack",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("c2_h_connack1");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_reason_code == MQTT_NS::v5::connect_reason_code::success);
                     c2->subscribe("topic1", MQTT_NS::qos::exactly_once);
                 },
-                "c2_h_connack1",
                 [&] {
                     MQTT_CHK("c2_h_connack2");
                     BOOST_TEST(sp == true);
@@ -707,15 +692,13 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5_timeout ) {
     c2->set_close_handler(
         [&chk, &c1, &finish, &ps]
         () {
-            auto ret = chk.match(
-                "c2_h_suback",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("c2_h_close1");
                     c1->publish("topic1", "topic1_contents1", MQTT_NS::qos::at_most_once, ps);
                     c1->publish("topic1", "topic1_contents2", MQTT_NS::qos::at_least_once, ps);
                     c1->publish("topic1", "topic1_contents3", MQTT_NS::qos::exactly_once, ps);
                 },
-                "c2_h_close1",
                 [&] {
                     MQTT_CHK("c2_h_close2");
                     finish();

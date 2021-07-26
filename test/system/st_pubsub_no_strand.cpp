@@ -10,6 +10,7 @@
 #include "test_settings.hpp"
 #include "test_server_no_tls.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "../common/global_fixture.hpp"
 
 #include <mqtt/client.hpp>

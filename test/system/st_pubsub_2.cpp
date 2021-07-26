@@ -7,6 +7,7 @@
 #include "../common/test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "../common/global_fixture.hpp"
 
 #include <mqtt/optional.hpp>
@@ -17,6 +18,7 @@ using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( pub_sub_wc_plus ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -196,6 +198,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_wc_plus ) {
 
 BOOST_AUTO_TEST_CASE( pub_sub_wc_sharp ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -375,6 +378,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_wc_sharp ) {
 
 BOOST_AUTO_TEST_CASE( pub_sub_sid ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -462,6 +466,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_sid ) {
 
 BOOST_AUTO_TEST_CASE( pub_sub_sid_ow ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -503,14 +508,12 @@ BOOST_AUTO_TEST_CASE( pub_sub_sid_ow ) {
         c->set_v5_suback_handler(
             [&]
             (packet_id_t, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
-                auto ret = chk.match(
-                    "h_connack",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_suback_1");
                         BOOST_TEST(reasons.size() == 1U);
                         BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
                     },
-                    "h_suback_1",
                     [&] {
                         MQTT_CHK("h_suback_2");
                         BOOST_TEST(reasons.size() == 1U);
@@ -567,6 +570,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_sid_ow ) {
 
 BOOST_AUTO_TEST_CASE( pub_sub_sid_multi_match ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -609,14 +613,12 @@ BOOST_AUTO_TEST_CASE( pub_sub_sid_multi_match ) {
         c->set_v5_suback_handler(
             [&]
             (packet_id_t, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
-                auto ret = chk.match(
-                    "h_connack",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_suback_1");
                         BOOST_TEST(reasons.size() == 1U);
                         BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
                     },
-                    "h_suback_1",
                     [&] {
                         MQTT_CHK("h_suback_2");
                         BOOST_TEST(reasons.size() == 1U);
@@ -637,8 +639,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_sid_multi_match ) {
              MQTT_NS::buffer topic,
              MQTT_NS::buffer contents,
              MQTT_NS::v5::properties props) {
-                auto ret = chk.match(
-                    "h_suback_2",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_publish_1");
                         BOOST_TEST(topic == "a/b");
@@ -657,7 +658,6 @@ BOOST_AUTO_TEST_CASE( pub_sub_sid_multi_match ) {
                             );
                         }
                     },
-                    "h_publish_1",
                     [&] {
                         MQTT_CHK("h_publish_2");
                         BOOST_TEST(topic == "a/b");

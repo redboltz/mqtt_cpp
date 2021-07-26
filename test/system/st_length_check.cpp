@@ -7,6 +7,7 @@
 #include "../common/test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "../common/global_fixture.hpp"
 
 #include <mqtt/optional.hpp>
@@ -15,6 +16,7 @@ BOOST_AUTO_TEST_SUITE(st_length_check)
 
 BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -78,14 +80,12 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             [&chk]
             (MQTT_NS::control_packet_type cpt, std::size_t /*len*/) {
                 bool rval = false;;
-                auto ret = chk.match(
-                    "h_connack",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         BOOST_TEST(cpt == MQTT_NS::control_packet_type::suback);
                         MQTT_CHK("h_lc_suback");
                         rval = true;
                     },
-                    "h_suback",
                     [&] {
                         BOOST_TEST(cpt == MQTT_NS::control_packet_type::publish);
                         MQTT_CHK("h_lc_publish");

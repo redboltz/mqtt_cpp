@@ -7,6 +7,7 @@
 #include "../common/test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "../common/global_fixture.hpp"
 
 #include <mqtt/optional.hpp>
@@ -17,6 +18,7 @@ using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( retain_and_publish ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -78,13 +80,11 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
-                    auto ret = chk.match(
-                        "h_connack",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_suback1");
                             c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once | MQTT_NS::retain::yes);
                         },
-                        "h_unsuback1",
                         [&] {
                             MQTT_CHK("h_suback2");
                         }
@@ -96,13 +96,11 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                 [&chk, &c, &pid_sub, &pid_unsub]
                 (packet_id_t packet_id) {
                     BOOST_TEST(packet_id == pid_unsub);
-                    auto ret = chk.match(
-                        "h_publish1",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_unsuback1");
                             pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
                         },
-                        "h_publish2",
                         [&] {
                             MQTT_CHK("h_unsuback2");
                             c->disconnect();
@@ -123,13 +121,11 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     pid_unsub = c->unsubscribe("topic1");
-                    auto ret = chk.match(
-                        "h_suback1",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_publish1");
                             BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
                         },
-                        "h_suback2",
                         [&] {
                             MQTT_CHK("h_publish2");
                             BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);
@@ -173,13 +169,11 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
-                    auto ret = chk.match(
-                        "h_connack",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_suback1");
                             c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once | MQTT_NS::retain::yes);
                         },
-                        "h_unsuback1",
                         [&] {
                             MQTT_CHK("h_suback2");
                         }
@@ -193,13 +187,11 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
-                    auto ret = chk.match(
-                        "h_publish1",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_unsuback1");
                             pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
                         },
-                        "h_publish2",
                         [&] {
                             MQTT_CHK("h_unsuback2");
                             c->disconnect();
@@ -221,13 +213,11 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     pid_unsub = c->unsubscribe("topic1");
-                    auto ret = chk.match(
-                        "h_suback1",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_publish1");
                             BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
                         },
-                        "h_suback2",
                         [&] {
                             MQTT_CHK("h_publish2");
                             BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);
@@ -262,6 +252,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
 
 BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -332,8 +323,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
-                    auto ret = chk.match(
-                        "h_connack",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_NS::v5::properties ps {
                                 MQTT_NS::v5::property::payload_format_indicator(MQTT_NS::v5::property::payload_format_indicator::string),
@@ -343,7 +333,6 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
                             MQTT_CHK("h_suback1");
                             c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once | MQTT_NS::retain::yes, ps);
                         },
-                        "h_unsuback1",
                         [&] {
                             MQTT_CHK("h_suback2");
 
@@ -366,8 +355,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
                     BOOST_TEST(packet_id == pid_unsub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
-                    auto ret = chk.match(
-                        "h_publish1",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_unsuback1");
 
@@ -380,7 +368,6 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
                                 }
                             );
                         },
-                        "h_suback2",
                         [&] {
                             MQTT_CHK("h_unsuback2");
                             c->disconnect();
@@ -402,13 +389,11 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     pid_unsub = c->unsubscribe("topic1");
-                    auto ret = chk.match(
-                        "h_suback1",
+                    auto ret = MQTT_ORDERED(
                         [&] {
                             MQTT_CHK("h_publish1");
                             BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
                         },
-                        "h_suback2",
                         [&] {
                             // Retained message should timeout and not be received
                             BOOST_TEST(false);
@@ -443,6 +428,7 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
 
 BOOST_AUTO_TEST_CASE( retain_rap ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -507,13 +493,11 @@ BOOST_AUTO_TEST_CASE( retain_rap ) {
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(reasons.size() == 1U);
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
-                auto ret = chk.match(
-                    "h_connack",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_suback1");
                         c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once | MQTT_NS::retain::yes);
                     },
-                    "h_unsuback1",
                     [&] {
                         MQTT_CHK("h_suback2");
                     }
@@ -527,13 +511,11 @@ BOOST_AUTO_TEST_CASE( retain_rap ) {
                 BOOST_TEST(packet_id == pid_unsub);
                 BOOST_TEST(reasons.size() == 1U);
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
-                auto ret = chk.match(
-                    "h_publish1",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_unsuback1");
                         pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once | MQTT_NS::rap::retain);
                     },
-                    "h_publish2",
                     [&] {
                         MQTT_CHK("h_unsuback2");
                         c->disconnect();
@@ -555,13 +537,11 @@ BOOST_AUTO_TEST_CASE( retain_rap ) {
                 BOOST_TEST(topic == "topic1");
                 BOOST_TEST(contents == "topic1_contents");
                 pid_unsub = c->unsubscribe("topic1");
-                auto ret = chk.match(
-                    "h_suback1",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_publish1");
                         BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);
                     },
-                    "h_suback2",
                     [&] {
                         MQTT_CHK("h_publish2");
                         BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);
@@ -591,6 +571,7 @@ BOOST_AUTO_TEST_CASE( retain_rap ) {
 
 BOOST_AUTO_TEST_CASE( retain_rh_send ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -652,17 +633,14 @@ BOOST_AUTO_TEST_CASE( retain_rh_send ) {
             (packet_id_t, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
                 BOOST_TEST(reasons.size() == 1U);
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
-                auto ret = chk.match(
-                    "h_connack",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_suback1");
                         c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once | MQTT_NS::retain::yes);
                     },
-                    "h_unsuback1",
                     [&] {
                         MQTT_CHK("h_suback2");
                     },
-                    "h_suback2",
                     [&] {
                         MQTT_CHK("h_suback3");
                     }
@@ -675,8 +653,7 @@ BOOST_AUTO_TEST_CASE( retain_rh_send ) {
             (packet_id_t, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
                 BOOST_TEST(reasons.size() == 1U);
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
-                auto ret = chk.match(
-                    "h_publish1",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_unsuback1");
                         c->subscribe(
@@ -688,7 +665,6 @@ BOOST_AUTO_TEST_CASE( retain_rh_send ) {
                             MQTT_NS::qos::at_most_once | MQTT_NS::retain_handling::send
                         );
                     },
-                    "h_publish2",
                     [&] {
                         MQTT_CHK("h_unsuback2");
                         c->disconnect();
@@ -709,19 +685,16 @@ BOOST_AUTO_TEST_CASE( retain_rh_send ) {
                 BOOST_CHECK(!packet_id);
                 BOOST_TEST(topic == "topic1");
                 BOOST_TEST(contents == "topic1_contents");
-                auto ret = chk.match(
-                    "h_suback1",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_publish1");
                         BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);
                         c->unsubscribe("topic1");
                     },
-                    "h_suback2",
                     [&] {
                         MQTT_CHK("h_publish2");
                         BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);
                     },
-                    "h_publish2",
                     [&] {
                         MQTT_CHK("h_publish3");
                         BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);
@@ -752,6 +725,7 @@ BOOST_AUTO_TEST_CASE( retain_rh_send ) {
 
 BOOST_AUTO_TEST_CASE( retain_rh_only_newsub ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -812,17 +786,14 @@ BOOST_AUTO_TEST_CASE( retain_rh_only_newsub ) {
             (packet_id_t, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
                 BOOST_TEST(reasons.size() == 1U);
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
-                auto ret = chk.match(
-                    "h_connack",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_suback1");
                         c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once | MQTT_NS::retain::yes);
                     },
-                    "h_unsuback1",
                     [&] {
                         MQTT_CHK("h_suback2");
                     },
-                    "h_suback2",
                     [&] {
                         MQTT_CHK("h_suback3");
                     }
@@ -835,8 +806,7 @@ BOOST_AUTO_TEST_CASE( retain_rh_only_newsub ) {
             (packet_id_t, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
                 BOOST_TEST(reasons.size() == 1U);
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
-                auto ret = chk.match(
-                    "h_publish1",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_unsuback1");
                         c->subscribe(
@@ -848,7 +818,6 @@ BOOST_AUTO_TEST_CASE( retain_rh_only_newsub ) {
                             MQTT_NS::qos::at_most_once | MQTT_NS::retain_handling::send_only_new_subscription
                         );
                     },
-                    "h_publish2",
                     [&] {
                         MQTT_CHK("h_unsuback2");
                         c->disconnect();
@@ -870,13 +839,11 @@ BOOST_AUTO_TEST_CASE( retain_rh_only_newsub ) {
                 BOOST_TEST(topic == "topic1");
                 BOOST_TEST(contents == "topic1_contents");
                 c->unsubscribe("topic1");
-                auto ret = chk.match(
-                    "h_suback1",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_publish1");
                         BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);
                     },
-                    "h_suback2",
                     [&] {
                         MQTT_CHK("h_publish2");
                         BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);
@@ -906,6 +873,7 @@ BOOST_AUTO_TEST_CASE( retain_rh_only_newsub ) {
 
 BOOST_AUTO_TEST_CASE( retain_rh_not_send ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -965,17 +933,14 @@ BOOST_AUTO_TEST_CASE( retain_rh_not_send ) {
             (packet_id_t, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
                 BOOST_TEST(reasons.size() == 1U);
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
-                auto ret = chk.match(
-                    "h_connack",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_suback1");
                         c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once | MQTT_NS::retain::yes);
                     },
-                    "h_unsuback1",
                     [&] {
                         MQTT_CHK("h_suback2");
                     },
-                    "h_suback2",
                     [&] {
                         MQTT_CHK("h_suback3");
                         c->unsubscribe("topic1");
@@ -989,8 +954,7 @@ BOOST_AUTO_TEST_CASE( retain_rh_not_send ) {
             (packet_id_t, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
                 BOOST_TEST(reasons.size() == 1U);
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
-                auto ret = chk.match(
-                    "h_publish1",
+                auto ret = MQTT_ORDERED(
                     [&] {
                         MQTT_CHK("h_unsuback1");
                         c->subscribe(
@@ -1002,7 +966,6 @@ BOOST_AUTO_TEST_CASE( retain_rh_not_send ) {
                             MQTT_NS::qos::at_most_once | MQTT_NS::retain_handling::not_send
                         );
                     },
-                    "h_unsuback1",
                     [&] {
                         MQTT_CHK("h_unsuback2");
                         c->disconnect();
@@ -1049,6 +1012,7 @@ BOOST_AUTO_TEST_CASE( retain_rh_not_send ) {
 
 BOOST_AUTO_TEST_CASE( prop ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;
@@ -1222,6 +1186,7 @@ BOOST_AUTO_TEST_CASE( prop ) {
 
 BOOST_AUTO_TEST_CASE( sid ) {
     auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+        clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
             return;

@@ -7,6 +7,7 @@
 #include "../common/test_main.hpp"
 #include "combi_test.hpp"
 #include "checker.hpp"
+#include "ordered_caller.hpp"
 #include "../common/global_fixture.hpp"
 
 using namespace MQTT_NS::literals;
@@ -198,8 +199,7 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
          MQTT_NS::buffer topic,
          MQTT_NS::buffer contents,
          MQTT_NS::v5::properties /*props*/) mutable {
-            auto ret = chk.match(
-                "h_suback_s1",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("h_publish_s1_1");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -209,7 +209,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
                     BOOST_TEST(topic == "t1");
                     BOOST_TEST(contents == "contents1");
                 },
-                "h_publish_s1_1",
                 [&]{
                     MQTT_CHK("h_publish_s1_2");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -219,7 +218,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
                     BOOST_TEST(topic == "t2");
                     BOOST_TEST(contents == "contents4");
                 },
-                "h_publish_s1_2",
                 [&]{
                     MQTT_CHK("h_publish_s1_3");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -243,8 +241,7 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
          MQTT_NS::buffer topic,
          MQTT_NS::buffer contents,
          MQTT_NS::v5::properties /*props*/) mutable {
-            auto ret = chk.match(
-                "h_suback_s2",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("h_publish_s2_1");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -254,7 +251,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
                     BOOST_TEST(topic == "t2");
                     BOOST_TEST(contents == "contents2");
                 },
-                "h_publish_s2_1",
                 [&]{
                     MQTT_CHK("h_publish_s2_2");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -278,8 +274,7 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
          MQTT_NS::buffer topic,
          MQTT_NS::buffer contents,
          MQTT_NS::v5::properties /*props*/) mutable {
-            auto ret = chk.match(
-                "h_suback_s3",
+            auto ret = MQTT_ORDERED(
                 [&] {
                     MQTT_CHK("h_publish_s3_1");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -289,7 +284,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
                     BOOST_TEST(topic == "t1");
                     BOOST_TEST(contents == "contents3");
                 },
-                "h_publish_s3_1",
                 [&]{
                     MQTT_CHK("h_publish_s3_2");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
@@ -299,7 +293,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
                     BOOST_TEST(topic == "t1");
                     BOOST_TEST(contents == "contents5");
                 },
-                "h_publish_s3_2",
                 [&]{
                     MQTT_CHK("h_publish_s3_3");
                     BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
