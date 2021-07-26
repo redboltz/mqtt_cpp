@@ -12,6 +12,7 @@
 #include <mqtt/namespace.hpp>
 #include <mqtt/property.hpp>
 #include <mqtt/variant.hpp>
+#include <mqtt/visitor_util.hpp>
 
 namespace MQTT_NS {
 
