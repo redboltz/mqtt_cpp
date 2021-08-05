@@ -1463,7 +1463,7 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
 
         MQTT_NS::v5::properties ps {
             MQTT_NS::v5::property::session_expiry_interval(0),
-            MQTT_NS::v5::property::receive_maximum(0),
+            MQTT_NS::v5::property::receive_maximum(0x1234),
             MQTT_NS::v5::property::maximum_qos(MQTT_NS::qos::exactly_once),
             MQTT_NS::v5::property::retain_available(true),
             MQTT_NS::v5::property::maximum_packet_size(100000),
@@ -1503,7 +1503,7 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
                                 BOOST_TEST(t.val() == 0);
                             },
                             [&](MQTT_NS::v5::property::receive_maximum const& t) {
-                                BOOST_TEST(t.val() == 0);
+                                BOOST_TEST(t.val() == 0x1234);
                             },
                             [&](MQTT_NS::v5::property::maximum_qos const& t) {
                                 BOOST_TEST(t.val() == 2);

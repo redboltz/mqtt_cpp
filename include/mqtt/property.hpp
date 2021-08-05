@@ -446,14 +446,14 @@ class receive_maximum : public detail::n_bytes_property<2> {
 public:
     using recv = receive_maximum;
     using store = receive_maximum;
-    receive_maximum(std::uint16_t val)
+    receive_maximum(receive_maximum_t val)
         : detail::n_bytes_property<2>(id::receive_maximum, { num_to_2bytes(val) } ) {}
 
     template <typename It>
     receive_maximum(It b, It e)
         : detail::n_bytes_property<2>(id::receive_maximum, b, e) {}
 
-    std::uint16_t val() const {
+    receive_maximum_t val() const {
         return make_uint16_t(buf_.begin(), buf_.end());
     }
 };
@@ -463,14 +463,14 @@ class topic_alias_maximum : public detail::n_bytes_property<2> {
 public:
     using recv = topic_alias_maximum;
     using store = topic_alias_maximum;
-    topic_alias_maximum(std::uint16_t val)
+    topic_alias_maximum(topic_alias_t val)
         : detail::n_bytes_property<2>(id::topic_alias_maximum, { num_to_2bytes(val) } ) {}
 
     template <typename It>
     topic_alias_maximum(It b, It e)
         : detail::n_bytes_property<2>(id::topic_alias_maximum, b, e) {}
 
-    std::uint16_t val() const {
+    topic_alias_t val() const {
         return make_uint16_t(buf_.begin(), buf_.end());
     }
 };
@@ -480,14 +480,14 @@ class topic_alias : public detail::n_bytes_property<2> {
 public:
     using recv = topic_alias;
     using store = topic_alias;
-    topic_alias(std::uint16_t val)
+    topic_alias(topic_alias_t val)
         : detail::n_bytes_property<2>(id::topic_alias, { num_to_2bytes(val) } ) {}
 
     template <typename It>
     topic_alias(It b, It e)
         : detail::n_bytes_property<2>(id::topic_alias, b, e) {}
 
-    std::uint16_t val() const {
+    topic_alias_t val() const {
         return make_uint16_t(buf_.begin(), buf_.end());
     }
 };
