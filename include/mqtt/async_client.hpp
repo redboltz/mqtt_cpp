@@ -267,7 +267,7 @@ protected:
     ) {
         set_auto_pub_response();
         base::set_async_pingreq(true);
-        base::set_async_error_notify(true);
+        base::set_async_notify(true);
     }
 };
 
