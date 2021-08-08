@@ -1080,7 +1080,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
             deps("h_error", "h_pubcomp", "h_publish1"),
             // connect
             cont("h_connack3"),
-            cont("h_publish2"),
             // disconnect
             cont("h_close2"),
         };
@@ -1105,6 +1104,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                         [&] {
                             MQTT_CHK("h_connack3");
                             BOOST_TEST(sp == true);
+                            c->disconnect();
                         }
                     );
                     BOOST_TEST(ret);
@@ -1127,34 +1127,17 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                  MQTT_NS::publish_options pubopts,
                  MQTT_NS::buffer topic,
                  MQTT_NS::buffer contents) {
-                    auto ret = MQTT_ORDERED(
-                        [&] {
-                            MQTT_CHK("h_publish1");
-                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
-                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
-                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
-                            BOOST_CHECK(packet_id);
-                            pid_pub = packet_id.value();
-                            BOOST_TEST(topic == "topic1");
-                            BOOST_TEST(contents == "topic1_contents");
-                            if (chk.passed("h_pubcomp")) {
-                                c->force_disconnect();
-                            }
-                        },
-                        [&] {
-                            MQTT_CHK("h_publish2");
-                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::yes);
-                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
-                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
-                            BOOST_CHECK(packet_id);
-                            BOOST_TEST(packet_id.value() == pid_pub);
-                            BOOST_TEST(topic == "topic1");
-                            BOOST_TEST(contents == "topic1_contents");
-                            c->pubrec(packet_id.value());
-                            c->disconnect();
-                        }
-                    );
-                    BOOST_TEST(ret);
+                    MQTT_CHK("h_publish1");
+                    BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                    BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
+                    BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                    BOOST_CHECK(packet_id);
+                    pid_pub = packet_id.value();
+                    BOOST_TEST(topic == "topic1");
+                    BOOST_TEST(contents == "topic1_contents");
+                    if (chk.passed("h_pubcomp")) {
+                        c->force_disconnect();
+                    }
                     return true;
                 }
             );
@@ -1198,6 +1181,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                         [&] {
                             MQTT_CHK("h_connack3");
                             BOOST_TEST(sp == true);
+                            c->disconnect();
                         }
                     );
                     BOOST_TEST(ret);
@@ -1221,34 +1205,17 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                  MQTT_NS::buffer topic,
                  MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties /*props*/) {
-                    auto ret = MQTT_ORDERED(
-                        [&] {
-                            MQTT_CHK("h_publish1");
-                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
-                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
-                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
-                            BOOST_CHECK(packet_id);
-                            pid_pub = packet_id.value();
-                            BOOST_TEST(topic == "topic1");
-                            BOOST_TEST(contents == "topic1_contents");
-                            if (chk.passed("h_pubcomp")) {
-                                c->force_disconnect();
-                            }
-                        },
-                        [&] {
-                            MQTT_CHK("h_publish2");
-                            BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::yes);
-                            BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
-                            BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
-                            BOOST_CHECK(packet_id);
-                            BOOST_TEST(packet_id.value() == pid_pub);
-                            BOOST_TEST(topic == "topic1");
-                            BOOST_TEST(contents == "topic1_contents");
-                            c->pubrec(packet_id.value());
-                            c->disconnect();
-                        }
-                    );
-                    BOOST_TEST(ret);
+                    MQTT_CHK("h_publish1");
+                    BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
+                    BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::exactly_once);
+                    BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
+                    BOOST_CHECK(packet_id);
+                    pid_pub = packet_id.value();
+                    BOOST_TEST(topic == "topic1");
+                    BOOST_TEST(contents == "topic1_contents");
+                    if (chk.passed("h_pubcomp")) {
+                        c->force_disconnect();
+                    }
                     return true;
                 }
             );

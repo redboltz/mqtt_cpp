@@ -858,14 +858,16 @@ public:
     }
 
     /**
-     * @brief Set async error notify flag
-     * @param async send connack/disconnect if error happens
+     * @brief Set async notify flag
+     * @param async send packet
      *
      * MQTT protocol requests sending connack/disconnect packet with error reason code if some error happens.<BR>
      * This function choose sync/async connack/disconnect.<BR>
+     * MQTT protocol requests sending pubrec even if the corresponding publish has already been handled.<BR>
+     * This function choose sync/async pubrec.<BR>
      */
-    void set_async_error_notify(bool async = true) {
-        async_error_notify_ = async;
+    void set_async_notify(bool async = true) {
+        async_notify_ = async;
     }
 
     /**
@@ -5023,7 +5025,7 @@ private:
     }
 
     void send_error_disconnect(v5::disconnect_reason_code rc) {
-        if (async_error_notify_) {
+        if (async_notify_) {
             async_disconnect(rc);
         }
         else {
@@ -5032,7 +5034,7 @@ private:
     }
 
     void send_error_connack(v5::connect_reason_code rc) {
-        if (async_error_notify_) {
+        if (async_notify_) {
             async_connack(false, rc);
         }
         else {
@@ -7342,23 +7344,12 @@ private:
                         [&] {
                             switch (ep_.version_) {
                             case protocol_version::v3_1_1:
-                                if (ep_.on_publish(
-                                        packet_id_,
-                                        publish_options(ep_.fixed_header_),
-                                        force_move(topic_name_),
-                                        force_move(force_move(variant_get<buffer>(var))))) {
-                                    ep_.on_mqtt_message_processed(
-                                        force_move(
-                                            std::get<0>(
-                                                any_cast<
-                                                    std::tuple<any, process_type_sp>
-                                                >(session_life_keeper)
-                                            )
-                                        )
-                                    );
-                                    return true;
-                                }
-                                break;
+                                return ep_.on_publish(
+                                    packet_id_,
+                                    publish_options(ep_.fixed_header_),
+                                    force_move(topic_name_),
+                                    force_move(variant_get<buffer>(var))
+                                );
                             case protocol_version::v5:
                                 if (topic_name_.empty()) {
                                     if (auto topic_alias = get_topic_alias_from_props(props_)) {
@@ -7390,26 +7381,13 @@ private:
                                         }
                                     }
                                 }
-                                if (ep_.on_v5_publish(
-                                        packet_id_,
-                                        publish_options(ep_.fixed_header_),
-                                        force_move(topic_name_),
-                                        force_move(variant_get<buffer>(var)),
-                                        force_move(props_)
-                                    )
-                                ) {
-                                    ep_.on_mqtt_message_processed(
-                                        force_move(
-                                            std::get<0>(
-                                                any_cast<
-                                                    std::tuple<any, process_type_sp>
-                                                >(session_life_keeper)
-                                            )
-                                        )
-                                    );
-                                    return true;
-                                }
-                                break;
+                                return ep_.on_v5_publish(
+                                    packet_id_,
+                                    publish_options(ep_.fixed_header_),
+                                    force_move(topic_name_),
+                                    force_move(variant_get<buffer>(var)),
+                                    force_move(props_)
+                                );
                             default:
                                 BOOST_ASSERT(false);
                             }
@@ -7417,10 +7395,29 @@ private:
                         };
                     switch (qos_value_) {
                     case qos::at_most_once:
-                        handler_call();
+                        if (handler_call()) {
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                        std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
+                                    )
+                                )
+                            );
+                        }
                         break;
                     case qos::at_least_once:
                         if (handler_call()) {
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                        std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
+                                    )
+                                )
+                            );
                             ep_.auto_pub_response(
                                 [this] {
                                     if (ep_.connected_) {
@@ -7445,29 +7442,67 @@ private:
                         }
                         break;
                     case qos::exactly_once:
-                        if (handler_call()) {
-                            ep_.qos2_publish_handled_.emplace(*packet_id_);
-                            ep_.auto_pub_response(
-                                [this] {
-                                    if (ep_.connected_) {
-                                        ep_.send_pubrec(
-                                            *packet_id_,
-                                            v5::pubrec_reason_code::success,
-                                            v5::properties{}
-                                        );
+                        if (ep_.qos2_publish_handled_.find(*packet_id_) == ep_.qos2_publish_handled_.end()) {
+                            if (handler_call()) {
+                                ep_.on_mqtt_message_processed(
+                                    force_move(
+                                        std::get<0>(
+                                            any_cast<
+                                            std::tuple<any, process_type_sp>
+                                            >(session_life_keeper)
+                                        )
+                                    )
+                                );
+                                ep_.qos2_publish_handled_.emplace(*packet_id_);
+                                ep_.auto_pub_response(
+                                    [this] {
+                                        if (ep_.connected_) {
+                                            ep_.send_pubrec(
+                                                *packet_id_,
+                                                v5::pubrec_reason_code::success,
+                                                v5::properties{}
+                                            );
+                                        }
+                                    },
+                                    [this] {
+                                        if (ep_.connected_) {
+                                            ep_.async_send_pubrec(
+                                                *packet_id_,
+                                                v5::pubrec_reason_code::success,
+                                                v5::properties{},
+                                                [](auto){}
+                                            );
+                                        }
                                     }
-                                },
-                                [this] {
-                                    if (ep_.connected_) {
-                                        ep_.async_send_pubrec(
-                                            *packet_id_,
-                                            v5::pubrec_reason_code::success,
-                                            v5::properties{},
-                                            [](auto){}
-                                        );
-                                    }
-                                }
+                                );
+                            }
+                        }
+                        else {
+                            // publish has already been handled
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                        std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
+                                    )
+                                )
                             );
+                            if (ep_.async_notify_) {
+                                ep_.async_send_pubrec(
+                                    *packet_id_,
+                                    v5::pubrec_reason_code::success,
+                                    v5::properties{},
+                                    [](auto){}
+                                );
+                            }
+                            else {
+                                ep_.send_pubrec(
+                                    *packet_id_,
+                                    v5::pubrec_reason_code::success,
+                                    v5::properties{}
+                                );
+                            }
                         }
                         break;
                     }
@@ -10458,7 +10493,7 @@ private:
     std::set<packet_id_t> sub_unsub_inflight_;
     bool auto_pub_response_{true};
     bool auto_pub_response_async_{false};
-    bool async_error_notify_{false};
+    bool async_notify_{false};
     bool async_send_store_ { false };
     bool async_read_on_message_processed_ { true };
     bool disconnect_requested_{false};
