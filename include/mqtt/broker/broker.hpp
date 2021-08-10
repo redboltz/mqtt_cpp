@@ -1020,7 +1020,9 @@ private:
                             session_present,
                             v5::connect_reason_code::success,
                             v5::properties{
-                                v5::property::topic_alias_maximum{topic_alias_max}
+                                v5::property::topic_alias_maximum{topic_alias_max},
+                                v5::property::maximum_qos{qos::exactly_once},
+                                v5::property::receive_maximum{receive_maximum_max}
                             }
                         );
                     }
@@ -1423,7 +1425,7 @@ private:
     bool pubrec_handler(
         con_sp_t spep,
         packet_id_t packet_id,
-        v5::pubrec_reason_code /*reason_code*/,
+        v5::pubrec_reason_code reason_code,
         v5::properties /*props*/) {
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
@@ -1434,6 +1436,8 @@ private:
                 e.erase_inflight_message_by_packet_id(packet_id);
             }
         );
+
+        if (is_error(reason_code)) return true;
 
         auto& ep = *spep;
 
@@ -1454,7 +1458,7 @@ private:
     bool pubrel_handler(
         con_sp_t spep,
         packet_id_t packet_id,
-        v5::pubrel_reason_code /*reason_code*/,
+        v5::pubrel_reason_code reason_code,
         v5::properties /*props*/) {
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
@@ -1473,7 +1477,12 @@ private:
             ep.pubcomp(packet_id);
             break;
         case protocol_version::v5:
-            ep.pubcomp(packet_id, v5::pubcomp_reason_code::success, pubcomp_props_);
+            ep.pubcomp(
+                packet_id,
+                // pubcomp reason code is the same as pubrel one
+                static_cast<v5::pubcomp_reason_code>(reason_code),
+                pubcomp_props_
+            );
             break;
         default:
             BOOST_ASSERT(false);

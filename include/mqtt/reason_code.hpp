@@ -295,6 +295,11 @@ char const* puback_reason_code_to_str(puback_reason_code v) {
     }
 }
 
+constexpr
+bool is_error(puback_reason_code v) {
+    return static_cast<std::uint8_t>(v) >= 0x80;
+}
+
 inline
 std::ostream& operator<<(std::ostream& os, puback_reason_code val)
 {
@@ -329,6 +334,11 @@ char const* pubrec_reason_code_to_str(pubrec_reason_code v) {
     case pubrec_reason_code::payload_format_invalid:        return "payload_format_invalid";
     default:                                                return "unknown_pubrec_reason_code";
     }
+}
+
+constexpr
+bool is_error(pubrec_reason_code v) {
+    return static_cast<std::uint8_t>(v) >= 0x80;
 }
 
 inline
