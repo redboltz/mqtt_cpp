@@ -819,7 +819,7 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
         (MQTT_NS::error_code) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
-                restore_serialized_message(c2, e);
+                restore_v5_serialized_message(c2, e);
             }
             // TCP level disconnection detecting timing is unpredictable.
             // Sometimes broker first, sometimes the client (this test) first.
@@ -964,7 +964,7 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
         (MQTT_NS::error_code) {
             MQTT_CHK("h_error");
             for (auto const& e : serialized) {
-                restore_serialized_message(c2, e);
+                restore_v5_serialized_message(c2, e);
             }
             // TCP level disconnection detecting timing is unpredictable.
             // Sometimes broker first, sometimes the client (this test) first.
@@ -1320,7 +1320,7 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
         (MQTT_NS::error_code) {
             MQTT_CHK("h_error1");
             for (auto const& e : serialized) {
-                restore_serialized_message(c2, e);
+                restore_v5_serialized_message(c2, e);
             }
             // TCP level disconnection detecting timing is unpredictable.
             // Sometimes broker first, sometimes the client (this test) first.

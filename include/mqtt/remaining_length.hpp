@@ -16,7 +16,7 @@ namespace MQTT_NS {
 inline std::string
 remaining_bytes(std::size_t size) {
     std::string bytes = variable_bytes(size);
-    if (bytes.empty()) throw remaining_length_error();
+    if (bytes.empty() || bytes.size() > 4) throw remaining_length_error();
     return bytes;
 }
 
