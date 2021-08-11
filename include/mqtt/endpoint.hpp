@@ -4601,7 +4601,7 @@ public:
             [&](auto msg, auto const& serialize, auto const& receive_maximum_proc) {
                 auto msg_lk = apply_topic_alias(msg, life_keeper);
                 if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
-                    throw protocol_error();
+                    throw packet_size_error();
                 }
                 preprocess_publish_message(
                     msg,
@@ -4616,7 +4616,7 @@ public:
         auto pubrel_proc =
             [&](auto msg, auto const& serialize) {
                 if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                    throw protocol_error();
+                    throw packet_size_error();
                 }
 
                 auto packet_id = msg.packet_id();
@@ -9390,7 +9390,7 @@ private:
                 variant_get<connect_return_code>(reason_code)
             );
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
@@ -9611,7 +9611,7 @@ private:
                         LockGuard<Mutex> lck_store (store_mtx_);
                         pid_man_.release_id(packet_id);
                     }
-                    throw protocol_error();
+                    throw packet_size_error();
                 }
                 if (preprocess_publish_message(
                         msg,
@@ -9678,14 +9678,14 @@ private:
         case protocol_version::v3_1_1: {
             auto msg = v3_1_1::basic_puback_message<PacketIdBytes>(packet_id);
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
         case protocol_version::v5: {
             auto msg = v5::basic_puback_message<PacketIdBytes>(packet_id, reason, force_move(props));
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
             erase_publish_received(packet_id);
@@ -9707,14 +9707,14 @@ private:
         case protocol_version::v3_1_1: {
             auto msg = v3_1_1::basic_pubrec_message<PacketIdBytes>(packet_id);
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
         case protocol_version::v5: {
             auto msg = v5::basic_pubrec_message<PacketIdBytes>(packet_id, reason, force_move(props));
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
             erase_publish_received(packet_id);
@@ -9736,7 +9736,7 @@ private:
             [&](auto msg, auto const& serialize) {
                 {
                     if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                        throw protocol_error();
+                        throw packet_size_error();
                     }
 
                     LockGuard<Mutex> lck (store_mtx_);
@@ -9854,14 +9854,14 @@ private:
         case protocol_version::v3_1_1: {
             auto msg = v3_1_1::basic_pubcomp_message<PacketIdBytes>(packet_id);
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
         case protocol_version::v5: {
             auto msg = v5::basic_pubcomp_message<PacketIdBytes>(packet_id, reason, force_move(props));
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
@@ -9895,7 +9895,7 @@ private:
                     LockGuard<Mutex> lck_store (store_mtx_);
                     pid_man_.release_id(packet_id);
                 }
-                throw protocol_error();
+                throw packet_size_error();
             }
             {
                 LockGuard<Mutex> lck (sub_unsub_inflight_mtx_);
@@ -9910,7 +9910,7 @@ private:
                     LockGuard<Mutex> lck_store (store_mtx_);
                     pid_man_.release_id(packet_id);
                 }
-                throw protocol_error();
+                throw packet_size_error();
             }
             {
                 LockGuard<Mutex> lck (sub_unsub_inflight_mtx_);
@@ -9936,7 +9936,7 @@ private:
                 packet_id
             );
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
@@ -9947,7 +9947,7 @@ private:
                 force_move(props)
             );
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
@@ -9970,7 +9970,7 @@ private:
                     LockGuard<Mutex> lck_store (store_mtx_);
                     pid_man_.release_id(packet_id);
                 }
-                throw protocol_error();
+                throw packet_size_error();
             }
             {
                 LockGuard<Mutex> lck (sub_unsub_inflight_mtx_);
@@ -9985,7 +9985,7 @@ private:
                     LockGuard<Mutex> lck_store (store_mtx_);
                     pid_man_.release_id(packet_id);
                 }
-                throw protocol_error();
+                throw packet_size_error();
             }
             {
                 LockGuard<Mutex> lck (sub_unsub_inflight_mtx_);
@@ -10006,7 +10006,7 @@ private:
         case protocol_version::v3_1_1: {
             auto msg = v3_1_1::basic_unsuback_message<PacketIdBytes>(packet_id);
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
@@ -10031,7 +10031,7 @@ private:
         case protocol_version::v5: {
             auto msg = v5::basic_unsuback_message<PacketIdBytes>(force_move(params), packet_id, force_move(props));
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
@@ -10046,7 +10046,7 @@ private:
         case protocol_version::v3_1_1: {
             auto msg = v3_1_1::pingreq_message();
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
             set_pingresp_timer();
@@ -10054,7 +10054,7 @@ private:
         case protocol_version::v5: {
             auto msg = v5::pingreq_message();
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
             set_pingresp_timer();
@@ -10070,14 +10070,14 @@ private:
         case protocol_version::v3_1_1: {
             auto msg = v3_1_1::pingresp_message();
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
         case protocol_version::v5: {
             auto msg = v5::pingresp_message();
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
@@ -10098,7 +10098,7 @@ private:
         case protocol_version::v5: {
             auto msg = v5::auth_message(reason, force_move(props));
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
@@ -10116,14 +10116,14 @@ private:
         case protocol_version::v3_1_1: {
             auto msg = v3_1_1::disconnect_message();
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
         case protocol_version::v5: {
             auto msg = v5::disconnect_message(reason, force_move(props));
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw protocol_error();
+                throw packet_size_error();
             }
             do_sync_write(force_move(msg));
         } break;
