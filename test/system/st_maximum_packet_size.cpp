@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE( sync ) {
                     );
                     BOOST_TEST(false);
                 }
-                catch (MQTT_NS::protocol_error const&) {
+                catch (MQTT_NS::packet_size_error const&) {
                     MQTT_CHK("publish101_exception");
                 }
                 return true;
