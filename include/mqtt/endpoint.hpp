@@ -10828,7 +10828,10 @@ private:
                 );
                 return;
             }
-            do_async_write(force_move(msg));
+            do_async_write(
+                force_move(msg),
+                force_move(func)
+            );
         } break;
         case protocol_version::v5:
             BOOST_ASSERT(false);
