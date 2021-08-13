@@ -7,8 +7,6 @@
 #if !defined(MQTT_NULL_STRAND_HPP)
 #define MQTT_NULL_STRAND_HPP
 
-#if !defined(MQTT_NO_TS_EXECUTORS)
-
 #include <utility>
 
 #include <boost/asio.hpp>
@@ -70,7 +68,5 @@ struct is_executor<MQTT_NS::null_strand> : std::true_type {
 
 } // namespace asio
 } // namespace boost
-
-#endif // MQTT_NO_TS_EXECUTORS
 
 #endif // MQTT_NULL_STRAND_HPP

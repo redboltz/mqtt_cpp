@@ -16,9 +16,12 @@
 #include <mqtt/tcp_endpoint.hpp>
 
 #include <mqtt/endpoint.hpp>
-#include <mqtt/null_strand.hpp>
 #include <mqtt/move.hpp>
 #include <mqtt/callable_overlay.hpp>
+
+#if !defined(MQTT_NO_TS_EXECUTORS)
+#include <mqtt/null_strand.hpp>
+#endif
 
 namespace MQTT_NS {
 
