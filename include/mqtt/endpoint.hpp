@@ -2148,14 +2148,16 @@ public:
      *       life_keeper parameter is important.
      */
     template <typename T, typename... Params>
-    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value >
+    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value, packet_id_t >
     async_publish(T&& t, Params&&... params) {
         if(detail::should_generate_packet_id(params...)) {
             packet_id_t packet_id = acquire_unique_packet_id();
             async_publish(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
+            return packet_id;
         }
         else {
             async_publish(0, std::forward<T>(t), std::forward<Params>(params)...);
+            return 0;
         }
     }
 
@@ -2232,10 +2234,11 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
     template <typename T, typename... Params>
-    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value >
+    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value, packet_id_t >
     async_subscribe(T&& t, Params&&... params) {
         packet_id_t packet_id = acquire_unique_packet_id();
         async_subscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
+        return packet_id;
     }
 
     /**
@@ -2249,10 +2252,11 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
     template <typename T, typename... Params>
-    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value >
+    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value, packet_id_t >
     async_unsubscribe(T&& t, Params&&... params) {
         packet_id_t packet_id = acquire_unique_packet_id();
         async_unsubscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
+        return packet_id;
     }
 
     /**
@@ -2754,7 +2758,7 @@ public:
         packet_id_t packet_id,
         as::const_buffer topic_filter,
         subscribe_options option,
-        async_handler_t func
+        async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -2800,7 +2804,7 @@ public:
         as::const_buffer topic_filter,
         subscribe_options option,
         v5::properties props,
-        async_handler_t func
+        async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3026,7 +3030,7 @@ public:
     void async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
-        async_handler_t func
+        async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3060,7 +3064,7 @@ public:
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         v5::properties props,
-        async_handler_t func
+        async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3213,7 +3217,7 @@ public:
     void async_unsubscribe(
         packet_id_t packet_id,
         as::const_buffer topic_filter,
-        async_handler_t func
+        async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3407,7 +3411,7 @@ public:
     void async_unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
-        async_handler_t func
+        async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3443,7 +3447,7 @@ public:
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
         v5::properties props,
-        async_handler_t func
+        async_handler_t func = {}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
