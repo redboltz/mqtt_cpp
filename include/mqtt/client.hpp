@@ -24,10 +24,8 @@
 #include <mqtt/move.hpp>
 #include <mqtt/constant.hpp>
 #include <mqtt/callable_overlay.hpp>
-
-#if !defined(MQTT_NO_TS_EXECUTORS)
+#include <mqtt/strand.hpp>
 #include <mqtt/null_strand.hpp>
-#endif
 
 namespace MQTT_NS {
 
@@ -63,11 +61,7 @@ public:
             client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -86,11 +80,7 @@ public:
             client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -112,11 +102,7 @@ public:
             client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -136,11 +122,7 @@ public:
             client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -161,11 +143,7 @@ public:
             client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -184,11 +162,7 @@ public:
             client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -210,11 +184,7 @@ public:
             client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -234,11 +204,7 @@ public:
             client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -259,11 +225,7 @@ public:
             client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -283,11 +245,7 @@ public:
             client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -310,11 +268,7 @@ public:
             client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -335,11 +289,7 @@ public:
             client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -361,11 +311,7 @@ public:
             client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -385,11 +331,7 @@ public:
             client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -412,11 +354,7 @@ public:
             client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -437,11 +375,7 @@ public:
             client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -1632,11 +1566,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -1645,11 +1575,7 @@ make_client(as::io_context& ioc, std::string host, std::string port, protocol_ve
     using client_t = client<
         tcp_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >
     >;
     return std::make_shared<callable_overlay<client_t>>(
@@ -1669,11 +1595,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -1692,11 +1614,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -1705,11 +1623,7 @@ make_client_no_strand(as::io_context& ioc, std::string host, std::string port, p
     using client_t = client<
         tcp_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >
     >;
     return std::make_shared<callable_overlay<client_t>>(
@@ -1729,11 +1643,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -1754,11 +1664,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -1767,11 +1673,7 @@ make_client_ws(as::io_context& ioc, std::string host, std::string port, std::str
     using client_t = client<
         ws_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >
     >;
     return std::make_shared<callable_overlay<client_t>>(
@@ -1789,11 +1691,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -1813,11 +1711,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -1826,11 +1720,7 @@ make_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port
     using client_t = client<
         ws_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >
     >;
     return std::make_shared<callable_overlay<client_t>>(
@@ -1848,11 +1738,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -1876,11 +1762,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -1889,11 +1771,7 @@ make_tls_client(as::io_context& ioc, std::string host, std::string port, protoco
     using client_t = client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >
     >;
     return std::make_shared<callable_overlay<client_t>>(
@@ -1913,11 +1791,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -1936,11 +1810,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -1949,11 +1819,7 @@ make_tls_client_no_strand(as::io_context& ioc, std::string host, std::string por
     using client_t = client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >
     >;
     return std::make_shared<callable_overlay<client_t>>(
@@ -1973,11 +1839,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -1998,11 +1860,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -2011,11 +1869,7 @@ make_tls_client_ws(as::io_context& ioc, std::string host, std::string port, std:
     using client_t = client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >
     >;
     return std::make_shared<callable_overlay<client_t>>(
@@ -2033,11 +1887,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -2057,11 +1907,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -2070,11 +1916,7 @@ make_tls_client_no_strand_ws(as::io_context& ioc, std::string host, std::string 
     using client_t = client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >
     >;
     return std::make_shared<callable_overlay<client_t>>(
@@ -2092,11 +1934,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -2123,11 +1961,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -2137,11 +1971,7 @@ make_client_32(as::io_context& ioc, std::string host, std::string port, protocol
     using client_t = client<
         tcp_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >,
         4
     >;
@@ -2162,11 +1992,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -2186,11 +2012,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -2200,11 +2022,7 @@ make_client_no_strand_32(as::io_context& ioc, std::string host, std::string port
     using client_t = client<
         tcp_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >,
         4
     >;
@@ -2225,11 +2043,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -2251,11 +2065,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -2265,11 +2075,7 @@ make_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::
     using client_t = client<
         ws_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >,
         4
     >;
@@ -2288,11 +2094,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -2313,11 +2115,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -2327,11 +2125,7 @@ make_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string p
     using client_t = client<
         ws_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >,
         4
     >;
@@ -2350,11 +2144,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -2379,11 +2169,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -2393,11 +2179,7 @@ make_tls_client_32(as::io_context& ioc, std::string host, std::string port, prot
     using client_t = client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >,
         4
     >;
@@ -2418,11 +2200,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -2442,11 +2220,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -2456,11 +2230,7 @@ make_tls_client_no_strand_32(as::io_context& ioc, std::string host, std::string 
     using client_t = client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >,
         4
     >;
@@ -2481,11 +2251,7 @@ inline std::shared_ptr<
             client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -2507,11 +2273,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -2521,11 +2283,7 @@ make_tls_client_ws_32(as::io_context& ioc, std::string host, std::string port, s
     using client_t = client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >,
         4
     >;
@@ -2544,11 +2302,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -2569,11 +2323,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -2583,11 +2333,7 @@ make_tls_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::stri
     using client_t = client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >,
         4
     >;
@@ -2606,11 +2352,7 @@ inline std::shared_ptr<
             client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >

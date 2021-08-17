@@ -41,11 +41,7 @@ public:
             async_client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -64,11 +60,7 @@ public:
             async_client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -90,11 +82,7 @@ public:
             async_client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -114,11 +102,7 @@ public:
             async_client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -139,11 +123,7 @@ public:
             async_client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -162,11 +142,7 @@ public:
             async_client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -188,11 +164,7 @@ public:
             async_client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -212,11 +184,7 @@ public:
             async_client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -237,11 +205,7 @@ public:
             async_client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -261,11 +225,7 @@ public:
             async_client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -288,11 +248,7 @@ public:
             async_client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -313,11 +269,7 @@ public:
             async_client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -339,11 +291,7 @@ public:
             async_client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -363,11 +311,7 @@ public:
             async_client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -390,11 +334,7 @@ public:
             async_client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -415,11 +355,7 @@ public:
             async_client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -492,11 +428,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -505,11 +437,7 @@ make_async_client(as::io_context& ioc, std::string host, std::string port, proto
     using async_client_t = async_client<
         tcp_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >
     >;
     return std::make_shared<callable_overlay<async_client_t>>(
@@ -529,11 +457,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -552,11 +476,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -565,11 +485,7 @@ make_async_client_no_strand(as::io_context& ioc, std::string host, std::string p
     using async_client_t = async_client<
         tcp_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >
     >;
     return std::make_shared<callable_overlay<async_client_t>>(
@@ -589,11 +505,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -614,11 +526,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -627,11 +535,7 @@ make_async_client_ws(as::io_context& ioc, std::string host, std::string port, st
     using async_client_t = async_client<
         ws_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >
     >;
     return std::make_shared<callable_overlay<async_client_t>>(
@@ -649,11 +553,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -673,11 +573,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -686,11 +582,7 @@ make_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::strin
     using async_client_t = async_client<
         ws_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >
     >;
     return std::make_shared<callable_overlay<async_client_t>>(
@@ -708,11 +600,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -736,11 +624,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -749,11 +633,7 @@ make_tls_async_client(as::io_context& ioc, std::string host, std::string port, p
     using async_client_t = async_client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >
     >;
     return std::make_shared<callable_overlay<async_client_t>>(
@@ -773,11 +653,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -796,11 +672,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -809,11 +681,7 @@ make_tls_async_client_no_strand(as::io_context& ioc, std::string host, std::stri
     using async_client_t = async_client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >
     >;
     return std::make_shared<callable_overlay<async_client_t>>(
@@ -833,11 +701,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -858,11 +722,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -871,11 +731,7 @@ make_tls_async_client_ws(as::io_context& ioc, std::string host, std::string port
     using async_client_t = async_client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >
     >;
     return std::make_shared<callable_overlay<async_client_t>>(
@@ -893,11 +749,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >
             >
         >
@@ -917,11 +769,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -930,11 +778,7 @@ make_tls_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::s
     using async_client_t = async_client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >
     >;
     return std::make_shared<callable_overlay<async_client_t>>(
@@ -952,11 +796,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >
             >
         >
@@ -983,11 +823,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -997,11 +833,7 @@ make_async_client_32(as::io_context& ioc, std::string host, std::string port, pr
     using async_client_t = async_client<
         tcp_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >,
         4
     >;
@@ -1022,11 +854,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -1046,11 +874,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -1060,11 +884,7 @@ make_async_client_no_strand_32(as::io_context& ioc, std::string host, std::strin
     using async_client_t = async_client<
         tcp_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >,
         4
     >;
@@ -1085,11 +905,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -1111,11 +927,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -1125,11 +937,7 @@ make_async_client_ws_32(as::io_context& ioc, std::string host, std::string port,
     using async_client_t = async_client<
         ws_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >,
         4
     >;
@@ -1148,11 +956,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -1173,11 +977,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -1187,11 +987,7 @@ make_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::st
     using async_client_t = async_client<
         ws_endpoint<
             as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >,
         4
     >;
@@ -1210,11 +1006,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     as::ip::tcp::socket,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -1239,11 +1031,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -1253,11 +1041,7 @@ make_tls_async_client_32(as::io_context& ioc, std::string host, std::string port
     using async_client_t = async_client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >,
         4
     >;
@@ -1278,11 +1062,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -1302,11 +1082,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -1316,11 +1092,7 @@ make_tls_async_client_no_strand_32(as::io_context& ioc, std::string host, std::s
     using async_client_t = async_client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >,
         4
     >;
@@ -1341,11 +1113,7 @@ inline std::shared_ptr<
             async_client<
                 tcp_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -1367,11 +1135,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -1381,11 +1145,7 @@ make_tls_async_client_ws_32(as::io_context& ioc, std::string host, std::string p
     using async_client_t = async_client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::strand<as::io_context::executor_type>
-#else
-            as::io_context::strand
-#endif
+            strand
         >,
         4
     >;
@@ -1404,11 +1164,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::strand<as::io_context::executor_type>
-#else
-                    as::io_context::strand
-#endif
+                    strand
                 >,
                 4
             >
@@ -1429,11 +1185,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >
@@ -1443,11 +1195,7 @@ make_tls_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std
     using async_client_t = async_client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-            as::io_context::executor_type
-#else
             null_strand
-#endif
         >,
         4
     >;
@@ -1466,11 +1214,7 @@ inline std::shared_ptr<
             async_client<
                 ws_endpoint<
                     tls::stream<as::ip::tcp::socket>,
-#if defined(MQTT_NO_TS_EXECUTORS)
-                    as::io_context::executor_type
-#else
                     null_strand
-#endif
                 >,
                 4
             >

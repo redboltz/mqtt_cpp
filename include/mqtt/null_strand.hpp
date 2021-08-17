@@ -17,8 +17,18 @@ namespace MQTT_NS {
 
 namespace as = boost::asio;
 
+// Determines which strand to use
+#if defined(MQTT_NO_TS_EXECUTORS)
+
+// Using standard executor style null_strand / simple executor
+using null_strand = as::io_context::executor_type;
+
+#else // defined(MQTT_NO_TS_EXECUTORS)
+
+namespace detail {
+
 struct null_strand {
-    null_strand(as::io_context& ioc) noexcept : ioc_(ioc) {}
+    explicit null_strand(as::io_context& ioc) noexcept : ioc_(ioc) {}
     template <typename Func, typename Allocator>
     void post(Func&& f, Allocator) const {
         as::post(
@@ -49,6 +59,11 @@ private:
     as::io_context& ioc_;
 };
 
+} // namespace detail
+
+// Use networking TS style null_strand
+using null_strand = detail::null_strand;
+
 inline bool operator==(null_strand const& lhs, null_strand const& rhs) {
     return std::addressof(lhs) == std::addressof(rhs);
 }
@@ -57,7 +72,12 @@ inline bool operator!=(null_strand const& lhs, null_strand const& rhs) {
     return !(lhs == rhs);
 }
 
+#endif // defined(MQTT_NO_TS_EXECUTORS)
+
 } // namespace MQTT_NS
+
+
+#if !defined(MQTT_NO_TS_EXECUTORS)
 
 namespace boost {
 namespace asio {
@@ -68,5 +88,7 @@ struct is_executor<MQTT_NS::null_strand> : std::true_type {
 
 } // namespace asio
 } // namespace boost
+
+#endif // !defined(MQTT_NO_TS_EXECUTORS)
 
 #endif // MQTT_NULL_STRAND_HPP

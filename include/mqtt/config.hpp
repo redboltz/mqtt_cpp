@@ -35,6 +35,9 @@
 // Check whether to use standard executors only
 #if defined(MQTT_NO_TS_EXECUTORS)
 
+// Determine Boost Asio version
+#include <boost/asio/version.hpp>
+
 // Make sure standard executors are supported by Boost Asio
 #if BOOST_ASIO_VERSION < 101800
 #error Boost Asio version 1.18.0 required for no TS-style executors

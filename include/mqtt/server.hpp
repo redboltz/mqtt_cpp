@@ -18,10 +18,8 @@
 #include <mqtt/endpoint.hpp>
 #include <mqtt/move.hpp>
 #include <mqtt/callable_overlay.hpp>
-
-#if !defined(MQTT_NO_TS_EXECUTORS)
+#include <mqtt/strand.hpp>
 #include <mqtt/null_strand.hpp>
-#endif
 
 namespace MQTT_NS {
 
@@ -40,11 +38,7 @@ protected:
 };
 
 template <
-#if defined(MQTT_NO_TS_EXECUTORS)
-    typename Strand = as::strand<as::io_context::executor_type>,
-#else
-    typename Strand = as::io_context::strand,
-#endif
+    typename Strand = strand,
     typename Mutex = std::mutex,
     template<typename...> class LockGuard = std::lock_guard,
     std::size_t PacketIdBytes = 2
@@ -202,11 +196,7 @@ private:
 #if defined(MQTT_USE_TLS)
 
 template <
-#if defined(MQTT_NO_TS_EXECUTORS)
-    typename Strand = as::strand<as::io_context::executor_type>,
-#else
-    typename Strand = as::io_context::strand,
-#endif
+    typename Strand = strand,
     typename Mutex = std::mutex,
     template<typename...> class LockGuard = std::lock_guard,
     std::size_t PacketIdBytes = 2
@@ -430,11 +420,7 @@ private:
 #if defined(MQTT_USE_WS)
 
 template <
-#if defined(MQTT_NO_TS_EXECUTORS)
-    typename Strand = as::strand<as::io_context::executor_type>,
-#else
-    typename Strand = as::io_context::strand,
-#endif
+    typename Strand = strand,
     typename Mutex = std::mutex,
     template<typename...> class LockGuard = std::lock_guard,
     std::size_t PacketIdBytes = 2
@@ -699,11 +685,7 @@ private:
 #if defined(MQTT_USE_TLS)
 
 template <
-#if defined(MQTT_NO_TS_EXECUTORS)
-    typename Strand = as::strand<as::io_context::executor_type>,
-#else
-    typename Strand = as::io_context::strand,
-#endif
+    typename Strand = strand,
     typename Mutex = std::mutex,
     template<typename...> class LockGuard = std::lock_guard,
     std::size_t PacketIdBytes = 2
