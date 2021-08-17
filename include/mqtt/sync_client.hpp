@@ -25,7 +25,7 @@ public:
      * Constructor used by factory functions at the end of this file.
      */
     template<typename ... Args>
-    sync_client(constructor_access, Args && ... args)
+    explicit sync_client(constructor_access, Args && ... args)
      : sync_client(std::forward<Args>(args)...)
     { }
 
@@ -36,7 +36,16 @@ public:
      * @param port port number
      * @return sync_client object
      */
-    friend std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_context::strand>>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    as::ip::tcp::socket,
+                    strand
+                >
+            >
+        >
+    >
     make_sync_client(as::io_context& ioc, std::string host, std::string port, protocol_version version);
 
     /**
@@ -46,7 +55,16 @@ public:
      * @param port port number
      * @return sync_client object
      */
-    friend std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+                >
+            >
+        >
+    >
     make_sync_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
@@ -59,7 +77,16 @@ public:
      * @return sync_client object.
      *  strand is controlled by ws_endpoint, not endpoint, so sync_client has null_strand template argument.
      */
-    friend std::shared_ptr<callable_overlay<sync_client<ws_endpoint<as::ip::tcp::socket, as::io_context::strand>>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    as::ip::tcp::socket,
+                    strand
+                >
+            >
+        >
+    >
     make_sync_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
@@ -70,7 +97,16 @@ public:
      * @param path path string
      * @return sync_client object
      */
-    friend std::shared_ptr<callable_overlay<sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+                >
+            >
+        >
+    >
     make_sync_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 
@@ -82,7 +118,16 @@ public:
      * @param port port number
      * @return sync_client object
      */
-    friend std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    strand
+                >
+            >
+        >
+    >
     make_tls_sync_client(as::io_context& ioc, std::string host, std::string port, protocol_version version);
 
     /**
@@ -92,7 +137,16 @@ public:
      * @param port port number
      * @return sync_client object
      */
-    friend std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    null_strand
+                >
+            >
+        >
+    >
     make_tls_sync_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
@@ -105,7 +159,16 @@ public:
      * @return sync_client object.
      *  strand is controlled by ws_endpoint, not endpoint, so sync_client has null_strand template argument.
      */
-    friend std::shared_ptr<callable_overlay<sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    strand
+                >
+            >
+        >
+    >
     make_tls_sync_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
@@ -116,7 +179,16 @@ public:
      * @param path path string
      * @return sync_client object
      */
-    friend std::shared_ptr<callable_overlay<sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    null_strand
+                >
+            >
+        >
+    >
     make_tls_sync_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_USE_TLS)
@@ -128,7 +200,17 @@ public:
      * @param port port number
      * @return sync_client object
      */
-    friend std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_context::strand>, 4>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    as::ip::tcp::socket,
+                    strand
+                >,
+                4
+            >
+        >
+    >
     make_sync_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
 
     /**
@@ -138,7 +220,17 @@ public:
      * @param port port number
      * @return sync_client object
      */
-    friend std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+                >,
+                4
+            >
+        >
+    >
     make_sync_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
@@ -151,7 +243,17 @@ public:
      * @return sync_client object.
      *  strand is controlled by ws_endpoint, not endpoint, so sync_client has null_strand template argument.
      */
-    friend std::shared_ptr<callable_overlay<sync_client<ws_endpoint<as::ip::tcp::socket, as::io_context::strand>, 4>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    as::ip::tcp::socket,
+                    strand
+                >,
+                4
+            >
+        >
+    >
     make_sync_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
@@ -162,7 +264,17 @@ public:
      * @param path path string
      * @return sync_client object
      */
-    friend std::shared_ptr<callable_overlay<sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+                >,
+                4
+            >
+        >
+    >
     make_sync_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 
@@ -174,7 +286,17 @@ public:
      * @param port port number
      * @return sync_client object
      */
-    friend std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    strand
+                >,
+                4
+            >
+        >
+    >
     make_tls_sync_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
 
     /**
@@ -184,7 +306,17 @@ public:
      * @param port port number
      * @return sync_client object
      */
-    friend std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>, 4>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    null_strand
+                >,
+                4
+            >
+        >
+    >
     make_tls_sync_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
@@ -197,7 +329,17 @@ public:
      * @return sync_client object.
      *  strand is controlled by ws_endpoint, not endpoint, so sync_client has null_strand template argument.
      */
-    friend std::shared_ptr<callable_overlay<sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    strand
+                >,
+                4
+            >
+        >
+    >
     make_tls_sync_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
@@ -208,7 +350,17 @@ public:
      * @param path path string
      * @return sync_client object
      */
-    friend std::shared_ptr<callable_overlay<sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>, 4>>>
+    friend std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    null_strand
+                >,
+                4
+            >
+        >
+    >
     make_tls_sync_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_USE_TLS)
@@ -268,9 +420,23 @@ protected:
     }
 };
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_context::strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    as::ip::tcp::socket,
+                    strand
+                >
+            >
+        >
+    >
 make_sync_client(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_context::strand>>;
+    using sync_client_t = sync_client<
+        tcp_endpoint<
+            as::ip::tcp::socket,
+            strand
+        >
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -283,7 +449,16 @@ make_sync_client(as::io_context& ioc, std::string host, std::string port, protoc
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_context::strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    as::ip::tcp::socket,
+                    strand
+                >
+            >
+        >
+    >
 make_sync_client(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_sync_client(
         ioc,
@@ -293,9 +468,22 @@ make_sync_client(as::io_context& ioc, std::string host, std::uint16_t port, prot
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+                >
+            >
+        >
+    >
 make_sync_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>>;
+    using sync_client_t = sync_client<
+        tcp_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+        >>;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -308,7 +496,16 @@ make_sync_client_no_strand(as::io_context& ioc, std::string host, std::string po
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+                >
+            >
+        >
+    >
 make_sync_client_no_strand(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_sync_client_no_strand(
         ioc,
@@ -320,9 +517,23 @@ make_sync_client_no_strand(as::io_context& ioc, std::string host, std::uint16_t 
 
 #if defined(MQTT_USE_WS)
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<as::ip::tcp::socket, as::io_context::strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    as::ip::tcp::socket,
+                    strand
+                >
+            >
+        >
+    >
 make_sync_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<ws_endpoint<as::ip::tcp::socket, as::io_context::strand>>;
+    using sync_client_t = sync_client<
+        ws_endpoint<
+            as::ip::tcp::socket,
+            strand
+        >
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -333,7 +544,16 @@ make_sync_client_ws(as::io_context& ioc, std::string host, std::string port, std
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<as::ip::tcp::socket, as::io_context::strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    as::ip::tcp::socket,
+                    strand
+                >
+            >
+        >
+    >
 make_sync_client_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_sync_client_ws(
         ioc,
@@ -344,9 +564,23 @@ make_sync_client_ws(as::io_context& ioc, std::string host, std::uint16_t port, s
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+                >
+            >
+        >
+    >
 make_sync_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>>;
+    using sync_client_t = sync_client<
+        ws_endpoint<
+            as::ip::tcp::socket,
+            null_strand
+        >
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -357,7 +591,16 @@ make_sync_client_no_strand_ws(as::io_context& ioc, std::string host, std::string
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+                >
+            >
+        >
+    >
 make_sync_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_sync_client_no_strand_ws(
         ioc,
@@ -372,9 +615,23 @@ make_sync_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16
 
 #if defined(MQTT_USE_TLS)
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    strand
+                >
+            >
+        >
+    >
 make_tls_sync_client(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>>;
+    using sync_client_t = sync_client<
+        tcp_endpoint<
+            tls::stream<as::ip::tcp::socket>,
+            strand
+        >
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -387,7 +644,16 @@ make_tls_sync_client(as::io_context& ioc, std::string host, std::string port, pr
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    strand
+                >
+            >
+        >
+    >
 make_tls_sync_client(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_sync_client(
         ioc,
@@ -397,9 +663,23 @@ make_tls_sync_client(as::io_context& ioc, std::string host, std::uint16_t port, 
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    null_strand
+                >
+            >
+        >
+    >
 make_tls_sync_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>>;
+    using sync_client_t = sync_client<
+        tcp_endpoint<
+            tls::stream<as::ip::tcp::socket>,
+            null_strand
+        >
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -412,7 +692,16 @@ make_tls_sync_client_no_strand(as::io_context& ioc, std::string host, std::strin
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    null_strand
+                >
+            >
+        >
+    >
 make_tls_sync_client_no_strand(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_sync_client_no_strand(
         ioc,
@@ -424,9 +713,23 @@ make_tls_sync_client_no_strand(as::io_context& ioc, std::string host, std::uint1
 
 #if defined(MQTT_USE_WS)
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    strand
+                >
+            >
+        >
+    >
 make_tls_sync_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>>;
+    using sync_client_t = sync_client<
+        ws_endpoint<
+            tls::stream<as::ip::tcp::socket>,
+            strand
+        >
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -437,7 +740,16 @@ make_tls_sync_client_ws(as::io_context& ioc, std::string host, std::string port,
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    strand
+                >
+            >
+        >
+    >
 make_tls_sync_client_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_sync_client_ws(
         ioc,
@@ -448,9 +760,23 @@ make_tls_sync_client_ws(as::io_context& ioc, std::string host, std::uint16_t por
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    null_strand
+                >
+            >
+        >
+    >
 make_tls_sync_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>>;
+    using sync_client_t = sync_client<
+        ws_endpoint<
+            tls::stream<as::ip::tcp::socket>,
+            null_strand
+        >
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -461,7 +787,16 @@ make_tls_sync_client_no_strand_ws(as::io_context& ioc, std::string host, std::st
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    null_strand
+                >
+            >
+        >
+    >
 make_tls_sync_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_sync_client_no_strand_ws(
         ioc,
@@ -479,9 +814,25 @@ make_tls_sync_client_no_strand_ws(as::io_context& ioc, std::string host, std::ui
 
 // 32bit Packet Id (experimental)
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_context::strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    as::ip::tcp::socket,
+                    strand
+                >,
+                4
+            >
+        >
+    >
 make_sync_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_context::strand>, 4>;
+    using sync_client_t = sync_client<
+        tcp_endpoint<
+            as::ip::tcp::socket,
+            strand
+        >,
+        4
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -494,7 +845,17 @@ make_sync_client_32(as::io_context& ioc, std::string host, std::string port, pro
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<as::ip::tcp::socket, as::io_context::strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    as::ip::tcp::socket,
+                    strand
+                >,
+                4
+            >
+        >
+    >
 make_sync_client_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_sync_client_32(
         ioc,
@@ -504,9 +865,25 @@ make_sync_client_32(as::io_context& ioc, std::string host, std::uint16_t port, p
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+                >,
+                4
+            >
+        >
+    >
 make_sync_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>;
+    using sync_client_t = sync_client<
+        tcp_endpoint<
+            as::ip::tcp::socket,
+            null_strand
+        >,
+        4
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -519,7 +896,17 @@ make_sync_client_no_strand_32(as::io_context& ioc, std::string host, std::string
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<as::ip::tcp::socket, null_strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+                >,
+                4
+            >
+        >
+    >
 make_sync_client_no_strand_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_sync_client_no_strand_32(
         ioc,
@@ -531,9 +918,25 @@ make_sync_client_no_strand_32(as::io_context& ioc, std::string host, std::uint16
 
 #if defined(MQTT_USE_WS)
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<as::ip::tcp::socket, as::io_context::strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    as::ip::tcp::socket,
+                    strand
+                >,
+                4
+            >
+        >
+    >
 make_sync_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<ws_endpoint<as::ip::tcp::socket, as::io_context::strand>, 4>;
+    using sync_client_t = sync_client<
+        ws_endpoint<
+            as::ip::tcp::socket,
+            strand
+        >,
+        4
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -544,7 +947,17 @@ make_sync_client_ws_32(as::io_context& ioc, std::string host, std::string port, 
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<as::ip::tcp::socket, as::io_context::strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    as::ip::tcp::socket,
+                    strand
+                >,
+                4
+            >
+        >
+    >
 make_sync_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_sync_client_ws_32(
         ioc,
@@ -555,9 +968,25 @@ make_sync_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t port
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+                >,
+                4
+            >
+        >
+    >
 make_sync_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>;
+    using sync_client_t = sync_client<
+        ws_endpoint<
+            as::ip::tcp::socket,
+            null_strand
+        >,
+        4
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -568,7 +997,17 @@ make_sync_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::str
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<as::ip::tcp::socket, null_strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    as::ip::tcp::socket,
+                    null_strand
+                >,
+                4
+            >
+        >
+    >
 make_sync_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_sync_client_no_strand_ws_32(
         ioc,
@@ -583,9 +1022,25 @@ make_sync_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::uin
 
 #if defined(MQTT_USE_TLS)
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    strand
+                >,
+                4
+            >
+        >
+    >
 make_tls_sync_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>;
+    using sync_client_t = sync_client<
+        tcp_endpoint<
+            tls::stream<as::ip::tcp::socket>,
+            strand
+        >,
+        4
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -598,7 +1053,17 @@ make_tls_sync_client_32(as::io_context& ioc, std::string host, std::string port,
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    strand
+                >,
+                4
+            >
+        >
+    >
 make_tls_sync_client_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_sync_client_32(
         ioc,
@@ -608,9 +1073,25 @@ make_tls_sync_client_32(as::io_context& ioc, std::string host, std::uint16_t por
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    null_strand
+                >,
+                4
+            >
+        >
+    >
 make_tls_sync_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>, 4>;
+    using sync_client_t = sync_client<
+        tcp_endpoint<
+            tls::stream<as::ip::tcp::socket>,
+            null_strand
+        >,
+        4
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -623,7 +1104,17 @@ make_tls_sync_client_no_strand_32(as::io_context& ioc, std::string host, std::st
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<tcp_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                tcp_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    null_strand
+                >,
+                4
+            >
+        >
+    >
 make_tls_sync_client_no_strand_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_sync_client_no_strand_32(
         ioc,
@@ -635,9 +1126,25 @@ make_tls_sync_client_no_strand_32(as::io_context& ioc, std::string host, std::ui
 
 #if defined(MQTT_USE_WS)
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    strand
+                >,
+                4
+            >
+        >
+    >
 make_tls_sync_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>;
+    using sync_client_t = sync_client<
+        ws_endpoint<
+            tls::stream<as::ip::tcp::socket>,
+            strand
+        >,
+        4
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -648,7 +1155,17 @@ make_tls_sync_client_ws_32(as::io_context& ioc, std::string host, std::string po
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, as::io_context::strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    strand
+                >,
+                4
+            >
+        >
+    >
 make_tls_sync_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_sync_client_ws_32(
         ioc,
@@ -659,9 +1176,25 @@ make_tls_sync_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t 
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    null_strand
+                >,
+                4
+            >
+        >
+    >
 make_tls_sync_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
-    using sync_client_t = sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>, 4>;
+    using sync_client_t = sync_client<
+        ws_endpoint<
+            tls::stream<as::ip::tcp::socket>,
+            null_strand
+        >,
+        4
+    >;
     return std::make_shared<callable_overlay<sync_client_t>>(
         sync_client_t::constructor_access(),
         ioc,
@@ -672,7 +1205,17 @@ make_tls_sync_client_no_strand_ws_32(as::io_context& ioc, std::string host, std:
     );
 }
 
-inline std::shared_ptr<callable_overlay<sync_client<ws_endpoint<tls::stream<as::ip::tcp::socket>, null_strand>, 4>>>
+inline std::shared_ptr<
+        callable_overlay<
+            sync_client<
+                ws_endpoint<
+                    tls::stream<as::ip::tcp::socket>,
+                    null_strand
+                >,
+                4
+            >
+        >
+    >
 make_tls_sync_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_sync_client_no_strand_ws_32(
         ioc,

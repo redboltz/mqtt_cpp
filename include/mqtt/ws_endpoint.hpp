@@ -26,9 +26,14 @@ template <typename Socket, typename Strand>
 class ws_endpoint : public socket {
 public:
     template <typename... Args>
-    ws_endpoint(as::io_context& ioc, Args&&... args)
+    explicit ws_endpoint(as::io_context& ioc, Args&&... args)
         :ws_(ioc, std::forward<Args>(args)...),
-         strand_(ioc) {
+#if defined(MQTT_NO_TS_EXECUTORS)
+         strand_(ioc.get_executor())
+#else
+         strand_(ioc)
+#endif
+    {
         ws_.binary(true);
         ws_.set_option(
             boost::beast::websocket::stream_base::decorator(

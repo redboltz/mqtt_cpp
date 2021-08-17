@@ -23,10 +23,14 @@ template <typename Socket, typename Strand>
 class tcp_endpoint : public socket {
 public:
     template <typename... Args>
-    tcp_endpoint(as::io_context& ioc, Args&&... args)
+    explicit tcp_endpoint(as::io_context& ioc, Args&&... args)
         :tcp_(ioc, std::forward<Args>(args)...),
-         strand_(ioc) {
-    }
+#if defined(MQTT_NO_TS_EXECUTORS)
+         strand_(ioc.get_executor())
+#else
+         strand_(ioc)
+#endif
+    {}
 
     MQTT_ALWAYS_INLINE void async_read(
         as::mutable_buffer buffers,

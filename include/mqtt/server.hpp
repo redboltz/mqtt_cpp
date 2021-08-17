@@ -16,9 +16,10 @@
 #include <mqtt/tcp_endpoint.hpp>
 
 #include <mqtt/endpoint.hpp>
-#include <mqtt/null_strand.hpp>
 #include <mqtt/move.hpp>
 #include <mqtt/callable_overlay.hpp>
+#include <mqtt/strand.hpp>
+#include <mqtt/null_strand.hpp>
 
 namespace MQTT_NS {
 
@@ -37,7 +38,7 @@ protected:
 };
 
 template <
-    typename Strand = as::io_context::strand,
+    typename Strand = strand,
     typename Mutex = std::mutex,
     template<typename...> class LockGuard = std::lock_guard,
     std::size_t PacketIdBytes = 2
@@ -195,7 +196,7 @@ private:
 #if defined(MQTT_USE_TLS)
 
 template <
-    typename Strand = as::io_context::strand,
+    typename Strand = strand,
     typename Mutex = std::mutex,
     template<typename...> class LockGuard = std::lock_guard,
     std::size_t PacketIdBytes = 2
@@ -419,7 +420,7 @@ private:
 #if defined(MQTT_USE_WS)
 
 template <
-    typename Strand = as::io_context::strand,
+    typename Strand = strand,
     typename Mutex = std::mutex,
     template<typename...> class LockGuard = std::lock_guard,
     std::size_t PacketIdBytes = 2
@@ -684,7 +685,7 @@ private:
 #if defined(MQTT_USE_TLS)
 
 template <
-    typename Strand = as::io_context::strand,
+    typename Strand = strand,
     typename Mutex = std::mutex,
     template<typename...> class LockGuard = std::lock_guard,
     std::size_t PacketIdBytes = 2
