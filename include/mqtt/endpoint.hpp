@@ -10384,10 +10384,6 @@ private:
                 &endpoint::on_serialize_v5_publish_message,
                 [this, func] (v5::basic_publish_message<PacketIdBytes>&& msg) {
                     if (publish_send_count_.load() == publish_send_max_) {
-                        if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                            return false;
-                        }
                         LockGuard<Mutex> lck (publish_send_queue_mtx_);
                         publish_send_queue_.emplace_back(force_move(msg), func);
                         return false;
