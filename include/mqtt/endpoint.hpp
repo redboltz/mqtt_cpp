@@ -9586,7 +9586,7 @@ private:
                 force_move(life_keeper)
             );
             (this->*serialize_publish)(store_msg);
-            if (!receive_maximum_proc(force_move(store_msg))) return false;
+            return receive_maximum_proc(force_move(store_msg));
         }
         return true;
     }
@@ -9653,12 +9653,10 @@ private:
                         publish_send_queue_.emplace_back(force_move(msg));
                         return false;
                     }
-                    else {
-                        MQTT_LOG("mqtt_impl", trace)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "increment publish_send_count_:" << publish_send_count_.load();
-                        ++publish_send_count_;
-                    }
+                    MQTT_LOG("mqtt_impl", trace)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "increment publish_send_count_:" << publish_send_count_.load();
+                    ++publish_send_count_;
                     return true;
                 }
             );
@@ -10388,12 +10386,10 @@ private:
                         publish_send_queue_.emplace_back(force_move(msg), func);
                         return false;
                     }
-                    else {
-                        MQTT_LOG("mqtt_impl", trace)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "increment publish_send_count_:" << publish_send_count_.load();
-                        ++publish_send_count_;
-                    }
+                    MQTT_LOG("mqtt_impl", trace)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "increment publish_send_count_:" << publish_send_count_.load();
+                    ++publish_send_count_;
                     return true;
                 }
             );
