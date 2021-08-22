@@ -4598,19 +4598,21 @@ public:
 
     void send_store_message(basic_store_message_variant<PacketIdBytes> msg, any life_keeper) {
         auto publish_proc =
-            [&](auto msg, auto const& serialize, auto const& receive_maximum_proc) {
+            [&](auto msg, auto&& serialize, auto&& receive_maximum_proc) {
                 auto msg_lk = apply_topic_alias(msg, life_keeper);
                 if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
                     throw packet_size_error();
                 }
-                preprocess_publish_message(
-                    msg,
-                    life_keeper,
-                    serialize,
-                    receive_maximum_proc,
-                    true // register packet_id
-                );
-                do_sync_write(force_move(std::get<0>(msg_lk)));
+                if (preprocess_publish_message(
+                        msg,
+                        life_keeper,
+                        std::forward<decltype(serialize)>(serialize),
+                        std::forward<decltype(receive_maximum_proc)>(receive_maximum_proc),
+                        true // register packet_id
+                    )
+                ) {
+                    do_sync_write(force_move(std::get<0>(msg_lk)));
+                }
             };
 
         auto pubrel_proc =
@@ -4663,7 +4665,7 @@ public:
                         [this] (v5::basic_publish_message<PacketIdBytes>&& msg) {
                             if (publish_send_count_.load() == publish_send_max_) {
                                 LockGuard<Mutex> lck (publish_send_queue_mtx_);
-                                publish_send_queue_.emplace_back(force_move(msg));
+                                publish_send_queue_.emplace_back(force_move(msg), false);
                                 return false;
                             }
                             else {
@@ -4690,7 +4692,7 @@ public:
 
     void async_send_store_message(basic_store_message_variant<PacketIdBytes> msg, any life_keeper, async_handler_t func) {
         auto publish_proc =
-            [&](auto msg, auto const& serialize, auto const& receive_maximum_proc) {
+            [&](auto msg, auto&& serialize, auto&& receive_maximum_proc) {
                 auto msg_lk = apply_topic_alias(msg, life_keeper);
                 if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
                     socket_->post(
@@ -4700,20 +4702,22 @@ public:
                     );
                     return;
                 }
-                preprocess_publish_message(
-                    msg,
-                    life_keeper,
-                    serialize,
-                    receive_maximum_proc,
-                    true // register packet_id
-                );
-                do_async_write(
-                    force_move(std::get<0>(msg_lk)),
-                    [func = force_move(func), life_keeper = force_move(std::get<1>(msg_lk))]
-                    (error_code ec) {
-                        if (func) func(ec);
-                    }
-                );
+                if (preprocess_publish_message(
+                        msg,
+                        life_keeper,
+                        std::forward<decltype(serialize)>(serialize),
+                        std::forward<decltype(receive_maximum_proc)>(receive_maximum_proc),
+                        true // register packet_id
+                    )
+                ) {
+                    do_async_write(
+                        force_move(std::get<0>(msg_lk)),
+                        [func = force_move(func), life_keeper = force_move(std::get<1>(msg_lk))]
+                        (error_code ec) {
+                            if (func) func(ec);
+                        }
+                    );
+                }
             };
 
         auto pubrel_proc =
@@ -4768,10 +4772,18 @@ public:
                     publish_proc(
                         force_move(m),
                         &endpoint::on_serialize_v5_publish_message,
-                        [this, func] (v5::basic_publish_message<PacketIdBytes>&& msg) {
+                        [this, func] (v5::basic_publish_message<PacketIdBytes>&& msg) mutable {
                             if (publish_send_count_.load() == publish_send_max_) {
-                                LockGuard<Mutex> lck (publish_send_queue_mtx_);
-                                publish_send_queue_.emplace_back(force_move(msg), func);
+                                {
+                                    LockGuard<Mutex> lck (publish_send_queue_mtx_);
+                                    publish_send_queue_.emplace_back(force_move(msg), true);
+                                }
+                                socket_->post(
+                                    [func = force_move(func)] {
+                                        // message has already been stored so func should be called with success here
+                                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+                                    }
+                                );
                                 return false;
                             }
                             else {
@@ -9560,8 +9572,8 @@ private:
     bool preprocess_publish_message(
         PublishMessage const& msg,
         any life_keeper,
-        SerializePublish const& serialize_publish,
-        ReceiveMaximumProc const& receive_maximum_proc,
+        SerializePublish&& serialize_publish,
+        ReceiveMaximumProc&& receive_maximum_proc,
         bool register_pid = false
     ) {
         auto qos_value = msg.get_qos();
@@ -9585,8 +9597,8 @@ private:
                 store_msg,
                 force_move(life_keeper)
             );
-            (this->*serialize_publish)(store_msg);
-            return receive_maximum_proc(force_move(store_msg));
+            (this->*std::forward<decltype(serialize_publish)>(serialize_publish))(store_msg);
+            return std::forward<decltype(receive_maximum_proc)>(receive_maximum_proc)(force_move(store_msg));
         }
         return true;
     }
@@ -9604,7 +9616,7 @@ private:
         any                 life_keeper) {
 
         auto do_send_publish =
-            [&](auto msg, auto const& serialize_publish, auto const& receive_maximum_proc) {
+            [&](auto msg, auto&& serialize_publish, auto&& receive_maximum_proc) {
                 auto msg_lk = apply_topic_alias(msg, life_keeper);
                 if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
                     if (packet_id != 0) {
@@ -9616,8 +9628,8 @@ private:
                 if (preprocess_publish_message(
                         msg,
                         life_keeper,
-                        serialize_publish,
-                        receive_maximum_proc
+                        std::forward<decltype(serialize_publish)>(serialize_publish),
+                        std::forward<decltype(receive_maximum_proc)>(receive_maximum_proc)
                     )
                 ) {
                     do_sync_write(force_move(std::get<0>(msg_lk)));
@@ -9650,7 +9662,7 @@ private:
                 [this] (v5::basic_publish_message<PacketIdBytes>&& msg) {
                     if (publish_send_count_.load() == publish_send_max_) {
                         LockGuard<Mutex> lck (publish_send_queue_mtx_);
-                        publish_send_queue_.emplace_back(force_move(msg));
+                        publish_send_queue_.emplace_back(force_move(msg), false);
                         return false;
                     }
                     MQTT_LOG("mqtt_impl", trace)
@@ -10179,6 +10191,7 @@ private:
                             LockGuard<Mutex> lck (publish_send_queue_mtx_);
                             publish_send_queue_.emplace_back(
                                 force_move(std::get<0>(msg_lk)),
+                                false,
                                 force_move(std::get<1>(msg_lk))
                             );
                         }
@@ -10327,7 +10340,7 @@ private:
         async_handler_t func
     ) {
         auto do_async_send_publish =
-            [&](auto msg, auto const& serialize_publish, auto const& receive_maximum_proc) {
+            [&](auto msg, auto&& serialize_publish, auto&& receive_maximum_proc) {
                 auto msg_lk = apply_topic_alias(msg, life_keeper);
                 if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
                     if (packet_id != 0) {
@@ -10344,8 +10357,8 @@ private:
                 if (preprocess_publish_message(
                         msg,
                         life_keeper,
-                        serialize_publish,
-                        receive_maximum_proc
+                        std::forward<decltype(serialize_publish)>(serialize_publish),
+                        std::forward<decltype(receive_maximum_proc)>(receive_maximum_proc)
                     )
                 ) {
                     do_async_write(
@@ -10380,10 +10393,18 @@ private:
                     force_move(props)
                 ),
                 &endpoint::on_serialize_v5_publish_message,
-                [this, func] (v5::basic_publish_message<PacketIdBytes>&& msg) {
+                [this, func] (v5::basic_publish_message<PacketIdBytes>&& msg) mutable {
                     if (publish_send_count_.load() == publish_send_max_) {
-                        LockGuard<Mutex> lck (publish_send_queue_mtx_);
-                        publish_send_queue_.emplace_back(force_move(msg), func);
+                        {
+                            LockGuard<Mutex> lck (publish_send_queue_mtx_);
+                            publish_send_queue_.emplace_back(force_move(msg), true);
+                        }
+                        socket_->post(
+                            [func = force_move(func)] {
+                                // message has already been stored so func should be called with success here
+                                if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+                            }
+                        );
                         return false;
                     }
                     MQTT_LOG("mqtt_impl", trace)
@@ -11057,9 +11078,7 @@ private:
                             LockGuard<Mutex> lck (publish_send_queue_mtx_);
                             publish_send_queue_.emplace_back(
                                 force_move(std::get<0>(msg_lk)),
-                                [g]
-                                (error_code /*ec*/){
-                                },
+                                true,
                                 force_move(std::get<1>(msg_lk))
                             );
                         }
@@ -11336,9 +11355,8 @@ private:
         if (entry.value().async) {
             do_async_write(
                 force_move(entry.value().message),
-                [handler = force_move(entry.value().handler), life_keeper = force_move(entry.value().life_keeper)]
-                (error_code ec) {
-                    handler(ec);
+                [life_keeper = force_move(entry.value().life_keeper)]
+                (error_code) {
                 }
             );
         }
@@ -11448,24 +11466,15 @@ private:
     struct publish_send_queue_elem {
         publish_send_queue_elem(
             basic_message_variant<PacketIdBytes> message,
-            async_handler_t handler,
+            bool async,
             any life_keeper = any()
         ): message{force_move(message)},
            life_keeper{force_move(life_keeper)},
-           async{true},
-           handler{force_move(handler)}
-        {}
-        publish_send_queue_elem(
-            basic_message_variant<PacketIdBytes> message,
-            any life_keeper = any()
-        ): message{force_move(message)},
-           life_keeper{force_move(life_keeper)},
-           async{false}
+           async{async}
         {}
         basic_message_variant<PacketIdBytes> message;
         any life_keeper;
         bool async;
-        async_handler_t handler;
     };
     Mutex publish_send_queue_mtx_;
     std::deque<publish_send_queue_elem> publish_send_queue_;
