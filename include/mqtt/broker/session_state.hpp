@@ -65,8 +65,23 @@ struct session_state {
          subs_map_(subs_map),
          shared_targets_(shared_targets),
          con_(force_move(con)),
+         version_(con_->get_protocol_version()),
          client_id_(force_move(client_id)),
-         session_expiry_interval_(force_move(session_expiry_interval))
+         session_expiry_interval_(force_move(session_expiry_interval)),
+         tim_will_send_(ioc_),
+         remain_after_close_(
+            [&] {
+                if (version_ == protocol_version::v3_1_1) {
+                    return !con_->clean_session();
+                }
+                else {
+                    BOOST_ASSERT(version_ == protocol_version::v5);
+                    return
+                        session_expiry_interval_ &&
+                        session_expiry_interval_.value() != std::chrono::steady_clock::duration::zero();
+                }
+            } ()
+         )
     {
         update_will(ioc, will, will_expiry_interval);
     }
@@ -159,10 +174,6 @@ struct session_state {
             << "renew_session expiry";
         session_expiry_interval_ = force_move(v);
         tim_session_expiry_.reset();
-    }
-
-    std::shared_ptr<as::steady_timer> const& tim_session_expiry() const {
-        return tim_session_expiry_;
     }
 
     void publish(
@@ -332,7 +343,7 @@ struct session_state {
                 (error_code ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
-                            reset_will();
+                            clear_will();
                         }
                     }
                 }
@@ -340,9 +351,52 @@ struct session_state {
         }
     }
 
-    void reset_will() {
+    void clear_will() {
         tim_will_expiry_.reset();
         will_value_ = nullopt;
+    }
+
+    template <typename Publish>
+    void send_will(Publish&& publish) {
+        if (!will_value_) return;
+
+        auto topic = force_move(will_value_.value().topic());
+        auto payload = force_move(will_value_.value().message());
+        auto opts = will_value_.value().get_qos() | will_value_.value().get_retain();
+        auto props = force_move(will_value_.value().props());
+        auto wd_opt = get_property<v5::property::will_delay_interval>(props);
+
+        auto update_prop_then_publish =
+            [&] {
+                if (tim_will_expiry_) {
+                    auto d =
+                        std::chrono::duration_cast<std::chrono::seconds>(
+                            tim_will_expiry_->expiry() - std::chrono::steady_clock::now()
+                        ).count();
+                    if (d < 0) d = 0;
+                    set_property<v5::property::message_expiry_interval>(
+                        props,
+                        v5::property::message_expiry_interval(
+                            static_cast<uint32_t>(d)
+                        )
+                    );
+                }
+                std::forward<Publish>(publish)(
+                    *this,
+                    force_move(topic),
+                    force_move(payload),
+                    opts,
+                    force_move(props)
+                );
+            };
+
+        if (remain_after_close_ || !wd_opt) {
+            // auto wd_sec = wd_opt.value().val();
+            update_prop_then_publish();
+        }
+        else {
+            update_prop_then_publish();
+        }
     }
 
     void insert_inflight_message(
@@ -381,6 +435,10 @@ struct session_state {
         offline_messages_.send_by_packet_id_release(*con_);
     }
 
+    protocol_version get_protocol_version() const {
+        return version_;
+    }
+
     buffer const& client_id() const {
         return client_id_;
     }
@@ -401,11 +459,6 @@ struct session_state {
         return session_expiry_interval_;
     }
 
-    optional<MQTT_NS::will>& will() { return will_value_; }
-    optional<MQTT_NS::will> const& will() const { return will_value_; }
-
-    std::shared_ptr<as::steady_timer>& get_tim_will_expiry() { return tim_will_expiry_; }
-
 private:
     friend class session_states;
 
@@ -416,6 +469,7 @@ private:
     sub_con_map& subs_map_;
     shared_target& shared_targets_;
     con_sp_t con_;
+    protocol_version version_;
     buffer client_id_;
 
     optional<std::chrono::steady_clock::duration> will_delay_;
@@ -428,6 +482,9 @@ private:
     offline_messages offline_messages_;
 
     std::set<sub_con_map::handle> handles_; // to efficient remove
+
+    as::steady_timer tim_will_send_;
+    bool remain_after_close_;
 };
 
 class session_states {
@@ -466,7 +523,7 @@ private:
                 BOOST_MULTI_INDEX_MEMBER(session_state, std::shared_ptr<as::steady_timer>, tim_session_expiry_)
             >
         >
->;
+    >;
 
     mi_session_state entries_;
 };

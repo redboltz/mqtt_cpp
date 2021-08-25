@@ -1094,7 +1094,7 @@ private:
                     );
                 }
                 else {
-                    // inherit offline session
+                    // inherit online session
                     MQTT_LOG("mqtt_broker", trace)
                         << MQTT_ADD_VALUE(address, this)
                         << "cid:" << client_id
@@ -1225,47 +1225,25 @@ private:
             } ();
 
         auto do_send_will =
-            [&](session_state& session) {
-                if (session.will()) {
-                    if (send_will) {
-                        // TODO: This should be triggered by the will delay
-                        // Not sent immediately.
-                        auto props = force_move(session.will().value().props());
-
-                        if (session.get_tim_will_expiry()) {
-                            auto d =
-                                std::chrono::duration_cast<std::chrono::seconds>(
-                                    session.get_tim_will_expiry()->expiry() - std::chrono::steady_clock::now()
-                                ).count();
-                            if (d < 0) d = 0;
-                            set_property<v5::property::message_expiry_interval>(
-                                props,
-                                v5::property::message_expiry_interval(
-                                    static_cast<uint32_t>(d)
-                                )
-                            );
+            [&](session_state& ss) {
+                if (send_will) {
+                    ss.send_will(
+                        [this](auto&&... params) {
+                            do_publish(std::forward<decltype(params)>(params)...);
                         }
-
-                        do_publish(
-                            ep,
-                            force_move(session.will().value().topic()),
-                            force_move(session.will().value().message()),
-                            session.will().value().get_qos() | session.will().value().get_retain(),
-                            props
-                        );
-                    }
-                    else {
-                        session.reset_will();
-                    }
+                    );
+                }
+                else {
+                    ss.clear_will();
                 }
             };
 
         if (session_clear) {
             idx.modify(
                 it,
-                [&](session_state& e) {
-                    do_send_will(e);
-                    e.con()->force_disconnect();
+                [&](session_state& ss) {
+                    do_send_will(ss);
+                    ss.con()->force_disconnect();
                 },
                 [](auto&) { BOOST_ASSERT(false); }
             );
@@ -1276,10 +1254,10 @@ private:
         else {
             idx.modify(
                 it,
-                [&](session_state& e) {
-                    do_send_will(e);
-                    e.con()->force_disconnect();
-                    e.become_offline(
+                [&](session_state& ss) {
+                    do_send_will(ss);
+                    ss.con()->force_disconnect();
+                    ss.become_offline(
                         [this]
                         (std::shared_ptr<as::steady_timer> const& sp_tim) {
                             sessions_.get<tag_tim>().erase(sp_tim);
@@ -1364,7 +1342,7 @@ private:
         }
 
         do_publish(
-            ep,
+            *it,
             force_move(topic_name),
             force_move(contents),
             pubopts.get_qos() | pubopts.get_retain(), // remove dup flag
@@ -1527,8 +1505,8 @@ private:
         optional<session_state_ref> ssr_opt;
         idx.modify(
             it,
-            [&](session_state& e) {
-                ssr_opt.emplace(e);
+            [&](session_state& ss) {
+                ssr_opt.emplace(ss);
             },
             [](auto&) { BOOST_ASSERT(false); }
         );
@@ -1665,8 +1643,8 @@ private:
         optional<session_state_ref> ssr_opt;
         idx.modify(
             it,
-            [&](session_state& e) {
-                ssr_opt.emplace(e);
+            [&](session_state& ss) {
+                ssr_opt.emplace(ss);
             },
             [](auto&) { BOOST_ASSERT(false); }
         );
@@ -1715,11 +1693,12 @@ private:
      *                    be sent to newly added subscriptions in the future.\
      */
     void do_publish(
-        endpoint_t& ep,
+        session_state const& source_ss,
         buffer topic,
         buffer contents,
         publish_options pubopts,
-        v5::properties props) {
+        v5::properties props
+    ) {
 
         // publish the message to subscribers.
         // retain is delivered as the original only if rap_value is rap::retain.
@@ -1765,7 +1744,7 @@ private:
                     // If NL (no local) subscription option is set and
                     // publisher is the same as subscriber, then skip it.
                     if (sub.subopts.get_nl() == nl::yes &&
-                        sub.ss.get().con().get() ==  &ep) return;
+                        sub.ss.get().client_id() ==  source_ss.client_id()) return;
                     deliver(sub.ss.get(), sub);
                 }
                 else {
@@ -1782,7 +1761,7 @@ private:
         );
 
         optional<std::chrono::steady_clock::duration> message_expiry_interval;
-        if (ep.get_protocol_version() == protocol_version::v5) {
+        if (source_ss.get_protocol_version() == protocol_version::v5) {
             auto v = get_property<v5::property::message_expiry_interval>(props);
             if (v) {
                 message_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
