@@ -378,6 +378,7 @@ public:
 
     void async_connect() = delete;
     void async_disconnect() = delete;
+    void async_force_disconnect() = delete;
 
     void async_publish() = delete;
     void async_subscribe() = delete;
