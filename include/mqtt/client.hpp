@@ -1078,6 +1078,19 @@ public:
     }
 
     /**
+     * @brief Disconnect by endpoint
+     * @param func A callback function that is called when async operation will finish.
+     * Force disconnect. It is not a clean disconnect sequence.<BR>
+     * When the endpoint disconnects using force_disconnect(), a will will send.<BR>
+     */
+    void async_force_disconnect(
+        async_handler_t func = async_handler_t()) {
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        tim_close_.cancel();
+        base::async_force_disconnect(force_move(func));
+    }
+
+    /**
      * @brief Set pingreq message sending mode
      * @param b If true then send pingreq asynchronously, otherwise send synchronously.
      */

@@ -2215,6 +2215,27 @@ public:
         }
     }
 
+    /**
+     * @brief Disconnect by endpoint
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * Force disconnect. It is not a clean disconnect sequence.<BR>
+     * When the endpoint disconnects using force_disconnect(), a will will send.<BR>
+     */
+    void async_force_disconnect(
+        async_handler_t func = {}
+    ) {
+        MQTT_LOG("mqtt_api", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "async_force_disconnect";
+        socket_->post(
+            [this, self = this->shared_from_this(), func = force_move(func)] {
+                shutdown(socket());
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+            }
+        );
+    }
+
     // packet_id manual setting version
 
     /**

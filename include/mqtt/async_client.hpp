@@ -379,6 +379,7 @@ public:
 
     void connect() = delete;
     void disconnect() = delete;
+    void force_disconnect() = delete;
 
     void publish() = delete;
     void subscribe() = delete;
