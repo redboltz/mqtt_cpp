@@ -1065,6 +1065,10 @@ private:
                 spep,
                 client_id,
                 force_move(will),
+                // will_sender
+                [this](auto&&... params) {
+                    do_publish(std::forward<decltype(params)>(params)...);
+                },
                 force_move(will_expiry_interval),
                 force_move(session_expiry_interval)
             );
@@ -1103,7 +1107,7 @@ private:
                     idx.modify(
                         it,
                         [&](auto& e) {
-                            e.reset_con(spep);
+                            e.renew(spep, clean_start);
                             e.update_will(ioc_, force_move(will), will_expiry_interval);
                             // TODO: e.will_delay = force_move(will_delay);
                             e.renew_session_expiry(force_move(session_expiry_interval));
@@ -1129,6 +1133,10 @@ private:
                     spep,
                     client_id,
                     force_move(will),
+                    // will_sender
+                    [this](auto&&... params) {
+                        do_publish(std::forward<decltype(params)>(params)...);
+                    },
                     force_move(will_expiry_interval),
                     force_move(session_expiry_interval)
                 );
@@ -1149,7 +1157,7 @@ private:
                     it,
                     [&](auto& e) {
                         e.clean();
-                        e.reset_con(spep);
+                        e.renew(spep, clean_start);
                         e.update_will(ioc_, force_move(will), will_expiry_interval);
                         // TODO: e.will_delay = force_move(will_delay);
                         e.renew_session_expiry(force_move(session_expiry_interval));
@@ -1167,7 +1175,7 @@ private:
                 idx.modify(
                     it,
                     [&](auto& e) {
-                        e.reset_con(spep);
+                        e.renew(spep, clean_start);
                         e.update_will(ioc_, force_move(will), will_expiry_interval);
                         // TODO: e.will_delay = force_move(will_delay);
                         e.renew_session_expiry(force_move(session_expiry_interval));
@@ -1227,11 +1235,7 @@ private:
         auto do_send_will =
             [&](session_state& ss) {
                 if (send_will) {
-                    ss.send_will(
-                        [this](auto&&... params) {
-                            do_publish(std::forward<decltype(params)>(params)...);
-                        }
-                    );
+                    ss.send_will();
                 }
                 else {
                     ss.clear_will();
