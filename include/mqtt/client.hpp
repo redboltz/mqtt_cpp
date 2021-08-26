@@ -486,6 +486,15 @@ public:
         will_ = force_move(w);
     }
 
+    /**
+     * @brief Clear will.
+     *
+     * This function should be called before calling connect().<BR>
+     */
+    void set_will() {
+        will_ = nullopt;
+    }
+
     template<typename ... Args>
     void set_will(Args && ... args) {
         will_.emplace(std::forward<Args>(args)...);

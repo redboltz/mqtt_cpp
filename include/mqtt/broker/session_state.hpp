@@ -51,7 +51,16 @@ class session_states;
  * Retained messages do not form part of the Session State in the Server, they are not deleted as a result of a Session ending.
  */
 struct session_state {
-    // TODO: Currently not fully implemented...
+    using will_sender_t = std::function<
+        void(
+            session_state const& source_ss,
+            buffer topic,
+            buffer contents,
+            publish_options pubopts,
+            v5::properties props
+        )
+    >;
+
     session_state(
         as::io_context& ioc,
         sub_con_map& subs_map,
@@ -59,14 +68,31 @@ struct session_state {
         con_sp_t con,
         buffer client_id,
         optional<will> will,
+        will_sender_t will_sender,
         optional<std::chrono::steady_clock::duration> will_expiry_interval,
-        optional<std::chrono::steady_clock::duration> session_expiry_interval = nullopt)
+        optional<std::chrono::steady_clock::duration> session_expiry_interval)
         :ioc_(ioc),
          subs_map_(subs_map),
          shared_targets_(shared_targets),
          con_(force_move(con)),
+         version_(con_->get_protocol_version()),
          client_id_(force_move(client_id)),
-         session_expiry_interval_(force_move(session_expiry_interval))
+         session_expiry_interval_(force_move(session_expiry_interval)),
+         tim_will_delay_(ioc_),
+         will_sender_(force_move(will_sender)),
+         remain_after_close_(
+            [&] {
+                if (version_ == protocol_version::v3_1_1) {
+                    return !con_->clean_session();
+                }
+                else {
+                    BOOST_ASSERT(version_ == protocol_version::v5);
+                    return
+                        session_expiry_interval_ &&
+                        session_expiry_interval_.value() != std::chrono::steady_clock::duration::zero();
+                }
+            } ()
+         )
     {
         update_will(ioc, will, will_expiry_interval);
     }
@@ -77,6 +103,7 @@ struct session_state {
         MQTT_LOG("mqtt_broker", trace)
             << MQTT_ADD_VALUE(address, this)
             << "session destroy";
+        send_will_impl();
         clean();
     }
 
@@ -127,7 +154,7 @@ struct session_state {
             }
         );
 
-        reset_con();
+        con_.reset();
 
         if (session_expiry_interval_ &&
             session_expiry_interval_.value() != std::chrono::seconds(session_never_expire)) {
@@ -159,10 +186,6 @@ struct session_state {
             << "renew_session expiry";
         session_expiry_interval_ = force_move(v);
         tim_session_expiry_.reset();
-    }
-
-    std::shared_ptr<as::steady_timer> const& tim_session_expiry() const {
-        return tim_session_expiry_;
     }
 
     void publish(
@@ -332,7 +355,7 @@ struct session_state {
                 (error_code ec) {
                     if (auto sp = wp.lock()) {
                         if (!ec) {
-                            reset_will();
+                            clear_will();
                         }
                     }
                 }
@@ -340,9 +363,45 @@ struct session_state {
         }
     }
 
-    void reset_will() {
+    void clear_will() {
+        MQTT_LOG("mqtt_broker", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "clear will. cid:" << client_id_;
         tim_will_expiry_.reset();
         will_value_ = nullopt;
+    }
+
+    void send_will() {
+        if (!will_value_) return;
+
+        auto wd_sec =
+            [&] () -> std::size_t {
+                if (auto wd_opt = get_property<v5::property::will_delay_interval>(
+                        will_value_.value().props()
+                    )
+                ) {
+                    return wd_opt.value().val();
+                }
+                return 0;
+            } ();
+
+        if (remain_after_close_ && wd_sec != 0) {
+            MQTT_LOG("mqtt_broker", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "set will_delay. cid:" << client_id_ << " delay:" << wd_sec;
+            tim_will_delay_.expires_after(std::chrono::seconds(wd_sec));
+            tim_will_delay_.async_wait(
+                [this]
+                (error_code ec) {
+                    if (!ec) {
+                        send_will_impl();
+                    }
+                }
+            );
+        }
+        else {
+            send_will_impl();
+        }
     }
 
     void insert_inflight_message(
@@ -381,15 +440,24 @@ struct session_state {
         offline_messages_.send_by_packet_id_release(*con_);
     }
 
+    protocol_version get_protocol_version() const {
+        return version_;
+    }
+
     buffer const& client_id() const {
         return client_id_;
     }
 
-    void reset_con() {
-        con_.reset();
-    }
-
-    void reset_con(con_sp_t con) {
+    void renew(con_sp_t con, bool clean_start) {
+        tim_will_delay_.cancel();
+        if (clean_start) {
+            // send previous will
+            send_will_impl();
+        }
+        else {
+            // cancel will
+            clear_will();
+        }
         con_ = force_move(con);
     }
 
@@ -401,10 +469,42 @@ struct session_state {
         return session_expiry_interval_;
     }
 
-    optional<MQTT_NS::will>& will() { return will_value_; }
-    optional<MQTT_NS::will> const& will() const { return will_value_; }
+private:
+    void send_will_impl() {
+        if (!will_value_) return;
 
-    std::shared_ptr<as::steady_timer>& get_tim_will_expiry() { return tim_will_expiry_; }
+        MQTT_LOG("mqtt_broker", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "send will. cid:" << client_id_;
+
+        auto topic = force_move(will_value_.value().topic());
+        auto payload = force_move(will_value_.value().message());
+        auto opts = will_value_.value().get_qos() | will_value_.value().get_retain();
+        auto props = force_move(will_value_.value().props());
+        will_value_ = nullopt;
+        if (tim_will_expiry_) {
+            auto d =
+                std::chrono::duration_cast<std::chrono::seconds>(
+                    tim_will_expiry_->expiry() - std::chrono::steady_clock::now()
+                ).count();
+            if (d < 0) d = 0;
+            set_property<v5::property::message_expiry_interval>(
+                props,
+                v5::property::message_expiry_interval(
+                    static_cast<uint32_t>(d)
+                )
+            );
+        }
+        if (will_sender_) {
+            will_sender_(
+                *this,
+                force_move(topic),
+                force_move(payload),
+                opts,
+                force_move(props)
+            );
+        }
+    }
 
 private:
     friend class session_states;
@@ -416,9 +516,9 @@ private:
     sub_con_map& subs_map_;
     shared_target& shared_targets_;
     con_sp_t con_;
+    protocol_version version_;
     buffer client_id_;
 
-    optional<std::chrono::steady_clock::duration> will_delay_;
     optional<std::chrono::steady_clock::duration> session_expiry_interval_;
     std::shared_ptr<as::steady_timer> tim_session_expiry_;
 
@@ -428,6 +528,10 @@ private:
     offline_messages offline_messages_;
 
     std::set<sub_con_map::handle> handles_; // to efficient remove
+
+    as::steady_timer tim_will_delay_;
+    will_sender_t will_sender_;
+    bool remain_after_close_;
 };
 
 class session_states {
@@ -466,7 +570,7 @@ private:
                 BOOST_MULTI_INDEX_MEMBER(session_state, std::shared_ptr<as::steady_timer>, tim_session_expiry_)
             >
         >
->;
+    >;
 
     mi_session_state entries_;
 };
