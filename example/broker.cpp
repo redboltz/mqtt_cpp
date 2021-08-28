@@ -51,7 +51,7 @@ void reload_ctx(Server& server, boost::asio::steady_timer& reload_timer,
     auto context = init_ctx();
 
     boost::system::error_code ec;
-    context.use_certificate_file(certificate_filename, boost::asio::ssl::context::pem, ec);
+    context.use_certificate_chain_file(certificate_filename, ec);
     if (ec) {
         auto message = "Failed to load certificate file: " + ec.message();
         if (first_load) {

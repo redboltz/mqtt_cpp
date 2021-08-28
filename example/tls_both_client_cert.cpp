@@ -342,7 +342,7 @@ int main(int argc, char** argv) {
     ctx.set_options(
         boost::asio::ssl::context::default_workarounds |
         boost::asio::ssl::context::single_dh_use);
-    ctx.use_certificate_file(base + "server.crt.pem", boost::asio::ssl::context::pem);
+    ctx.use_certificate_chain_file(base + "server.crt.pem");
     ctx.use_private_key_file(base + "server.key.pem", boost::asio::ssl::context::pem);
     ctx.set_verify_mode(MQTT_NS::tls::verify_peer);
     ctx.load_verify_file(base + "cacert.pem");
@@ -389,7 +389,7 @@ int main(int argc, char** argv) {
     std::uint16_t pid_sub2;
 
     auto c = MQTT_NS::make_tls_sync_client(ioc, "localhost", port);
-    c->get_ssl_context().use_certificate_file(base + "client.crt.pem", boost::asio::ssl::context::pem);
+    c->get_ssl_context().use_certificate_chain_file(base + "client.crt.pem");
     c->get_ssl_context().use_private_key_file(base + "client.key.pem", boost::asio::ssl::context::pem);
     c->get_ssl_context().load_verify_file(base + "cacert.pem");
 
