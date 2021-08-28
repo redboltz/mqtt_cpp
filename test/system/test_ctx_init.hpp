@@ -22,7 +22,7 @@ static inline boost::asio::ssl::context test_ctx_init() {
     std::string path = boost::unit_test::framework::master_test_suite().argv[0];
     std::size_t pos = path.find_last_of("/\\");
     std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-    ctx.use_certificate_file(base + "server.crt.pem", boost::asio::ssl::context::pem);
+    ctx.use_certificate_chain_file(base + "server.crt.pem");
     ctx.use_private_key_file(base + "server.key.pem", boost::asio::ssl::context::pem);
     return ctx;
 }

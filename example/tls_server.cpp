@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
     ctx.set_options(
         boost::asio::ssl::context::default_workarounds |
         boost::asio::ssl::context::single_dh_use);
-    ctx.use_certificate_file(cert, boost::asio::ssl::context::pem);
+    ctx.use_certificate_chain_file(cert);
     ctx.use_private_key_file(key, boost::asio::ssl::context::pem);
 
     auto s = MQTT_NS::server_tls<>(

@@ -341,7 +341,7 @@ int main(int argc, char** argv) {
     ctx.set_options(
         boost::asio::ssl::context::default_workarounds |
         boost::asio::ssl::context::single_dh_use);
-    ctx.use_certificate_file(base + "server.crt.pem", boost::asio::ssl::context::pem);
+    ctx.use_certificate_chain_file(base + "server.crt.pem");
     ctx.use_private_key_file(base + "server.key.pem", boost::asio::ssl::context::pem);
 
     boost::asio::io_context iocs;
