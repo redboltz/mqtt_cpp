@@ -24,6 +24,7 @@
 #include <mqtt/broker/broker_namespace.hpp>
 #include <mqtt/broker/session_state_fwd.hpp>
 #include <mqtt/broker/tags.hpp>
+#include <mqtt/broker/mutex.hpp>
 
 MQTT_BROKER_NS_BEGIN
 
@@ -69,6 +70,7 @@ private:
         >
     >;
 
+    mutable mutex mtx_targets_;
     mi_shared_target targets_;
 };
 

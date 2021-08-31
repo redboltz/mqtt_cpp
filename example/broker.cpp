@@ -99,13 +99,13 @@ void run_broker(boost::program_options::variables_map const& vm)
 
         MQTT_NS::optional<test_server_no_tls> s;
         if (vm.count("tcp.port")) {
-            s.emplace(ioc, b, vm["tcp.port"].as<uint16_t>());
+            s.emplace(ioc, b, vm["tcp.port"].as<std::uint16_t>());
         }
 
 #if defined(MQTT_USE_WS)
         MQTT_NS::optional<test_server_no_tls_ws> s_ws;
         if (vm.count("ws.port")) {
-            s_ws.emplace(ioc, b, vm["ws.port"].as<uint16_t>());
+            s_ws.emplace(ioc, b, vm["ws.port"].as<std::uint16_t>());
         }
 #endif // defined(MQTT_USE_WS)
 
@@ -114,7 +114,7 @@ void run_broker(boost::program_options::variables_map const& vm)
         MQTT_NS::optional<boost::asio::steady_timer> s_lts_timer;
 
         if (vm.count("tls.port")) {
-            s_tls.emplace(ioc, init_ctx(), b, vm["tls.port"].as<uint16_t>());
+            s_tls.emplace(ioc, init_ctx(), b, vm["tls.port"].as<std::uint16_t>());
             s_lts_timer.emplace(ioc);
             load_ctx(s_tls.value(), s_lts_timer.value(), vm, "TLS");
         }
@@ -125,13 +125,33 @@ void run_broker(boost::program_options::variables_map const& vm)
         MQTT_NS::optional<boost::asio::steady_timer> s_tls_ws_timer;
 
         if (vm.count("wss.port")) {
-            s_tls_ws.emplace(ioc, init_ctx(), b, vm["wss.port"].as<uint16_t>());
+            s_tls_ws.emplace(ioc, init_ctx(), b, vm["wss.port"].as<std::uint16_t>());
             s_tls_ws_timer.emplace(ioc);
             load_ctx(s_tls_ws.value(), s_tls_ws_timer.value(), vm, "WSS");
         }
 #endif // defined(MQTT_USE_TLS) && defined(MQTT_USE_WS)
 
-        ioc.run();
+        auto threads =
+            [&] () -> std::size_t {
+                if (vm.count("threads")) {
+                    return vm["threads"].as<std::size_t>();
+                }
+                return 1;
+            } ();
+        if (threads == 0) {
+            MQTT_LOG("mqtt_broker", error) << "threads should be greater than 0";
+            return;
+        }
+        std::vector<std::thread> ts;
+        ts.reserve(threads);
+        for (std::size_t i = 0; i != threads; ++i) {
+            ts.emplace_back(
+                [&ioc] {
+                    ioc.run();
+                }
+            );
+        }
+        for (auto& t : ts) t.join();
     } catch(std::exception &e) {
         MQTT_LOG("mqtt_broker", error) << e.what();
     }
@@ -145,6 +165,7 @@ int main(int argc, char **argv) {
         general_desc.add_options()
             ("help", "produce help message")
             ("cfg", boost::program_options::value<std::string>()->default_value("broker.conf"), "Load configuration file")
+            ("threads", boost::program_options::value<std::size_t>()->default_value(1), "Number of worker threads")
 #if defined(MQTT_USE_LOG)
             ("verbose", boost::program_options::value<unsigned int>()->default_value(1), "set verbose level, possible values:\n 0 - Fatal\n 1 - Error\n 2 - Warning\n 3 - Info\n 4 - Debug\n 5 - Trace")
 #endif // defined(MQTT_USE_LOG)
@@ -155,14 +176,14 @@ int main(int argc, char **argv) {
 
         boost::program_options::options_description notls_desc("TCP Server options");
         notls_desc.add_options()
-            ("tcp.port", boost::program_options::value<uint16_t>(), "default port (TCP)")
+            ("tcp.port", boost::program_options::value<std::uint16_t>(), "default port (TCP)")
         ;
         desc.add(general_desc).add(notls_desc);
 
 #if defined(MQTT_USE_WS)
         boost::program_options::options_description ws_desc("TCP websocket Server options");
         ws_desc.add_options()
-            ("ws.port", boost::program_options::value<uint16_t>(), "default port (TCP)")
+            ("ws.port", boost::program_options::value<std::uint16_t>(), "default port (TCP)")
         ;
 
         desc.add(ws_desc);
@@ -171,7 +192,7 @@ int main(int argc, char **argv) {
 #if defined(MQTT_USE_TLS)
         boost::program_options::options_description tls_desc("TLS Server options");
         tls_desc.add_options()
-            ("tls.port", boost::program_options::value<uint16_t>(), "default port (TLS)")
+            ("tls.port", boost::program_options::value<std::uint16_t>(), "default port (TLS)")
         ;
 
         desc.add(tls_desc);
@@ -180,7 +201,7 @@ int main(int argc, char **argv) {
 #if defined(MQTT_USE_WS) && defined(MQTT_USE_TLS)
         boost::program_options::options_description tlsws_desc("TLS Websocket Server options");
         tlsws_desc.add_options()
-            ("wss.port", boost::program_options::value<uint16_t>(), "default port (TLS)")
+            ("wss.port", boost::program_options::value<std::uint16_t>(), "default port (TLS)")
         ;
         desc.add(tlsws_desc);
 #endif // defined(MQTT_USE_TLS) && defined(MQTT_USE_WS)

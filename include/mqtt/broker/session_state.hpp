@@ -25,6 +25,7 @@
 #include <mqtt/broker/tags.hpp>
 #include <mqtt/broker/inflight_message.hpp>
 #include <mqtt/broker/offline_message.hpp>
+#include <mqtt/broker/mutex.hpp>
 
 MQTT_BROKER_NS_BEGIN
 
@@ -63,6 +64,7 @@ struct session_state {
 
     session_state(
         as::io_context& ioc,
+        mutex& mtx_subs_map,
         sub_con_map& subs_map,
         shared_target& shared_targets,
         con_sp_t con,
@@ -72,6 +74,7 @@ struct session_state {
         optional<std::chrono::steady_clock::duration> will_expiry_interval,
         optional<std::chrono::steady_clock::duration> session_expiry_interval)
         :ioc_(ioc),
+         mtx_subs_map_(mtx_subs_map),
          subs_map_(subs_map),
          shared_targets_(shared_targets),
          con_(force_move(con)),
@@ -96,8 +99,6 @@ struct session_state {
     {
         update_will(ioc, will, will_expiry_interval);
     }
-
-    session_state(session_state&&) = default;
 
     ~session_state() {
         MQTT_LOG("mqtt_broker", trace)
@@ -197,22 +198,45 @@ struct session_state {
 
         BOOST_ASSERT(online());
 
+        boost::lock_guard<mutex> g(mtx_offline_messages_);
         if (offline_messages_.empty()) {
             auto qos_value = pubopts.get_qos();
             if (qos_value == qos::at_least_once ||
                 qos_value == qos::exactly_once) {
                 if (auto pid = con_->acquire_unique_packet_id_no_except()) {
-                    // TODO: Probably this should be switched to async_publish?
-                    //       Given the async_client / sync_client seperation
-                    //       and the way they have different function names,
-                    //       it wouldn't be possible for broker.hpp to be
-                    //       used with some hypothetical "async_server" in the future.
-                    con_->publish(pid.value(), pub_topic, contents, pubopts, props);
+                    con_->async_publish(
+                        pid.value(),
+                        force_move(pub_topic),
+                        force_move(contents),
+                        pubopts,
+                        force_move(props),
+                        [con = con_]
+                        (error_code ec) {
+                            if (ec) {
+                                MQTT_LOG("mqtt_broker", warning)
+                                    << MQTT_ADD_VALUE(address, con.get())
+                                    << ec.message();
+                            }
+                        }
+                    );
                     return;
                 }
             }
             else {
-                con_->publish(pub_topic, contents, pubopts, props);
+                con_->async_publish(
+                    force_move(pub_topic),
+                    force_move(contents),
+                    pubopts,
+                    force_move(props),
+                    [con = con_]
+                    (error_code ec) {
+                        if (ec) {
+                            MQTT_LOG("mqtt_broker", warning)
+                                << MQTT_ADD_VALUE(address, con.get())
+                                << ec.message();
+                        }
+                    }
+                );
                 return;
             }
         }
@@ -244,6 +268,7 @@ struct session_state {
             );
         }
         else {
+            boost::lock_guard<mutex> g(mtx_offline_messages_);
             offline_messages_.push_back(
                 ioc,
                 force_move(pub_topic),
@@ -255,22 +280,34 @@ struct session_state {
     }
 
     void clean() {
-        inflight_messages_.clear();
-        offline_messages_.clear();
-        qos2_publish_processed_.clear();
+        {
+            boost::lock_guard<mutex> g(mtx_inflight_messages_);
+            inflight_messages_.clear();
+        }
+        {
+            boost::lock_guard<mutex> g(mtx_offline_messages_);
+            offline_messages_.clear();
+        }
+        {
+            boost::lock_guard<mutex> g(mtx_qos2_publish_processed_);
+            qos2_publish_processed_.clear();
+        }
         shared_targets_.erase(*this);
         unsubscribe_all();
     }
 
     void exactly_once_start(packet_id_t packet_id) {
+        boost::lock_guard<mutex> g(mtx_qos2_publish_processed_);
         qos2_publish_processed_.insert(packet_id);
     }
 
     bool exactly_once_processing(packet_id_t packet_id) const {
+        boost::shared_lock_guard<mutex> g(mtx_qos2_publish_processed_);
         return qos2_publish_processed_.find(packet_id) != qos2_publish_processed_.end();
     }
 
     void exactly_once_finish(packet_id_t packet_id) {
+        boost::lock_guard<mutex> g(mtx_qos2_publish_processed_);
         qos2_publish_processed_.erase(packet_id);
     }
 
@@ -293,11 +330,15 @@ struct session_state {
             << " qos:" << subopts.get_qos();
 
         subscription sub {*this, force_move(share_name), topic_filter, subopts, sid };
-        auto handle_ret = subs_map_.insert_or_assign(
-            force_move(topic_filter),
-            client_id_,
-            force_move(sub)
-        );
+        auto handle_ret =
+            [&] {
+                boost::lock_guard<mutex> g{mtx_subs_map_};
+                return subs_map_.insert_or_assign(
+                    force_move(topic_filter),
+                    client_id_,
+                    force_move(sub)
+                );
+            } ();
 
         auto rh = subopts.get_retain_handling();
 
@@ -327,6 +368,7 @@ struct session_state {
         if (!share_name.empty()) {
             shared_targets_.erase(share_name, topic_filter, *this);
         }
+        boost::lock_guard<mutex> g{mtx_subs_map_};
         auto handle = subs_map_.lookup(topic_filter);
         if (handle) {
             handles_.erase(handle.value());
@@ -335,8 +377,11 @@ struct session_state {
     }
 
     void unsubscribe_all() {
-        for (auto const& h : handles_) {
-            subs_map_.erase(h, client_id_);
+        {
+            boost::lock_guard<mutex> g{mtx_subs_map_};
+            for (auto const& h : handles_) {
+                subs_map_.erase(h, client_id_);
+            }
         }
         handles_.clear();
     }
@@ -409,6 +454,7 @@ struct session_state {
         any life_keeper,
         std::shared_ptr<as::steady_timer> tim_message_expiry
     ) {
+        boost::lock_guard<mutex> g(mtx_inflight_messages_);
         inflight_messages_.insert(
             force_move(msg),
             force_move(life_keeper),
@@ -418,26 +464,31 @@ struct session_state {
 
     void send_inflight_messages() {
         BOOST_ASSERT(con_);
+        boost::lock_guard<mutex> g(mtx_inflight_messages_);
         inflight_messages_.send_all_messages(*con_);
     }
 
     void erase_inflight_message_by_expiry(std::shared_ptr<as::steady_timer> const& sp) {
+        boost::lock_guard<mutex> g(mtx_inflight_messages_);
         inflight_messages_.get<tag_tim>().erase(sp);
     }
 
     void erase_inflight_message_by_packet_id(packet_id_t packet_id) {
+        boost::lock_guard<mutex> g(mtx_inflight_messages_);
         auto& idx = inflight_messages_.get<tag_pid>();
         idx.erase(packet_id);
     }
 
     void send_all_offline_messages() {
         BOOST_ASSERT(con_);
-        offline_messages_.send_all(*con_);
+        boost::lock_guard<mutex> g(mtx_offline_messages_);
+        offline_messages_.send_until_fail(*con_);
     }
 
     void send_offline_messages_by_packet_id_release() {
         BOOST_ASSERT(con_);
-        offline_messages_.send_by_packet_id_release(*con_);
+        boost::lock_guard<mutex> g(mtx_offline_messages_);
+        offline_messages_.send_until_fail(*con_);
     }
 
     protocol_version get_protocol_version() const {
@@ -513,6 +564,7 @@ private:
     std::shared_ptr<as::steady_timer> tim_will_expiry_;
     optional<MQTT_NS::will> will_value_;
 
+    mutex& mtx_subs_map_;
     sub_con_map& subs_map_;
     shared_target& shared_targets_;
     con_sp_t con_;
@@ -522,9 +574,13 @@ private:
     optional<std::chrono::steady_clock::duration> session_expiry_interval_;
     std::shared_ptr<as::steady_timer> tim_session_expiry_;
 
+    mutable mutex mtx_inflight_messages_;
     inflight_messages inflight_messages_;
+
+    mutable mutex mtx_qos2_publish_processed_;
     std::set<packet_id_t> qos2_publish_processed_;
 
+    mutable mutex mtx_offline_messages_;
     offline_messages offline_messages_;
 
     std::set<sub_con_map::handle> handles_; // to efficient remove

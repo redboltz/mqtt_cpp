@@ -76,8 +76,18 @@ public:
         }
         // packet_id_exhausted never happen because inflight message has already
         // allocated packet_id at the previous connection.
-        // In  send_store_message(), packet_id is registered.
-        ep.send_store_message(msg_opt ? msg_opt.value() : msg_, life_keeper_);
+        // In async_send_store_message(), packet_id is registered.
+        ep.async_send_store_message(
+            msg_opt ? msg_opt.value() : msg_,
+            life_keeper_,
+            [sp = ep.shared_from_this()](error_code ec) {
+                if (ec) {
+                    MQTT_LOG("mqtt_broker", trace)
+                        << MQTT_ADD_VALUE(address, sp.get())
+                        <<  ec;
+                }
+            }
+        );
     }
 
 private:
