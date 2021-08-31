@@ -1287,7 +1287,16 @@ private:
             // See https://github.com/boostorg/multi_index/issues/50
             auto& ss = const_cast<session_state&>(*it);
             do_send_will(ss);
-            ss.con()->force_disconnect();
+            ss.con()->async_force_disconnect(
+                [spep]
+                (error_code ec) {
+                    if (ec) {
+                        MQTT_LOG("mqtt_broker", info)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << ec.message();
+                    }
+                }
+            );
             idx.erase(it);
             BOOST_ASSERT(sessions_.get<tag_con>().find(spep) == sessions_.get<tag_con>().end());
             return false;
@@ -1297,7 +1306,16 @@ private:
                 it,
                 [&](session_state& ss) {
                     do_send_will(ss);
-                    ss.con()->force_disconnect();
+                    ss.con()->async_force_disconnect(
+                        [spep]
+                        (error_code ec) {
+                            if (ec) {
+                                MQTT_LOG("mqtt_broker", info)
+                                    << MQTT_ADD_VALUE(address, spep.get())
+                                    << ec.message();
+                            }
+                        }
+                    );
                     // become_offline updates index
                     ss.become_offline(
                         [this]

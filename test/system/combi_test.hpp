@@ -70,12 +70,18 @@ inline void do_test(
                     s->close();
                     b.clear_all_sessions();
                     b.clear_all_retained_topics();
+                    MQTT_LOG("mqtt_broker", trace)
+                        << MQTT_ADD_VALUE(address, &b)
+                        << "broker finished";
                 }
             );
         },
         b
     );
     th.join();
+    MQTT_LOG("mqtt_broker", trace)
+        << MQTT_ADD_VALUE(address, &b)
+        << "broker thread joined";
 }
 
 #if defined(MQTT_USE_TLS)
