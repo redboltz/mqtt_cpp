@@ -961,7 +961,7 @@ public:
     }
 
     void clear_all_sessions() {
-        boost::lock_guard<mutex> g(mtx_sessions_);
+        std::lock_guard<mutex> g(mtx_sessions_);
         sessions_.clear();
     }
 
@@ -1086,7 +1086,7 @@ private:
          */
 
         // Find any sessions that have the same client_id
-        boost::lock_guard<mutex> g(mtx_sessions_);
+        std::lock_guard<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_cid>();
         auto it = idx.lower_bound(client_id);
         if (it == idx.end() || it->client_id() != client_id) {
@@ -1322,7 +1322,7 @@ private:
      */
     // TODO: Maybe change the name of this function.
     bool close_proc(con_sp_t spep, bool send_will) {
-        boost::lock_guard<mutex> g(mtx_sessions_);
+        std::lock_guard<mutex> g(mtx_sessions_);
         return close_proc_no_lock(force_move(spep), send_will);
     }
 
@@ -1336,7 +1336,7 @@ private:
 
         auto& ep = *spep;
 
-        boost::shared_lock_guard<mutex> g(mtx_sessions_);
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
@@ -1435,7 +1435,7 @@ private:
         packet_id_t packet_id,
         v5::puback_reason_code /*reason_code*/,
         v5::properties /*props*/) {
-        boost::shared_lock_guard<mutex> g(mtx_sessions_);
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
@@ -1454,7 +1454,7 @@ private:
         packet_id_t packet_id,
         v5::pubrec_reason_code reason_code,
         v5::properties /*props*/) {
-        boost::shared_lock_guard<mutex> g(mtx_sessions_);
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
@@ -1509,7 +1509,7 @@ private:
         packet_id_t packet_id,
         v5::pubrel_reason_code reason_code,
         v5::properties /*props*/) {
-        boost::shared_lock_guard<mutex> g(mtx_sessions_);
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
@@ -1563,7 +1563,7 @@ private:
         packet_id_t packet_id,
         v5::pubcomp_reason_code /*reason_code*/,
         v5::properties /*props*/){
-        boost::shared_lock_guard<mutex> g(mtx_sessions_);
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
@@ -1585,7 +1585,7 @@ private:
 
         auto& ep = *spep;
 
-        boost::shared_lock_guard<mutex> g(mtx_sessions_);
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
@@ -1744,7 +1744,7 @@ private:
 
         auto& ep = *spep;
 
-        boost::shared_lock_guard<mutex> g(mtx_sessions_);
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it  = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
@@ -1865,7 +1865,7 @@ private:
         std::set<std::tuple<string_view, string_view>> sent;
 
         {
-            boost::shared_lock_guard<mutex> g{mtx_subs_map_};
+            std::shared_lock<mutex> g{mtx_subs_map_};
             subs_map_.modify(
                 topic,
                 [&](buffer const& /*key*/, subscription& sub) {

@@ -198,7 +198,7 @@ struct session_state {
 
         BOOST_ASSERT(online());
 
-        boost::lock_guard<mutex> g(mtx_offline_messages_);
+        std::lock_guard<mutex> g(mtx_offline_messages_);
         if (offline_messages_.empty()) {
             auto qos_value = pubopts.get_qos();
             if (qos_value == qos::at_least_once ||
@@ -268,7 +268,7 @@ struct session_state {
             );
         }
         else {
-            boost::lock_guard<mutex> g(mtx_offline_messages_);
+            std::lock_guard<mutex> g(mtx_offline_messages_);
             offline_messages_.push_back(
                 ioc,
                 force_move(pub_topic),
@@ -281,15 +281,15 @@ struct session_state {
 
     void clean() {
         {
-            boost::lock_guard<mutex> g(mtx_inflight_messages_);
+            std::lock_guard<mutex> g(mtx_inflight_messages_);
             inflight_messages_.clear();
         }
         {
-            boost::lock_guard<mutex> g(mtx_offline_messages_);
+            std::lock_guard<mutex> g(mtx_offline_messages_);
             offline_messages_.clear();
         }
         {
-            boost::lock_guard<mutex> g(mtx_qos2_publish_processed_);
+            std::lock_guard<mutex> g(mtx_qos2_publish_processed_);
             qos2_publish_processed_.clear();
         }
         shared_targets_.erase(*this);
@@ -297,17 +297,17 @@ struct session_state {
     }
 
     void exactly_once_start(packet_id_t packet_id) {
-        boost::lock_guard<mutex> g(mtx_qos2_publish_processed_);
+        std::lock_guard<mutex> g(mtx_qos2_publish_processed_);
         qos2_publish_processed_.insert(packet_id);
     }
 
     bool exactly_once_processing(packet_id_t packet_id) const {
-        boost::shared_lock_guard<mutex> g(mtx_qos2_publish_processed_);
+        std::shared_lock<mutex> g(mtx_qos2_publish_processed_);
         return qos2_publish_processed_.find(packet_id) != qos2_publish_processed_.end();
     }
 
     void exactly_once_finish(packet_id_t packet_id) {
-        boost::lock_guard<mutex> g(mtx_qos2_publish_processed_);
+        std::lock_guard<mutex> g(mtx_qos2_publish_processed_);
         qos2_publish_processed_.erase(packet_id);
     }
 
@@ -332,7 +332,7 @@ struct session_state {
         subscription sub {*this, force_move(share_name), topic_filter, subopts, sid };
         auto handle_ret =
             [&] {
-                boost::lock_guard<mutex> g{mtx_subs_map_};
+                std::lock_guard<mutex> g{mtx_subs_map_};
                 return subs_map_.insert_or_assign(
                     force_move(topic_filter),
                     client_id_,
@@ -368,7 +368,7 @@ struct session_state {
         if (!share_name.empty()) {
             shared_targets_.erase(share_name, topic_filter, *this);
         }
-        boost::lock_guard<mutex> g{mtx_subs_map_};
+        std::lock_guard<mutex> g{mtx_subs_map_};
         auto handle = subs_map_.lookup(topic_filter);
         if (handle) {
             handles_.erase(handle.value());
@@ -378,7 +378,7 @@ struct session_state {
 
     void unsubscribe_all() {
         {
-            boost::lock_guard<mutex> g{mtx_subs_map_};
+            std::lock_guard<mutex> g{mtx_subs_map_};
             for (auto const& h : handles_) {
                 subs_map_.erase(h, client_id_);
             }
@@ -454,7 +454,7 @@ struct session_state {
         any life_keeper,
         std::shared_ptr<as::steady_timer> tim_message_expiry
     ) {
-        boost::lock_guard<mutex> g(mtx_inflight_messages_);
+        std::lock_guard<mutex> g(mtx_inflight_messages_);
         inflight_messages_.insert(
             force_move(msg),
             force_move(life_keeper),
@@ -464,30 +464,30 @@ struct session_state {
 
     void send_inflight_messages() {
         BOOST_ASSERT(con_);
-        boost::lock_guard<mutex> g(mtx_inflight_messages_);
+        std::lock_guard<mutex> g(mtx_inflight_messages_);
         inflight_messages_.send_all_messages(*con_);
     }
 
     void erase_inflight_message_by_expiry(std::shared_ptr<as::steady_timer> const& sp) {
-        boost::lock_guard<mutex> g(mtx_inflight_messages_);
+        std::lock_guard<mutex> g(mtx_inflight_messages_);
         inflight_messages_.get<tag_tim>().erase(sp);
     }
 
     void erase_inflight_message_by_packet_id(packet_id_t packet_id) {
-        boost::lock_guard<mutex> g(mtx_inflight_messages_);
+        std::lock_guard<mutex> g(mtx_inflight_messages_);
         auto& idx = inflight_messages_.get<tag_pid>();
         idx.erase(packet_id);
     }
 
     void send_all_offline_messages() {
         BOOST_ASSERT(con_);
-        boost::lock_guard<mutex> g(mtx_offline_messages_);
+        std::lock_guard<mutex> g(mtx_offline_messages_);
         offline_messages_.send_until_fail(*con_);
     }
 
     void send_offline_messages_by_packet_id_release() {
         BOOST_ASSERT(con_);
-        boost::lock_guard<mutex> g(mtx_offline_messages_);
+        std::lock_guard<mutex> g(mtx_offline_messages_);
         offline_messages_.send_until_fail(*con_);
     }
 

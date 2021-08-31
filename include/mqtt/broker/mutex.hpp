@@ -7,13 +7,13 @@
 #if !defined(MQTT_BROKER_MUTEX_HPP)
 #define MQTT_BROKER_MUTEX_HPP
 
-#include <boost/thread.hpp>
+#include <shared_mutex>
 
 #include <mqtt/broker/broker_namespace.hpp>
 
 MQTT_BROKER_NS_BEGIN
 
-using mutex = boost::shared_mutex;
+using mutex = std::shared_timed_mutex;
 
 MQTT_BROKER_NS_END
 

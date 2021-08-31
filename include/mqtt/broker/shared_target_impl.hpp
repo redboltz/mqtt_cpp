@@ -13,7 +13,7 @@
 MQTT_BROKER_NS_BEGIN
 
 inline void shared_target::insert(buffer share_name, buffer topic_filter, session_state& ss) {
-    boost::lock_guard<mutex> g{mtx_targets_};
+    std::lock_guard<mutex> g{mtx_targets_};
     auto& idx = targets_.get<tag_cid_sn>();
     auto it = idx.lower_bound(std::make_tuple(ss.client_id(), share_name));
     if (it == idx.end() || (it->share_name != share_name || it->client_id() != ss.client_id())) {
@@ -37,7 +37,7 @@ inline void shared_target::insert(buffer share_name, buffer topic_filter, sessio
 }
 
 inline void shared_target::erase(buffer share_name, buffer topic_filter, session_state const& ss) {
-    boost::lock_guard<mutex> g{mtx_targets_};
+    std::lock_guard<mutex> g{mtx_targets_};
     auto& idx = targets_.get<tag_cid_sn>();
     auto it = idx.find(std::make_tuple(ss.client_id(), share_name));
     if (it == idx.end()) {
@@ -61,14 +61,14 @@ inline void shared_target::erase(buffer share_name, buffer topic_filter, session
 }
 
 inline void shared_target::erase(session_state const& ss) {
-    boost::lock_guard<mutex> g{mtx_targets_};
+    std::lock_guard<mutex> g{mtx_targets_};
     auto& idx = targets_.get<tag_cid_sn>();
     auto r = idx.equal_range(ss.client_id());
     idx.erase(r.first, r.second);
 }
 
 inline optional<session_state_ref> shared_target::get_target(buffer const& share_name, buffer const& topic_filter) {
-    boost::lock_guard<mutex> g{mtx_targets_};
+    std::lock_guard<mutex> g{mtx_targets_};
     // get share_name matched range ordered by timestamp (ascending)
     auto& idx = targets_.get<tag_sn_tp>();
     auto r = idx.equal_range(share_name);
