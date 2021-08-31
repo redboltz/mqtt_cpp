@@ -1130,7 +1130,7 @@ private:
                         [&](auto& e) {
                             e.clean();
                             e.update_will(ioc_, force_move(will), will_expiry_interval);
-                            // TODO: e.will_delay = force_move(will_delay);
+                            // renew_session_expiry updates index
                             e.renew_session_expiry(force_move(session_expiry_interval));
                         },
                         [](auto&) { BOOST_ASSERT(false); }
@@ -1148,7 +1148,7 @@ private:
                         [&](auto& e) {
                             e.renew(spep, clean_start);
                             e.update_will(ioc_, force_move(will), will_expiry_interval);
-                            // TODO: e.will_delay = force_move(will_delay);
+                            // renew_session_expiry updates index
                             e.renew_session_expiry(force_move(session_expiry_interval));
                             e.send_inflight_messages();
                             e.send_all_offline_messages();
@@ -1199,7 +1199,7 @@ private:
                         e.clean();
                         e.renew(spep, clean_start);
                         e.update_will(ioc_, force_move(will), will_expiry_interval);
-                        // TODO: e.will_delay = force_move(will_delay);
+                        // renew_session_expiry updates index
                         e.renew_session_expiry(force_move(session_expiry_interval));
                     },
                     [](auto&) { BOOST_ASSERT(false); }
@@ -1217,7 +1217,7 @@ private:
                     [&](auto& e) {
                         e.renew(spep, clean_start);
                         e.update_will(ioc_, force_move(will), will_expiry_interval);
-                        // TODO: e.will_delay = force_move(will_delay);
+                        // renew_session_expiry updates index
                         e.renew_session_expiry(force_move(session_expiry_interval));
                         e.send_inflight_messages();
                         e.send_all_offline_messages();
@@ -1283,14 +1283,11 @@ private:
             };
 
         if (session_clear) {
-            idx.modify(
-                it,
-                [&](session_state& ss) {
-                    do_send_will(ss);
-                    ss.con()->force_disconnect();
-                },
-                [](auto&) { BOOST_ASSERT(false); }
-            );
+            // const_cast is appropriate here
+            // See https://github.com/boostorg/multi_index/issues/50
+            auto& ss = const_cast<session_state&>(*it);
+            do_send_will(ss);
+            ss.con()->force_disconnect();
             idx.erase(it);
             BOOST_ASSERT(sessions_.get<tag_con>().find(spep) == sessions_.get<tag_con>().end());
             return false;
@@ -1301,6 +1298,7 @@ private:
                 [&](session_state& ss) {
                     do_send_will(ss);
                     ss.con()->force_disconnect();
+                    // become_offline updates index
                     ss.become_offline(
                         [this]
                         (std::shared_ptr<as::steady_timer> const& sp_tim) {
@@ -1310,7 +1308,6 @@ private:
                 },
                 [](auto&) { BOOST_ASSERT(false); }
             );
-
             return true;
         }
 
@@ -1363,12 +1360,10 @@ private:
                     );
                     break;
                 case qos::exactly_once: {
-                    idx.modify(
-                        it,
-                        [&](auto& e) {
-                            e.exactly_once_start(packet_id.value());
-                        }
-                    );
+                    // const_cast is appropriate here
+                    // See https://github.com/boostorg/multi_index/issues/50
+                    auto& ss = const_cast<session_state&>(*it);
+                    ss.exactly_once_start(packet_id.value());
                     ep.async_pubrec(
                         packet_id.value(),
                         v5::pubrec_reason_code::success,
@@ -1444,13 +1439,13 @@ private:
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
-        idx.modify(
-            it,
-            [&](auto& e) {
-                e.erase_inflight_message_by_packet_id(packet_id);
-                e.send_offline_messages_by_packet_id_release();
-            }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& ss = const_cast<session_state&>(*it);
+        ss.erase_inflight_message_by_packet_id(packet_id);
+        ss.send_offline_messages_by_packet_id_release();
+
         return true;
     }
 
@@ -1463,12 +1458,11 @@ private:
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
-        idx.modify(
-            it,
-            [&](auto& e) {
-                e.erase_inflight_message_by_packet_id(packet_id);
-            }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& ss = const_cast<session_state&>(*it);
+        ss.erase_inflight_message_by_packet_id(packet_id);
 
         if (is_error(reason_code)) return true;
 
@@ -1519,12 +1513,11 @@ private:
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
-        idx.modify(
-            it,
-            [&](auto& e) {
-                e.exactly_once_finish(packet_id);
-            }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& ss = const_cast<session_state&>(*it);
+        ss.exactly_once_finish(packet_id);
 
         auto& ep = *spep;
 
@@ -1574,13 +1567,13 @@ private:
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
-        idx.modify(
-            it,
-            [&](auto& e) {
-                e.erase_inflight_message_by_packet_id(packet_id);
-                e.send_offline_messages_by_packet_id_release();
-            }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& ss = const_cast<session_state&>(*it);
+        ss.erase_inflight_message_by_packet_id(packet_id);
+        ss.send_offline_messages_by_packet_id_release();
+
         return true;
     }
 
@@ -1601,13 +1594,11 @@ private:
         // than corresponding subscription.
         // Because the subscription store the reference of the element.
         optional<session_state_ref> ssr_opt;
-        idx.modify(
-            it,
-            [&](session_state& ss) {
-                ssr_opt.emplace(ss);
-            },
-            [](auto&) { BOOST_ASSERT(false); }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& ss = const_cast<session_state&>(*it);
+        ssr_opt.emplace(ss);
 
         BOOST_ASSERT(ssr_opt);
         session_state_ref ssr {ssr_opt.value()};
@@ -1763,13 +1754,11 @@ private:
         // than corresponding subscription.
         // Because the subscription store the reference of the element.
         optional<session_state_ref> ssr_opt;
-        idx.modify(
-            it,
-            [&](session_state& ss) {
-                ssr_opt.emplace(ss);
-            },
-            [](auto&) { BOOST_ASSERT(false); }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& ss = const_cast<session_state&>(*it);
+        ssr_opt.emplace(ss);
 
         BOOST_ASSERT(ssr_opt);
         session_state_ref ssr {ssr_opt.value()};

@@ -114,14 +114,11 @@ public:
         auto& idx = messages_.get<tag_seq>();
         while (!idx.empty()) {
             auto it = idx.begin();
-            auto ret = false;
-            idx.modify(
-                it,
-                [&](auto& e) {
-                    ret = e.send(ep);
-                }
-            );
-            if (ret) {
+
+            // const_cast is appropriate here
+            // See https://github.com/boostorg/multi_index/issues/50
+            auto& m = const_cast<offline_message&>(*it);
+            if (m.send(ep)) {
                 idx.pop_front();
             }
             else {

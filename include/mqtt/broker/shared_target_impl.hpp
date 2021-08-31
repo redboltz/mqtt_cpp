@@ -18,23 +18,21 @@ inline void shared_target::insert(buffer share_name, buffer topic_filter, sessio
     auto it = idx.lower_bound(std::make_tuple(ss.client_id(), share_name));
     if (it == idx.end() || (it->share_name != share_name || it->client_id() != ss.client_id())) {
         it = idx.emplace_hint(it, force_move(share_name), ss, std::chrono::steady_clock::now());
-        idx.modify(
-            it,
-            [&](auto& e) {
-                bool inserted;
-                std::tie(std::ignore, inserted) = e.topic_filters.insert(force_move(topic_filter));
-                BOOST_ASSERT(inserted);
-            }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& st = const_cast<entry&>(*it);
+        bool inserted;
+        std::tie(std::ignore, inserted) = st.topic_filters.insert(force_move(topic_filter));
+        BOOST_ASSERT(inserted);
     }
     else {
         // entry exists
-        idx.modify(
-            it,
-            [&](auto& e) {
-                e.topic_filters.insert(force_move(topic_filter)); // ignore overwrite
-            }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& st = const_cast<entry&>(*it);
+        st.topic_filters.insert(force_move(topic_filter)); // ignore overwrite
     }
 }
 
@@ -50,8 +48,13 @@ inline void shared_target::erase(buffer share_name, buffer topic_filter, session
             << " client_id:" << ss.client_id();
         return;
     }
+
     // entry exists
-    idx.modify(it, [&](auto& e) { e.topic_filters.erase(topic_filter); });
+
+    // const_cast is appropriate here
+    // See https://github.com/boostorg/multi_index/issues/50
+    auto& st = const_cast<entry&>(*it);
+    st.topic_filters.erase(topic_filter);
     if (it->topic_filters.empty()) {
         idx.erase(it);
     }
@@ -77,7 +80,7 @@ inline optional<session_state_ref> shared_target::get_target(buffer const& share
         if (it == elem.topic_filters.end()) continue;
 
         // matched
-        // update timestamp
+        // update timestamp (timestamp is key)
         idx.modify(r.first, [](auto& e) { e.tp = std::chrono::steady_clock::now(); });
         return elem.ssr;
     }
