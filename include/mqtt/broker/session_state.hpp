@@ -605,25 +605,6 @@ public:
     }
 
     void clear() {
-#if 0
-        for (auto const& css : entries_) {
-            // const_cast is appropriate here
-            // See https://github.com/boostorg/multi_index/issues/50
-            auto& ss = const_cast<session_state&>(css);
-            if (ss.con()) {
-                ss.con()->async_force_disconnect(
-                    [sp = ss.con()]
-                    (error_code ec) {
-                        if (ec) {
-                            MQTT_LOG("mqtt_broker", info)
-                                << MQTT_ADD_VALUE(address, sp.get())
-                                << ec.message();
-                        }
-                    }
-                );
-            }
-        }
-#endif
         entries_.clear();
     }
 
