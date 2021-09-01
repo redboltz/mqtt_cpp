@@ -3893,6 +3893,43 @@ public:
      *        functor object who's operator() will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      *
+     * @note The library may store this message while it communicates with the server for several round trips.
+     *       As such, the life_keeper paramter is important.
+     */
+    template <typename Func>
+    std::enable_if_t<
+        std::is_convertible<Func, async_handler_t>::value
+    >
+    async_pubrel(
+        packet_id_t packet_id,
+        v5::pubrel_reason_code reason_code,
+        v5::properties props = {},
+        Func&& func = {}
+    ) {
+        MQTT_LOG("mqtt_api", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "async_pubrel"
+            << " pid:" << packet_id
+            << " reason:" << reason_code;
+
+        async_send_pubrel(packet_id, reason_code, force_move(props), any(), std::forward<Func>(func));
+    }
+
+    /**
+     * @brief Send pubrel packet.
+     * @param packet_id packet id corresponding to publish
+     * @param reason_code
+     *        PUBREL Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901144<BR>
+     *        3.6.2.1 PUBREL Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901145<BR>
+     *        3.6.2.2 PUBREL Properties
+     * @param func
+     *        functor object who's operator() will be called when the async operation completes.
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
+     *
      * @param life_keeper
      *        An object that stays alive as long as the library holds a reference to any other parameters.
      *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
@@ -11423,7 +11460,11 @@ protected:
     // This avoids issues of the destructor not triggering destruction
     // of derived classes, and any member variables contained in them.
     // Note: Not virtual to avoid need for a vtable when possible.
-    ~endpoint() = default;
+    ~endpoint() {
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "endpoint destroy";
+    }
 
 protected:
     bool clean_start_{false};

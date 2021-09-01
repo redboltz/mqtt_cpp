@@ -49,7 +49,7 @@ public:
           tim_message_expiry_(force_move(tim_message_expiry))
     { }
 
-    bool send(endpoint_t& ep) const {
+    bool send(endpoint_t& ep) {
         auto props = props_;
         if (tim_message_expiry_) {
             auto d =
@@ -68,12 +68,32 @@ public:
         if (qos_value == qos::at_least_once ||
             qos_value == qos::exactly_once) {
             if (auto pid = ep.acquire_unique_packet_id_no_except()) {
-                ep.publish(pid.value(), topic_, contents_, pubopts_, force_move(props));
+                ep.async_publish(
+                    pid.value(),
+                    force_move(topic_),
+                    force_move(contents_),
+                    pubopts_,
+                    force_move(props),
+                    any{},
+                    [sp = ep.shared_from_this()]
+                    (error_code ec) {
+                        if (ec) {
+                            MQTT_LOG("mqtt_broker", warning)
+                                << MQTT_ADD_VALUE(address, sp.get())
+                                << ec.message();
+                        }
+                    }
+                );
                 return true;
             }
         }
         else {
-            ep.publish(topic_, contents_, pubopts_, force_move(props));
+            ep.publish(
+                topic_,
+                contents_,
+                pubopts_,
+                force_move(props)
+            );
             return true;
         }
         return false;
@@ -91,23 +111,15 @@ private:
 
 class offline_messages {
 public:
-    void send_all(endpoint_t& ep) {
+    void send_until_fail(endpoint_t& ep) {
         auto& idx = messages_.get<tag_seq>();
         while (!idx.empty()) {
-            if (idx.front().send(ep)) {
-                idx.pop_front();
-            }
-            else {
-                break;
-            }
-        }
-    }
+            auto it = idx.begin();
 
-    void send_by_packet_id_release(endpoint_t& ep) {
-        auto& idx = messages_.get<tag_seq>();
-        while (!idx.empty()) {
-            if (idx.front().send(ep)) {
-                // if packet_id is consumed, then finish
+            // const_cast is appropriate here
+            // See https://github.com/boostorg/multi_index/issues/50
+            auto& m = const_cast<offline_message&>(*it);
+            if (m.send(ep)) {
                 idx.pop_front();
             }
             else {

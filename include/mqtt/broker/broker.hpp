@@ -24,6 +24,7 @@
 
 #include <mqtt/broker/retained_topic_map.hpp>
 #include <mqtt/broker/shared_target_impl.hpp>
+#include <mqtt/broker/mutex.hpp>
 
 MQTT_BROKER_NS_BEGIN
 
@@ -307,6 +308,7 @@ public:
 
         ep.socket().lowest_layer().set_option(as::ip::tcp::no_delay(true));
         ep.set_auto_pub_response(false);
+        ep.set_async_notify(true);
         ep.set_topic_alias_maximum(MQTT_NS::topic_alias_max);
         // Pass spep to keep lifetime.
         // It makes sure wp.lock() never return nullptr in the handlers below
@@ -348,7 +350,18 @@ public:
                                 MQTT_LOG("mqtt_broker", trace)
                                     << MQTT_ADD_VALUE(address, this)
                                     << "send DISCONNECT reason_code:" << rc.value();
-                                sp->disconnect(rc.value());
+                                sp->async_disconnect(
+                                    rc.value(),
+                                    v5::properties{},
+                                    [sp]
+                                    (error_code ec) {
+                                        if (ec) {
+                                            MQTT_LOG("mqtt_broker", info)
+                                                << MQTT_ADD_VALUE(address, sp.get())
+                                                << ec.message();
+                                        }
+                                    }
+                                );
                             }
                         }
                         else if (sp->underlying_connected()){
@@ -368,7 +381,18 @@ public:
                                 MQTT_LOG("mqtt_broker", trace)
                                     << MQTT_ADD_VALUE(address, this)
                                     << "send CONNACK reason_code:" << rc.value();
-                                sp->connack(false, rc.value());
+                                sp->async_connack(
+                                    false,
+                                    rc.value(),
+                                    [sp]
+                                    (error_code ec) {
+                                        if (ec) {
+                                            MQTT_LOG("mqtt_broker", info)
+                                                << MQTT_ADD_VALUE(address, sp.get())
+                                                << ec.message();
+                                        }
+                                    }
+                                );
                             }
                         }
                     };
@@ -841,7 +865,19 @@ public:
             [this, wp] {
                 con_sp_t sp = wp.lock();
                 BOOST_ASSERT(sp);
-                if (pingresp_) sp->pingresp();
+                if (pingresp_) {
+                    auto p = sp.get();
+                    p->async_pingresp(
+                        [sp = force_move(sp)]
+                        (error_code ec) {
+                            if (ec) {
+                                MQTT_LOG("mqtt_broker", info)
+                                    << MQTT_ADD_VALUE(address, sp.get())
+                                    << ec.message();
+                            }
+                        }
+                    );
+                }
                 return true;
             }
         );
@@ -925,6 +961,7 @@ public:
     }
 
     void clear_all_sessions() {
+        std::lock_guard<mutex> g(mtx_sessions_);
         sessions_.clear();
     }
 
@@ -1049,6 +1086,7 @@ private:
          */
 
         // Find any sessions that have the same client_id
+        std::lock_guard<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_cid>();
         auto it = idx.lower_bound(client_id);
         if (it == idx.end() || it->client_id() != client_id) {
@@ -1060,6 +1098,7 @@ private:
             it = idx.emplace_hint(
                 it,
                 ioc_,
+                mtx_subs_map_,
                 subs_map_,
                 shared_targets_,
                 spep,
@@ -1077,7 +1116,7 @@ private:
         }
         else if (it->online()) {
             // online overwrite
-            if (close_proc(it->con(), true)) {
+            if (close_proc_no_lock(it->con(), true)) {
                 // remain offline
                 if (clean_start) {
                     // discard offline session
@@ -1091,7 +1130,7 @@ private:
                         [&](auto& e) {
                             e.clean();
                             e.update_will(ioc_, force_move(will), will_expiry_interval);
-                            // TODO: e.will_delay = force_move(will_delay);
+                            // renew_session_expiry updates index
                             e.renew_session_expiry(force_move(session_expiry_interval));
                         },
                         [](auto&) { BOOST_ASSERT(false); }
@@ -1109,7 +1148,7 @@ private:
                         [&](auto& e) {
                             e.renew(spep, clean_start);
                             e.update_will(ioc_, force_move(will), will_expiry_interval);
-                            // TODO: e.will_delay = force_move(will_delay);
+                            // renew_session_expiry updates index
                             e.renew_session_expiry(force_move(session_expiry_interval));
                             e.send_inflight_messages();
                             e.send_all_offline_messages();
@@ -1128,6 +1167,7 @@ private:
                 bool inserted;
                 std::tie(it, inserted) = idx.emplace(
                     ioc_,
+                    mtx_subs_map_,
                     subs_map_,
                     shared_targets_,
                     spep,
@@ -1159,7 +1199,7 @@ private:
                         e.clean();
                         e.renew(spep, clean_start);
                         e.update_will(ioc_, force_move(will), will_expiry_interval);
-                        // TODO: e.will_delay = force_move(will_delay);
+                        // renew_session_expiry updates index
                         e.renew_session_expiry(force_move(session_expiry_interval));
                     },
                     [](auto&) { BOOST_ASSERT(false); }
@@ -1177,7 +1217,7 @@ private:
                     [&](auto& e) {
                         e.renew(spep, clean_start);
                         e.update_will(ioc_, force_move(will), will_expiry_interval);
-                        // TODO: e.will_delay = force_move(will_delay);
+                        // renew_session_expiry updates index
                         e.renew_session_expiry(force_move(session_expiry_interval));
                         e.send_inflight_messages();
                         e.send_all_offline_messages();
@@ -1201,14 +1241,14 @@ private:
     }
 
     /**
-     * @brief close_proc - clean up a connection that has been closed.
+     * @brief close_proc_no_lock - clean up a connection that has been closed.
      *
      * @param ep - The underlying server (of whichever type) that is disconnecting.
      * @param send_will - Whether to publish this connections last will
      * @return true if offline session is remained, otherwise false
      */
     // TODO: Maybe change the name of this function.
-    bool close_proc(con_sp_t spep, bool send_will) {
+    bool close_proc_no_lock(con_sp_t spep, bool send_will) {
         endpoint_t& ep = *spep;
 
         auto& idx = sessions_.get<tag_con>();
@@ -1243,13 +1283,19 @@ private:
             };
 
         if (session_clear) {
-            idx.modify(
-                it,
-                [&](session_state& ss) {
-                    do_send_will(ss);
-                    ss.con()->force_disconnect();
-                },
-                [](auto&) { BOOST_ASSERT(false); }
+            // const_cast is appropriate here
+            // See https://github.com/boostorg/multi_index/issues/50
+            auto& ss = const_cast<session_state&>(*it);
+            do_send_will(ss);
+            ss.con()->async_force_disconnect(
+                [spep]
+                (error_code ec) {
+                    if (ec) {
+                        MQTT_LOG("mqtt_broker", info)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << ec.message();
+                    }
+                }
             );
             idx.erase(it);
             BOOST_ASSERT(sessions_.get<tag_con>().find(spep) == sessions_.get<tag_con>().end());
@@ -1260,7 +1306,17 @@ private:
                 it,
                 [&](session_state& ss) {
                     do_send_will(ss);
-                    ss.con()->force_disconnect();
+                    ss.con()->async_force_disconnect(
+                        [spep]
+                        (error_code ec) {
+                            if (ec) {
+                                MQTT_LOG("mqtt_broker", info)
+                                    << MQTT_ADD_VALUE(address, spep.get())
+                                    << ec.message();
+                            }
+                        }
+                    );
+                    // become_offline updates index
                     ss.become_offline(
                         [this]
                         (std::shared_ptr<as::steady_timer> const& sp_tim) {
@@ -1270,10 +1326,22 @@ private:
                 },
                 [](auto&) { BOOST_ASSERT(false); }
             );
-
             return true;
         }
 
+    }
+
+    /**
+     * @brief close_proc - clean up a connection that has been closed.
+     *
+     * @param ep - The underlying server (of whichever type) that is disconnecting.
+     * @param send_will - Whether to publish this connections last will
+     * @return true if offline session is remained, otherwise false
+     */
+    // TODO: Maybe change the name of this function.
+    bool close_proc(con_sp_t spep, bool send_will) {
+        std::lock_guard<mutex> g(mtx_sessions_);
+        return close_proc_no_lock(force_move(spep), send_will);
     }
 
     bool publish_handler(
@@ -1286,24 +1354,47 @@ private:
 
         auto& ep = *spep;
 
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
 
-        auto send_pubrec =
+        auto send_pubres =
             [&] {
                 switch (pubopts.get_qos()) {
                 case qos::at_least_once:
-                    ep.puback(packet_id.value(), v5::puback_reason_code::success, puback_props_);
-                    break;
-                case qos::exactly_once: {
-                    idx.modify(
-                        it,
-                        [&](auto& e) {
-                            e.exactly_once_start(packet_id.value());
+                    ep.async_puback(
+                        packet_id.value(),
+                        v5::puback_reason_code::success,
+                        puback_props_,
+                        [spep = force_move(spep)]
+                        (error_code ec) {
+                            if (ec) {
+                                MQTT_LOG("mqtt_broker", info)
+                                    << MQTT_ADD_VALUE(address, spep.get())
+                                    << ec.message();
+                            }
                         }
                     );
-                    ep.pubrec(packet_id.value(), v5::pubrec_reason_code::success, pubrec_props_);
+                    break;
+                case qos::exactly_once: {
+                    // const_cast is appropriate here
+                    // See https://github.com/boostorg/multi_index/issues/50
+                    auto& ss = const_cast<session_state&>(*it);
+                    ss.exactly_once_start(packet_id.value());
+                    ep.async_pubrec(
+                        packet_id.value(),
+                        v5::pubrec_reason_code::success,
+                        pubrec_props_,
+                        [spep = force_move(spep)]
+                        (error_code ec) {
+                            if (ec) {
+                                MQTT_LOG("mqtt_broker", info)
+                                    << MQTT_ADD_VALUE(address, spep.get())
+                                    << ec.message();
+                            }
+                        }
+                    );
                 } break;
                 default:
                     break;
@@ -1314,9 +1405,9 @@ private:
             if (pubopts.get_qos() == qos::exactly_once &&
                 it->exactly_once_processing(packet_id.value())) {
                 MQTT_LOG("mqtt_broker", info)
-                    << MQTT_ADD_VALUE(address, spep.get())
+                    << MQTT_ADD_VALUE(address, &ep)
                     << "receive already processed publish pid:" << packet_id.value();
-                send_pubrec();
+                send_pubres();
                 return true;
             }
         }
@@ -1332,9 +1423,9 @@ private:
                         // A receiver MUST NOT carry forward any Topic Alias mappings from
                         // one Network Connection to another [MQTT-3.3.2-7].
                     },
-                    [&spep](v5::property::subscription_identifier&& p) {
+                    [&ep](v5::property::subscription_identifier&& p) {
                         MQTT_LOG("mqtt_broker", warning)
-                            << MQTT_ADD_VALUE(address, spep.get())
+                            << MQTT_ADD_VALUE(address, &ep)
                             << "Subscription Identifier from client not forwarded sid:" << p.val();
                     },
                     [&forward_props](auto&& p) {
@@ -1353,36 +1444,7 @@ private:
             force_move(forward_props)
         );
 
-        switch (ep.get_protocol_version()) {
-        case protocol_version::v3_1_1:
-            switch (pubopts.get_qos()) {
-            case qos::at_least_once:
-                ep.puback(packet_id.value());
-                break;
-            case qos::exactly_once:
-                send_pubrec();
-                break;
-            default:
-                break;
-            }
-            break;
-        case protocol_version::v5:
-            switch (pubopts.get_qos()) {
-            case qos::at_least_once:
-                ep.puback(packet_id.value(), v5::puback_reason_code::success, puback_props_);
-                break;
-            case qos::exactly_once:
-                send_pubrec();
-                break;
-            default:
-                break;
-            }
-            break;
-        default:
-            BOOST_ASSERT(false);
-            break;
-        }
-
+        send_pubres();
         return true;
     }
 
@@ -1391,16 +1453,17 @@ private:
         packet_id_t packet_id,
         v5::puback_reason_code /*reason_code*/,
         v5::properties /*props*/) {
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
-        idx.modify(
-            it,
-            [&](auto& e) {
-                e.erase_inflight_message_by_packet_id(packet_id);
-                e.send_offline_messages_by_packet_id_release();
-            }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& ss = const_cast<session_state&>(*it);
+        ss.erase_inflight_message_by_packet_id(packet_id);
+        ss.send_offline_messages_by_packet_id_release();
+
         return true;
     }
 
@@ -1409,15 +1472,15 @@ private:
         packet_id_t packet_id,
         v5::pubrec_reason_code reason_code,
         v5::properties /*props*/) {
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
-        idx.modify(
-            it,
-            [&](auto& e) {
-                e.erase_inflight_message_by_packet_id(packet_id);
-            }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& ss = const_cast<session_state&>(*it);
+        ss.erase_inflight_message_by_packet_id(packet_id);
 
         if (is_error(reason_code)) return true;
 
@@ -1425,10 +1488,32 @@ private:
 
         switch (ep.get_protocol_version()) {
         case protocol_version::v3_1_1:
-            ep.pubrel(packet_id);
+            ep.async_pubrel(
+                packet_id,
+                [spep = force_move(spep)]
+                (error_code ec) {
+                    if (ec) {
+                        MQTT_LOG("mqtt_broker", info)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << ec.message();
+                    }
+                }
+            );
             break;
         case protocol_version::v5:
-            ep.pubrel(packet_id, v5::pubrel_reason_code::success, pubrel_props_);
+            ep.async_pubrel(
+                packet_id,
+                v5::pubrel_reason_code::success,
+                pubrel_props_,
+                [spep = force_move(spep)]
+                (error_code ec) {
+                    if (ec) {
+                        MQTT_LOG("mqtt_broker", info)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << ec.message();
+                    }
+                }
+            );
             break;
         default:
             BOOST_ASSERT(false);
@@ -1442,28 +1527,46 @@ private:
         packet_id_t packet_id,
         v5::pubrel_reason_code reason_code,
         v5::properties /*props*/) {
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
-        idx.modify(
-            it,
-            [&](auto& e) {
-                e.exactly_once_finish(packet_id);
-            }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& ss = const_cast<session_state&>(*it);
+        ss.exactly_once_finish(packet_id);
 
         auto& ep = *spep;
 
         switch (ep.get_protocol_version()) {
         case protocol_version::v3_1_1:
-            ep.pubcomp(packet_id);
+            ep.async_pubcomp(
+                packet_id,
+                [spep = force_move(spep)]
+                (error_code ec) {
+                    if (ec) {
+                        MQTT_LOG("mqtt_broker", info)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << ec.message();
+                    }
+                }
+            );
             break;
         case protocol_version::v5:
-            ep.pubcomp(
+            ep.async_pubcomp(
                 packet_id,
                 // pubcomp reason code is the same as pubrel one
                 static_cast<v5::pubcomp_reason_code>(reason_code),
-                pubcomp_props_
+                pubcomp_props_,
+                [spep = force_move(spep)]
+                (error_code ec) {
+                    if (ec) {
+                        MQTT_LOG("mqtt_broker", info)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << ec.message();
+                    }
+                }
             );
             break;
         default:
@@ -1478,16 +1581,17 @@ private:
         packet_id_t packet_id,
         v5::pubcomp_reason_code /*reason_code*/,
         v5::properties /*props*/){
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
-        idx.modify(
-            it,
-            [&](auto& e) {
-                e.erase_inflight_message_by_packet_id(packet_id);
-                e.send_offline_messages_by_packet_id_release();
-            }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& ss = const_cast<session_state&>(*it);
+        ss.erase_inflight_message_by_packet_id(packet_id);
+        ss.send_offline_messages_by_packet_id_release();
+
         return true;
     }
 
@@ -1499,6 +1603,7 @@ private:
 
         auto& ep = *spep;
 
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
@@ -1507,13 +1612,11 @@ private:
         // than corresponding subscription.
         // Because the subscription store the reference of the element.
         optional<session_state_ref> ssr_opt;
-        idx.modify(
-            it,
-            [&](session_state& ss) {
-                ssr_opt.emplace(ss);
-            },
-            [](auto&) { BOOST_ASSERT(false); }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& ss = const_cast<session_state&>(*it);
+        ssr_opt.emplace(ss);
 
         BOOST_ASSERT(ssr_opt);
         session_state_ref ssr {ssr_opt.value()};
@@ -1581,7 +1684,18 @@ private:
                 );
             }
             // Acknowledge the subscriptions, and the registered QOS settings
-            ep.suback(packet_id, force_move(res));
+            ep.async_suback(
+                packet_id,
+                force_move(res),
+                [spep = force_move(spep)]
+                (error_code ec) {
+                    if (ec) {
+                        MQTT_LOG("mqtt_broker", info)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << ec.message();
+                    }
+                }
+            );
         } break;
         case protocol_version::v5: {
             // Get subscription identifier
@@ -1615,7 +1729,19 @@ private:
             }
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
-            ep.suback(packet_id, force_move(res), suback_props_);
+            ep.async_suback(
+                packet_id,
+                force_move(res),
+                suback_props_,
+                [spep = force_move(spep)]
+                (error_code ec) {
+                    if (ec) {
+                        MQTT_LOG("mqtt_broker", info)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << ec.message();
+                    }
+                }
+            );
         } break;
         default:
             BOOST_ASSERT(false);
@@ -1636,6 +1762,7 @@ private:
 
         auto& ep = *spep;
 
+        std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it  = idx.find(spep);
         BOOST_ASSERT(it != idx.end());
@@ -1645,13 +1772,11 @@ private:
         // than corresponding subscription.
         // Because the subscription store the reference of the element.
         optional<session_state_ref> ssr_opt;
-        idx.modify(
-            it,
-            [&](session_state& ss) {
-                ssr_opt.emplace(ss);
-            },
-            [](auto&) { BOOST_ASSERT(false); }
-        );
+
+        // const_cast is appropriate here
+        // See https://github.com/boostorg/multi_index/issues/50
+        auto& ss = const_cast<session_state&>(*it);
+        ssr_opt.emplace(ss);
 
         BOOST_ASSERT(ssr_opt);
         session_state_ref ssr {ssr_opt.value()};
@@ -1665,17 +1790,35 @@ private:
 
         switch (ep.get_protocol_version()) {
         case protocol_version::v3_1_1:
-            ep.unsuback(packet_id);
+            ep.async_unsuback(
+                packet_id,
+                [spep = force_move(spep)]
+                (error_code ec) {
+                    if (ec) {
+                        MQTT_LOG("mqtt_broker", info)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << ec.message();
+                    }
+                }
+            );
             break;
         case protocol_version::v5:
             if (h_unsubscribe_props_) h_unsubscribe_props_(props);
-            ep.unsuback(
+            ep.async_unsuback(
                 packet_id,
                 std::vector<v5::unsuback_reason_code>(
                     entries.size(),
                     v5::unsuback_reason_code::success
                 ),
-                unsuback_props_
+                unsuback_props_,
+                [spep = force_move(spep)]
+                (error_code ec) {
+                    if (ec) {
+                        MQTT_LOG("mqtt_broker", info)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << ec.message();
+                    }
+                }
             );
             break;
         default:
@@ -1739,30 +1882,33 @@ private:
         //                  share_name   topic_filter
         std::set<std::tuple<string_view, string_view>> sent;
 
-        subs_map_.modify(
-            topic,
-            [&](buffer const& /*key*/, subscription& sub) {
-                if (sub.share_name.empty()) {
-                    // Non shared subscriptions
+        {
+            std::shared_lock<mutex> g{mtx_subs_map_};
+            subs_map_.modify(
+                topic,
+                [&](buffer const& /*key*/, subscription& sub) {
+                    if (sub.share_name.empty()) {
+                        // Non shared subscriptions
 
-                    // If NL (no local) subscription option is set and
-                    // publisher is the same as subscriber, then skip it.
-                    if (sub.subopts.get_nl() == nl::yes &&
-                        sub.ss.get().client_id() ==  source_ss.client_id()) return;
-                    deliver(sub.ss.get(), sub);
-                }
-                else {
-                    // Shared subscriptions
-                    bool inserted;
-                    std::tie(std::ignore, inserted) = sent.emplace(sub.share_name, sub.topic_filter);
-                    if (inserted) {
-                        if (auto ssr_opt = shared_targets_.get_target(sub.share_name, sub.topic_filter)) {
-                            deliver(ssr_opt.value().get(), sub);
+                        // If NL (no local) subscription option is set and
+                        // publisher is the same as subscriber, then skip it.
+                        if (sub.subopts.get_nl() == nl::yes &&
+                            sub.ss.get().client_id() ==  source_ss.client_id()) return;
+                        deliver(sub.ss.get(), sub);
+                    }
+                    else {
+                        // Shared subscriptions
+                        bool inserted;
+                        std::tie(std::ignore, inserted) = sent.emplace(sub.share_name, sub.topic_filter);
+                        if (inserted) {
+                            if (auto ssr_opt = shared_targets_.get_target(sub.share_name, sub.topic_filter)) {
+                                deliver(ssr_opt.value().get(), sub);
+                            }
                         }
                     }
                 }
-            }
-        );
+            );
+        }
 
         optional<std::chrono::steady_clock::duration> message_expiry_interval;
         if (source_ss.get_protocol_version() == protocol_version::v5) {
@@ -1833,12 +1979,14 @@ private:
     as::steady_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
     optional<std::chrono::steady_clock::duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
 
+    mutable mutex mtx_subs_map_;
     sub_con_map subs_map_;   /// subscription information
     shared_target shared_targets_; /// shared subscription targets
 
     ///< Map of active client id and connections
     /// session_state has references of subs_map_ and shared_targets_.
     /// because session_state (member of sessions_) has references of subs_map_ and shared_targets_.
+    mutable mutex mtx_sessions_;
     session_states sessions_;
 
 

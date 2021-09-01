@@ -129,8 +129,7 @@ BOOST_AUTO_TEST_CASE( sync ) {
             });
         c->set_v5_puback_handler(
             []
-            (packet_id_t, MQTT_NS::v5::puback_reason_code rc, MQTT_NS::v5::properties /*props*/) {
-                std::cout <<"puback:" << rc <<  std::endl;
+            (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                 return true;
             });
 
