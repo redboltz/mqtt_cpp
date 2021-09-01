@@ -1464,7 +1464,7 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
         MQTT_NS::v5::properties ps {
             MQTT_NS::v5::property::session_expiry_interval(0),
             MQTT_NS::v5::property::receive_maximum(0x1234),
-            MQTT_NS::v5::property::maximum_qos(MQTT_NS::qos::exactly_once),
+            MQTT_NS::v5::property::maximum_qos(MQTT_NS::qos::at_least_once),
             MQTT_NS::v5::property::retain_available(true),
             MQTT_NS::v5::property::maximum_packet_size(100000),
             MQTT_NS::v5::property::assigned_client_identifier("test cid"_mb),
@@ -1506,7 +1506,7 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
                                 BOOST_TEST(t.val() == 0x1234);
                             },
                             [&](MQTT_NS::v5::property::maximum_qos const& t) {
-                                BOOST_TEST(t.val() == 2);
+                                BOOST_TEST(t.val() == 1);
                             },
                             [&](MQTT_NS::v5::property::retain_available const& t) {
                                 BOOST_TEST(t.val() == true);

@@ -1058,7 +1058,6 @@ private:
                             v5::connect_reason_code::success,
                             v5::properties{
                                 v5::property::topic_alias_maximum{topic_alias_max},
-                                v5::property::maximum_qos{qos::exactly_once},
                                 v5::property::receive_maximum{receive_maximum_max}
                             }
                         );
