@@ -827,10 +827,9 @@ BOOST_AUTO_TEST_CASE( resend_publish ) {
                     return true;
                 });
             c->set_v5_puback_handler(
-                [&chk, &c]
+                [&chk]
                 (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_puback");
-                    c->disconnect();
                     return true;
                 });
             c->set_v5_pubrec_handler(
