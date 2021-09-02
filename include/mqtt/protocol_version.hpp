@@ -25,7 +25,7 @@ constexpr char const* protocol_version_to_str(protocol_version v) {
     case protocol_version::undetermined: return "undetermined";
     case protocol_version::v3_1_1: return "v3_1_1";
     case protocol_version::v5: return "v5";
-    default: return "unknown protocol_version";
+    default: return "unknown_protocol_version";
     }
 }
 
