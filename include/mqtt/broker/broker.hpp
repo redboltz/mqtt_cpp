@@ -1385,7 +1385,13 @@ private:
         std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
-        BOOST_ASSERT(it != idx.end());
+
+        // broker uses async_* APIs
+        // If broker erase a connection, then async_force_disconnect()
+        // and/or async_force_disconnect () is called.
+        // During async operation, spep is valid but it has already been
+        // erased from sessions_
+        if (it == idx.end()) return true;
 
         auto send_pubres =
             [&] {
@@ -1484,7 +1490,13 @@ private:
         std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
-        BOOST_ASSERT(it != idx.end());
+
+        // broker uses async_* APIs
+        // If broker erase a connection, then async_force_disconnect()
+        // and/or async_force_disconnect () is called.
+        // During async operation, spep is valid but it has already been
+        // erased from sessions_
+        if (it == idx.end()) return true;
 
         // const_cast is appropriate here
         // See https://github.com/boostorg/multi_index/issues/50
@@ -1503,7 +1515,13 @@ private:
         std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
-        BOOST_ASSERT(it != idx.end());
+
+        // broker uses async_* APIs
+        // If broker erase a connection, then async_force_disconnect()
+        // and/or async_force_disconnect () is called.
+        // During async operation, spep is valid but it has already been
+        // erased from sessions_
+        if (it == idx.end()) return true;
 
         // const_cast is appropriate here
         // See https://github.com/boostorg/multi_index/issues/50
@@ -1558,7 +1576,13 @@ private:
         std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
-        BOOST_ASSERT(it != idx.end());
+
+        // broker uses async_* APIs
+        // If broker erase a connection, then async_force_disconnect()
+        // and/or async_force_disconnect () is called.
+        // During async operation, spep is valid but it has already been
+        // erased from sessions_
+        if (it == idx.end()) return true;
 
         // const_cast is appropriate here
         // See https://github.com/boostorg/multi_index/issues/50
@@ -1612,7 +1636,13 @@ private:
         std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
-        BOOST_ASSERT(it != idx.end());
+
+        // broker uses async_* APIs
+        // If broker erase a connection, then async_force_disconnect()
+        // and/or async_force_disconnect () is called.
+        // During async operation, spep is valid but it has already been
+        // erased from sessions_
+        if (it == idx.end()) return true;
 
         // const_cast is appropriate here
         // See https://github.com/boostorg/multi_index/issues/50
@@ -1634,7 +1664,13 @@ private:
         std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it = idx.find(spep);
-        BOOST_ASSERT(it != idx.end());
+
+        // broker uses async_* APIs
+        // If broker erase a connection, then async_force_disconnect()
+        // and/or async_force_disconnect () is called.
+        // During async operation, spep is valid but it has already been
+        // erased from sessions_
+        if (it == idx.end()) return true;
 
         // The element of sessions_ must have longer lifetime
         // than corresponding subscription.
@@ -1793,8 +1829,13 @@ private:
         std::shared_lock<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_con>();
         auto it  = idx.find(spep);
-        BOOST_ASSERT(it != idx.end());
 
+        // broker uses async_* APIs
+        // If broker erase a connection, then async_force_disconnect()
+        // and/or async_force_disconnect () is called.
+        // During async operation, spep is valid but it has already been
+        // erased from sessions_
+        if (it == idx.end()) return true;
 
         // The element of sessions_ must have longer lifetime
         // than corresponding subscription.
