@@ -13,6 +13,7 @@ ENDIF ()
 IF (MQTT_TEST_1)
     LIST (APPEND check_PROGRAMS
         ut_buffer.cpp
+        ut_code.cpp
         ut_utf8string_validate.cpp
         ut_packet_id.cpp
         ut_topic_alias.cpp
