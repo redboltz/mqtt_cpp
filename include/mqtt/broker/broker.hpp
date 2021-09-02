@@ -1115,7 +1115,7 @@ private:
         }
         else if (it->online()) {
             // online overwrite
-            if (close_proc_no_lock(it->con(), true)) {
+            if (close_proc_no_lock(it->con(), true, v5::disconnect_reason_code::session_taken_over)) {
                 // remain offline
                 if (clean_start) {
                     // discard offline session
@@ -1136,7 +1136,7 @@ private:
                     );
                 }
                 else {
-                    // inherit online session
+                    // inherit online session if previous session's session exists
                     MQTT_LOG("mqtt_broker", trace)
                         << MQTT_ADD_VALUE(address, this)
                         << "cid:" << client_id
@@ -1247,7 +1247,10 @@ private:
      * @return true if offline session is remained, otherwise false
      */
     // TODO: Maybe change the name of this function.
-    bool close_proc_no_lock(con_sp_t spep, bool send_will) {
+    bool close_proc_no_lock(
+        con_sp_t spep,
+        bool send_will,
+        optional<v5::disconnect_reason_code> rc) {
         endpoint_t& ep = *spep;
 
         auto& idx = sessions_.get<tag_con>();
@@ -1281,21 +1284,46 @@ private:
                 }
             };
 
+        auto force_disconnect =
+            [](con_sp_t spep) {
+                auto p = spep.get();
+                p->async_force_disconnect(
+                    [spep = force_move(spep)]
+                    (error_code ec) {
+                        if (ec) {
+                            MQTT_LOG("mqtt_broker", info)
+                                << MQTT_ADD_VALUE(address, spep.get())
+                                << ec.message();
+                        }
+                    }
+                );
+            };
+
+        auto disconnect_and_force_disconnect =
+            [force_disconnect]
+            (con_sp_t spep, v5::disconnect_reason_code rc) mutable {
+                auto p = spep.get();
+                p->async_disconnect(
+                    rc,
+                    v5::properties{},
+                    [spep = force_move(spep), force_disconnect = force_move(force_disconnect)]
+                    (error_code) mutable {
+                        force_disconnect(force_move(spep));
+                    }
+                );
+            };
+
         if (session_clear) {
             // const_cast is appropriate here
             // See https://github.com/boostorg/multi_index/issues/50
             auto& ss = const_cast<session_state&>(*it);
             do_send_will(ss);
-            ss.con()->async_force_disconnect(
-                [spep]
-                (error_code ec) {
-                    if (ec) {
-                        MQTT_LOG("mqtt_broker", info)
-                            << MQTT_ADD_VALUE(address, spep.get())
-                            << ec.message();
-                    }
-                }
-            );
+            if (rc) {
+                disconnect_and_force_disconnect(spep, rc.value());
+            }
+            else {
+                force_disconnect(spep);
+            }
             idx.erase(it);
             BOOST_ASSERT(sessions_.get<tag_con>().find(spep) == sessions_.get<tag_con>().end());
             return false;
@@ -1305,16 +1333,12 @@ private:
                 it,
                 [&](session_state& ss) {
                     do_send_will(ss);
-                    ss.con()->async_force_disconnect(
-                        [spep]
-                        (error_code ec) {
-                            if (ec) {
-                                MQTT_LOG("mqtt_broker", info)
-                                    << MQTT_ADD_VALUE(address, spep.get())
-                                    << ec.message();
-                            }
-                        }
-                    );
+                    if (rc) {
+                        disconnect_and_force_disconnect(spep, rc.value());
+                    }
+                    else {
+                        force_disconnect(spep);
+                    }
                     // become_offline updates index
                     ss.become_offline(
                         [this]
@@ -1335,12 +1359,17 @@ private:
      *
      * @param ep - The underlying server (of whichever type) that is disconnecting.
      * @param send_will - Whether to publish this connections last will
+     * @param rc - Reason Code for send pack DISCONNECT
      * @return true if offline session is remained, otherwise false
      */
     // TODO: Maybe change the name of this function.
-    bool close_proc(con_sp_t spep, bool send_will) {
+    bool close_proc(
+        con_sp_t spep,
+        bool send_will,
+        optional<v5::disconnect_reason_code> rc = nullopt
+    ) {
         std::lock_guard<mutex> g(mtx_sessions_);
-        return close_proc_no_lock(force_move(spep), send_will);
+        return close_proc_no_lock(force_move(spep), send_will, rc);
     }
 
     bool publish_handler(
