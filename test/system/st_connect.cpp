@@ -1635,11 +1635,15 @@ BOOST_AUTO_TEST_CASE( session_taken_over ) {
         // connect
         cont("h_connack1"),
         // connect
+#if !defined(_MSC_VER)
         cont("h_disconnect1"),
+#endif // !defined(_MSC_VER)
         cont("h_error1"),
         deps("h_connack2", "h_connack1"),
         // connect
+#if !defined(_MSC_VER)
         cont("h_disconnect2"),
+#endif // !defined(_MSC_VER)
         cont("h_error2"),
         deps("h_connack3", "h_connack2"),
         // disconnect
