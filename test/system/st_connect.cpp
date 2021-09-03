@@ -1628,8 +1628,8 @@ BOOST_AUTO_TEST_CASE( session_taken_over ) {
     c2->set_client_id("cid1");
     c3->set_client_id("cid1");
     c1->set_clean_start(true);
-    c2->set_clean_start(true);
-    c3->set_clean_start(false);
+    c2->set_clean_start(false);
+    c3->set_clean_start(true);
 
     checker chk = {
         // connect
@@ -1652,7 +1652,13 @@ BOOST_AUTO_TEST_CASE( session_taken_over ) {
             MQTT_CHK("h_connack1");
             BOOST_TEST(sp == false);
             BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
-            c2->connect();
+            c2->connect(
+                MQTT_NS::v5::properties{
+                    MQTT_NS::v5::property::session_expiry_interval(
+                        MQTT_NS::session_never_expire
+                    )
+                }
+            );
             return true;
         }
     );
@@ -1673,7 +1679,7 @@ BOOST_AUTO_TEST_CASE( session_taken_over ) {
         [&]
         (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_connack2");
-            BOOST_TEST(sp == false);
+            BOOST_TEST(sp == true);
             BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
             c3->connect();
             return true;
@@ -1702,19 +1708,19 @@ BOOST_AUTO_TEST_CASE( session_taken_over ) {
             return true;
         }
     );
-    c3->set_v5_disconnect_handler(
-        [&](MQTT_NS::v5::disconnect_reason_code disconnect_reason_code, MQTT_NS::v5::properties /*props*/) {
-            MQTT_CHK("h_disconnect3");
-            BOOST_TEST(disconnect_reason_code == MQTT_NS::v5::disconnect_reason_code::session_taken_over);
-        }
-    );
     c3->set_close_handler(
         [&] {
             MQTT_CHK("h_close3");
             finish();
         }
     );
-    c1->connect();
+    c1->connect(
+        MQTT_NS::v5::properties{
+            MQTT_NS::v5::property::session_expiry_interval(
+                MQTT_NS::session_never_expire
+            )
+        }
+    );
     ioc.run();
     BOOST_TEST(chk.all());
     th.join();
