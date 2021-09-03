@@ -687,7 +687,7 @@ BOOST_AUTO_TEST_CASE( multi_client_nl ) {
         deps("h_publish_2_2","h_publish_2_1"),
 
         // disconnect
-        cont("h_close_1"),
+        deps("h_close_1", "h_publish_1"),
         deps("h_close_2", "h_publish_2_2"),
     };
 

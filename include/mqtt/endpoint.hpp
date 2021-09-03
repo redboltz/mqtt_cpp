@@ -2181,6 +2181,13 @@ public:
                                   v5::properties{},
                                   force_move(func));
         }
+        else {
+            socket_->post(
+                [func = force_move(func)] {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+                }
+            );
+        }
     }
 
     /**
@@ -2212,6 +2219,13 @@ public:
         if (connected_ && mqtt_connected_) {
             disconnect_requested_ = true;
             async_send_disconnect(reason, force_move(props), force_move(func));
+        }
+        else {
+            socket_->post(
+                [func = force_move(func)] {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+                }
+            );
         }
     }
 
