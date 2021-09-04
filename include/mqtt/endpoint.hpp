@@ -5241,8 +5241,22 @@ private:
         connected_ = false;
         mqtt_connected_ = false;
 
-        boost::system::error_code ec;
-        socket.lowest_layer().close(ec);
+        {
+            boost::system::error_code ec;
+            socket.lowest_layer().shutdown(as::ip::tcp::socket::shutdown_both, ec);
+            MQTT_LOG("mqtt_impl", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "socket shutdown ec:"
+                << ec.message();
+        }
+        {
+            boost::system::error_code ec;
+            socket.lowest_layer().close(ec);
+            MQTT_LOG("mqtt_impl", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "socket close ec:"
+                << ec.message();
+        }
     }
 
     void send_error_disconnect(v5::disconnect_reason_code rc) {

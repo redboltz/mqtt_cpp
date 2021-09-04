@@ -18,7 +18,6 @@
 #include <mqtt/property.hpp>
 #include <mqtt/visitor_util.hpp>
 
-#include <mqtt/broker/broker_config.hpp>
 #include <mqtt/broker/session_state.hpp>
 #include <mqtt/broker/sub_con_map.hpp>
 #include <mqtt/broker/retained_messages.hpp>
@@ -1300,39 +1299,6 @@ private:
                 );
             };
 
-#if defined(_MSC_VER)
-        // This is sending DISCONNECT packet and then close the socket from the broker side.
-        // If the client receive DISCONNECT packet then the client is expected that close
-        // the socket from the client side. But not all clients do that.
-        // So the broker should close the socket from the broker side.
-        // mqtt_cpp uses Boost.Asio's async_write..
-        // See https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/reference/async_write/overload1.html
-        // **In the WriteHandler**, call force_disconnect() that closes the socket.
-        // It works on Linux and osx. However Windows doesn't.
-        // After some try and error, Windows requires some wait.
-        // So I inserted wait code.
-        auto disconnect_and_force_disconnect =
-            [this, force_disconnect]
-            (con_sp_t spep, v5::disconnect_reason_code rc) mutable {
-                auto p = spep.get();
-                p->async_disconnect(
-                    rc,
-                    v5::properties{},
-                    [this, spep = force_move(spep), force_disconnect = force_move(force_disconnect)]
-                    (error_code) mutable {
-                        auto tim = std::make_shared<as::steady_timer>(ioc_, windows_close_delay);
-                        tim->async_wait(
-                            [tim, spep = force_move(spep), force_disconnect = force_move(force_disconnect)]
-                            (boost::system::error_code const& ec) mutable {
-                                if (!ec) {
-                                    force_disconnect(force_move(spep));
-                                }
-                            }
-                        );
-                    }
-                );
-            };
-#else  // defined(_MSC_VER)
         auto disconnect_and_force_disconnect =
             [force_disconnect]
             (con_sp_t spep, v5::disconnect_reason_code rc) mutable {
@@ -1346,7 +1312,6 @@ private:
                     }
                 );
             };
-#endif // defined(_MSC_VER)
 
         if (session_clear) {
             // const_cast is appropriate here
