@@ -15,7 +15,8 @@
 BOOST_AUTO_TEST_SUITE(st_remaining_length)
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
@@ -127,7 +128,8 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_127 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
@@ -241,7 +243,8 @@ BOOST_AUTO_TEST_CASE( pub_sub_over_16384 ) {
 # if 0 // It would make network load too much.
 
 BOOST_AUTO_TEST_CASE( pub_sub_over_2097152 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();

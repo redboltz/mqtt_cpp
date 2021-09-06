@@ -17,7 +17,8 @@ BOOST_AUTO_TEST_SUITE(st_pubsub_2)
 using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( pub_sub_wc_plus ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -197,7 +198,8 @@ BOOST_AUTO_TEST_CASE( pub_sub_wc_plus ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_sub_wc_sharp ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -377,7 +379,8 @@ BOOST_AUTO_TEST_CASE( pub_sub_wc_sharp ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_sub_sid ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
@@ -465,7 +468,8 @@ BOOST_AUTO_TEST_CASE( pub_sub_sid ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_sub_sid_ow ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
@@ -569,7 +573,8 @@ BOOST_AUTO_TEST_CASE( pub_sub_sid_ow ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_sub_sid_multi_match ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();

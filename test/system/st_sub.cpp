@@ -19,7 +19,8 @@ using namespace MQTT_NS::literals;
 using namespace std::literals::string_literals;
 
 BOOST_AUTO_TEST_CASE( qos0_sub_string_single ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -118,7 +119,8 @@ BOOST_AUTO_TEST_CASE( qos0_sub_string_single ) {
 }
 
 BOOST_AUTO_TEST_CASE( sub_update ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -249,7 +251,8 @@ BOOST_AUTO_TEST_CASE( sub_update ) {
 }
 
 BOOST_AUTO_TEST_CASE( sub_v5_options ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -345,7 +348,8 @@ BOOST_AUTO_TEST_CASE( sub_v5_options ) {
 }
 
 BOOST_AUTO_TEST_CASE( qos0_sub_string_multi_arg ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -450,7 +454,8 @@ BOOST_AUTO_TEST_CASE( qos0_sub_string_multi_arg ) {
 }
 
 BOOST_AUTO_TEST_CASE( qos0_sub_string_multi_vec ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -559,7 +564,8 @@ BOOST_AUTO_TEST_CASE( qos0_sub_string_multi_vec ) {
 }
 
 BOOST_AUTO_TEST_CASE( qos0_sub_string_single_async ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -652,7 +658,8 @@ BOOST_AUTO_TEST_CASE( qos0_sub_string_single_async ) {
 }
 
 BOOST_AUTO_TEST_CASE( qos0_sub_string_multi_arg_async ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -771,7 +778,8 @@ BOOST_AUTO_TEST_CASE( qos0_sub_string_multi_arg_async ) {
 }
 
 BOOST_AUTO_TEST_CASE( qos0_sub_string_multi_vec_async ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -892,7 +900,8 @@ BOOST_AUTO_TEST_CASE( qos0_sub_string_multi_vec_async ) {
 }
 
 BOOST_AUTO_TEST_CASE( sub_unsub_prop ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
@@ -1036,7 +1045,8 @@ BOOST_AUTO_TEST_CASE( sub_unsub_prop ) {
 }
 
 BOOST_AUTO_TEST_CASE( suback_unsuback_prop ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();

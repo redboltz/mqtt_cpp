@@ -9,6 +9,7 @@
 
 #include <thread>
 #include <future>
+#include <vector>
 
 #include <mqtt/broker/broker.hpp>
 
@@ -36,6 +37,7 @@ template <typename ClientCreator, typename Test>
 inline void do_test(
     ClientCreator const& cc,
     Test const& test,
+    std::size_t clients,
     MQTT_NS::optional<MQTT_NS::protocol_version> v = MQTT_NS::nullopt) {
     boost::asio::io_context iocb;
     MQTT_NS::broker::broker_t b(iocb);
@@ -51,18 +53,26 @@ inline void do_test(
     );
     f.wait();
     boost::asio::io_context ioc;
-    auto c =
+    auto cs =
         [&] {
+            BOOST_ASSERT(clients > 0);
+            std::vector<decltype(cc(ioc, broker_url, broker_notls_port))> cs;
+            cs.reserve(clients);
             if (v) {
-                return cc(ioc, broker_url, broker_notls_port, v.value());
+                for (std::size_t i = 0; i != clients; ++i) {
+                    cs.push_back(cc(ioc, broker_url, broker_notls_port, v.value()));
+                }
             }
             else {
-                return cc(ioc, broker_url, broker_notls_port);
+                for (std::size_t i = 0; i != clients; ++i) {
+                    cs.push_back(cc(ioc, broker_url, broker_notls_port));
+                }
             }
+            return cs;
         } ();
     test(
         ioc,
-        c,
+        cs,
         [&] {
             as::post(
                 iocb,
@@ -90,6 +100,7 @@ template <typename ClientCreator, typename Test>
 inline void do_tls_test(
     ClientCreator const& cc,
     Test const& test,
+    std::size_t clients,
     MQTT_NS::optional<MQTT_NS::protocol_version> v = MQTT_NS::nullopt) {
     boost::asio::io_context iocb;
     MQTT_NS::broker::broker_t b(iocb);
@@ -105,22 +116,32 @@ inline void do_tls_test(
     );
     f.wait();
     boost::asio::io_context ioc;
-    auto c =
+    auto cs =
         [&] {
+            BOOST_ASSERT(clients > 0);
+            std::vector<decltype(cc(ioc, broker_url, broker_tls_port))> cs;
+            cs.reserve(clients);
             if (v) {
-                return cc(ioc, broker_url, broker_tls_port, v.value());
+                for (std::size_t i = 0; i != clients; ++i) {
+                    cs.push_back(cc(ioc, broker_url, broker_tls_port, v.value()));
+                }
             }
             else {
-                return cc(ioc, broker_url, broker_tls_port);
+                for (std::size_t i = 0; i != clients; ++i) {
+                    cs.push_back(cc(ioc, broker_url, broker_tls_port));
+                }
             }
+            return cs;
         } ();
     std::string path = boost::unit_test::framework::master_test_suite().argv[0];
     std::size_t pos = path.find_last_of("/\\");
     std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-    c->get_ssl_context().load_verify_file(base + "cacert.pem");
+    for (auto& c : cs) {
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
+    }
     test(
         ioc,
-        c,
+        cs,
         [&] {
             as::post(
                 iocb,
@@ -144,6 +165,7 @@ template <typename ClientCreator, typename Test>
 inline void do_ws_test(
     ClientCreator const& cc,
     Test const& test,
+    std::size_t clients,
     MQTT_NS::optional<MQTT_NS::protocol_version> v = MQTT_NS::nullopt) {
     boost::asio::io_context iocb;
     MQTT_NS::broker::broker_t b(iocb);
@@ -159,18 +181,26 @@ inline void do_ws_test(
     );
     f.wait();
     boost::asio::io_context ioc;
-    auto c =
+    auto cs =
         [&] {
+            BOOST_ASSERT(clients > 0);
+            std::vector<decltype(cc(ioc, broker_url, broker_notls_ws_port))> cs;
+            cs.reserve(clients);
             if (v) {
-                return cc(ioc, broker_url, broker_notls_ws_port, "/", v.value());
+                for (std::size_t i = 0; i != clients; ++i) {
+                    cs.push_back(cc(ioc, broker_url, broker_notls_ws_port, "/", v.value()));
+                }
             }
             else {
-                return cc(ioc, broker_url, broker_notls_ws_port);
+                for (std::size_t i = 0; i != clients; ++i) {
+                    cs.push_back(cc(ioc, broker_url, broker_notls_ws_port));
+                }
             }
+            return cs;
         } ();
     test(
         ioc,
-        c,
+        cs,
         [&] {
             as::post(
                 iocb,
@@ -192,6 +222,7 @@ template <typename ClientCreator, typename Test>
 inline void do_tls_ws_test(
     ClientCreator const& cc,
     Test const& test,
+    std::size_t clients,
     MQTT_NS::optional<MQTT_NS::protocol_version> v = MQTT_NS::nullopt) {
     boost::asio::io_context iocb;
     MQTT_NS::broker::broker_t b(iocb);
@@ -207,22 +238,32 @@ inline void do_tls_ws_test(
     );
     f.wait();
     boost::asio::io_context ioc;
-    auto c =
+    auto cs =
         [&] {
+            BOOST_ASSERT(clients > 0);
+            std::vector<decltype(cc(ioc, broker_url, broker_tls_ws_port))> cs;
+            cs.reserve(clients);
             if (v) {
-                return cc(ioc, broker_url, broker_tls_ws_port, "/", v.value());
+                for (std::size_t i = 0; i != clients; ++i) {
+                    cs.push_back(cc(ioc, broker_url, broker_tls_ws_port, "/", v.value()));
+                }
             }
             else {
-                return cc(ioc, broker_url, broker_tls_ws_port);
+                for (std::size_t i = 0; i != clients; ++i) {
+                    cs.push_back(cc(ioc, broker_url, broker_tls_ws_port));
+                }
             }
+            return cs;
         } ();
     std::string path = boost::unit_test::framework::master_test_suite().argv[0];
     std::size_t pos = path.find_last_of("/\\");
     std::string base = (pos == std::string::npos) ? "" : path.substr(0, pos + 1);
-    c->get_ssl_context().load_verify_file(base + "cacert.pem");
+    for (auto& c : cs) {
+        c->get_ssl_context().load_verify_file(base + "cacert.pem");
+    }
     test(
         ioc,
-        c,
+        cs,
         [&] {
             as::post(
                 iocb,
@@ -243,45 +284,53 @@ inline void do_tls_ws_test(
 
 
 template <typename Test>
-inline void do_combi_test(Test const& test) {
+inline void do_combi_test(Test const& test, std::size_t clients = 1) {
     do_test(
         [&](auto&&... args) { return MQTT_NS::make_client(std::forward<decltype(args)>(args)...); },
-        test
+        test,
+        clients
     );
     do_test(
         [&](auto&&... args) { return MQTT_NS::make_client(std::forward<decltype(args)>(args)...); },
         test,
+        clients,
         MQTT_NS::protocol_version::v5
     );
 #if defined(MQTT_USE_TLS)
     do_tls_test(
         [&](auto&&... args) { return MQTT_NS::make_tls_client(std::forward<decltype(args)>(args)...); },
-        test
+        test,
+        clients
     );
     do_tls_test(
         [&](auto&&... args) { return MQTT_NS::make_tls_client(std::forward<decltype(args)>(args)...); },
         test,
+        clients,
         MQTT_NS::protocol_version::v5
     );
 #endif // defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_WS)
     do_ws_test(
         [&](auto&&... args) { return MQTT_NS::make_client_ws(std::forward<decltype(args)>(args)...); },
-        test
+        test,
+        clients
     );
     do_ws_test(
         [&](auto&&... args) { return MQTT_NS::make_client_ws(std::forward<decltype(args)>(args)...); },
         test,
+        clients,
         MQTT_NS::protocol_version::v5
     );
 #if defined(MQTT_USE_TLS)
     do_tls_ws_test(
         [&](auto&&... args) { return MQTT_NS::make_tls_client_ws(std::forward<decltype(args)>(args)...); },
-        test
+        test,
+        clients
     );
     do_tls_ws_test(
         [&](auto&&... args) { return MQTT_NS::make_tls_client_ws(std::forward<decltype(args)>(args)...); },
         test,
+        clients,
         MQTT_NS::protocol_version::v5
     );
 #endif // defined(MQTT_USE_TLS)
@@ -289,45 +338,53 @@ inline void do_combi_test(Test const& test) {
 }
 
 template <typename Test>
-inline void do_combi_test_sync(Test const& test) {
+inline void do_combi_test_sync(Test const& test, std::size_t clients = 1) {
     do_test(
         [&](auto&&... args) { return MQTT_NS::make_sync_client(std::forward<decltype(args)>(args)...); },
-        test
+        test,
+        clients
     );
     do_test(
         [&](auto&&... args) { return MQTT_NS::make_sync_client(std::forward<decltype(args)>(args)...); },
         test,
+        clients,
         MQTT_NS::protocol_version::v5
     );
 #if defined(MQTT_USE_TLS)
     do_tls_test(
         [&](auto&&... args) { return MQTT_NS::make_tls_sync_client(std::forward<decltype(args)>(args)...); },
-        test
+        test,
+        clients
     );
     do_tls_test(
         [&](auto&&... args) { return MQTT_NS::make_tls_sync_client(std::forward<decltype(args)>(args)...); },
         test,
+        clients,
         MQTT_NS::protocol_version::v5
     );
 #endif // defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_WS)
     do_ws_test(
         [&](auto&&... args) { return MQTT_NS::make_sync_client_ws(std::forward<decltype(args)>(args)...); },
-        test
+        test,
+        clients
     );
     do_ws_test(
         [&](auto&&... args) { return MQTT_NS::make_sync_client_ws(std::forward<decltype(args)>(args)...); },
         test,
+        clients,
         MQTT_NS::protocol_version::v5
     );
 #if defined(MQTT_USE_TLS)
     do_tls_ws_test(
         [&](auto&&... args) { return MQTT_NS::make_tls_sync_client_ws(std::forward<decltype(args)>(args)...); },
-        test
+        test,
+        clients
     );
     do_tls_ws_test(
         [&](auto&&... args) { return MQTT_NS::make_tls_sync_client_ws(std::forward<decltype(args)>(args)...); },
         test,
+        clients,
         MQTT_NS::protocol_version::v5
     );
 #endif // defined(MQTT_USE_TLS)
@@ -335,45 +392,53 @@ inline void do_combi_test_sync(Test const& test) {
 }
 
 template <typename Test>
-inline void do_combi_test_async(Test const& test) {
+inline void do_combi_test_async(Test const& test, std::size_t clients = 1) {
     do_test(
         [&](auto&&... args) { return MQTT_NS::make_async_client(std::forward<decltype(args)>(args)...); },
-        test
+        test,
+        clients
     );
     do_test(
         [&](auto&&... args) { return MQTT_NS::make_async_client(std::forward<decltype(args)>(args)...); },
         test,
+        clients,
         MQTT_NS::protocol_version::v5
     );
 #if defined(MQTT_USE_TLS)
     do_tls_test(
         [&](auto&&... args) { return MQTT_NS::make_tls_async_client(std::forward<decltype(args)>(args)...); },
-        test
+        test,
+        clients
     );
     do_tls_test(
         [&](auto&&... args) { return MQTT_NS::make_tls_async_client(std::forward<decltype(args)>(args)...); },
         test,
+        clients,
         MQTT_NS::protocol_version::v5
     );
 #endif // defined(MQTT_USE_TLS)
 #if defined(MQTT_USE_WS)
     do_ws_test(
         [&](auto&&... args) { return MQTT_NS::make_async_client_ws(std::forward<decltype(args)>(args)...); },
-        test
+        test,
+        clients
     );
     do_ws_test(
         [&](auto&&... args) { return MQTT_NS::make_async_client_ws(std::forward<decltype(args)>(args)...); },
         test,
+        clients,
         MQTT_NS::protocol_version::v5
     );
 #if defined(MQTT_USE_TLS)
     do_tls_ws_test(
         [&](auto&&... args) { return MQTT_NS::make_tls_async_client_ws(std::forward<decltype(args)>(args)...); },
-        test
+        test,
+        clients
     );
     do_tls_ws_test(
         [&](auto&&... args) { return MQTT_NS::make_tls_async_client_ws(std::forward<decltype(args)>(args)...); },
         test,
+        clients,
         MQTT_NS::protocol_version::v5
     );
 #endif // defined(MQTT_USE_TLS)

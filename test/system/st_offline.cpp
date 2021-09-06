@@ -49,7 +49,8 @@ inline void async_connect_no_clean(Client& c) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -167,7 +168,8 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -300,7 +302,8 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -440,7 +443,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
 }
 
 BOOST_AUTO_TEST_CASE( async_publish_qos1 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");

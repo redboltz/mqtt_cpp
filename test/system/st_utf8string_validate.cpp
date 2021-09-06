@@ -34,7 +34,8 @@ using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( connect_overlength_client_id ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -64,7 +65,8 @@ BOOST_AUTO_TEST_CASE( connect_overlength_client_id ) {
 
 BOOST_AUTO_TEST_CASE( connect_invalid_client_id ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -89,7 +91,8 @@ BOOST_AUTO_TEST_CASE( connect_invalid_client_id ) {
 
 BOOST_AUTO_TEST_CASE( connect_overlength_user_name ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -114,7 +117,8 @@ BOOST_AUTO_TEST_CASE( connect_overlength_user_name ) {
 
 BOOST_AUTO_TEST_CASE( connect_invalid_user_name ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -139,7 +143,8 @@ BOOST_AUTO_TEST_CASE( connect_invalid_user_name ) {
 
 BOOST_AUTO_TEST_CASE( connect_overlength_will_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -164,7 +169,8 @@ BOOST_AUTO_TEST_CASE( connect_overlength_will_topic ) {
 
 BOOST_AUTO_TEST_CASE( connect_invalid_will_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -189,7 +195,8 @@ BOOST_AUTO_TEST_CASE( connect_invalid_will_topic ) {
 
 BOOST_AUTO_TEST_CASE( publish_overlength_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -226,7 +233,8 @@ BOOST_AUTO_TEST_CASE( publish_overlength_topic ) {
 
 BOOST_AUTO_TEST_CASE( publish_invalid_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -257,7 +265,8 @@ BOOST_AUTO_TEST_CASE( publish_invalid_topic ) {
 
 BOOST_AUTO_TEST_CASE( subscribe_overlength_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -288,7 +297,8 @@ BOOST_AUTO_TEST_CASE( subscribe_overlength_topic ) {
 
 BOOST_AUTO_TEST_CASE( subscribe_invalid_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -319,7 +329,8 @@ BOOST_AUTO_TEST_CASE( subscribe_invalid_topic ) {
 
 BOOST_AUTO_TEST_CASE( unsubscribe_overlength_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
@@ -350,7 +361,8 @@ BOOST_AUTO_TEST_CASE( unsubscribe_overlength_topic ) {
 
 BOOST_AUTO_TEST_CASE( unsubscribe_invalid_topic ) {
 #if defined(MQTT_USE_STR_CHECK)
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();
             return;
