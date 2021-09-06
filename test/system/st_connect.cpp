@@ -15,7 +15,8 @@ BOOST_AUTO_TEST_SUITE(st_connect)
 using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( connect ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
         c->set_user_name("dummy");
@@ -85,7 +86,8 @@ BOOST_AUTO_TEST_CASE( connect ) {
 }
 
 BOOST_AUTO_TEST_CASE( connect_no_strand ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -144,7 +146,8 @@ BOOST_AUTO_TEST_CASE( connect_no_strand ) {
 }
 
 BOOST_AUTO_TEST_CASE( keep_alive ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -210,7 +213,8 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
 }
 
 BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -311,7 +315,8 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
 
 
 BOOST_AUTO_TEST_CASE( pingresp_timeout ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         b.set_pingresp(false);
         c->set_pingresp_timeout(std::chrono::seconds(2));
@@ -371,7 +376,8 @@ BOOST_AUTO_TEST_CASE( pingresp_timeout ) {
 }
 
 BOOST_AUTO_TEST_CASE( connect_again ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -453,7 +459,8 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
 }
 
 BOOST_AUTO_TEST_CASE( nocid ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_clean_session(true);
 
@@ -511,7 +518,8 @@ BOOST_AUTO_TEST_CASE( nocid ) {
 }
 
 BOOST_AUTO_TEST_CASE( nocid_noclean ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
 
         checker chk = {
@@ -566,7 +574,8 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
 }
 
 BOOST_AUTO_TEST_CASE( noclean ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
 
@@ -710,7 +719,8 @@ BOOST_AUTO_TEST_CASE( noclean ) {
 }
 
 BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -771,7 +781,8 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
 }
 
 BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -832,7 +843,8 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
 }
 
 BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -904,7 +916,8 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
 }
 
 BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -987,7 +1000,8 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
 
 
 BOOST_AUTO_TEST_CASE( async_keep_alive ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -1053,7 +1067,8 @@ BOOST_AUTO_TEST_CASE( async_keep_alive ) {
 }
 
 BOOST_AUTO_TEST_CASE( async_keep_alive_and_send_control_packet ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
         c->set_clean_session(true);
@@ -1154,7 +1169,8 @@ BOOST_AUTO_TEST_CASE( async_keep_alive_and_send_control_packet ) {
 
 
 BOOST_AUTO_TEST_CASE( async_pingresp_timeout ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         b.set_pingresp(false);
         c->set_pingresp_timeout(std::chrono::seconds(2));
@@ -1214,7 +1230,8 @@ BOOST_AUTO_TEST_CASE( async_pingresp_timeout ) {
 }
 
 BOOST_AUTO_TEST_CASE( connect_prop ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
@@ -1336,7 +1353,8 @@ BOOST_AUTO_TEST_CASE( connect_prop ) {
 }
 
 BOOST_AUTO_TEST_CASE( disconnect_prop ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
@@ -1443,7 +1461,8 @@ BOOST_AUTO_TEST_CASE( disconnect_prop ) {
 }
 
 BOOST_AUTO_TEST_CASE( connack_prop ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
@@ -1595,135 +1614,116 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
 }
 
 BOOST_AUTO_TEST_CASE( session_taken_over ) {
-    boost::asio::io_context iocb;
-    MQTT_NS::broker::broker_t b(iocb);
-    MQTT_NS::optional<test_server_no_tls> s;
-    std::promise<void> p;
-    auto f = p.get_future();
-    std::thread th(
-        [&] {
-            s.emplace(iocb, b);
-            p.set_value();
-            iocb.run();
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c1 = cs[0];
+        auto& c2 = cs[1];
+        auto& c3 = cs[2];
+        clear_ordered();
+        if (c1->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
         }
-    );
-    f.wait();
-    auto finish =
-        [&] {
-            as::post(
-                iocb,
-                [&] {
-                    s->close();
-                }
-            );
+        c1->set_client_id("cid1");
+        c2->set_client_id("cid1");
+        c3->set_client_id("cid1");
+        c1->set_clean_start(true);
+        c2->set_clean_start(false);
+        c3->set_clean_start(true);
+
+        checker chk = {
+            // connect
+            cont("h_connack1"),
+            // connect
+            cont("h_disconnect1"),
+            cont("h_error1"),
+            deps("h_connack2", "h_connack1"),
+            // connect
+            cont("h_disconnect2"),
+            cont("h_error2"),
+            deps("h_connack3", "h_connack2"),
+            // disconnect
+            cont("h_close3"),
         };
 
+        c1->set_v5_connack_handler(
+            [&]
+            (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties /*props*/) {
+                MQTT_CHK("h_connack1");
+                BOOST_TEST(sp == false);
+                BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
+                c2->connect(
+                    MQTT_NS::v5::properties{
+                        MQTT_NS::v5::property::session_expiry_interval(
+                            MQTT_NS::session_never_expire
+                        )
+                            }
+                );
+                return true;
+            }
+        );
+        c1->set_v5_disconnect_handler(
+            [&](MQTT_NS::v5::disconnect_reason_code disconnect_reason_code, MQTT_NS::v5::properties /*props*/) {
+                MQTT_CHK("h_disconnect1");
+                BOOST_TEST(disconnect_reason_code == MQTT_NS::v5::disconnect_reason_code::session_taken_over);
+            }
+        );
+        c1->set_error_handler(
+            [&]
+            (MQTT_NS::error_code) {
+                MQTT_CHK("h_error1");
+            }
+        );
 
-    boost::asio::io_context ioc;
+        c2->set_v5_connack_handler(
+            [&]
+            (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties /*props*/) {
+                MQTT_CHK("h_connack2");
+                BOOST_TEST(sp == true);
+                BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
+                c3->connect();
+                return true;
+            }
+        );
+        c2->set_v5_disconnect_handler(
+            [&](MQTT_NS::v5::disconnect_reason_code disconnect_reason_code, MQTT_NS::v5::properties /*props*/) {
+                MQTT_CHK("h_disconnect2");
+                BOOST_TEST(disconnect_reason_code == MQTT_NS::v5::disconnect_reason_code::session_taken_over);
+            }
+        );
+        c2->set_error_handler(
+            [&]
+            (MQTT_NS::error_code) {
+                MQTT_CHK("h_error2");
+            }
+        );
 
-    auto c1 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
-    auto c2 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
-    auto c3 = MQTT_NS::make_client(ioc, broker_url, broker_notls_port, MQTT_NS::protocol_version::v5);
-    c1->set_client_id("cid1");
-    c2->set_client_id("cid1");
-    c3->set_client_id("cid1");
-    c1->set_clean_start(true);
-    c2->set_clean_start(false);
-    c3->set_clean_start(true);
-
-    checker chk = {
-        // connect
-        cont("h_connack1"),
-        // connect
-        cont("h_disconnect1"),
-        cont("h_error1"),
-        deps("h_connack2", "h_connack1"),
-        // connect
-        cont("h_disconnect2"),
-        cont("h_error2"),
-        deps("h_connack3", "h_connack2"),
-        // disconnect
-        cont("h_close3"),
+        c3->set_v5_connack_handler(
+            [&]
+            (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties /*props*/) {
+                MQTT_CHK("h_connack3");
+                BOOST_TEST(sp == false);
+                BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
+                c3->disconnect();
+                return true;
+            }
+        );
+        c3->set_close_handler(
+            [&] {
+                MQTT_CHK("h_close3");
+                finish();
+            }
+        );
+        c1->connect(
+            MQTT_NS::v5::properties{
+                MQTT_NS::v5::property::session_expiry_interval(
+                    MQTT_NS::session_never_expire
+                )
+            }
+        );
+        ioc.run();
+        BOOST_TEST(chk.all());
     };
-
-    c1->set_v5_connack_handler(
-        [&]
-        (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties /*props*/) {
-            MQTT_CHK("h_connack1");
-            BOOST_TEST(sp == false);
-            BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
-            c2->connect(
-                MQTT_NS::v5::properties{
-                    MQTT_NS::v5::property::session_expiry_interval(
-                        MQTT_NS::session_never_expire
-                    )
-                }
-            );
-            return true;
-        }
-    );
-    c1->set_v5_disconnect_handler(
-        [&](MQTT_NS::v5::disconnect_reason_code disconnect_reason_code, MQTT_NS::v5::properties /*props*/) {
-            MQTT_CHK("h_disconnect1");
-            BOOST_TEST(disconnect_reason_code == MQTT_NS::v5::disconnect_reason_code::session_taken_over);
-        }
-    );
-    c1->set_error_handler(
-        [&]
-        (MQTT_NS::error_code) {
-            MQTT_CHK("h_error1");
-        }
-    );
-
-    c2->set_v5_connack_handler(
-        [&]
-        (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties /*props*/) {
-            MQTT_CHK("h_connack2");
-            BOOST_TEST(sp == true);
-            BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
-            c3->connect();
-            return true;
-        }
-    );
-    c2->set_v5_disconnect_handler(
-        [&](MQTT_NS::v5::disconnect_reason_code disconnect_reason_code, MQTT_NS::v5::properties /*props*/) {
-            MQTT_CHK("h_disconnect2");
-            BOOST_TEST(disconnect_reason_code == MQTT_NS::v5::disconnect_reason_code::session_taken_over);
-        }
-    );
-    c2->set_error_handler(
-        [&]
-        (MQTT_NS::error_code) {
-            MQTT_CHK("h_error2");
-        }
-    );
-
-    c3->set_v5_connack_handler(
-        [&]
-        (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties /*props*/) {
-            MQTT_CHK("h_connack3");
-            BOOST_TEST(sp == false);
-            BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
-            c3->disconnect();
-            return true;
-        }
-    );
-    c3->set_close_handler(
-        [&] {
-            MQTT_CHK("h_close3");
-            finish();
-        }
-    );
-    c1->connect(
-        MQTT_NS::v5::properties{
-            MQTT_NS::v5::property::session_expiry_interval(
-                MQTT_NS::session_never_expire
-            )
-        }
-    );
-    ioc.run();
-    BOOST_TEST(chk.all());
-    th.join();
+    do_combi_test_sync(test, 3);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

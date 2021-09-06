@@ -17,7 +17,8 @@ BOOST_AUTO_TEST_SUITE(st_multi_sub)
 using namespace std::literals::string_literals;
 
 BOOST_AUTO_TEST_CASE( multi_channel ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v3_1_1) {
             finish();

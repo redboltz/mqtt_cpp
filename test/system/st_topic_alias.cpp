@@ -18,7 +18,8 @@ BOOST_AUTO_TEST_SUITE(st_topic_alias)
 using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( pubsub ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
 
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
@@ -173,7 +174,8 @@ BOOST_AUTO_TEST_CASE( pubsub ) {
 }
 
 BOOST_AUTO_TEST_CASE( auto_replace ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
 
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
@@ -286,7 +288,8 @@ BOOST_AUTO_TEST_CASE( auto_replace ) {
 }
 
 BOOST_AUTO_TEST_CASE( auto_map ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
 
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
@@ -442,7 +445,8 @@ BOOST_AUTO_TEST_CASE( auto_map ) {
 }
 
 BOOST_AUTO_TEST_CASE( overwrite ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
 
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
@@ -635,7 +639,8 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
 }
 
 BOOST_AUTO_TEST_CASE( no_entry ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
 
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
@@ -763,7 +768,8 @@ BOOST_AUTO_TEST_CASE( no_entry ) {
 }
 
 BOOST_AUTO_TEST_CASE( resend_publish ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
 
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {

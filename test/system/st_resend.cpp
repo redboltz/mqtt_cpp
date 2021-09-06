@@ -16,7 +16,8 @@ BOOST_AUTO_TEST_SUITE(st_resend)
 using namespace MQTT_NS::literals;
 
 BOOST_AUTO_TEST_CASE( publish_qos1 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -229,7 +230,8 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos2 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -391,7 +393,8 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& b) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -604,7 +607,8 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -803,7 +807,8 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
 
 
 BOOST_AUTO_TEST_CASE( publish_qos1_from_broker ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -1052,7 +1057,8 @@ BOOST_AUTO_TEST_CASE( publish_qos1_from_broker ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -1284,7 +1290,8 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
 }
 
 BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -1558,7 +1565,8 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_message_expired_from_broker ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
@@ -1704,7 +1712,8 @@ BOOST_AUTO_TEST_CASE( publish_message_expired_from_broker ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_message_expiry_update_from_broker ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
@@ -1882,7 +1891,8 @@ BOOST_AUTO_TEST_CASE( publish_message_expiry_update_from_broker ) {
 }
 
 BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
         c->set_client_id("cid1");
@@ -2052,7 +2062,8 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_session_before_expire ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
@@ -2182,7 +2193,8 @@ BOOST_AUTO_TEST_CASE( publish_session_before_expire ) {
 }
 
 BOOST_AUTO_TEST_CASE( publish_session_after_expire ) {
-    auto test = [](boost::asio::io_context& ioc, auto& c, auto finish, auto& /*b*/) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
         clear_ordered();
         if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
             finish();
