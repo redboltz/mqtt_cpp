@@ -139,8 +139,8 @@ void run_broker(boost::program_options::variables_map const& vm)
                 return 1;
             } ();
         if (threads == 0) {
-            MQTT_LOG("mqtt_broker", error) << "threads should be greater than 0";
-            return;
+            threads = std::thread::hardware_concurrency();
+            MQTT_LOG("mqtt_broker", info) << "threads set to auto decide (0). Automatically set to " << threads;
         }
         std::vector<std::thread> ts;
         ts.reserve(threads);
@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
         general_desc.add_options()
             ("help", "produce help message")
             ("cfg", boost::program_options::value<std::string>()->default_value("broker.conf"), "Load configuration file")
-            ("threads", boost::program_options::value<std::size_t>()->default_value(1), "Number of worker threads")
+            ("threads", boost::program_options::value<std::size_t>()->default_value(1), "Number of worker threads. If set 0 then automatically decided by hardware_concurrency().")
 #if defined(MQTT_USE_LOG)
             ("verbose", boost::program_options::value<unsigned int>()->default_value(1), "set verbose level, possible values:\n 0 - Fatal\n 1 - Error\n 2 - Warning\n 3 - Info\n 4 - Debug\n 5 - Trace")
 #endif // defined(MQTT_USE_LOG)
