@@ -373,7 +373,7 @@ public:
      * When set auto publish response mode to true, puback, pubrec, pubrel,and pub comp automatically send.<BR>
      */
     void set_auto_pub_response(bool b = true) {
-        base::set_auto_pub_response(b, false);
+        base::set_auto_pub_response(b);
     }
 
     void async_connect() = delete;

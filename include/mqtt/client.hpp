@@ -1099,14 +1099,6 @@ public:
         base::async_force_disconnect(force_move(func));
     }
 
-    /**
-     * @brief Set pingreq message sending mode
-     * @param b If true then send pingreq asynchronously, otherwise send synchronously.
-     */
-    void set_async_pingreq(bool b) {
-        async_pingreq_ = b;
-    }
-
     std::shared_ptr<Socket> const& socket() const {
         return socket_;
     }
@@ -1125,14 +1117,15 @@ protected:
 #endif // defined(MQTT_USE_WS)
            ,
            protocol_version version = protocol_version::v3_1_1,
-           bool async_store_send = false
+           bool async_operation = false
     )
-        :base(ioc, version, async_store_send),
+        :base(ioc, version, async_operation),
          ioc_(ioc),
          tim_ping_(ioc_),
          tim_close_(ioc_),
          host_(force_move(host)),
-         port_(force_move(port))
+         port_(force_move(port)),
+         async_operation_(async_operation)
 #if defined(MQTT_USE_WS)
          ,
          path_(force_move(path))
@@ -1497,7 +1490,7 @@ protected:
 private:
     void handle_timer(error_code ec) {
         if (!ec) {
-            if (async_pingreq_) {
+            if (async_operation_) {
                 base::async_pingreq();
             }
             else {
@@ -1574,7 +1567,7 @@ private:
     optional<will> will_;
     optional<std::string> user_name_;
     optional<std::string> password_;
-    bool async_pingreq_ = false;
+    bool async_operation_ = false;
 #if defined(MQTT_USE_TLS)
     tls::context ctx_{tls::context::tlsv12};
 #endif // defined(MQTT_USE_TLS)
