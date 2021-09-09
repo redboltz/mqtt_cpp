@@ -1,3 +1,9 @@
+## 12.0.0
+* <<<< breaking change >>>> Unified automatic async/sync choosing flag. (#857)
+  endppoint constructor 4th parameter `async_operation` is used.
+  set_async_operation() can overwrite the async_operation.
+  It should be called before sending any packets.
+
 ## 11.1.0
 * Added Topic Alias Maximum setting functionality. (#816, #817, #818)
 

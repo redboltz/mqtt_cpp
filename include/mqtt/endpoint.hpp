@@ -178,9 +178,18 @@ public:
 
     /**
      * @brief Constructor for client
+     * @param ioc io_context
+     * @param version protocol_version
+     * @param async_operation
+     *        This flag effects the following automatic operation.
+     *        - puback/pubrec/pubrel/pubcomp if auto_pub_response_ is true.
+     *        - send store data (publish QoS1,2 and pubrel) on connack receive.
+     *        - disconnect
+     *          MQTT protocol requests sending connack/disconnect packet with error reason code if some error happens.<BR>
+     *          This function choose sync/async connack/disconnect.<BR>
      */
-    endpoint(as::io_context& ioc, protocol_version version = protocol_version::undetermined, bool async_send_store = false)
-        :async_send_store_{async_send_store},
+    endpoint(as::io_context& ioc, protocol_version version = protocol_version::undetermined, bool async_operation = false)
+        :async_operation_{async_operation},
          version_(version),
          tim_pingresp_(ioc)
     {
@@ -188,17 +197,26 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "create"
             << " version:" << version
-            << " async_send_store:" << std::boolalpha << async_send_store;
+            << " async_operation:" << std::boolalpha << async_operation;
     }
 
     /**
      * @brief Constructor for server.
-     *        socket should have already been connected with another endpoint.
+     * @param ioc io_context
+     * @param socket connected socket. It should have already been connected with another endpoint.
+     * @param version protocol_version
+     * @param async_operation
+     *        This flag effects the following automatic operation.
+     *        - puback/pubrec/pubrel/pubcomp if auto_pub_response_ is true.
+     *        - send store data (publish QoS1,2 and pubrel) on connack receive.
+     *        - disconnect
+     *          MQTT protocol requests sending connack/disconnect packet with error reason code if some error happens.<BR>
+     *          This function choose sync/async connack/disconnect.<BR>
      */
-    explicit endpoint(as::io_context& ioc, std::shared_ptr<MQTT_NS::socket> socket, protocol_version version = protocol_version::undetermined, bool async_send_store = false)
+    explicit endpoint(as::io_context& ioc, std::shared_ptr<MQTT_NS::socket> socket, protocol_version version = protocol_version::undetermined, bool async_operation = false)
         :socket_(force_move(socket)),
          connected_(true),
-         async_send_store_{async_send_store},
+         async_operation_{async_operation},
          version_(version),
          tim_pingresp_(ioc)
     {
@@ -206,7 +224,7 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "create"
             << " version:" << version
-            << " async_send_store:" << std::boolalpha << async_send_store;
+            << " async_operation:" << std::boolalpha << async_operation;
     }
 
     // MQTT Common handlers
@@ -848,26 +866,31 @@ public:
     /**
      * @brief Set auto publish response mode.
      * @param b set value
-     * @param async auto publish ressponse send asynchronous
      *
      * When set auto publish response mode to true, puback, pubrec, pubrel,and pub comp automatically send.<BR>
      */
-    void set_auto_pub_response(bool b = true, bool async = true) {
+    void set_auto_pub_response(bool b = true) {
         auto_pub_response_ = b;
-        auto_pub_response_async_ = async;
     }
 
     /**
-     * @brief Set async notify flag
-     * @param async send packet
+     * @brief Set async operation flag
+     * @param async if true async , otherwise sync
      *
-     * MQTT protocol requests sending connack/disconnect packet with error reason code if some error happens.<BR>
-     * This function choose sync/async connack/disconnect.<BR>
-     * MQTT protocol requests sending pubrec even if the corresponding publish has already been handled.<BR>
-     * This function choose sync/async pubrec.<BR>
+     * This function overwrite async_operation_ flag that is set by constructor.
+     *
+     * This function should be called before sending any packets.
+     * For server, in the CONNECT packet receiving handler.
+     *
+     * This flag effects the following automatic operation.
+     * - puback/pubrec/pubrel/pubcomp if auto_pub_response_ is true.
+     * - send store data (publish QoS1,2 and pubrel) on connack receive.
+     * - disconnect
+     *   MQTT protocol requests sending connack/disconnect packet with error reason code if some error happens.<BR>
+     *   This function choose sync/async connack/disconnect.<BR>
      */
-    void set_async_notify(bool async = true) {
-        async_notify_ = async;
+    void set_async_operation(bool async = true) {
+        async_operation_ = async;
     }
 
     /**
@@ -5260,7 +5283,7 @@ private:
     }
 
     void send_error_disconnect(v5::disconnect_reason_code rc) {
-        if (async_notify_) {
+        if (async_operation_) {
             auto sp = this->shared_from_this();
             async_disconnect(
                 rc,
@@ -5281,7 +5304,7 @@ private:
     }
 
     void send_error_connack(v5::connect_reason_code rc) {
-        if (async_notify_) {
+        if (async_operation_) {
             auto sp = this->shared_from_this();
             async_connack(
                 false,
@@ -7507,7 +7530,7 @@ private:
                         // Connection [MQTT-3.2.2-5].
                         // ---
                         if (session_present_) {
-                            if (ep_.async_send_store_) {
+                            if (ep_.async_operation_) {
                                 // Until all stored messages are written to internal send buffer,
                                 // disable further async reading of incoming packets..
                                 ep_.async_read_on_message_processed_ = false;
@@ -7673,7 +7696,7 @@ private:
                                     // publish handler is not called
                                 case qos::at_least_once:
                                     if (check_full()) {
-                                        if (ep_.async_notify_) {
+                                        if (ep_.async_operation_) {
                                             ep_.async_send_puback(
                                                 *packet_id_,
                                                 v5::puback_reason_code::quota_exceeded,
@@ -7702,7 +7725,7 @@ private:
                                     break;
                                 case qos::exactly_once:
                                     if (check_full()) {
-                                        if (ep_.async_notify_) {
+                                        if (ep_.async_operation_) {
                                             ep_.async_send_pubrec(
                                                 *packet_id_,
                                                 v5::pubrec_reason_code::quota_exceeded,
@@ -7877,7 +7900,7 @@ private:
                                     )
                                 )
                             );
-                            if (ep_.async_notify_) {
+                            if (ep_.async_operation_) {
                                 ep_.async_send_pubrec(
                                     *packet_id_,
                                     v5::pubrec_reason_code::success,
@@ -9429,7 +9452,7 @@ private:
     template <typename F, typename AF>
     void auto_pub_response(F const& f, AF const& af) {
         if (auto_pub_response_) {
-            if (auto_pub_response_async_) af();
+            if (async_operation_) af();
             else f();
         }
     }
@@ -11518,9 +11541,7 @@ private:
     Mutex sub_unsub_inflight_mtx_;
     std::set<packet_id_t> sub_unsub_inflight_;
     bool auto_pub_response_{true};
-    bool auto_pub_response_async_{false};
-    bool async_notify_{false};
-    bool async_send_store_{ false };
+    bool async_operation_{ false };
     bool async_read_on_message_processed_ { true };
     bool disconnect_requested_{false};
     bool connect_requested_{false};
