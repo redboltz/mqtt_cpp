@@ -33,4 +33,26 @@ inline void connect_no_clean(Client& c) {
     }
 }
 
+template <typename Client>
+inline void async_connect_no_clean(Client& c) {
+    c->set_clean_session(false);
+    switch (c->get_protocol_version()) {
+    case MQTT_NS::protocol_version::v3_1_1:
+        c->async_connect();
+        break;
+    case MQTT_NS::protocol_version::v5:
+        c->async_connect(
+            MQTT_NS::v5::properties{
+                MQTT_NS::v5::property::session_expiry_interval(
+                    MQTT_NS::session_never_expire
+                )
+            }
+        );
+        break;
+    default:
+        BOOST_CHECK(false);
+        break;
+    }
+}
+
 #endif // MQTT_TEST_TEST_UTIL_HPP
