@@ -8,6 +8,7 @@
 #include "combi_test.hpp"
 #include "checker.hpp"
 #include "ordered_caller.hpp"
+#include "test_util.hpp"
 #include "../common/global_fixture.hpp"
 
 BOOST_AUTO_TEST_SUITE(st_connect)
@@ -1223,6 +1224,101 @@ BOOST_AUTO_TEST_CASE( async_pingresp_timeout ) {
             });
         c->set_keep_alive_sec(3);
         c->async_connect();
+        ioc.run();
+        BOOST_TEST(chk.all());
+    };
+    do_combi_test_async(test);
+}
+
+
+BOOST_AUTO_TEST_CASE( async_connect_session_present_empty_store ) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
+        clear_ordered();
+        c->set_client_id("cid1");
+
+        checker chk = {
+            // connect
+            cont("h_connack1"),
+            // disconnect
+            cont("h_close1"),
+            // connect
+            cont("h_connack2"),
+            // disconnect
+            cont("h_close2"),
+        };
+
+        switch (c->get_protocol_version()) {
+        case MQTT_NS::protocol_version::v3_1_1:
+            c->set_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+                    auto ret = MQTT_ORDERED(
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                            c->async_disconnect();
+                        },
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == true);
+                            BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                            c->async_disconnect();
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            break;
+        case MQTT_NS::protocol_version::v5:
+            c->set_v5_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    auto ret = MQTT_ORDERED(
+                        [&] {
+                            MQTT_CHK("h_connack1");
+                            BOOST_TEST(sp == false);
+                            BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
+                            c->async_disconnect();
+                        },
+                        [&] {
+                            MQTT_CHK("h_connack2");
+                            BOOST_TEST(sp == true);
+                            BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
+                            c->async_disconnect();
+                        }
+                    );
+                    BOOST_TEST(ret);
+                    return true;
+                });
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+
+        c->set_close_handler(
+            [&]
+            () {
+                auto ret = MQTT_ORDERED(
+                    [&] {
+                        MQTT_CHK("h_close1");
+                        async_connect_no_clean(c);
+                    },
+                    [&] {
+                        MQTT_CHK("h_close2");
+                        finish();
+                    }
+                );
+                BOOST_TEST(ret);
+            });
+        c->set_error_handler(
+            [&]
+            (MQTT_NS::error_code) {
+                BOOST_CHECK(false);
+            });
+        async_connect_no_clean(c);
         ioc.run();
         BOOST_TEST(chk.all());
     };

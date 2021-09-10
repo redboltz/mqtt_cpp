@@ -11132,6 +11132,12 @@ private:
             }
         );
         LockGuard<Mutex> lck (store_mtx_);
+        if (store_.empty()) {
+            socket().post(
+                [g]{}
+            );
+            return;
+        }
         auto& idx = store_.template get<tag_seq>();
         for (auto it = idx.begin(), end = idx.end(); it != end;) {
             auto msg = it->message();
