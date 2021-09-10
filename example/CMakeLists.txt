@@ -12,6 +12,8 @@ LIST (APPEND exec_PROGRAMS
     broker.cpp
 )
 
+FIND_PACKAGE (Boost 1.67.0 REQUIRED COMPONENTS program_options)
+
 IF (MQTT_USE_TLS)
     LIST (APPEND exec_PROGRAMS
         tls_client.cpp
