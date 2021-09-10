@@ -28,7 +28,9 @@ public:
     virtual void post(std::function<void()>) = 0;
     virtual as::ip::tcp::socket::lowest_layer_type& lowest_layer() = 0;
     virtual any native_handle() = 0;
-    virtual void close(boost::system::error_code&) = 0;
+    virtual void clean_shutdown_and_close(boost::system::error_code&) = 0;
+    virtual void async_clean_shutdown_and_close(std::function<void(error_code)>) = 0;
+    virtual void force_shutdown_and_close(boost::system::error_code&) = 0;
 #if BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
     virtual as::executor get_executor() = 0;
 #else  // BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)

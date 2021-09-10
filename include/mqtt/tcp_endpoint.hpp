@@ -14,6 +14,8 @@
 #include <mqtt/type_erased_socket.hpp>
 #include <mqtt/move.hpp>
 #include <mqtt/attributes.hpp>
+#include <mqtt/tls.hpp>
+#include <mqtt/log.hpp>
 
 namespace MQTT_NS {
 
@@ -82,7 +84,16 @@ public:
         return tcp_.native_handle();
     }
 
-    MQTT_ALWAYS_INLINE void close(boost::system::error_code& ec) override final {
+    MQTT_ALWAYS_INLINE void clean_shutdown_and_close(boost::system::error_code& ec) override final {
+        shutdown_and_close_impl(tcp_, ec);
+    }
+
+    MQTT_ALWAYS_INLINE void async_clean_shutdown_and_close(std::function<void(error_code)> handler) override final {
+        async_shutdown_and_close_impl(tcp_, force_move(handler));
+    }
+
+    MQTT_ALWAYS_INLINE void force_shutdown_and_close(boost::system::error_code& ec) override final {
+        tcp_.lowest_layer().shutdown(as::ip::tcp::socket::shutdown_both, ec);
         tcp_.lowest_layer().close(ec);
     }
 
@@ -121,6 +132,56 @@ public:
         tcp_.async_handshake(std::forward<Args>(args)...);
     }
 
+#endif // defined(MQTT_USE_TLS)
+
+private:
+    void shutdown_and_close_impl(as::basic_socket<boost::asio::ip::tcp>& s, boost::system::error_code& ec) {
+        s.shutdown(as::ip::tcp::socket::shutdown_both, ec);
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "shutdown ec:"
+            << ec.message();
+        s.close(ec);
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "close ec:"
+            << ec.message();
+    }
+
+    void async_shutdown_and_close_impl(as::basic_socket<boost::asio::ip::tcp>& s, std::function<void(error_code)> handler) {
+        post(
+            [this, &s, handler = force_move(handler)] () mutable {
+                error_code ec;
+                shutdown_and_close_impl(s, ec);
+                force_move(handler)(ec);
+            }
+        );
+    }
+
+#if defined(MQTT_USE_TLS)
+    void shutdown_and_close_impl(tls::stream<as::ip::tcp::socket>& s, boost::system::error_code& ec) {
+        s.shutdown(ec);
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "shutdown ec:"
+            << ec.message();
+        shutdown_and_close_impl(lowest_layer(), ec);
+    }
+    void async_shutdown_and_close_impl(tls::stream<as::ip::tcp::socket>& s, std::function<void(error_code)> handler) {
+        s.async_shutdown(
+            as::bind_executor(
+                strand_,
+                [this, &s, handler = force_move(handler)] (error_code ec) mutable {
+                    MQTT_LOG("mqtt_impl", trace)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "shutdown ec:"
+                        << ec.message();
+                    shutdown_and_close_impl(s.lowest_layer(), ec);
+                    force_move(handler)(ec);
+                }
+            )
+        );
+    }
 #endif // defined(MQTT_USE_TLS)
 
 private:

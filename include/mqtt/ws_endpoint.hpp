@@ -17,6 +17,8 @@
 #include <mqtt/attributes.hpp>
 #include <mqtt/string_view.hpp>
 #include <mqtt/error_code.hpp>
+#include <mqtt/tls.hpp>
+#include <mqtt/log.hpp>
 
 namespace MQTT_NS {
 
@@ -153,15 +155,71 @@ public:
         return next_layer().native_handle();
     }
 
-    MQTT_ALWAYS_INLINE void close(boost::system::error_code& ec) override final {
-        ws_.close(boost::beast::websocket::close_code::normal, ec);
-        if (ec) return;
-        do {
-            boost::beast::flat_buffer buffer;
-            ws_.read(buffer, ec);
-        } while (!ec);
-        if (ec != boost::beast::websocket::error::closed) return;
-        ec = boost::system::errc::make_error_code(boost::system::errc::success);
+    MQTT_ALWAYS_INLINE void clean_shutdown_and_close(boost::system::error_code& ec) override final {
+        if (ws_.is_open()) {
+            // WebSocket closing process
+            MQTT_LOG("mqtt_impl", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "call beast close";
+            ws_.close(boost::beast::websocket::close_code::normal, ec);
+            MQTT_LOG("mqtt_impl", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "ws close ec:"
+                << ec.message();
+            if (!ec) {
+                do {
+                    boost::beast::flat_buffer buffer;
+                    ws_.read(buffer, ec);
+                } while (!ec);
+                if (ec == boost::beast::websocket::error::closed) {
+                    ec = boost::system::errc::make_error_code(boost::system::errc::success);
+                }
+                MQTT_LOG("mqtt_impl", trace)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "ws read ec:"
+                    << ec.message();
+            }
+        }
+        shutdown_and_close_impl(next_layer(), ec);
+    }
+
+    MQTT_ALWAYS_INLINE void async_clean_shutdown_and_close(std::function<void(error_code)> handler) override final {
+        if (ws_.is_open()) {
+            // WebSocket closing process
+            MQTT_LOG("mqtt_impl", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "call beast async_close";
+            ws_.async_close(
+                boost::beast::websocket::close_code::normal,
+                as::bind_executor(
+                    strand_,
+                    [this, handler = force_move(handler)]
+                    (error_code ec) mutable {
+                        if (ec) {
+                            MQTT_LOG("mqtt_impl", trace)
+                                << MQTT_ADD_VALUE(address, this)
+                                << "ws async_close ec:"
+                                << ec.message();
+                            async_shutdown_and_close_impl(next_layer(), force_move(handler));
+                        }
+                        else {
+                            async_read_until_closed(force_move(handler));
+                        }
+                    }
+                )
+            );
+        }
+        else {
+            MQTT_LOG("mqtt_impl", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "ws async_close already closed";
+            async_shutdown_and_close_impl(next_layer(), force_move(handler));
+        }
+    }
+
+    MQTT_ALWAYS_INLINE void force_shutdown_and_close(boost::system::error_code& ec) override final {
+        lowest_layer().shutdown(as::ip::tcp::socket::shutdown_both, ec);
+        lowest_layer().close(ec);
     }
 
 #if BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
@@ -214,6 +272,82 @@ public:
         ws_.write(buffers);
         return as::buffer_size(buffers);
     }
+
+private:
+    void async_read_until_closed(std::function<void(error_code)> handler) {
+        auto buffer = std::make_shared<boost::beast::flat_buffer>();
+        ws_.async_read(
+            *buffer,
+            as::bind_executor(
+                strand_,
+                [this, handler = force_move(handler)]
+                (error_code ec, std::size_t) mutable {
+                    if (ec) {
+                        if (ec == boost::beast::websocket::error::closed) {
+                            ec = boost::system::errc::make_error_code(boost::system::errc::success);
+                        }
+                        MQTT_LOG("mqtt_impl", trace)
+                            << MQTT_ADD_VALUE(address, this)
+                            << "ws async_read ec:"
+                            << ec.message();
+                        async_shutdown_and_close_impl(next_layer(), force_move(handler));
+                    }
+                    else {
+                        async_read_until_closed(force_move(handler));
+                    }
+                }
+            )
+        );
+    }
+
+    void shutdown_and_close_impl(as::basic_socket<boost::asio::ip::tcp>& s, boost::system::error_code& ec) {
+        s.shutdown(as::ip::tcp::socket::shutdown_both, ec);
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "shutdown ec:"
+            << ec.message();
+        s.close(ec);
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "close ec:"
+            << ec.message();
+    }
+
+    void async_shutdown_and_close_impl(as::basic_socket<boost::asio::ip::tcp>& s, std::function<void(error_code)> handler) {
+        post(
+            [this, &s, handler = force_move(handler)] () mutable {
+                error_code ec;
+                shutdown_and_close_impl(s, ec);
+                force_move(handler)(ec);
+            }
+        );
+    }
+
+#if defined(MQTT_USE_TLS)
+    void shutdown_and_close_impl(tls::stream<as::ip::tcp::socket>& s, boost::system::error_code& ec) {
+        s.shutdown(ec);
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "shutdown ec:"
+            << ec.message();
+        shutdown_and_close_impl(lowest_layer(), ec);
+    }
+    void async_shutdown_and_close_impl(tls::stream<as::ip::tcp::socket>& s, std::function<void(error_code)> handler) {
+        s.async_shutdown(
+            as::bind_executor(
+                strand_,
+                [this, handler = force_move(handler)] (error_code ec) mutable {
+                    MQTT_LOG("mqtt_impl", trace)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "shutdown ec:"
+                        << ec.message();
+                    shutdown_and_close_impl(lowest_layer(), ec);
+                    force_move(handler)(ec);
+                }
+            )
+        );
+    }
+#endif // defined(MQTT_USE_TLS)
 
 private:
     boost::beast::websocket::stream<Socket> ws_;

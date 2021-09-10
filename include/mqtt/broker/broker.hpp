@@ -1319,9 +1319,15 @@ private:
             auto& ss = const_cast<session_state&>(*it);
             do_send_will(ss);
             if (rc) {
+                MQTT_LOG("mqtt_broker", trace)
+                    << MQTT_ADD_VALUE(address, spep.get())
+                    << "disconnect_and_force_disconnect(async) cid:" << ss.client_id();
                 disconnect_and_force_disconnect(spep, rc.value());
             }
             else {
+                MQTT_LOG("mqtt_broker", trace)
+                    << MQTT_ADD_VALUE(address, spep.get())
+                    << "force_disconnect(async) cid:" << ss.client_id();
                 force_disconnect(spep);
             }
             idx.erase(it);
@@ -1334,9 +1340,15 @@ private:
                 [&](session_state& ss) {
                     do_send_will(ss);
                     if (rc) {
+                        MQTT_LOG("mqtt_broker", trace)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << "disconnect_and_force_disconnect(async) cid:" << ss.client_id();
                         disconnect_and_force_disconnect(spep, rc.value());
                     }
                     else {
+                        MQTT_LOG("mqtt_broker", trace)
+                            << MQTT_ADD_VALUE(address, spep.get())
+                            << "force_disconnect(async) cid:" << ss.client_id();
                         force_disconnect(spep);
                     }
                     // become_offline updates index
