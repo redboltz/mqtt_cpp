@@ -9323,7 +9323,7 @@ private:
                     }
                     MQTT_LOG("mqtt_impl", trace)
                         << MQTT_ADD_VALUE(address, this)
-                        << "receive DISCONNECT call chutdown";
+                        << "receive DISCONNECT call shutdown";
                     ep_.shutdown(*ep_.socket_);
                     ep_.on_mqtt_message_processed(
                         force_move(
@@ -9348,7 +9348,7 @@ private:
                 }
                 MQTT_LOG("mqtt_impl", trace)
                     << MQTT_ADD_VALUE(address, this)
-                    << "receive DISCONNECT call chutdown";
+                    << "receive DISCONNECT call shutdown";
                 ep_.shutdown(*ep_.socket_);
                 ep_.on_mqtt_message_processed(
                     force_move(
@@ -10366,7 +10366,7 @@ private:
         v5::properties props,
         async_handler_t func
     ) {
-
+        shutdowned_ = false;
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
@@ -10408,7 +10408,6 @@ private:
         v5::properties props,
         async_handler_t func
     ) {
-        shutdowned_ = false;
         switch (version_) {
         case protocol_version::v3_1_1: {
             auto msg = v3_1_1::connack_message(
