@@ -9323,7 +9323,7 @@ private:
                     }
                     MQTT_LOG("mqtt_impl", trace)
                         << MQTT_ADD_VALUE(address, this)
-                        << "receive DISCONNECT call chutdown";
+                        << "receive DISCONNECT call shutdown";
                     ep_.shutdown(*ep_.socket_);
                     ep_.on_mqtt_message_processed(
                         force_move(
@@ -9348,7 +9348,7 @@ private:
                 }
                 MQTT_LOG("mqtt_impl", trace)
                     << MQTT_ADD_VALUE(address, this)
-                    << "receive DISCONNECT call chutdown";
+                    << "receive DISCONNECT call shutdown";
                 ep_.shutdown(*ep_.socket_);
                 ep_.on_mqtt_message_processed(
                     force_move(
