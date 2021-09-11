@@ -949,6 +949,7 @@ public:
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "start_session";
+        shutdowned_ = false;
         async_read_control_packet_type(force_move(session_life_keeper));
     }
 
@@ -5261,6 +5262,16 @@ private:
 
     template <typename T>
     void shutdown(T& socket) {
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "shutdown";
+        if (shutdowned_) {
+            MQTT_LOG("mqtt_impl", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "already shutdowned";
+            return;
+        }
+        shutdowned_ = true;
         connected_ = false;
         mqtt_connected_ = false;
 
@@ -9310,6 +9321,9 @@ private:
                     default:
                         BOOST_ASSERT(false);
                     }
+                    MQTT_LOG("mqtt_impl", trace)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "receive DISCONNECT call chutdown";
                     ep_.shutdown(*ep_.socket_);
                     ep_.on_mqtt_message_processed(
                         force_move(
@@ -9332,6 +9346,9 @@ private:
                 default:
                     BOOST_ASSERT(false);
                 }
+                MQTT_LOG("mqtt_impl", trace)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "receive DISCONNECT call chutdown";
                 ep_.shutdown(*ep_.socket_);
                 ep_.on_mqtt_message_processed(
                     force_move(
@@ -9466,6 +9483,7 @@ private:
         std::uint16_t keep_alive_sec,
         v5::properties props
     ) {
+        shutdowned_ = false;
         switch (version_) {
         case protocol_version::v3_1_1:
             do_sync_write(
@@ -10390,6 +10408,7 @@ private:
         v5::properties props,
         async_handler_t func
     ) {
+        shutdowned_ = false;
         switch (version_) {
         case protocol_version::v3_1_1: {
             auto msg = v3_1_1::connack_message(
@@ -11530,6 +11549,7 @@ private:
     std::shared_ptr<MQTT_NS::socket> socket_;
     std::atomic<bool> connected_{false};
     std::atomic<bool> mqtt_connected_{false};
+    std::atomic<bool> shutdowned_{false};
 
     std::array<char, 10>  buf_;
     std::uint8_t fixed_header_;
