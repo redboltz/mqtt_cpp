@@ -981,11 +981,11 @@ public:
         auto prev_topic_name_size = get_size(topic_name_);
         topic_name_ = force_move(topic_name);
         topic_name_length_buf_ = boost::container::static_vector<char, 2>{
-            num_to_2bytes(boost::numeric_cast<std::uint16_t>(get_size(topic_name)))
+            num_to_2bytes(boost::numeric_cast<std::uint16_t>(get_size(topic_name_)))
         };
 
         remaining_length_buf_.clear();
-        remaining_length_ =  remaining_length_ - prev_topic_name_size + get_size(topic_name);
+        remaining_length_ =  remaining_length_ - prev_topic_name_size + get_size(topic_name_);
         auto rb = remaining_bytes(remaining_length_);
         for (auto e : rb) {
             remaining_length_buf_.push_back(e);
