@@ -94,60 +94,80 @@ void load_ctx(Server& server, boost::asio::steady_timer& reload_timer, boost::pr
 void run_broker(boost::program_options::variables_map const& vm)
 {
     try {
-        boost::asio::io_context ioc;
-        MQTT_NS::broker::broker_t b(ioc);
-
-        MQTT_NS::optional<test_server_no_tls> s;
-        if (vm.count("tcp.port")) {
-            s.emplace(ioc, b, vm["tcp.port"].as<std::uint16_t>());
-        }
-
-#if defined(MQTT_USE_WS)
-        MQTT_NS::optional<test_server_no_tls_ws> s_ws;
-        if (vm.count("ws.port")) {
-            s_ws.emplace(ioc, b, vm["ws.port"].as<std::uint16_t>());
-        }
-#endif // defined(MQTT_USE_WS)
-
-#if defined(MQTT_USE_TLS)
-        MQTT_NS::optional<test_server_tls> s_tls;
-        MQTT_NS::optional<boost::asio::steady_timer> s_lts_timer;
-
-        if (vm.count("tls.port")) {
-            s_tls.emplace(ioc, init_ctx(), b, vm["tls.port"].as<std::uint16_t>());
-            s_lts_timer.emplace(ioc);
-            load_ctx(s_tls.value(), s_lts_timer.value(), vm, "TLS");
-        }
-#endif // defined(MQTT_USE_TLS)
-
-#if defined(MQTT_USE_TLS) && defined(MQTT_USE_WS)
-        MQTT_NS::optional<test_server_tls_ws> s_tls_ws;
-        MQTT_NS::optional<boost::asio::steady_timer> s_tls_ws_timer;
-
-        if (vm.count("wss.port")) {
-            s_tls_ws.emplace(ioc, init_ctx(), b, vm["wss.port"].as<std::uint16_t>());
-            s_tls_ws_timer.emplace(ioc);
-            load_ctx(s_tls_ws.value(), s_tls_ws_timer.value(), vm, "WSS");
-        }
-#endif // defined(MQTT_USE_TLS) && defined(MQTT_USE_WS)
-
-        auto threads =
+        auto iocs =
             [&] () -> std::size_t {
-                if (vm.count("threads")) {
-                    return vm["threads"].as<std::size_t>();
+                if (vm.count("iocs")) {
+                    return vm["iocs"].as<std::size_t>();
                 }
                 return 1;
             } ();
-        if (threads == 0) {
-            threads = std::thread::hardware_concurrency();
-            MQTT_LOG("mqtt_broker", info) << "threads set to auto decide (0). Automatically set to " << threads;
+        if (iocs == 0) {
+            MQTT_LOG("mqtt_broker", error) << "iocs must be greater than 0. iocs:" << iocs;
+            return;
         }
         std::vector<std::thread> ts;
-        ts.reserve(threads);
-        for (std::size_t i = 0; i != threads; ++i) {
+        ts.reserve(iocs);
+        for (std::size_t i = 0; i != iocs; ++i) {
             ts.emplace_back(
-                [&ioc] {
-                    ioc.run();
+                [vm, i] {
+                    boost::asio::io_context ioc;
+                    MQTT_NS::broker::broker_t b(ioc);
+
+                    MQTT_NS::optional<test_server_no_tls> s;
+                    if (vm.count("tcp.port")) {
+                        s.emplace(ioc, b, vm["tcp.port"].as<std::uint16_t>() + i);
+                    }
+
+#if defined(MQTT_USE_WS)
+                    MQTT_NS::optional<test_server_no_tls_ws> s_ws;
+                    if (vm.count("ws.port")) {
+                        s_ws.emplace(ioc, b, vm["ws.port"].as<std::uint16_t>()+ i);
+                    }
+#endif // defined(MQTT_USE_WS)
+
+#if defined(MQTT_USE_TLS)
+                    MQTT_NS::optional<test_server_tls> s_tls;
+                    MQTT_NS::optional<boost::asio::steady_timer> s_lts_timer;
+
+                    if (vm.count("tls.port")) {
+                        s_tls.emplace(ioc, init_ctx(), b, vm["tls.port"].as<std::uint16_t>() + i);
+                        s_lts_timer.emplace(ioc);
+                        load_ctx(s_tls.value(), s_lts_timer.value(), vm, "TLS");
+                    }
+#endif // defined(MQTT_USE_TLS)
+
+#if defined(MQTT_USE_TLS) && defined(MQTT_USE_WS)
+                    MQTT_NS::optional<test_server_tls_ws> s_tls_ws;
+                    MQTT_NS::optional<boost::asio::steady_timer> s_tls_ws_timer;
+
+                    if (vm.count("wss.port")) {
+                        s_tls_ws.emplace(ioc, init_ctx(), b, vm["wss.port"].as<std::uint16_t>() + i);
+                        s_tls_ws_timer.emplace(ioc);
+                        load_ctx(s_tls_ws.value(), s_tls_ws_timer.value(), vm, "WSS");
+                    }
+#endif // defined(MQTT_USE_TLS) && defined(MQTT_USE_WS)
+
+                    auto threads =
+                        [&] () -> std::size_t {
+                            if (vm.count("threads")) {
+                                return vm["threads"].as<std::size_t>();
+                            }
+                            return 1;
+                        } ();
+                    if (threads == 0) {
+                        threads = std::thread::hardware_concurrency();
+                        MQTT_LOG("mqtt_broker", info) << "threads set to auto decide (0). Automatically set to " << threads;
+                    }
+                    std::vector<std::thread> ts;
+                    ts.reserve(threads);
+                    for (std::size_t i = 0; i != threads; ++i) {
+                        ts.emplace_back(
+                            [&ioc] {
+                                ioc.run();
+                            }
+                        );
+                    }
+                    for (auto& t : ts) t.join();
                 }
             );
         }
@@ -165,6 +185,7 @@ int main(int argc, char **argv) {
         general_desc.add_options()
             ("help", "produce help message")
             ("cfg", boost::program_options::value<std::string>()->default_value("broker.conf"), "Load configuration file")
+            ("iocs", boost::program_options::value<std::size_t>()->default_value(1), "Number of io_context.")
             ("threads", boost::program_options::value<std::size_t>()->default_value(1), "Number of worker threads. If set 0 then automatically decided by hardware_concurrency().")
 #if defined(MQTT_USE_LOG)
             ("verbose", boost::program_options::value<unsigned int>()->default_value(1), "set verbose level, possible values:\n 0 - Fatal\n 1 - Error\n 2 - Warning\n 3 - Info\n 4 - Debug\n 5 - Trace")
