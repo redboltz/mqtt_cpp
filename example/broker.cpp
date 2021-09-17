@@ -97,9 +97,17 @@ void run_broker(boost::program_options::variables_map const& vm)
         boost::asio::io_context ioc;
         MQTT_NS::broker::broker_t b(ioc);
 
-        MQTT_NS::optional<test_server_no_tls> s;
+        MQTT_NS::optional<test_server_no_tls> s1;
         if (vm.count("tcp.port")) {
-            s.emplace(ioc, b, vm["tcp.port"].as<std::uint16_t>());
+            s1.emplace(ioc, b, vm["tcp.port"].as<std::uint16_t>());
+        }
+        MQTT_NS::optional<test_server_no_tls> s2;
+        if (vm.count("tcp.port")) {
+            s2.emplace(ioc, b, vm["tcp.port"].as<std::uint16_t>() + 1);
+        }
+        MQTT_NS::optional<test_server_no_tls> s3;
+        if (vm.count("tcp.port")) {
+            s3.emplace(ioc, b, vm["tcp.port"].as<std::uint16_t>() + 2);
         }
 
 #if defined(MQTT_USE_WS)
