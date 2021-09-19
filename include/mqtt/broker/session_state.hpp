@@ -63,7 +63,7 @@ struct session_state {
     >;
 
     session_state(
-        as::io_context& ioc,
+        as::io_context& timer_ioc,
         mutex& mtx_subs_map,
         sub_con_map& subs_map,
         shared_target& shared_targets,
@@ -73,7 +73,7 @@ struct session_state {
         will_sender_t will_sender,
         optional<std::chrono::steady_clock::duration> will_expiry_interval,
         optional<std::chrono::steady_clock::duration> session_expiry_interval)
-        :ioc_(ioc),
+        :timer_ioc_(timer_ioc),
          mtx_subs_map_(mtx_subs_map),
          subs_map_(subs_map),
          shared_targets_(shared_targets),
@@ -81,7 +81,7 @@ struct session_state {
          version_(con_->get_protocol_version()),
          client_id_(force_move(client_id)),
          session_expiry_interval_(force_move(session_expiry_interval)),
-         tim_will_delay_(ioc_),
+         tim_will_delay_(timer_ioc_),
          will_sender_(force_move(will_sender)),
          remain_after_close_(
             [&] {
@@ -97,7 +97,7 @@ struct session_state {
             } ()
          )
     {
-        update_will(ioc, will, will_expiry_interval);
+        update_will(timer_ioc, will, will_expiry_interval);
     }
 
     ~session_state() {
@@ -129,7 +129,7 @@ struct session_state {
                             auto v = get_property<v5::property::message_expiry_interval>(m.props());
                             if (v) {
                                 tim_message_expiry =
-                                    std::make_shared<as::steady_timer>(ioc_, std::chrono::seconds(v.value().val()));
+                                    std::make_shared<as::steady_timer>(timer_ioc_, std::chrono::seconds(v.value().val()));
                                 tim_message_expiry->async_wait(
                                     [this, wp = std::weak_ptr<as::steady_timer>(tim_message_expiry)]
                                     (error_code ec) {
@@ -164,7 +164,7 @@ struct session_state {
                 << MQTT_ADD_VALUE(address, this)
                 << "session expiry interval timer set";
 
-            tim_session_expiry_ = std::make_shared<as::steady_timer>(ioc_, session_expiry_interval_.value());
+            tim_session_expiry_ = std::make_shared<as::steady_timer>(timer_ioc_, session_expiry_interval_.value());
             tim_session_expiry_->async_wait(
                 [this, wp = std::weak_ptr<as::steady_timer>(tim_session_expiry_), h = std::forward<SessionExpireHandler>(h)]
                 (error_code ec) {
@@ -190,7 +190,7 @@ struct session_state {
     }
 
     void publish(
-        as::io_context& ioc,
+        as::io_context& timer_ioc,
         buffer pub_topic,
         buffer contents,
         publish_options pubopts,
@@ -245,7 +245,7 @@ struct session_state {
 
         // offline_messages_ is not empty or packet_id_exhausted
         offline_messages_.push_back(
-            ioc,
+            timer_ioc,
             force_move(pub_topic),
             force_move(contents),
             pubopts,
@@ -254,7 +254,7 @@ struct session_state {
     }
 
     void deliver(
-        as::io_context& ioc,
+        as::io_context& timer_ioc,
         buffer pub_topic,
         buffer contents,
         publish_options pubopts,
@@ -262,7 +262,7 @@ struct session_state {
 
         if (online()) {
             publish(
-                ioc,
+                timer_ioc,
                 force_move(pub_topic),
                 force_move(contents),
                 pubopts,
@@ -272,7 +272,7 @@ struct session_state {
         else {
             std::lock_guard<mutex> g(mtx_offline_messages_);
             offline_messages_.push_back(
-                ioc,
+                timer_ioc,
                 force_move(pub_topic),
                 force_move(contents),
                 pubopts,
@@ -389,14 +389,14 @@ struct session_state {
     }
 
     void update_will(
-        as::io_context& ioc,
+        as::io_context& timer_ioc,
         optional<MQTT_NS::will> will,
         optional<std::chrono::steady_clock::duration> will_expiry_interval) {
         tim_will_expiry_.reset();
         will_value_ = force_move(will);
 
         if (will_value_ && will_expiry_interval) {
-            tim_will_expiry_ = std::make_shared<as::steady_timer>(ioc, will_expiry_interval.value());
+            tim_will_expiry_ = std::make_shared<as::steady_timer>(timer_ioc, will_expiry_interval.value());
             tim_will_expiry_->async_wait(
                 [this, wp = std::weak_ptr<as::steady_timer>(tim_will_expiry_)]
                 (error_code ec) {
@@ -562,7 +562,7 @@ private:
 private:
     friend class session_states;
 
-    as::io_context& ioc_;
+    as::io_context& timer_ioc_;
     std::shared_ptr<as::steady_timer> tim_will_expiry_;
     optional<MQTT_NS::will> will_value_;
 

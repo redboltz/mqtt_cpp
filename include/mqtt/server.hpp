@@ -68,7 +68,8 @@ public:
         AcceptorConfig&& config)
         : ep_(std::forward<AsioEndpoint>(ep)),
           ioc_accept_(ioc_accept),
-          ioc_con_(ioc_con),
+          ioc_con_(&ioc_con),
+          ioc_con_getter_([this]() -> as::io_context& { return *ioc_con_; }),
           acceptor_(as::ip::tcp::acceptor(ioc_accept_, ep_)),
           config_(std::forward<AcceptorConfig>(config)) {
         config_(acceptor_.value());
@@ -93,6 +94,20 @@ public:
         AsioEndpoint&& ep,
         as::io_context& ioc)
         : server(std::forward<AsioEndpoint>(ep), ioc, ioc, [](as::ip::tcp::acceptor&) {}) {}
+
+    template <typename AsioEndpoint, typename AcceptorConfig>
+    server(
+        AsioEndpoint&& ep,
+        as::io_context& ioc_accept,
+        std::function<as::io_context&()> ioc_con_getter,
+        AcceptorConfig&& config = [](as::ip::tcp::acceptor&) {})
+        : ep_(std::forward<AsioEndpoint>(ep)),
+          ioc_accept_(ioc_accept),
+          ioc_con_getter_(force_move(ioc_con_getter)),
+          acceptor_(as::ip::tcp::acceptor(ioc_accept_, ep_)),
+          config_(std::forward<AcceptorConfig>(config)) {
+        config_(acceptor_.value());
+    }
 
     void listen() {
         close_request_ = false;
@@ -145,36 +160,21 @@ public:
         version_ = version;
     }
 
-    /**
-     * @brief Get reference of boost::asio::io_context for connections
-     * @return reference of boost::asio::io_context for connections
-     */
-    as::io_context& ioc_con() const {
-        return ioc_con_;
-    }
-
-    /**
-     * @brief Get reference of boost::asio::io_context for acceptor
-     * @return reference of boost::asio::io_context for acceptor
-     */
-    as::io_context& ioc_accept() const {
-        return ioc_accept_;
-    }
-
 private:
     void do_accept() {
         if (close_request_) return;
-        auto socket = std::make_shared<socket_t>(ioc_con_);
+        auto& ioc_con = ioc_con_getter_();
+        auto socket = std::make_shared<socket_t>(ioc_con);
         acceptor_.value().async_accept(
             socket->lowest_layer(),
-            [this, socket]
+            [this, socket, &ioc_con]
             (error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
                     if (h_error_) h_error_(ec);
                     return;
                 }
-                auto sp = std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_);
+                auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
                 if (h_accept_) h_accept_(force_move(sp));
                 do_accept();
             }
@@ -184,7 +184,8 @@ private:
 private:
     as::ip::tcp::endpoint ep_;
     as::io_context& ioc_accept_;
-    as::io_context& ioc_con_;
+    as::io_context* ioc_con_ = nullptr;
+    std::function<as::io_context&()> ioc_con_getter_;
     optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
@@ -227,7 +228,8 @@ public:
         AcceptorConfig&& config)
         : ep_(std::forward<AsioEndpoint>(ep)),
           ioc_accept_(ioc_accept),
-          ioc_con_(ioc_con),
+          ioc_con_(&ioc_con),
+          ioc_con_getter_([this]() -> as::io_context& { return *ioc_con_; }),
           acceptor_(as::ip::tcp::acceptor(ioc_accept_, ep_)),
           config_(std::forward<AcceptorConfig>(config)),
           ctx_(force_move(ctx)) {
@@ -256,6 +258,22 @@ public:
         tls::context&& ctx,
         as::io_context& ioc)
         : server_tls(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc, ioc, [](as::ip::tcp::acceptor&) {}) {}
+
+    template <typename AsioEndpoint, typename AcceptorConfig>
+    server_tls(
+        AsioEndpoint&& ep,
+        tls::context&& ctx,
+        as::io_context& ioc_accept,
+        std::function<as::io_context&()> ioc_con_getter,
+        AcceptorConfig&& config = [](as::ip::tcp::acceptor&) {})
+        : ep_(std::forward<AsioEndpoint>(ep)),
+          ioc_accept_(ioc_accept),
+          ioc_con_getter_(force_move(ioc_con_getter)),
+          acceptor_(as::ip::tcp::acceptor(ioc_accept_, ep_)),
+          config_(std::forward<AcceptorConfig>(config)),
+          ctx_(force_move(ctx)) {
+        config_(acceptor_.value());
+    }
 
     void listen() {
         close_request_ = false;
@@ -309,22 +327,6 @@ public:
     }
 
     /**
-     * @brief Get reference of boost::asio::io_context for connections
-     * @return reference of boost::asio::io_context for connections
-     */
-    as::io_context& ioc_con() const {
-        return ioc_con_;
-    }
-
-    /**
-     * @brief Get reference of boost::asio::io_context for acceptor
-     * @return reference of boost::asio::io_context for acceptor
-     */
-    as::io_context& ioc_accept() const {
-        return ioc_accept_;
-    }
-
-    /**
      * @bried Set underlying layer connection timeout.
      * The timer is set after TCP layer connection accepted.
      * The timer is cancelled just before accept handler is called.
@@ -355,11 +357,12 @@ public:
 private:
     void do_accept() {
         if (close_request_) return;
-        auto socket = std::make_shared<socket_t>(ioc_con_, ctx_);
+        auto& ioc_con = ioc_con_getter_();
+        auto socket = std::make_shared<socket_t>(ioc_con, ctx_);
         auto ps = socket.get();
         acceptor_.value().async_accept(
             ps->lowest_layer(),
-            [this, socket = force_move(socket)]
+            [this, socket = force_move(socket), &ioc_con]
             (error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
@@ -367,7 +370,7 @@ private:
                     return;
                 }
                 auto underlying_finished = std::make_shared<bool>(false);
-                auto tim = std::make_shared<as::steady_timer>(ioc_con_);
+                auto tim = std::make_shared<as::steady_timer>(ioc_con);
                 tim->expires_after(underlying_connect_timeout_);
                 tim->async_wait(
                     [socket, tim, underlying_finished]
@@ -385,14 +388,14 @@ private:
                 auto ps = socket.get();
                 ps->async_handshake(
                     tls::stream_base::server,
-                    [this, socket = force_move(socket), tim, underlying_finished]
+                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
                     (error_code ec) mutable {
                         *underlying_finished = true;
                         tim->cancel();
                         if (ec) {
                             return;
                         }
-                        auto sp = std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_);
+                        auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
                         if (h_accept_) h_accept_(force_move(sp));
                     }
                 );
@@ -404,7 +407,8 @@ private:
 private:
     as::ip::tcp::endpoint ep_;
     as::io_context& ioc_accept_;
-    as::io_context& ioc_con_;
+    as::io_context* ioc_con_ = nullptr;
+    std::function<as::io_context&()> ioc_con_getter_;
     optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
@@ -450,7 +454,8 @@ public:
         AcceptorConfig&& config)
         : ep_(std::forward<AsioEndpoint>(ep)),
           ioc_accept_(ioc_accept),
-          ioc_con_(ioc_con),
+          ioc_con_(&ioc_con),
+          ioc_con_getter_([this]() -> as::io_context& { return *ioc_con_; }),
           acceptor_(as::ip::tcp::acceptor(ioc_accept_, ep_)),
           config_(std::forward<AcceptorConfig>(config)) {
         config_(acceptor_.value());
@@ -476,6 +481,19 @@ public:
         as::io_context& ioc)
         : server_ws(std::forward<AsioEndpoint>(ep), ioc, ioc, [](as::ip::tcp::acceptor&) {}) {}
 
+    template <typename AsioEndpoint, typename AcceptorConfig>
+    server_ws(
+        AsioEndpoint&& ep,
+        as::io_context& ioc_accept,
+        std::function<as::io_context&()> ioc_con_getter,
+        AcceptorConfig&& config = [](as::ip::tcp::acceptor&) {})
+        : ep_(std::forward<AsioEndpoint>(ep)),
+          ioc_accept_(ioc_accept),
+          ioc_con_getter_(force_move(ioc_con_getter)),
+          acceptor_(as::ip::tcp::acceptor(ioc_accept_, ep_)),
+          config_(std::forward<AcceptorConfig>(config)) {
+        config_(acceptor_.value());
+    }
     void listen() {
         close_request_ = false;
 
@@ -528,22 +546,6 @@ public:
     }
 
     /**
-     * @brief Get reference of boost::asio::io_context for connections
-     * @return reference of boost::asio::io_context for connections
-     */
-    as::io_context& ioc_con() const {
-        return ioc_con_;
-    }
-
-    /**
-     * @brief Get reference of boost::asio::io_context for acceptor
-     * @return reference of boost::asio::io_context for acceptor
-     */
-    as::io_context& ioc_accept() const {
-        return ioc_accept_;
-    }
-
-    /**
      * @bried Set underlying layer connection timeout.
      * The timer is set after TCP layer connection accepted.
      * The timer is cancelled just before accept handler is called.
@@ -558,11 +560,12 @@ public:
 private:
     void do_accept() {
         if (close_request_) return;
-        auto socket = std::make_shared<socket_t>(ioc_con_);
+        auto& ioc_con = ioc_con_getter_();
+        auto socket = std::make_shared<socket_t>(ioc_con);
         auto ps = socket.get();
         acceptor_.value().async_accept(
             ps->next_layer(),
-            [this, socket = force_move(socket)]
+            [this, socket = force_move(socket), &ioc_con]
             (error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
@@ -570,7 +573,7 @@ private:
                     return;
                 }
                 auto underlying_finished = std::make_shared<bool>(false);
-                auto tim = std::make_shared<as::steady_timer>(ioc_con_);
+                auto tim = std::make_shared<as::steady_timer>(ioc_con);
                 tim->expires_after(underlying_connect_timeout_);
                 tim->async_wait(
                     [socket, tim, underlying_finished]
@@ -593,7 +596,7 @@ private:
                     ps->next_layer(),
                     *sb,
                     *request,
-                    [this, socket = force_move(socket), sb, request, tim, underlying_finished]
+                    [this, socket = force_move(socket), sb, request, tim, underlying_finished, &ioc_con]
                     (error_code ec, std::size_t) mutable {
                         if (ec) {
                             *underlying_finished = true;
@@ -623,14 +626,14 @@ private:
                         }
                         ps->async_accept(
                             *request,
-                            [this, socket = force_move(socket), tim, underlying_finished]
+                            [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
                             (error_code ec) mutable {
                                 *underlying_finished = true;
                                 tim->cancel();
                                 if (ec) {
                                     return;
                                 }
-                                auto sp = std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_);
+                                auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
                                 if (h_accept_) h_accept_(force_move(sp));
                             }
                         );
@@ -646,14 +649,14 @@ private:
                                     m.insert(it->name(), it->value());
                                 }
                             },
-                            [this, socket = force_move(socket), tim, underlying_finished]
+                            [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
                             (error_code ec) mutable {
                                 *underlying_finished = true;
                                 tim->cancel();
                                 if (ec) {
                                     return;
                                 }
-                                auto sp = std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_);
+                                auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
                                 if (h_accept_) h_accept_(force_move(sp));
                             }
                         );
@@ -671,7 +674,8 @@ private:
 private:
     as::ip::tcp::endpoint ep_;
     as::io_context& ioc_accept_;
-    as::io_context& ioc_con_;
+    as::io_context* ioc_con_ = nullptr;
+    std::function<as::io_context&()> ioc_con_getter_;
     optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
@@ -716,7 +720,8 @@ public:
         AcceptorConfig&& config)
         : ep_(std::forward<AsioEndpoint>(ep)),
           ioc_accept_(ioc_accept),
-          ioc_con_(ioc_con),
+          ioc_con_(&ioc_con),
+          ioc_con_getter_([this]() -> as::io_context& { return *ioc_con_; }),
           acceptor_(as::ip::tcp::acceptor(ioc_accept_, ep_)),
           config_(std::forward<AcceptorConfig>(config)),
           ctx_(force_move(ctx)) {
@@ -745,6 +750,22 @@ public:
         tls::context&& ctx,
         as::io_context& ioc)
         : server_tls_ws(std::forward<AsioEndpoint>(ep), force_move(ctx), ioc, ioc, [](as::ip::tcp::acceptor&) {}) {}
+
+    template <typename AsioEndpoint, typename AcceptorConfig>
+    server_tls_ws(
+        AsioEndpoint&& ep,
+        tls::context&& ctx,
+        as::io_context& ioc_accept,
+        std::function<as::io_context&()> ioc_con_getter,
+        AcceptorConfig&& config = [](as::ip::tcp::acceptor&) {})
+        : ep_(std::forward<AsioEndpoint>(ep)),
+          ioc_accept_(ioc_accept),
+          ioc_con_getter_(force_move(ioc_con_getter)),
+          acceptor_(as::ip::tcp::acceptor(ioc_accept_, ep_)),
+          config_(std::forward<AcceptorConfig>(config)),
+          ctx_(force_move(ctx)) {
+        config_(acceptor_.value());
+    }
 
     void listen() {
         close_request_ = false;
@@ -798,22 +819,6 @@ public:
     }
 
     /**
-     * @brief Get reference of boost::asio::io_context for connections
-     * @return reference of boost::asio::io_context for connections
-     */
-    as::io_context& ioc_con() const {
-        return ioc_con_;
-    }
-
-    /**
-     * @brief Get reference of boost::asio::io_context for acceptor
-     * @return reference of boost::asio::io_context for acceptor
-     */
-    as::io_context& ioc_accept() const {
-        return ioc_accept_;
-    }
-
-    /**
      * @bried Set underlying layer connection timeout.
      * The timer is set after TCP layer connection accepted.
      * The timer is cancelled just before accept handler is called.
@@ -844,11 +849,12 @@ public:
 private:
     void do_accept() {
         if (close_request_) return;
-        auto socket = std::make_shared<socket_t>(ioc_con_, ctx_);
+        auto& ioc_con = ioc_con_getter_();
+        auto socket = std::make_shared<socket_t>(ioc_con, ctx_);
         auto ps = socket.get();
         acceptor_.value().async_accept(
             ps->next_layer().next_layer(),
-            [this, socket = force_move(socket)]
+            [this, socket = force_move(socket), &ioc_con]
             (error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
@@ -856,7 +862,7 @@ private:
                     return;
                 }
                 auto underlying_finished = std::make_shared<bool>(false);
-                auto tim = std::make_shared<as::steady_timer>(ioc_con_);
+                auto tim = std::make_shared<as::steady_timer>(ioc_con);
                 tim->expires_after(underlying_connect_timeout_);
                 tim->async_wait(
                     [socket, tim, underlying_finished]
@@ -875,7 +881,7 @@ private:
                 auto ps = socket.get();
                 ps->next_layer().async_handshake(
                     tls::stream_base::server,
-                    [this, socket = force_move(socket), tim, underlying_finished]
+                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
                     (error_code ec) mutable {
                         if (ec) {
                             *underlying_finished = true;
@@ -889,7 +895,7 @@ private:
                             ps->next_layer(),
                             *sb,
                             *request,
-                            [this, socket = force_move(socket), sb, request, tim, underlying_finished]
+                            [this, socket = force_move(socket), sb, request, tim, underlying_finished, &ioc_con]
                             (error_code ec, std::size_t) mutable {
                                 if (ec) {
                                     *underlying_finished = true;
@@ -919,14 +925,14 @@ private:
                                 }
                                 ps->async_accept(
                                     *request,
-                                    [this, socket = force_move(socket), tim, underlying_finished]
+                                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
                                     (error_code ec) mutable {
                                         *underlying_finished = true;
                                         tim->cancel();
                                         if (ec) {
                                             return;
                                         }
-                                        auto sp = std::make_shared<endpoint_t>(ioc_con_, force_move(socket), version_);
+                                        auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
                                         if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 );
@@ -942,7 +948,7 @@ private:
                                             m.insert(it->name(), it->value());
                                         }
                                     },
-                                    [this, socket = force_move(socket), tim, underlying_finished]
+                                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
                                     (error_code ec) mutable {
                                         *underlying_finished = true;
                                         tim->cancel();
@@ -952,7 +958,7 @@ private:
                                         // TODO: The use of force_move on this line of code causes
                                         // a static assertion that socket is a const object when
                                         // TLS is enabled, and WS is enabled, with Boost 1.70, and gcc 8.3.0
-                                        auto sp = std::make_shared<endpoint_t>(ioc_con_, socket, version_);
+                                        auto sp = std::make_shared<endpoint_t>(ioc_con, socket, version_);
                                         if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 );
@@ -972,7 +978,8 @@ private:
 private:
     as::ip::tcp::endpoint ep_;
     as::io_context& ioc_accept_;
-    as::io_context& ioc_con_;
+    as::io_context* ioc_con_ = nullptr;
+    std::function<as::io_context&()> ioc_con_getter_;
     optional<as::ip::tcp::acceptor> acceptor_;
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
