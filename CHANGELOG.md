@@ -1,8 +1,28 @@
 ## 12.0.0
-* <<<< breaking change >>>> Unified automatic async/sync choosing flag. (#857)
+* Added io_context and threads setting options for example broker (#866)
+* Fixed moved from object access (#865)
+* <<<< breaking change >>>> Removed ioc_con() and ioc_accept() (#866)
+* <<<< breaking change >>>> Unified automatic async/sync choosing flag. (#857, #862)
   endppoint constructor 4th parameter `async_operation` is used.
   set_async_operation() can overwrite the async_operation.
   It should be called before sending any packets.
+* Implemented clean shutdown (WS TLS TCP) (#849, 860, #863, #864)
+* Improved build system (#859)
+* Added DISCONNECT with session taken over reason code (#847)
+* Improved tests (#845, #846, #852)
+* Fixed invalid maximum_qos (2) sending (#844)
+* Added multi thread support for example broker (#842, #855, #866)
+* Replaced example broker's API call from sync to async (#842)
+* Replaced use_certificate_file() with use_certificate_chain_file() to support both server cert and server - intermediate CA cert (#841)
+* <<<< breaking change >>>> Added async_force_disconnect(). force_disconnect() is removed from async_client (#840)
+* Added will delay interval support (#839)
+* Fixed async_handler_t calling timing (#836)
+* Added BOOST_ASIO_NO_TS_EXECUTORS support (#830)
+* Fixed async_unsuback() argument mismatch (#828)
+* Added receive maximum support(#825, #835)
+* Fixed QoS2 packet handling problem (#824)
+* Refined async test mechanism. MQTT_ORDERED() macro is introcuded (#822, #823)
+* Added maximum packet size support (#821, #826, #834))
 
 ## 11.1.0
 * Added Topic Alias Maximum setting functionality. (#816, #817, #818)
