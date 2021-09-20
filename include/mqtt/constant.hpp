@@ -8,6 +8,7 @@
 #define MQTT_CONSTANT_HPP
 
 #include <cstddef>
+#include <chrono>
 
 #include <mqtt/namespace.hpp>
 #include <mqtt/type.hpp>
@@ -21,6 +22,7 @@ static constexpr std::size_t packet_size_no_limit =
     4 + // remaining length
     128 * 128 * 128 * 128; // maximum value of remainin length
 static constexpr receive_maximum_t receive_maximum_max = 0xffff;
+static constexpr auto shutdown_timeout = std::chrono::seconds(3);
 
 } // namespace MQTT_NS
 

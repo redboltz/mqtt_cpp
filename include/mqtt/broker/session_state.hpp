@@ -282,6 +282,9 @@ struct session_state {
     }
 
     void clean() {
+        MQTT_LOG("mqtt_broker", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "clean";
         {
             std::lock_guard<mutex> g(mtx_inflight_messages_);
             inflight_messages_.clear();
@@ -296,6 +299,7 @@ struct session_state {
         }
         shared_targets_.erase(*this);
         unsubscribe_all();
+        if (con_) con_->async_force_disconnect();
     }
 
     void exactly_once_start(packet_id_t packet_id) {

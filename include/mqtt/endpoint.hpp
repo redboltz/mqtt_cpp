@@ -191,7 +191,8 @@ public:
     endpoint(as::io_context& ioc, protocol_version version = protocol_version::undetermined, bool async_operation = false)
         :async_operation_{async_operation},
          version_(version),
-         tim_pingresp_(ioc)
+         tim_pingresp_(ioc),
+         tim_shutdown_(ioc)
     {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -218,7 +219,8 @@ public:
          connected_(true),
          async_operation_{async_operation},
          version_(version),
-         tim_pingresp_(ioc)
+         tim_pingresp_(ioc),
+         tim_shutdown_(ioc)
     {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -949,7 +951,7 @@ public:
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "start_session";
-        shutdowned_ = false;
+        shutdown_requested_ = false;
         async_read_control_packet_type(force_move(session_life_keeper));
     }
 
@@ -5043,24 +5045,22 @@ protected:
     bool handle_close_or_error(error_code ec) {
         if (connected_) {
             if (!ec) return false;
-            connected_ = false;
-            mqtt_connected_ = false;
-            {
-                boost::system::error_code ignored_ec;
-                socket_->close(ignored_ec);
-            }
+            MQTT_LOG("mqtt_impl", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "handle_close_or_error call shutdown";
+            shutdown(socket());
         }
-        if (disconnect_requested_) {
-            disconnect_requested_ = false;
-            connect_requested_ = false;
-            clean_sub_unsub_inflight();
-            on_close();
-            return true;
-        }
-        disconnect_requested_ = false;
+
         connect_requested_ = false;
-        if (!ec) ec = boost::system::errc::make_error_code(boost::system::errc::not_connected);
-        clean_sub_unsub_inflight_on_error(ec);
+        clean_sub_unsub_inflight();
+        if (disconnect_requested_) {
+            on_close();
+            disconnect_requested_ = false;
+        }
+        else {
+            if (!ec) ec = boost::system::errc::make_error_code(boost::system::errc::not_connected);
+            on_error(ec);
+        }
         return true;
     }
 
@@ -5260,36 +5260,82 @@ private:
         clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
     }
 
-    template <typename T>
-    void shutdown(T& socket) {
+    void shutdown(MQTT_NS::socket& s) {
         MQTT_LOG("mqtt_impl", trace)
             << MQTT_ADD_VALUE(address, this)
             << "shutdown";
-        if (shutdowned_) {
+        if (shutdown_requested_) {
             MQTT_LOG("mqtt_impl", trace)
                 << MQTT_ADD_VALUE(address, this)
                 << "already shutdowned";
             return;
         }
-        shutdowned_ = true;
-        connected_ = false;
+        shutdown_requested_ = true;
         mqtt_connected_ = false;
+        if (async_operation_) {
+            MQTT_LOG("mqtt_impl", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "async_clean_shutdown_and_close";
+            s.async_clean_shutdown_and_close(
+                [this, sp = this->shared_from_this(), ssp = socket_sp_ref()](error_code ec) { // *1
+                    MQTT_LOG("mqtt_impl", trace)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "async_clean_shutdown_and_close ec:"
+                        << ec.message();
+                    tim_shutdown_.cancel();
+                    connected_ = false;
+                }
+            );
+            // timeout timer set
+            tim_shutdown_.expires_after(shutdown_timeout);
+            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+            tim_shutdown_.async_wait(
+                [this, wp = force_move(wp), ssp = socket_sp_ref()](error_code ec) mutable {
+                    if (auto sp = wp.lock()) {
+                        MQTT_LOG("mqtt_impl", trace)
+                            << MQTT_ADD_VALUE(address, this)
+                            << "async_shutdown timer ec:"
+                            << ec.message();
+                        if (!ec) {
+                            // timeout
+                            // tcp_shutdown indirectly cancel stream.async_shutdown()
+                            // and handler is called with error.
+                            // So captured sp at *1 is released.
 
-        {
-            boost::system::error_code ec;
-            socket.lowest_layer().shutdown(as::ip::tcp::socket::shutdown_both, ec);
-            MQTT_LOG("mqtt_impl", trace)
-                << MQTT_ADD_VALUE(address, this)
-                << "socket shutdown ec:"
-                << ec.message();
+                            // post is for applying strand
+                            MQTT_LOG("mqtt_impl", trace)
+                                << MQTT_ADD_VALUE(address, this)
+                                << "post force_shutdown_and_close";
+                            sp->socket().post(
+                                [this, sp] {
+                                    if (connected_) {
+                                        error_code ec;
+                                        socket().force_shutdown_and_close(ec);
+                                        MQTT_LOG("mqtt_impl", trace)
+                                            << MQTT_ADD_VALUE(address, this)
+                                            << "force_shutdown_and_close ec:"
+                                            << ec.message();
+                                        connected_ = false;
+                                    }
+                                }
+                            );
+                        }
+                    }
+                }
+            );
+            return;
         }
-        {
-            boost::system::error_code ec;
-            socket.lowest_layer().close(ec);
+        else {
+            error_code ec;
             MQTT_LOG("mqtt_impl", trace)
                 << MQTT_ADD_VALUE(address, this)
-                << "socket close ec:"
+                << "clean_shutdown_and_close";
+            s.clean_shutdown_and_close(ec);
+            MQTT_LOG("mqtt_impl", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "clean_shutdown_and_close ec:"
                 << ec.message();
+            connected_ = false;
         }
     }
 
@@ -9483,7 +9529,7 @@ private:
         std::uint16_t keep_alive_sec,
         v5::properties props
     ) {
-        shutdowned_ = false;
+        shutdown_requested_ = false;
         switch (version_) {
         case protocol_version::v3_1_1:
             do_sync_write(
@@ -10349,11 +10395,12 @@ private:
     template <typename MessageVariant>
     void do_sync_write(MessageVariant&& mv) {
         boost::system::error_code ec;
-        if (!connected_) return;
-        on_pre_send();
-        total_bytes_sent_ += socket_->write(const_buffer_sequence<PacketIdBytes>(mv), ec);
-        // If ec is set as error, the error will be handled by async_read.
-        // If `handle_error(ec);` is called here, error_handler would be called twice.
+        if (can_send()) {
+            on_pre_send();
+            total_bytes_sent_ += socket_->write(const_buffer_sequence<PacketIdBytes>(mv), ec);
+            // If ec is set as error, the error will be handled by async_read.
+            // If `handle_error(ec);` is called here, error_handler would be called twice.
+        }
     }
 
     // Non blocking (async) senders
@@ -10366,7 +10413,7 @@ private:
         v5::properties props,
         async_handler_t func
     ) {
-        shutdowned_ = false;
+        shutdown_requested_ = false;
         switch (version_) {
         case protocol_version::v3_1_1:
             do_async_write(
@@ -11294,7 +11341,6 @@ private:
             }
             if (ec || // Error is handled by async_read.
                 !self_->connected_) {
-                self_->connected_ = false;
                 while (!self_->queue_.empty()) {
                     // Handlers for outgoing packets need not be valid.
                     if (auto&& h = self_->queue_.front().handler()) h(ec);
@@ -11316,7 +11362,6 @@ private:
             }
             if (ec || // Error is handled by async_read.
                 !self_->connected_) {
-                self_->connected_ = false;
                 while (!self_->queue_.empty()) {
                     // Handlers for outgoing packets need not be valid.
                     if(auto&& h = self_->queue_.front().handler()) h(ec);
@@ -11325,7 +11370,6 @@ private:
                 return;
             }
             if (bytes_to_transfer_ != bytes_transferred) {
-                self_->connected_ = false;
                 while (!self_->queue_.empty()) {
                     // Handlers for outgoing packets need not be valid.
                     if(auto&& h = self_->queue_.front().handler()) h(ec);
@@ -11407,15 +11451,17 @@ private:
         socket_->post(
             [this, self = this->shared_from_this(), mv = force_move(mv), func = force_move(func)]
             () mutable {
-                if (!connected_) {
+                if (can_send()) {
+                    queue_.emplace_back(force_move(mv), force_move(func));
+                    // Only need to start async writes if there was nothing in the queue before the above item.
+                    if (queue_.size() > 1) return;
+                    do_async_write();
+                }
+                else {
                     // offline async publish is successfully finished, because there's nothing to do.
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                     return;
                 }
-                queue_.emplace_back(force_move(mv), force_move(func));
-                // Only need to start async writes if there was nothing in the queue before the above item.
-                if (queue_.size() > 1) return;
-                do_async_write();
             }
         );
     }
@@ -11503,6 +11549,10 @@ private:
         publish_received_.erase(packet_id);
     }
 
+    bool can_send() const {
+        return connected_ && ! shutdown_requested_;
+    }
+
     static optional<topic_alias_t> get_topic_alias_from_prop(v5::property_variant const& prop) {
         optional<topic_alias_t> val;
         v5::visit_prop(
@@ -11548,7 +11598,7 @@ private:
     std::shared_ptr<MQTT_NS::socket> socket_;
     std::atomic<bool> connected_{false};
     std::atomic<bool> mqtt_connected_{false};
-    std::atomic<bool> shutdowned_{false};
+    std::atomic<bool> shutdown_requested_{false};
 
     std::array<char, 10>  buf_;
     std::uint8_t fixed_header_;
@@ -11582,6 +11632,8 @@ private:
     std::chrono::steady_clock::duration pingresp_timeout_ = std::chrono::steady_clock::duration::zero();
     as::steady_timer tim_pingresp_;
     bool tim_pingresp_set_ = false;
+
+    as::steady_timer tim_shutdown_;
 
     bool auto_map_topic_alias_send_ = false;
     bool auto_replace_topic_alias_send_ = false;
