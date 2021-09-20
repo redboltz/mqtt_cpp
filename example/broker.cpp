@@ -5,28 +5,258 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 #include <mqtt/config.hpp>
-#include "../test/system/test_server_no_tls.hpp"
-#include "../test/system/test_server_no_tls_ws.hpp"
-#include "../test/system/test_server_tls.hpp"
-#include "../test/system/test_server_tls_ws.hpp"
 #include <mqtt/setup_log.hpp>
 #include <mqtt/broker/broker.hpp>
 #include <boost/program_options.hpp>
 
 #include <fstream>
 
+namespace as = boost::asio;
+
+using con_t = MQTT_NS::server<>::endpoint_t;
+using con_sp_t = std::shared_ptr<con_t>;
+
+
+class server_no_tls {
+public:
+    server_no_tls(
+        as::io_context& ioc_accept,
+        std::function<as::io_context&()> ioc_con_getter,
+        MQTT_NS::broker::broker_t& b,
+        uint16_t port
+    )
+        : server_(
+            as::ip::tcp::endpoint(
+                as::ip::tcp::v4(), port
+            ),
+            ioc_accept,
+            MQTT_NS::force_move(ioc_con_getter),
+            [](auto& acceptor) {
+                acceptor.set_option(as::ip::tcp::acceptor::reuse_address(true));
+            }
+        ), b_(b) {
+        server_.set_error_handler(
+            [](MQTT_NS::error_code /*ec*/) {
+            }
+        );
+
+        server_.set_accept_handler(
+            [&](con_sp_t spep) {
+                b_.handle_accept(MQTT_NS::force_move(spep));
+            }
+        );
+
+        server_.listen();
+    }
+
+    MQTT_NS::broker::broker_t& broker() const {
+        return b_;
+    }
+
+    void close() {
+        server_.close();
+    }
+
+private:
+    MQTT_NS::server<> server_;
+    MQTT_NS::broker::broker_t& b_;
+};
+
 #if defined(MQTT_USE_TLS)
-boost::asio::ssl::context init_ctx()
+
+class server_tls {
+public:
+    server_tls(
+        as::io_context& ioc_accept,
+        std::function<as::io_context&()> ioc_con_getter,
+        boost::asio::ssl::context&& ctx,
+        MQTT_NS::broker::broker_t& b,
+        uint16_t port
+    )
+        : server_(
+            as::ip::tcp::endpoint(
+                as::ip::tcp::v4(), port
+            ),
+            MQTT_NS::force_move(ctx),
+            ioc_accept,
+            MQTT_NS::force_move(ioc_con_getter),
+            [](auto& acceptor) {
+                acceptor.set_option(as::ip::tcp::acceptor::reuse_address(true));
+            }
+        ), b_(b) {
+        server_.set_error_handler(
+            [](MQTT_NS::error_code /*ec*/) {
+            }
+        );
+
+        server_.set_accept_handler(
+            [&](std::shared_ptr<MQTT_NS::server_tls<>::endpoint_t> spep) {
+                b_.handle_accept(MQTT_NS::force_move(spep));
+            }
+        );
+
+        server_.listen();
+    }
+
+    MQTT_NS::broker::broker_t& broker() const {
+        return b_;
+    }
+
+    void close() {
+        server_.close();
+    }
+
+    /**
+     * @brief Get boost asio ssl context.
+     * @return ssl context
+     */
+    MQTT_NS::tls::context& get_ssl_context() {
+        return server_.get_ssl_context();
+    }
+
+    /**
+     * @brief Get boost asio ssl context.
+     * @return ssl context
+     */
+    MQTT_NS::tls::context const& get_ssl_context() const {
+        return server_.get_ssl_context();
+    }
+
+private:
+    MQTT_NS::server_tls<> server_;
+    MQTT_NS::broker::broker_t& b_;
+};
+
+#endif // defined(MQTT_USE_TLS)
+
+#if defined(MQTT_USE_WS)
+
+class server_no_tls_ws {
+public:
+    server_no_tls_ws(
+        as::io_context& ioc_accept,
+        std::function<as::io_context&()> ioc_con_getter,
+        MQTT_NS::broker::broker_t& b,
+        uint16_t port)
+        : server_(
+            as::ip::tcp::endpoint(
+                as::ip::tcp::v4(), port
+            ),
+            ioc_accept,
+            MQTT_NS::force_move(ioc_con_getter),
+            [](auto& acceptor) {
+                acceptor.set_option(as::ip::tcp::acceptor::reuse_address(true));
+            }
+        ), b_(b) {
+        server_.set_error_handler(
+            [](MQTT_NS::error_code /*ec*/) {
+            }
+        );
+
+        server_.set_accept_handler(
+            [&](std::shared_ptr<MQTT_NS::server_ws<>::endpoint_t> spep) {
+                b_.handle_accept(MQTT_NS::force_move(spep));
+            }
+        );
+
+        server_.listen();
+    }
+
+    MQTT_NS::broker::broker_t& broker() const {
+        return b_;
+    }
+
+    void close() {
+        server_.close();
+    }
+
+private:
+    MQTT_NS::server_ws<> server_;
+    MQTT_NS::broker::broker_t& b_;
+};
+
+#if defined(MQTT_USE_TLS)
+
+class server_tls_ws {
+public:
+    server_tls_ws(
+        as::io_context& ioc_accept,
+        std::function<as::io_context&()> ioc_con_getter,
+        boost::asio::ssl::context&& ctx,
+        MQTT_NS::broker::broker_t& b,
+        uint16_t port
+    )
+        : server_(
+            as::ip::tcp::endpoint(
+                as::ip::tcp::v4(),
+                port
+            ),
+            MQTT_NS::force_move(ctx),
+            ioc_accept,
+            MQTT_NS::force_move(ioc_con_getter),
+            [](auto& acceptor) {
+                acceptor.set_option(as::ip::tcp::acceptor::reuse_address(true));
+            }
+        ), b_(b) {
+        server_.set_error_handler(
+            [](MQTT_NS::error_code /*ec*/) {
+            }
+        );
+
+        server_.set_accept_handler(
+            [&](std::shared_ptr<MQTT_NS::server_tls_ws<>::endpoint_t> spep) {
+                b_.handle_accept(MQTT_NS::force_move(spep));
+            }
+        );
+
+        server_.listen();
+    }
+
+    MQTT_NS::broker::broker_t& broker() const {
+        return b_;
+    }
+
+    void close() {
+        server_.close();
+    }
+
+    /**
+     * @brief Get boost asio ssl context.
+     * @return ssl context
+     */
+    MQTT_NS::tls::context& get_ssl_context() {
+        return server_.get_ssl_context();
+    }
+
+    /**
+     * @brief Get boost asio ssl context.
+     * @return ssl context
+     */
+    MQTT_NS::tls::context const& get_ssl_context() const {
+        return server_.get_ssl_context();
+    }
+
+private:
+    MQTT_NS::server_tls_ws<> server_;
+    MQTT_NS::broker::broker_t& b_;
+};
+
+#endif // defined(MQTT_USE_TLS)
+#endif // defined(MQTT_USE_WS)
+
+
+#if defined(MQTT_USE_TLS)
+as::ssl::context init_ctx()
 {
-    boost::asio::ssl::context ctx(boost::asio::ssl::context::tlsv12);
+    as::ssl::context ctx(as::ssl::context::tlsv12);
     ctx.set_options(
-        boost::asio::ssl::context::default_workarounds |
-        boost::asio::ssl::context::single_dh_use);
+        as::ssl::context::default_workarounds |
+        as::ssl::context::single_dh_use);
     return ctx;
 }
 
 template<typename Server>
-void reload_ctx(Server& server, boost::asio::steady_timer& reload_timer,
+void reload_ctx(Server& server, as::steady_timer& reload_timer,
                 std::string const& certificate_filename,
                 std::string const& key_filename,
                 unsigned int certificate_reload_interval,
@@ -40,7 +270,7 @@ void reload_ctx(Server& server, boost::asio::steady_timer& reload_timer,
             [&server, &reload_timer, certificate_filename, key_filename, certificate_reload_interval, name]
             (boost::system::error_code const& e) {
 
-            BOOST_ASSERT(!e || e == boost::asio::error::operation_aborted);
+            BOOST_ASSERT(!e || e == as::error::operation_aborted);
 
             if (!e) {
                 reload_ctx(server, reload_timer, certificate_filename, key_filename, certificate_reload_interval, name, false);
@@ -62,7 +292,7 @@ void reload_ctx(Server& server, boost::asio::steady_timer& reload_timer,
         return;
     }
 
-    context.use_private_key_file(key_filename, boost::asio::ssl::context::pem, ec);
+    context.use_private_key_file(key_filename, as::ssl::context::pem, ec);
     if (ec) {
         auto message = "Failed to load private key file: " + ec.message();
         if (first_load) {
@@ -77,7 +307,7 @@ void reload_ctx(Server& server, boost::asio::steady_timer& reload_timer,
 }
 
 template<typename Server>
-void load_ctx(Server& server, boost::asio::steady_timer& reload_timer, boost::program_options::variables_map const& vm, char const* name)
+void load_ctx(Server& server, as::steady_timer& reload_timer, boost::program_options::variables_map const& vm, char const* name)
 {
     if (vm.count("certificate") == 0 && vm.count("private_key") == 0) {
         throw std::runtime_error("TLS requested but certificate and/or private_key not specified");
@@ -91,67 +321,166 @@ void load_ctx(Server& server, boost::asio::steady_timer& reload_timer, boost::pr
 }
 #endif // defined(MQTT_USE_TLS)
 
-void run_broker(boost::program_options::variables_map const& vm)
-{
-    try {
-        boost::asio::io_context ioc;
-        MQTT_NS::broker::broker_t b(ioc);
 
-        MQTT_NS::optional<test_server_no_tls> s;
+
+
+void run_broker(boost::program_options::variables_map const& vm) {
+    try {
+        as::io_context timer_ioc;
+        MQTT_NS::broker::broker_t b(timer_ioc);
+
+        auto num_of_iocs =
+            [&] () -> std::size_t {
+                if (vm.count("iocs")) {
+                    return vm["iocs"].as<std::size_t>();
+                }
+                return 1;
+            } ();
+        if (num_of_iocs == 0) {
+            num_of_iocs = std::thread::hardware_concurrency();
+            MQTT_LOG("mqtt_broker", info) << "iocs set to auto decide (0). Automatically set to " << num_of_iocs;
+        }
+
+        auto threads_per_ioc =
+            [&] () -> std::size_t {
+                if (vm.count("threads_per_ioc")) {
+                    return vm["threads_per_ioc"].as<std::size_t>();
+                }
+                return 1;
+            } ();
+        if (threads_per_ioc == 0) {
+            MQTT_LOG("mqtt_broker", error) << "threads per ioc must be greater than 0";
+            return;
+        }
+
+        MQTT_LOG("mqtt_broker", info)
+            << "iocs:" << num_of_iocs
+            << " threads_per_ioc:" << threads_per_ioc
+            << " total threads:" << num_of_iocs * threads_per_ioc;
+
+        as::io_context accept_ioc;
+
+        std::mutex mtx_con_iocs;
+        std::vector<as::io_context> con_iocs(num_of_iocs);
+        BOOST_ASSERT(!con_iocs.empty());
+
+        std::vector<
+            as::executor_work_guard<
+                as::io_context::executor_type
+            >
+        > guard_con_iocs;
+        guard_con_iocs.reserve(con_iocs.size());
+        for (auto& con_ioc : con_iocs) {
+            guard_con_iocs.emplace_back(con_ioc.get_executor());
+        }
+
+        auto con_iocs_it = con_iocs.begin();
+
+        auto con_ioc_getter =
+            [&mtx_con_iocs, &con_iocs, &con_iocs_it]() -> as::io_context& {
+                std::lock_guard<std::mutex> g{mtx_con_iocs};
+                auto& ret = *con_iocs_it++;
+                if (con_iocs_it == con_iocs.end()) con_iocs_it = con_iocs.begin();
+                return ret;
+            };
+
+        MQTT_NS::optional<server_no_tls> s;
         if (vm.count("tcp.port")) {
-            s.emplace(ioc, b, vm["tcp.port"].as<std::uint16_t>());
+            s.emplace(
+                accept_ioc,
+                con_ioc_getter,
+                b,
+                vm["tcp.port"].as<std::uint16_t>()
+            );
         }
 
 #if defined(MQTT_USE_WS)
-        MQTT_NS::optional<test_server_no_tls_ws> s_ws;
+        MQTT_NS::optional<server_no_tls_ws> s_ws;
         if (vm.count("ws.port")) {
-            s_ws.emplace(ioc, b, vm["ws.port"].as<std::uint16_t>());
+            s_ws.emplace(
+                accept_ioc,
+                con_ioc_getter,
+                b,
+                vm["ws.port"].as<std::uint16_t>()
+            );
         }
 #endif // defined(MQTT_USE_WS)
 
 #if defined(MQTT_USE_TLS)
-        MQTT_NS::optional<test_server_tls> s_tls;
-        MQTT_NS::optional<boost::asio::steady_timer> s_lts_timer;
+        MQTT_NS::optional<server_tls> s_tls;
+        MQTT_NS::optional<as::steady_timer> s_lts_timer;
 
         if (vm.count("tls.port")) {
-            s_tls.emplace(ioc, init_ctx(), b, vm["tls.port"].as<std::uint16_t>());
-            s_lts_timer.emplace(ioc);
+            s_tls.emplace(
+                accept_ioc,
+                con_ioc_getter,
+                init_ctx(),
+                b,
+                vm["tls.port"].as<std::uint16_t>()
+            );
+            s_lts_timer.emplace(accept_ioc);
             load_ctx(s_tls.value(), s_lts_timer.value(), vm, "TLS");
         }
 #endif // defined(MQTT_USE_TLS)
 
 #if defined(MQTT_USE_TLS) && defined(MQTT_USE_WS)
-        MQTT_NS::optional<test_server_tls_ws> s_tls_ws;
-        MQTT_NS::optional<boost::asio::steady_timer> s_tls_ws_timer;
+        MQTT_NS::optional<server_tls_ws> s_tls_ws;
+        MQTT_NS::optional<as::steady_timer> s_tls_ws_timer;
 
         if (vm.count("wss.port")) {
-            s_tls_ws.emplace(ioc, init_ctx(), b, vm["wss.port"].as<std::uint16_t>());
-            s_tls_ws_timer.emplace(ioc);
+            s_tls_ws.emplace(
+                accept_ioc,
+                con_ioc_getter,
+                init_ctx(),
+                b,
+                vm["wss.port"].as<std::uint16_t>()
+            );
+            s_tls_ws_timer.emplace(accept_ioc);
             load_ctx(s_tls_ws.value(), s_tls_ws_timer.value(), vm, "WSS");
         }
 #endif // defined(MQTT_USE_TLS) && defined(MQTT_USE_WS)
 
-        auto threads =
-            [&] () -> std::size_t {
-                if (vm.count("threads")) {
-                    return vm["threads"].as<std::size_t>();
-                }
-                return 1;
-            } ();
-        if (threads == 0) {
-            threads = std::thread::hardware_concurrency();
-            MQTT_LOG("mqtt_broker", info) << "threads set to auto decide (0). Automatically set to " << threads;
-        }
+        std::thread th_accept {
+            [&accept_ioc] {
+                accept_ioc.run();
+                MQTT_LOG("mqtt_broker", trace) << "accept_ioc.run() finished";
+            }
+        };
+
+        as::executor_work_guard<
+            as::io_context::executor_type
+        > guard_timer_ioc(timer_ioc.get_executor());
+
+        std::thread th_timer {
+            [&timer_ioc] {
+                timer_ioc.run();
+                MQTT_LOG("mqtt_broker", trace) << "timer_ioc.run() finished";
+            }
+        };
         std::vector<std::thread> ts;
-        ts.reserve(threads);
-        for (std::size_t i = 0; i != threads; ++i) {
-            ts.emplace_back(
-                [&ioc] {
-                    ioc.run();
-                }
-            );
+        ts.reserve(num_of_iocs * threads_per_ioc);
+        for (auto& con_ioc : con_iocs) {
+            for (std::size_t i = 0; i != threads_per_ioc; ++i) {
+                ts.emplace_back(
+                    [&con_ioc] {
+                        con_ioc.run();
+                        MQTT_LOG("mqtt_broker", trace) << "con_ioc.run() finished";
+                    }
+                );
+            }
         }
+
+        th_accept.join();
+        MQTT_LOG("mqtt_broker", trace) << "th_accept joined";
+
+        for (auto& g : guard_con_iocs) g.reset();
         for (auto& t : ts) t.join();
+        MQTT_LOG("mqtt_broker", trace) << "ts joined";
+
+        guard_timer_ioc.reset();
+        th_timer.join();
+        MQTT_LOG("mqtt_broker", trace) << "th_timer joined";
+
     } catch(std::exception &e) {
         MQTT_LOG("mqtt_broker", error) << e.what();
     }
@@ -164,14 +493,43 @@ int main(int argc, char **argv) {
         boost::program_options::options_description general_desc("General options");
         general_desc.add_options()
             ("help", "produce help message")
-            ("cfg", boost::program_options::value<std::string>()->default_value("broker.conf"), "Load configuration file")
-            ("threads", boost::program_options::value<std::size_t>()->default_value(1), "Number of worker threads. If set 0 then automatically decided by hardware_concurrency().")
+            (
+                "cfg",
+                boost::program_options::value<std::string>()->default_value("broker.conf"),
+                "Load configuration file"
+            )
+            (
+                "iocs",
+                boost::program_options::value<std::size_t>()->default_value(1),
+                "Number of io_context. If set 0 then automatically decided by hardware_concurrency()."
+            )
+            (
+                "threads_per_ioc",
+                boost::program_options::value<std::size_t>()->default_value(1),
+                "Number of worker threads for each io_context."
+            )
 #if defined(MQTT_USE_LOG)
-            ("verbose", boost::program_options::value<unsigned int>()->default_value(1), "set verbose level, possible values:\n 0 - Fatal\n 1 - Error\n 2 - Warning\n 3 - Info\n 4 - Debug\n 5 - Trace")
+            (
+                "verbose",
+                boost::program_options::value<unsigned int>()->default_value(1),
+                "set verbose level, possible values:\n 0 - Fatal\n 1 - Error\n 2 - Warning\n 3 - Info\n 4 - Debug\n 5 - Trace"
+            )
 #endif // defined(MQTT_USE_LOG)
-            ("certificate", boost::program_options::value<std::string>(), "Certificate file for TLS connections")
-            ("private_key", boost::program_options::value<std::string>(), "Private key file for TLS connections")
-            ("certificate_reload_interval", boost::program_options::value<unsigned int>()->default_value(0), "Reload interval for the certificate and private key files (hours)\n 0 - Disabled")
+            (
+                "certificate",
+                boost::program_options::value<std::string>(),
+                "Certificate file for TLS connections"
+            )
+            (
+                "private_key",
+                boost::program_options::value<std::string>(),
+                "Private key file for TLS connections"
+            )
+            (
+                "certificate_reload_interval",
+                boost::program_options::value<unsigned int>()->default_value(0),
+                "Reload interval for the certificate and private key files (hours)\n 0 - Disabled"
+            )
             ;
 
         boost::program_options::options_description notls_desc("TCP Server options");

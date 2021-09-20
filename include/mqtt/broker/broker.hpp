@@ -256,9 +256,9 @@ static_assert( ! compare_topic_filter("bob/alice/mary/sue/#", "bob/alice/mary/su
 
 class broker_t {
 public:
-    broker_t(as::io_context& ioc)
-        :ioc_(ioc),
-         tim_disconnect_(ioc_)
+    broker_t(as::io_context& timer_ioc)
+        :timer_ioc_(timer_ioc),
+         tim_disconnect_(timer_ioc_)
     {}
 
     // [begin] for test setting
@@ -1096,7 +1096,7 @@ private:
                 << " new connection inserted.";
             it = idx.emplace_hint(
                 it,
-                ioc_,
+                timer_ioc_,
                 mtx_subs_map_,
                 subs_map_,
                 shared_targets_,
@@ -1128,7 +1128,7 @@ private:
                         it,
                         [&](auto& e) {
                             e.clean();
-                            e.update_will(ioc_, force_move(will), will_expiry_interval);
+                            e.update_will(timer_ioc_, force_move(will), will_expiry_interval);
                             // renew_session_expiry updates index
                             e.renew_session_expiry(force_move(session_expiry_interval));
                         },
@@ -1146,7 +1146,7 @@ private:
                         it,
                         [&](auto& e) {
                             e.renew(spep, clean_start);
-                            e.update_will(ioc_, force_move(will), will_expiry_interval);
+                            e.update_will(timer_ioc_, force_move(will), will_expiry_interval);
                             // renew_session_expiry updates index
                             e.renew_session_expiry(force_move(session_expiry_interval));
                             e.send_inflight_messages();
@@ -1165,7 +1165,7 @@ private:
                     << "online connection exists, discard old one due to session_expiry and renew";
                 bool inserted;
                 std::tie(it, inserted) = idx.emplace(
-                    ioc_,
+                    timer_ioc_,
                     mtx_subs_map_,
                     subs_map_,
                     shared_targets_,
@@ -1197,7 +1197,7 @@ private:
                     [&](auto& e) {
                         e.clean();
                         e.renew(spep, clean_start);
-                        e.update_will(ioc_, force_move(will), will_expiry_interval);
+                        e.update_will(timer_ioc_, force_move(will), will_expiry_interval);
                         // renew_session_expiry updates index
                         e.renew_session_expiry(force_move(session_expiry_interval));
                     },
@@ -1215,7 +1215,7 @@ private:
                     it,
                     [&](auto& e) {
                         e.renew(spep, clean_start);
-                        e.update_will(ioc_, force_move(will), will_expiry_interval);
+                        e.update_will(timer_ioc_, force_move(will), will_expiry_interval);
                         // renew_session_expiry updates index
                         e.renew_session_expiry(force_move(session_expiry_interval));
                         e.send_inflight_messages();
@@ -1716,7 +1716,7 @@ private:
                     );
                 }
                 ssr.get().publish(
-                    ioc_,
+                    timer_ioc_,
                     r.topic,
                     r.contents,
                     std::min(r.qos_value, qos_value) | MQTT_NS::retain::yes,
@@ -1941,7 +1941,7 @@ private:
                 if (sub.sid) {
                     props.push_back(v5::property::subscription_identifier(sub.sid.value()));
                     ss.deliver(
-                        ioc_,
+                        timer_ioc_,
                         topic,
                         contents,
                         new_pubopts,
@@ -1951,7 +1951,7 @@ private:
                 }
                 else {
                     ss.deliver(
-                        ioc_,
+                        timer_ioc_,
                         topic,
                         contents,
                         new_pubopts,
@@ -2028,7 +2028,7 @@ private:
             else {
                 std::shared_ptr<as::steady_timer> tim_message_expiry;
                 if (message_expiry_interval) {
-                    tim_message_expiry = std::make_shared<as::steady_timer>(ioc_, message_expiry_interval.value());
+                    tim_message_expiry = std::make_shared<as::steady_timer>(timer_ioc_, message_expiry_interval.value());
                     tim_message_expiry->async_wait(
                         [this, topic = topic, wp = std::weak_ptr<as::steady_timer>(tim_message_expiry)]
                         (boost::system::error_code const& ec) {
@@ -2056,7 +2056,7 @@ private:
     }
 
 private:
-    as::io_context& ioc_; ///< The boost asio context to run this broker on.
+    as::io_context& timer_ioc_; ///< The boost asio context to run this broker on.
     as::steady_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
     optional<std::chrono::steady_clock::duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
 
