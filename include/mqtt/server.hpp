@@ -134,7 +134,12 @@ public:
 
     void close() {
         close_request_ = true;
-        acceptor_.reset();
+        as::post(
+            ioc_accept_,
+            [this] {
+                acceptor_.reset();
+            }
+        );
     }
 
     void set_accept_handler(accept_handler h = accept_handler()) {
@@ -300,7 +305,12 @@ public:
 
     void close() {
         close_request_ = true;
-        acceptor_.reset();
+        as::post(
+            ioc_accept_,
+            [this] {
+                acceptor_.reset();
+            }
+        );
     }
 
     void set_accept_handler(accept_handler h = accept_handler()) {
@@ -519,7 +529,12 @@ public:
 
     void close() {
         close_request_ = true;
-        acceptor_.reset();
+        as::post(
+            ioc_accept_,
+            [this] {
+                acceptor_.reset();
+            }
+        );
     }
 
     void set_accept_handler(accept_handler h = accept_handler()) {
@@ -792,7 +807,12 @@ public:
 
     void close() {
         close_request_ = true;
-        acceptor_.reset();
+        as::post(
+            ioc_accept_,
+            [this] {
+                acceptor_.reset();
+            }
+        );
     }
 
     void set_accept_handler(accept_handler h = accept_handler()) {
