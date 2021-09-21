@@ -188,7 +188,8 @@ public:
      *          MQTT protocol requests sending connack/disconnect packet with error reason code if some error happens.<BR>
      *          This function choose sync/async connack/disconnect.<BR>
      */
-    endpoint(as::io_context& ioc, protocol_version version = protocol_version::undetermined, bool async_operation = false)
+    template <typename ExecutionContext>
+    endpoint(ExecutionContext& ioc, protocol_version version = protocol_version::undetermined, bool async_operation = false)
         :async_operation_{async_operation},
          version_(version),
          tim_pingresp_(ioc),
@@ -214,7 +215,8 @@ public:
      *          MQTT protocol requests sending connack/disconnect packet with error reason code if some error happens.<BR>
      *          This function choose sync/async connack/disconnect.<BR>
      */
-    explicit endpoint(as::io_context& ioc, std::shared_ptr<MQTT_NS::socket> socket, protocol_version version = protocol_version::undetermined, bool async_operation = false)
+    template <typename ExecutionContext>
+    explicit endpoint(ExecutionContext& ioc, std::shared_ptr<MQTT_NS::socket> socket, protocol_version version = protocol_version::undetermined, bool async_operation = false)
         :socket_(force_move(socket)),
          connected_(true),
          async_operation_{async_operation},

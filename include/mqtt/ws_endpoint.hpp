@@ -27,8 +27,8 @@ namespace as = boost::asio;
 template <typename Socket, typename Strand>
 class ws_endpoint : public socket {
 public:
-    template <typename... Args>
-    explicit ws_endpoint(as::io_context& ioc, Args&&... args)
+    template <typename ExecutionContext, typename... Args>
+    explicit ws_endpoint(ExecutionContext& ioc, Args&&... args)
         :ws_(ioc, std::forward<Args>(args)...),
 #if defined(MQTT_NO_TS_EXECUTORS)
          strand_(ioc.get_executor())

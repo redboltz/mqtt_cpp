@@ -36,6 +36,7 @@ public:
      * @param port port number
      * @return async_client object
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -46,7 +47,7 @@ public:
             >
         >
     >
-    make_async_client(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_async_client(ExecutionContext& ioc, std::string host, std::string port, protocol_version version);
 
     /**
      * @brief Create no tls async_client without strand.
@@ -55,6 +56,7 @@ public:
      * @param port port number
      * @return async_client object
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -65,7 +67,7 @@ public:
             >
         >
     >
-    make_async_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_async_client_no_strand(ExecutionContext& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
     /**
@@ -77,6 +79,7 @@ public:
      * @return async_client object.
      *  strand is controlled by ws_endpoint, not endpoint, so async_client has null_strand template argument.
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -87,7 +90,7 @@ public:
             >
         >
     >
-    make_async_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_async_client_ws(ExecutionContext& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
      * @brief Create no tls websocket async_client without strand.
@@ -97,6 +100,7 @@ public:
      * @param path path string
      * @return async_client object
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -107,7 +111,7 @@ public:
             >
         >
     >
-    make_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_async_client_no_strand_ws(ExecutionContext& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 
 #if defined(MQTT_USE_TLS)
@@ -118,6 +122,7 @@ public:
      * @param port port number
      * @return async_client object
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -128,7 +133,7 @@ public:
             >
         >
     >
-    make_tls_async_client(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_tls_async_client(ExecutionContext& ioc, std::string host, std::string port, protocol_version version);
 
     /**
      * @brief Create tls async_client without strand.
@@ -137,6 +142,7 @@ public:
      * @param port port number
      * @return async_client object
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -147,7 +153,7 @@ public:
             >
         >
     >
-    make_tls_async_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_tls_async_client_no_strand(ExecutionContext& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
     /**
@@ -159,6 +165,7 @@ public:
      * @return async_client object.
      *  strand is controlled by ws_endpoint, not endpoint, so async_client has null_strand template argument.
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -169,7 +176,7 @@ public:
             >
         >
     >
-    make_tls_async_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_tls_async_client_ws(ExecutionContext& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
      * @brief Create no tls websocket async_client without strand.
@@ -179,6 +186,7 @@ public:
      * @param path path string
      * @return async_client object
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -189,7 +197,7 @@ public:
             >
         >
     >
-    make_tls_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_tls_async_client_no_strand_ws(ExecutionContext& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_USE_TLS)
 
@@ -200,6 +208,7 @@ public:
      * @param port port number
      * @return async_client object
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -211,7 +220,7 @@ public:
             >
         >
     >
-    make_async_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_async_client_32(ExecutionContext& ioc, std::string host, std::string port, protocol_version version);
 
     /**
      * @brief Create no tls async_client without strand.
@@ -220,6 +229,7 @@ public:
      * @param port port number
      * @return async_client object
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -231,7 +241,7 @@ public:
             >
         >
     >
-    make_async_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_async_client_no_strand_32(ExecutionContext& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
     /**
@@ -243,6 +253,7 @@ public:
      * @return async_client object.
      *  strand is controlled by ws_endpoint, not endpoint, so async_client has null_strand template argument.
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -254,7 +265,7 @@ public:
             >
         >
     >
-    make_async_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_async_client_ws_32(ExecutionContext& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
      * @brief Create no tls websocket async_client without strand.
@@ -264,6 +275,7 @@ public:
      * @param path path string
      * @return async_client object
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -275,7 +287,7 @@ public:
             >
         >
     >
-    make_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_async_client_no_strand_ws_32(ExecutionContext& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 
 #if defined(MQTT_USE_TLS)
@@ -286,6 +298,7 @@ public:
      * @param port port number
      * @return async_client object
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -297,7 +310,7 @@ public:
             >
         >
     >
-    make_tls_async_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_tls_async_client_32(ExecutionContext& ioc, std::string host, std::string port, protocol_version version);
 
     /**
      * @brief Create tls async_client without strand.
@@ -306,6 +319,7 @@ public:
      * @param port port number
      * @return async_client object
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -317,7 +331,7 @@ public:
             >
         >
     >
-    make_tls_async_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_tls_async_client_no_strand_32(ExecutionContext& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
     /**
@@ -329,6 +343,7 @@ public:
      * @return async_client object.
      *  strand is controlled by ws_endpoint, not endpoint, so async_client has null_strand template argument.
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -340,7 +355,7 @@ public:
             >
         >
     >
-    make_tls_async_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_tls_async_client_ws_32(ExecutionContext& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
      * @brief Create no tls websocket async_client without strand.
@@ -350,6 +365,7 @@ public:
      * @param path path string
      * @return async_client object
      */
+    template <typename ExecutionContext>
     friend std::shared_ptr<
         callable_overlay<
             async_client<
@@ -361,7 +377,7 @@ public:
             >
         >
     >
-    make_tls_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_tls_async_client_no_strand_ws_32(ExecutionContext& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_USE_TLS)
 
@@ -402,7 +418,7 @@ protected:
     ~async_client() = default;
 
     async_client(
-        as::io_context& ioc,
+        ExecutionContext& ioc,
         std::string host,
         std::string port,
 #if defined(MQTT_USE_WS)
@@ -422,6 +438,7 @@ protected:
     }
 };
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -432,7 +449,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+make_async_client(ExecutionContext& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         tcp_endpoint<
             as::ip::tcp::socket,
@@ -451,6 +468,7 @@ make_async_client(as::io_context& ioc, std::string host, std::string port, proto
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -461,7 +479,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+make_async_client(ExecutionContext& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_async_client(
         ioc,
         force_move(host),
@@ -470,6 +488,7 @@ make_async_client(as::io_context& ioc, std::string host, std::uint16_t port, pro
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -480,7 +499,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+make_async_client_no_strand(ExecutionContext& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         tcp_endpoint<
             as::ip::tcp::socket,
@@ -499,6 +518,7 @@ make_async_client_no_strand(as::io_context& ioc, std::string host, std::string p
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -509,7 +529,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_no_strand(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+make_async_client_no_strand(ExecutionContext& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_no_strand(
         ioc,
         force_move(host),
@@ -520,6 +540,7 @@ make_async_client_no_strand(as::io_context& ioc, std::string host, std::uint16_t
 
 #if defined(MQTT_USE_WS)
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -530,7 +551,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_async_client_ws(ExecutionContext& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         ws_endpoint<
             as::ip::tcp::socket,
@@ -547,6 +568,7 @@ make_async_client_ws(as::io_context& ioc, std::string host, std::string port, st
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -557,7 +579,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_async_client_ws(ExecutionContext& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_ws(
         ioc,
         force_move(host),
@@ -567,6 +589,7 @@ make_async_client_ws(as::io_context& ioc, std::string host, std::uint16_t port, 
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -577,7 +600,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_async_client_no_strand_ws(ExecutionContext& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         ws_endpoint<
             as::ip::tcp::socket,
@@ -594,6 +617,7 @@ make_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::strin
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -604,7 +628,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_async_client_no_strand_ws(ExecutionContext& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_no_strand_ws(
         ioc,
         force_move(host),
@@ -618,6 +642,7 @@ make_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint1
 
 #if defined(MQTT_USE_TLS)
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -628,7 +653,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client(ExecutionContext& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -647,6 +672,7 @@ make_tls_async_client(as::io_context& ioc, std::string host, std::string port, p
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -657,7 +683,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client(ExecutionContext& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client(
         ioc,
         force_move(host),
@@ -666,6 +692,7 @@ make_tls_async_client(as::io_context& ioc, std::string host, std::uint16_t port,
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -676,7 +703,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_no_strand(ExecutionContext& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -695,6 +722,7 @@ make_tls_async_client_no_strand(as::io_context& ioc, std::string host, std::stri
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -705,7 +733,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_no_strand(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_no_strand(ExecutionContext& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_no_strand(
         ioc,
         force_move(host),
@@ -716,6 +744,7 @@ make_tls_async_client_no_strand(as::io_context& ioc, std::string host, std::uint
 
 #if defined(MQTT_USE_WS)
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -726,7 +755,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_ws(ExecutionContext& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -743,6 +772,7 @@ make_tls_async_client_ws(as::io_context& ioc, std::string host, std::string port
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -753,7 +783,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_ws(ExecutionContext& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_ws(
         ioc,
         force_move(host),
@@ -763,6 +793,7 @@ make_tls_async_client_ws(as::io_context& ioc, std::string host, std::uint16_t po
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -773,7 +804,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_no_strand_ws(ExecutionContext& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -790,6 +821,7 @@ make_tls_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::s
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -800,7 +832,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_no_strand_ws(ExecutionContext& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_no_strand_ws(
         ioc,
         force_move(host),
@@ -817,6 +849,7 @@ make_tls_async_client_no_strand_ws(as::io_context& ioc, std::string host, std::u
 
 // 32bit Packet Id (experimental)
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -828,7 +861,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+make_async_client_32(ExecutionContext& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         tcp_endpoint<
             as::ip::tcp::socket,
@@ -848,6 +881,7 @@ make_async_client_32(as::io_context& ioc, std::string host, std::string port, pr
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -859,7 +893,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+make_async_client_32(ExecutionContext& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_32(
         ioc,
         force_move(host),
@@ -868,6 +902,7 @@ make_async_client_32(as::io_context& ioc, std::string host, std::uint16_t port, 
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -879,7 +914,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+make_async_client_no_strand_32(ExecutionContext& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         tcp_endpoint<
             as::ip::tcp::socket,
@@ -899,6 +934,7 @@ make_async_client_no_strand_32(as::io_context& ioc, std::string host, std::strin
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -910,7 +946,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_no_strand_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+make_async_client_no_strand_32(ExecutionContext& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_no_strand_32(
         ioc,
         force_move(host),
@@ -921,6 +957,7 @@ make_async_client_no_strand_32(as::io_context& ioc, std::string host, std::uint1
 
 #if defined(MQTT_USE_WS)
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -932,7 +969,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_async_client_ws_32(ExecutionContext& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         ws_endpoint<
             as::ip::tcp::socket,
@@ -950,6 +987,7 @@ make_async_client_ws_32(as::io_context& ioc, std::string host, std::string port,
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -961,7 +999,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_async_client_ws_32(ExecutionContext& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_ws_32(
         ioc,
         force_move(host),
@@ -971,6 +1009,7 @@ make_async_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t por
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -982,7 +1021,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_async_client_no_strand_ws_32(ExecutionContext& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         ws_endpoint<
             as::ip::tcp::socket,
@@ -1000,6 +1039,7 @@ make_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::st
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -1011,7 +1051,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_async_client_no_strand_ws_32(ExecutionContext& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_async_client_no_strand_ws_32(
         ioc,
         force_move(host),
@@ -1025,6 +1065,7 @@ make_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::ui
 
 #if defined(MQTT_USE_TLS)
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -1036,7 +1077,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_32(ExecutionContext& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -1056,6 +1097,7 @@ make_tls_async_client_32(as::io_context& ioc, std::string host, std::string port
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -1067,7 +1109,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_32(ExecutionContext& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_32(
         ioc,
         force_move(host),
@@ -1076,6 +1118,7 @@ make_tls_async_client_32(as::io_context& ioc, std::string host, std::uint16_t po
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -1087,7 +1130,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_no_strand_32(ExecutionContext& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -1107,6 +1150,7 @@ make_tls_async_client_no_strand_32(as::io_context& ioc, std::string host, std::s
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -1118,7 +1162,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_no_strand_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_no_strand_32(ExecutionContext& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_no_strand_32(
         ioc,
         force_move(host),
@@ -1129,6 +1173,7 @@ make_tls_async_client_no_strand_32(as::io_context& ioc, std::string host, std::u
 
 #if defined(MQTT_USE_WS)
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -1140,7 +1185,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_ws_32(ExecutionContext& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -1158,6 +1203,7 @@ make_tls_async_client_ws_32(as::io_context& ioc, std::string host, std::string p
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -1169,7 +1215,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_ws_32(ExecutionContext& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_ws_32(
         ioc,
         force_move(host),
@@ -1179,6 +1225,7 @@ make_tls_async_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -1190,7 +1237,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_no_strand_ws_32(ExecutionContext& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     using async_client_t = async_client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -1208,6 +1255,7 @@ make_tls_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std
     );
 }
 
+template <typename ExecutionContext>
 inline std::shared_ptr<
         callable_overlay<
             async_client<
@@ -1219,7 +1267,7 @@ inline std::shared_ptr<
             >
         >
     >
-make_tls_async_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+make_tls_async_client_no_strand_ws_32(ExecutionContext& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
     return make_tls_async_client_no_strand_ws_32(
         ioc,
         force_move(host),
