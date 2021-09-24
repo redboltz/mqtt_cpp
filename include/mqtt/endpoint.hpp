@@ -1080,7 +1080,7 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "force_disconnect";
 
-        shutdown(socket());
+        sync_shutdown(socket());
     }
 
     /**
@@ -2269,9 +2269,8 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "async_force_disconnect";
         socket_->post(
-            [this, self = this->shared_from_this(), func = force_move(func)] {
-                shutdown(socket());
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+            [this, self = this->shared_from_this(), func = force_move(func)] () mutable {
+                async_shutdown(socket(), force_move(func));
             }
         );
     }
@@ -5043,23 +5042,40 @@ protected:
     }
 
     bool handle_close_or_error(error_code ec) {
+        auto call_handler =
+            [this, ec] () mutable {
+                connect_requested_ = false;
+                clean_sub_unsub_inflight();
+                if (disconnect_requested_) {
+                    on_close();
+                    disconnect_requested_ = false;
+                }
+                else {
+                    if (!ec) ec = boost::system::errc::make_error_code(boost::system::errc::not_connected);
+                    on_error(ec);
+                }
+            };
+
         if (connected_) {
             if (!ec) return false;
             MQTT_LOG("mqtt_impl", trace)
                 << MQTT_ADD_VALUE(address, this)
                 << "handle_close_or_error call shutdown";
-            shutdown(socket());
-        }
-
-        connect_requested_ = false;
-        clean_sub_unsub_inflight();
-        if (disconnect_requested_) {
-            on_close();
-            disconnect_requested_ = false;
+            if (async_operation_) {
+                async_shutdown(
+                    socket(),
+                    [call_handler](error_code) mutable {
+                        call_handler();
+                    }
+                );
+            }
+            else {
+                sync_shutdown(socket());
+                call_handler();
+            }
         }
         else {
-            if (!ec) ec = boost::system::errc::make_error_code(boost::system::errc::not_connected);
-            on_error(ec);
+            call_handler();
         }
         return true;
     }
@@ -5261,9 +5277,18 @@ private:
     }
 
     void shutdown(MQTT_NS::socket& s) {
+        if (async_operation_) {
+            async_shutdown(s, [](auto){});
+        }
+        else {
+            sync_shutdown(s);
+        }
+    }
+
+    void sync_shutdown(MQTT_NS::socket& s) {
         MQTT_LOG("mqtt_impl", trace)
             << MQTT_ADD_VALUE(address, this)
-            << "shutdown";
+            << "sync_shutdown";
         if (shutdown_requested_) {
             MQTT_LOG("mqtt_impl", trace)
                 << MQTT_ADD_VALUE(address, this)
@@ -5272,71 +5297,85 @@ private:
         }
         shutdown_requested_ = true;
         mqtt_connected_ = false;
-        if (async_operation_) {
+
+        error_code ec;
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "clean_shutdown_and_close";
+        s.clean_shutdown_and_close(ec);
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "clean_shutdown_and_close ec:"
+            << ec.message();
+        connected_ = false;
+    }
+
+    void async_shutdown(MQTT_NS::socket& s, async_handler_t func) {
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "shutdown";
+        if (shutdown_requested_) {
             MQTT_LOG("mqtt_impl", trace)
                 << MQTT_ADD_VALUE(address, this)
-                << "async_clean_shutdown_and_close";
-            s.async_clean_shutdown_and_close(
-                [this, sp = this->shared_from_this(), ssp = socket_sp_ref()](error_code ec) { // *1
-                    MQTT_LOG("mqtt_impl", trace)
-                        << MQTT_ADD_VALUE(address, this)
-                        << "async_clean_shutdown_and_close ec:"
-                        << ec.message();
-                    tim_shutdown_.cancel();
-                    connected_ = false;
-                }
-            );
-            // timeout timer set
-            tim_shutdown_.expires_after(shutdown_timeout);
-            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-            tim_shutdown_.async_wait(
-                [this, wp = force_move(wp), ssp = socket_sp_ref()](error_code ec) mutable {
-                    if (auto sp = wp.lock()) {
-                        MQTT_LOG("mqtt_impl", trace)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "async_shutdown timer ec:"
-                            << ec.message();
-                        if (!ec) {
-                            // timeout
-                            // tcp_shutdown indirectly cancel stream.async_shutdown()
-                            // and handler is called with error.
-                            // So captured sp at *1 is released.
-
-                            // post is for applying strand
-                            MQTT_LOG("mqtt_impl", trace)
-                                << MQTT_ADD_VALUE(address, this)
-                                << "post force_shutdown_and_close";
-                            sp->socket().post(
-                                [this, sp] {
-                                    if (connected_) {
-                                        error_code ec;
-                                        socket().force_shutdown_and_close(ec);
-                                        MQTT_LOG("mqtt_impl", trace)
-                                            << MQTT_ADD_VALUE(address, this)
-                                            << "force_shutdown_and_close ec:"
-                                            << ec.message();
-                                        connected_ = false;
-                                    }
-                                }
-                            );
-                        }
-                    }
-                }
-            );
+                << "already shutdowned";
+            if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
             return;
         }
-        else {
-            error_code ec;
-            MQTT_LOG("mqtt_impl", trace)
-                << MQTT_ADD_VALUE(address, this)
-                << "clean_shutdown_and_close";
-            s.clean_shutdown_and_close(ec);
-            MQTT_LOG("mqtt_impl", trace)
-                << MQTT_ADD_VALUE(address, this)
-                << "clean_shutdown_and_close ec:"
-                << ec.message();
-            connected_ = false;
-        }
+        shutdown_requested_ = true;
+        mqtt_connected_ = false;
+
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "async_clean_shutdown_and_close";
+        s.async_clean_shutdown_and_close(
+            [this, func, sp = this->shared_from_this(), ssp = socket_sp_ref()](error_code ec) { // *1
+                MQTT_LOG("mqtt_impl", trace)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "async_clean_shutdown_and_close ec:"
+                    << ec.message();
+                tim_shutdown_.cancel();
+                connected_ = false;
+                if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+            }
+        );
+        // timeout timer set
+        tim_shutdown_.expires_after(shutdown_timeout);
+        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+        tim_shutdown_.async_wait(
+            [this, func, wp = force_move(wp), ssp = socket_sp_ref()](error_code ec) mutable {
+                if (auto sp = wp.lock()) {
+                    MQTT_LOG("mqtt_impl", trace)
+                        << MQTT_ADD_VALUE(address, this)
+                        << "async_shutdown timer ec:"
+                        << ec.message();
+                    if (!ec) {
+                        // timeout
+                        // tcp_shutdown indirectly cancel stream.async_shutdown()
+                        // and handler is called with error.
+                        // So captured sp at *1 is released.
+
+                        // post is for applying strand
+                        MQTT_LOG("mqtt_impl", trace)
+                            << MQTT_ADD_VALUE(address, this)
+                            << "post force_shutdown_and_close";
+                        sp->socket().post(
+                            [this, func = force_move(func), sp] {
+                                if (connected_) {
+                                    error_code ec;
+                                    socket().force_shutdown_and_close(ec);
+                                    MQTT_LOG("mqtt_impl", trace)
+                                        << MQTT_ADD_VALUE(address, this)
+                                        << "force_shutdown_and_close ec:"
+                                        << ec.message();
+                                    connected_ = false;
+                                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+                                }
+                            }
+                        );
+                    }
+                }
+            }
+        );
     }
 
     void send_error_disconnect(v5::disconnect_reason_code rc) {

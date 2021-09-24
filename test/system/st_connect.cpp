@@ -1325,6 +1325,92 @@ BOOST_AUTO_TEST_CASE( async_connect_session_present_empty_store ) {
     do_combi_test_async(test);
 }
 
+BOOST_AUTO_TEST_CASE( async_connect_retry_before_cb ) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
+        clear_ordered();
+        c->set_client_id("cid1");
+
+        checker chk = {
+            // connect
+            cont("async_connect_invalid_host"),
+            deps("async_force_disconnect", "async_connect_invalid_host"),
+            cont("h_async_force_disconnect"),
+            deps("h_async_connect", "async_connect_invalid_host"),
+            cont("async_connect_valid_host"),
+            cont("h_connack1"),
+            // disconnect
+            cont("h_close1"),
+        };
+
+        switch (c->get_protocol_version()) {
+        case MQTT_NS::protocol_version::v3_1_1:
+            c->set_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::connect_return_code connack_return_code) {
+                    MQTT_CHK("h_connack1");
+                    BOOST_TEST(sp == false);
+                    BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
+                    c->async_disconnect();
+                    return true;
+                });
+            break;
+        case MQTT_NS::protocol_version::v5:
+            c->set_v5_connack_handler(
+                [&chk, &c]
+                (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties /*props*/) {
+                    MQTT_CHK("h_connack1");
+                    BOOST_TEST(sp == false);
+                    BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
+                    c->async_disconnect();
+                    return true;
+                });
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+
+        c->set_close_handler(
+            [&]
+            () {
+                MQTT_CHK("h_close1");
+                finish();
+            });
+        c->set_error_handler(
+            [&]
+            (MQTT_NS::error_code) {
+                BOOST_CHECK(false);
+            });
+
+        c->set_host("invalid");
+        MQTT_CHK("async_connect_invalid_host");
+        c->async_connect(
+            [&](MQTT_NS::error_code ec) {
+                MQTT_CHK("h_async_connect");
+                BOOST_TEST(ec);
+                c->set_host(broker_url);
+                MQTT_CHK("async_connect_valid_host");
+                c->async_connect(
+                    [&](MQTT_NS::error_code ec) {
+                        BOOST_TEST(!ec);
+                    }
+                );
+            }
+        );
+        MQTT_CHK("async_force_disconnect");
+        c->async_force_disconnect(
+            [&](MQTT_NS::error_code ec) {
+                MQTT_CHK("h_async_force_disconnect");
+                BOOST_TEST(!ec);
+            }
+        );
+        ioc.run();
+        BOOST_TEST(chk.all());
+    };
+    do_combi_test_async(test);
+}
+
 BOOST_AUTO_TEST_CASE( connect_prop ) {
     auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
         auto& c = cs[0];
