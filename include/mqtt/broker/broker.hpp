@@ -279,11 +279,22 @@ public:
      * @brief set pingresp send operaton
      *
      * @param b - if true, send pingresp when pingreq is received.
-     *            if false, doesn't send pingrespp for test.
+     *            if false, doesn't send pingresp for test.
      */
     void set_pingresp(bool b) {
         pingresp_ = b;
     }
+
+    /**
+     * @brief set pingresp send operaton
+     *
+     * @param b - if true, send connack when connect is received.
+     *            if false, doesn't send connack for test.
+     */
+    void set_connack(bool b) {
+        connack_ = b;
+    }
+
     // [end] for test setting
 
     /**
@@ -381,7 +392,7 @@ public:
                                 MQTT_LOG("mqtt_broker", trace)
                                     << MQTT_ADD_VALUE(address, this)
                                     << "send CONNACK reason_code:" << rc.value();
-                                sp->async_connack(
+                                if (connack_) sp->async_connack(
                                     false,
                                     rc.value(),
                                     [sp]
@@ -1026,13 +1037,13 @@ private:
         switch (ep.get_protocol_version()) {
         case protocol_version::v3_1_1:
             if (client_id.empty() && !clean_start) {
-                ep.connack(false, connect_return_code::identifier_rejected);
+                if (connack_) ep.async_connack(false, connect_return_code::identifier_rejected);
                 return false;
             }
             break;
         case protocol_version::v5:
             if (client_id.empty() && !clean_start) {
-                ep.connack(false, v5::connect_reason_code::client_identifier_not_valid);
+                if (connack_) ep.async_connack(false, v5::connect_reason_code::client_identifier_not_valid);
                 return false;
             }
             break;
@@ -1042,31 +1053,43 @@ private:
         }
 
         auto send_connack =
-            [&](bool session_present) {
+            [&](bool session_present, std::function<void(error_code)> finish = [](error_code){}) {
                 // Reply to the connect message.
                 switch (ep.get_protocol_version()) {
                 case protocol_version::v3_1_1:
-                    ep.connack(
+                    if (connack_) ep.async_connack(
                         session_present,
-                        connect_return_code::accepted
+                        connect_return_code::accepted,
+                        [finish = force_move(finish)]
+                        (error_code ec) {
+                            finish(ec);
+                        }
                     );
                     break;
                 case protocol_version::v5:
                     if (connack_props_.empty()) {
-                        ep.connack(
+                        if (connack_) ep.async_connack(
                             session_present,
                             v5::connect_reason_code::success,
                             v5::properties{
                                 v5::property::topic_alias_maximum{topic_alias_max},
                                 v5::property::receive_maximum{receive_maximum_max}
+                            },
+                            [finish = force_move(finish)]
+                            (error_code ec) {
+                                finish(ec);
                             }
                         );
                     }
                     else {
-                        ep.connack(
+                        if (connack_) ep.async_connack(
                             session_present,
                             v5::connect_reason_code::success,
-                            connack_props_
+                            connack_props_,
+                            [finish = force_move(finish)]
+                            (error_code ec) {
+                                finish(ec);
+                            }
                         );
                     }
                     break;
@@ -1110,7 +1133,6 @@ private:
                 force_move(will_expiry_interval),
                 force_move(session_expiry_interval)
             );
-
             send_connack(false);
         }
         else if (it->online()) {
@@ -1141,20 +1163,38 @@ private:
                         << MQTT_ADD_VALUE(address, this)
                         << "cid:" << client_id
                         << "online connection exists, inherit old one and renew";
-                    send_connack(true);
-                    idx.modify(
-                        it,
-                        [&](auto& e) {
-                            e.renew(spep, clean_start);
-                            e.update_will(timer_ioc_, force_move(will), will_expiry_interval);
-                            // renew_session_expiry updates index
-                            e.renew_session_expiry(force_move(session_expiry_interval));
-                            e.send_inflight_messages();
-                            e.send_all_offline_messages();
-                        },
-                        [](auto&) { BOOST_ASSERT(false); }
+                    send_connack(
+                        true,
+                        [
+                            this,
+                            &idx,
+                            it,
+                            will = force_move(will),
+                            clean_start,
+                            spep,
+                            will_expiry_interval,
+                            session_expiry_interval
+                        ](error_code ec) mutable {
+                            if (ec) {
+                                MQTT_LOG("mqtt_broker", trace)
+                                    << MQTT_ADD_VALUE(address, this)
+                                    << ec.message();
+                                return;
+                            }
+                            idx.modify(
+                                it,
+                                [&](auto& e) {
+                                    e.renew(spep, clean_start);
+                                    e.update_will(timer_ioc_, force_move(will), will_expiry_interval);
+                                    // renew_session_expiry updates index
+                                    e.renew_session_expiry(force_move(session_expiry_interval));
+                                    e.send_inflight_messages();
+                                    e.send_all_offline_messages();
+                                },
+                                [](auto&) { BOOST_ASSERT(false); }
+                            );
+                        }
                     );
-                    // send offline messages
                 }
             }
             else {
@@ -1206,22 +1246,41 @@ private:
             }
             else {
                 // inherit offline session
-                    MQTT_LOG("mqtt_broker", trace)
-                        << MQTT_ADD_VALUE(address, this)
-                        << "cid:" << client_id
-                        << "offline connection exists, inherit old one and renew";
-                send_connack(true);
-                idx.modify(
-                    it,
-                    [&](auto& e) {
-                        e.renew(spep, clean_start);
-                        e.update_will(timer_ioc_, force_move(will), will_expiry_interval);
-                        // renew_session_expiry updates index
-                        e.renew_session_expiry(force_move(session_expiry_interval));
-                        e.send_inflight_messages();
-                        e.send_all_offline_messages();
-                    },
-                    [](auto&) { BOOST_ASSERT(false); }
+                MQTT_LOG("mqtt_broker", trace)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "cid:" << client_id
+                    << "offline connection exists, inherit old one and renew";
+                send_connack(
+                    true,
+                    [
+                        this,
+                        &idx,
+                        it,
+                        will = force_move(will),
+                        clean_start,
+                        spep,
+                        will_expiry_interval,
+                        session_expiry_interval
+                    ](error_code ec) mutable {
+                        if (ec) {
+                            MQTT_LOG("mqtt_broker", trace)
+                                << MQTT_ADD_VALUE(address, this)
+                                << ec.message();
+                            return;
+                        }
+                        idx.modify(
+                            it,
+                            [&](auto& e) {
+                                e.renew(spep, clean_start);
+                                e.update_will(timer_ioc_, force_move(will), will_expiry_interval);
+                                // renew_session_expiry updates index
+                                e.renew_session_expiry(force_move(session_expiry_interval));
+                                e.send_inflight_messages();
+                                e.send_all_offline_messages();
+                            },
+                            [](auto&) { BOOST_ASSERT(false); }
+                        );
+                    }
                 );
             }
         }
@@ -2092,6 +2151,7 @@ private:
     std::function<void(v5::properties const&)> h_unsubscribe_props_;
     std::function<void(v5::properties const&)> h_auth_props_;
     bool pingresp_ = true;
+    bool connack_ = true;
 };
 
 MQTT_BROKER_NS_END
