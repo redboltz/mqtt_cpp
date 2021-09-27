@@ -3,7 +3,7 @@
 * Fixed example broker's invalid sync connack call (#869)
 * Added no CONNACK sending mode to the example broker (#869)
 * Added posting code to acceptors (#867)
-* Added io_context and threads setting options for example broker (#866, #871)
+* Added io_context and threads setting options for example broker (#866, #871, #872)
 * Fixed moved from object access (#865)
 * <<<< breaking change >>>> Removed ioc_con() and ioc_accept() (#866)
 * <<<< breaking change >>>> Unified automatic async/sync choosing flag. (#857, #862)
