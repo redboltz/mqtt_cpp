@@ -10,6 +10,7 @@
 #include <boost/program_options.hpp>
 
 #include <fstream>
+#include <algorithm>
 
 namespace as = boost::asio;
 
@@ -349,8 +350,8 @@ void run_broker(boost::program_options::variables_map const& vm) {
                 return 1;
             } ();
         if (threads_per_ioc == 0) {
-            MQTT_LOG("mqtt_broker", error) << "threads per ioc must be greater than 0";
-            return;
+            threads_per_ioc = std::max(std::size_t(std::thread::hardware_concurrency()), std::size_t(4));
+            MQTT_LOG("mqtt_broker", info) << "threads_per_ioc set to auto decide (0). Automatically set to " << threads_per_ioc;
         }
 
         MQTT_LOG("mqtt_broker", info)
