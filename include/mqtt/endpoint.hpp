@@ -4348,6 +4348,24 @@ public:
         }
     }
 
+    /**
+     * @brief Get processed but not released QoS2 packet ids
+     *        This function should be called after disconnection
+     * @return set of packet_ids
+     */
+    std::set<packet_id_t> get_qos2_publish_handled_pids() const {
+        return qos2_publish_handled_;
+    }
+
+    /**
+     * @brief Restore processed but not released QoS2 packet ids
+     *        This function should be called before receive the first publish
+     * @param pids packet ids
+     */
+    void restore_qos2_publish_handled_pids(std::set<packet_id_t> pids) {
+        qos2_publish_handled_ = force_move(pids);
+    }
+
     // manual packet_id management for advanced users
 
     /**
