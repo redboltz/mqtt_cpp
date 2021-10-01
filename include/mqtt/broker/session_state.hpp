@@ -154,7 +154,7 @@ struct session_state {
                 );
             }
         );
-
+        qos2_publish_processed_ = con_->get_qos2_publish_handled_pids();
         con_.reset();
 
         if (session_expiry_interval_ &&
@@ -514,6 +514,7 @@ struct session_state {
         else {
             // cancel will
             clear_will();
+            con->restore_qos2_publish_handled_pids(force_move(qos2_publish_processed_));
         }
         con_ = force_move(con);
     }
@@ -594,6 +595,8 @@ private:
     as::steady_timer tim_will_delay_;
     will_sender_t will_sender_;
     bool remain_after_close_;
+
+    std::set<packet_id_t> qos2_publish_handled_;
 };
 
 class session_states {
