@@ -1537,7 +1537,7 @@ private:
                         forward_props.push_back(force_move(p));
                     }
                 ),
-                force_move(p)
+                p
             );
         }
 
