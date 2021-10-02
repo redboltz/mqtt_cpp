@@ -154,7 +154,7 @@ struct session_state {
                 );
             }
         );
-        qos2_publish_processed_ = con_->get_qos2_publish_handled_pids();
+        qos2_publish_handled_ = con_->get_qos2_publish_handled_pids();
         con_.reset();
 
         if (session_expiry_interval_ &&
@@ -293,28 +293,9 @@ struct session_state {
             std::lock_guard<mutex> g(mtx_offline_messages_);
             offline_messages_.clear();
         }
-        {
-            std::lock_guard<mutex> g(mtx_qos2_publish_processed_);
-            qos2_publish_processed_.clear();
-        }
         shared_targets_.erase(*this);
         unsubscribe_all();
         if (con_) con_->async_force_disconnect();
-    }
-
-    void exactly_once_start(packet_id_t packet_id) {
-        std::lock_guard<mutex> g(mtx_qos2_publish_processed_);
-        qos2_publish_processed_.insert(packet_id);
-    }
-
-    bool exactly_once_processing(packet_id_t packet_id) const {
-        std::shared_lock<mutex> g(mtx_qos2_publish_processed_);
-        return qos2_publish_processed_.find(packet_id) != qos2_publish_processed_.end();
-    }
-
-    void exactly_once_finish(packet_id_t packet_id) {
-        std::lock_guard<mutex> g(mtx_qos2_publish_processed_);
-        qos2_publish_processed_.erase(packet_id);
     }
 
     template <typename PublishRetainHandler>
@@ -510,11 +491,12 @@ struct session_state {
         if (clean_start) {
             // send previous will
             send_will_impl();
+            qos2_publish_handled_.clear();
         }
         else {
             // cancel will
             clear_will();
-            con->restore_qos2_publish_handled_pids(force_move(qos2_publish_processed_));
+            con->restore_qos2_publish_handled_pids(qos2_publish_handled_);
         }
         con_ = force_move(con);
     }
@@ -583,9 +565,6 @@ private:
 
     mutable mutex mtx_inflight_messages_;
     inflight_messages inflight_messages_;
-
-    mutable mutex mtx_qos2_publish_processed_;
-    std::set<packet_id_t> qos2_publish_processed_;
 
     mutable mutex mtx_offline_messages_;
     offline_messages offline_messages_;

@@ -1483,10 +1483,6 @@ private:
                     );
                     break;
                 case qos::exactly_once: {
-                    // const_cast is appropriate here
-                    // See https://github.com/boostorg/multi_index/issues/50
-                    auto& ss = const_cast<session_state&>(*it);
-                    ss.exactly_once_start(packet_id.value());
                     ep.async_pubrec(
                         packet_id.value(),
                         v5::pubrec_reason_code::success,
@@ -1505,17 +1501,6 @@ private:
                     break;
                 }
             };
-
-        if (packet_id) {
-            if (pubopts.get_qos() == qos::exactly_once &&
-                it->exactly_once_processing(packet_id.value())) {
-                MQTT_LOG("mqtt_broker", info)
-                    << MQTT_ADD_VALUE(address, &ep)
-                    << "receive already processed publish pid:" << packet_id.value();
-                send_pubres();
-                return true;
-            }
-        }
 
         v5::properties forward_props;
 
@@ -1654,11 +1639,6 @@ private:
         // During async operation, spep is valid but it has already been
         // erased from sessions_
         if (it == idx.end()) return true;
-
-        // const_cast is appropriate here
-        // See https://github.com/boostorg/multi_index/issues/50
-        auto& ss = const_cast<session_state&>(*it);
-        ss.exactly_once_finish(packet_id);
 
         auto& ep = *spep;
 
