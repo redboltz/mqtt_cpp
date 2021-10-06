@@ -575,7 +575,7 @@ private:
     will_sender_t will_sender_;
     bool remain_after_close_;
 
-    std::set<packet_id_t> qos2_publish_handled_;
+    std::map<packet_id_t, buffer> qos2_publish_handled_;
 };
 
 class session_states {

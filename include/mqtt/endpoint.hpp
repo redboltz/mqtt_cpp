@@ -14,6 +14,7 @@
 #include <deque>
 #include <functional>
 #include <set>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <atomic>
@@ -4351,18 +4352,18 @@ public:
     /**
      * @brief Get processed but not released QoS2 packet ids
      *        This function should be called after disconnection
-     * @return set of packet_ids
+     * @return map of packet_id and topic
      */
-    std::set<packet_id_t> get_qos2_publish_handled_pids() const {
+    std::map<packet_id_t, buffer> get_qos2_publish_handled_pids() const {
         return qos2_publish_handled_;
     }
 
     /**
      * @brief Restore processed but not released QoS2 packet ids
      *        This function should be called before receive the first publish
-     * @param pids packet ids
+     * @param map of packet_id and topic
      */
-    void restore_qos2_publish_handled_pids(std::set<packet_id_t> pids) {
+    void restore_qos2_publish_handled_pids(std::map<packet_id_t, buffer> pids) {
         qos2_publish_handled_ = force_move(pids);
     }
 
@@ -7969,6 +7970,7 @@ private:
                         break;
                     case qos::exactly_once:
                         if (ep_.qos2_publish_handled_.find(*packet_id_) == ep_.qos2_publish_handled_.end()) {
+                            ep_.qos2_publish_handled_.emplace(*packet_id_, topic_name_);
                             if (handler_call()) {
                                 ep_.on_mqtt_message_processed(
                                     force_move(
@@ -7979,7 +7981,6 @@ private:
                                         )
                                     )
                                 );
-                                ep_.qos2_publish_handled_.emplace(*packet_id_);
                                 ep_.auto_pub_response(
                                     [this] {
                                         if (ep_.connected_) {
@@ -11665,7 +11666,7 @@ private:
 
     Mutex store_mtx_;
     mi_store store_;
-    std::set<packet_id_t> qos2_publish_handled_;
+    std::map<packet_id_t, buffer> qos2_publish_handled_;
     std::deque<async_packet> queue_;
 
     packet_id_manager<packet_id_t> pid_man_;
