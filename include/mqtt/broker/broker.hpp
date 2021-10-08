@@ -977,6 +977,7 @@ public:
     }
 
     void clear_all_retained_topics() {
+        std::lock_guard<mutex> g(mtx_retains_);
         retains_.clear();
     }
 
@@ -1785,6 +1786,7 @@ private:
                     e.topic_filter,
                     e.subopts,
                     [&] {
+                        std::shared_lock<mutex> g(mtx_retains_);
                         retains_.find(
                             e.topic_filter,
                             [&](retain_t const& r) {
@@ -1828,6 +1830,7 @@ private:
                     e.topic_filter,
                     e.subopts,
                     [&] {
+                        std::shared_lock<mutex> g(mtx_retains_);
                         retains_.find(
                             e.topic_filter,
                             [&](retain_t const& r) {
@@ -2062,6 +2065,7 @@ private:
          */
         if (pubopts.get_retain() == MQTT_NS::retain::yes) {
             if (contents.empty()) {
+                std::lock_guard<mutex> g(mtx_retains_);
                 retains_.erase(topic);
             }
             else {
@@ -2080,6 +2084,7 @@ private:
                     );
                 }
 
+                std::lock_guard<mutex> g(mtx_retains_);
                 retains_.insert_or_assign(
                     topic,
                     retain_t {
@@ -2109,7 +2114,7 @@ private:
     mutable mutex mtx_sessions_;
     session_states sessions_;
 
-
+    mutable mutex mtx_retains_;
     retained_messages retains_; ///< A list of messages retained so they can be sent to newly subscribed clients.
 
     // MQTTv5 members
