@@ -8,6 +8,7 @@
 #include <mqtt/setup_log.hpp>
 #include <mqtt/broker/broker.hpp>
 #include <boost/program_options.hpp>
+#include <boost/format.hpp>
 
 #include <fstream>
 #include <algorithm>
@@ -584,6 +585,30 @@ int main(int argc, char **argv) {
         if (vm.count("help")) {
             std::cout << desc << std::endl;
             return 1;
+        }
+
+        std::cout << "Set options:" << std::endl;
+        for (auto const& e : vm) {
+            std::cout << boost::format("%-28s") % e.first.c_str() << " : ";
+            if (auto p = boost::any_cast<std::string>(&e.second.value())) {
+                std::cout << *p;
+            }
+            else if (auto p = boost::any_cast<std::size_t>(&e.second.value())) {
+                std::cout << *p;
+            }
+            else if (auto p = boost::any_cast<std::uint32_t>(&e.second.value())) {
+                std::cout << *p;
+            }
+            else if (auto p = boost::any_cast<std::uint16_t>(&e.second.value())) {
+                std::cout << *p;
+            }
+            else if (auto p = boost::any_cast<unsigned int>(&e.second.value())) {
+                std::cout << *p;
+            }
+            else if (auto p = boost::any_cast<bool>(&e.second.value())) {
+                std::cout << std::boolalpha << *p;
+            }
+            std::cout << std::endl;
         }
 
 #if defined(MQTT_USE_LOG)
