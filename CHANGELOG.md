@@ -10,7 +10,7 @@
   endppoint constructor 4th parameter `async_operation` is used.
   set_async_operation() can overwrite the async_operation.
   It should be called before sending any packets.
-* Implemented clean shutdown (WS TLS TCP) (#849, 860, #863, #864)
+* Implemented clean shutdown (WS TLS TCP) (#849, #860, #863, #864)
 * Improved build system (#859)
 * Added DISCONNECT with session taken over reason code (#847)
 * Improved tests (#845, #846, #852)

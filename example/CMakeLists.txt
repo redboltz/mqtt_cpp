@@ -11,6 +11,7 @@ LIST (APPEND exec_PROGRAMS
     long_lived_client.cpp
     redirect.cpp
     broker.cpp
+    bench.cpp
 )
 
 FIND_PACKAGE (Boost 1.67.0 REQUIRED COMPONENTS program_options)
@@ -69,6 +70,7 @@ FOREACH (source_file ${exec_PROGRAMS})
 ENDFOREACH ()
 
 FILE(COPY broker.conf DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" )
+FILE(COPY bench.conf DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" )
 FILE(COPY ../test/certs/mosquitto.org.crt DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" )
 FILE(COPY ../test/certs/server.crt.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" )
 FILE(COPY ../test/certs/server.key.pem DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" )
