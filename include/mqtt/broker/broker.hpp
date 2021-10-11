@@ -31,7 +31,6 @@ MQTT_BROKER_NS_BEGIN
 namespace mi = boost::multi_index;
 namespace as = boost::asio;
 
-
 #if defined(MQTT_STD_STRING_VIEW)
 #define MQTT_STRING_VIEW_CONSTEXPR constexpr
 #else  // defined(MQTT_STD_STRING_VIEW)
@@ -321,10 +320,6 @@ public:
         ep.set_auto_pub_response(false);
         ep.set_async_operation(true);
         ep.set_topic_alias_maximum(MQTT_NS::topic_alias_max);
-        // Pass spep to keep lifetime.
-        // It makes sure wp.lock() never return nullptr in the handlers below
-        // including close_handler and error_handler.
-        ep.start_session(spep);
 
         // set connection (lower than MQTT) level handlers
         ep.set_close_handler(
@@ -901,6 +896,11 @@ public:
                 return true;
             }
         );
+
+        // Pass spep to keep lifetime.
+        // It makes sure wp.lock() never return nullptr in the handlers below
+        // including close_handler and error_handler.
+        ep.start_session(spep);
     }
 
     void set_connack_props(v5::properties props) {
