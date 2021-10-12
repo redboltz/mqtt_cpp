@@ -18,15 +18,6 @@
 
 namespace as = boost::asio;
 
-template <typename T>
-bool compare_decrement(std::atomic<T>& val, T comp) {
-    T old = val.load();
-    do {
-        if (old == comp) return true;
-    } while (!val.compare_exchange_weak(old, old - 1));
-    return false;
-}
-
 int main(int argc, char **argv) {
     try {
         boost::program_options::options_description desc;
@@ -577,7 +568,7 @@ int main(int argc, char **argv) {
                             async_wait_pub(ci);
                         }
 
-                        if (compare_decrement(rest_times, std::uint64_t(1))) finish_proc();
+                        if (--rest_times == 0) finish_proc();
                         return true;
                     };
 
@@ -592,7 +583,7 @@ int main(int argc, char **argv) {
                         [&]
                         (bool /*sp*/, MQTT_NS::connect_return_code connack_return_code) {
                             if (connack_return_code == MQTT_NS::connect_return_code::accepted) {
-                                if (compare_decrement(rest_connect, std::size_t(1))) sub_proc();
+                                if (--rest_connect == 0) sub_proc();
                             }
                             else {
                                 std::cout << "connack error:" << connack_return_code << std::endl;
@@ -604,7 +595,7 @@ int main(int argc, char **argv) {
                         [&]
                         (bool /*sp*/, MQTT_NS::v5::connect_reason_code reason_code, MQTT_NS::v5::properties /*props*/) {
                             if (reason_code == MQTT_NS::v5::connect_reason_code::success) {
-                                if (compare_decrement(rest_connect, std::size_t(1))) sub_proc();
+                                if (--rest_connect == 0) sub_proc();
                             }
                             else {
                                 std::cout << "connack error:" << reason_code << std::endl;
@@ -620,7 +611,7 @@ int main(int argc, char **argv) {
                             if (results.front() == MQTT_NS::suback_return_code::success_maximum_qos_0 ||
                                 results.front() == MQTT_NS::suback_return_code::success_maximum_qos_1 ||
                                 results.front() == MQTT_NS::suback_return_code::success_maximum_qos_2) {
-                                if (compare_decrement(rest_sub, std::size_t(1))) pub_proc();
+                                if (--rest_sub == 0) pub_proc();
                             }
                             return true;
                         }
@@ -634,7 +625,7 @@ int main(int argc, char **argv) {
                             if (reasons.front() == MQTT_NS::v5::suback_reason_code::granted_qos_0 ||
                                 reasons.front() == MQTT_NS::v5::suback_reason_code::granted_qos_1 ||
                                 reasons.front() == MQTT_NS::v5::suback_reason_code::granted_qos_2) {
-                                if (compare_decrement(rest_sub, std::size_t(1))) pub_proc();
+                                if (--rest_sub == 0) pub_proc();
                             }
                             return true;
                         }
