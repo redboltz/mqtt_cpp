@@ -348,9 +348,9 @@ int main(int argc, char **argv) {
 
         std::uint64_t pub_interval_us = pub_interval_ms * 1000;
         std::cout << "pub_interval:" << pub_interval_us << " us" << std::endl;
-        auto all_interval_us = pub_interval_us / clients;
-        std::cout << "all_interval:" << all_interval_us << " us" << std::endl;
-        std::cout << (double(1) * 1000 * 1000 / static_cast<double>(all_interval_us)) <<  " publish/sec" << std::endl;
+        std::uint64_t all_interval_ns = pub_interval_us * 1000 / static_cast<std::uint64_t>(clients);
+        std::cout << "all_interval:" << all_interval_ns << " ns" << std::endl;
+        std::cout << (double(1) * 1000 * 1000 * 1000 / static_cast<double>(all_interval_ns)) <<  " publish/sec" << std::endl;
         auto num_of_iocs =
             [&] () -> std::size_t {
                 if (vm.count("iocs")) {
@@ -465,10 +465,10 @@ int main(int argc, char **argv) {
                         std::cout << "Publish" << std::endl;
                         std::size_t index = 0;
                         for (auto& ci : cis) {
-                            ci.tim->expires_after(
+                            auto tp =
                                 std::chrono::milliseconds(pub_delay_ms) +
-                                std::chrono::microseconds(all_interval_us) * index++
-                            );
+                                std::chrono::nanoseconds(all_interval_ns) * index++;
+                            ci.tim->expires_after(tp);
                             async_wait_pub(ci);
                         }
                     };
@@ -568,7 +568,7 @@ int main(int argc, char **argv) {
 
                         ci.tim->cancel();
                         ci.tim->expires_at(
-                            ci.tim->expiry() + std::chrono::microseconds(all_interval_us)
+                            ci.tim->expiry() + std::chrono::nanoseconds(all_interval_ns)
                         );
 
                         BOOST_ASSERT(ci.recv_times != 0);
