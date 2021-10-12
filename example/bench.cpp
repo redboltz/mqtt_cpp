@@ -419,33 +419,37 @@ int main(int argc, char **argv) {
                         }
                     };
 
-                auto async_wait_pub =
-                    [&] (auto& ci) {
+                using ci_t = typename std::remove_reference_t<decltype(cis.front())>;
+                std::function <void(ci_t&)> async_wait_pub;
+                async_wait_pub =
+                    [&] (ci_t& ci) {
                         ci.tim->async_wait(
                             [&] (boost::system::error_code const& ec) {
                                 if (ec && ec != as::error::operation_aborted) {
                                     std::cout << "timer error:" << ec.message() << std::endl;
                                 }
                                 else {
-                                    ci.c->socket()->post(
-                                        [&] {
-                                            MQTT_NS::publish_options opts = qos | retain;
-                                            ci.sent.at(ci.send_times - 1) = std::chrono::steady_clock::now();
+                                    MQTT_NS::publish_options opts = qos | retain;
+                                    ci.sent.at(ci.send_times - 1) = std::chrono::steady_clock::now();
 
-                                            ci.c->async_publish(
-                                                MQTT_NS::allocate_buffer(topic_prefix + ci.index_str),
-                                                ci.send_payload(),
-                                                opts,
-                                                [&](MQTT_NS::error_code ec) {
-                                                    if (ec) {
-                                                        locked_cout() << "pub error:" << ec.message() << std::endl;
-                                                    }
-                                                }
-                                            );
-                                            BOOST_ASSERT(ci.send_times != 0);
-                                            --ci.send_times;
+                                    ci.c->async_publish(
+                                        MQTT_NS::allocate_buffer(topic_prefix + ci.index_str),
+                                        ci.send_payload(),
+                                        opts,
+                                        [&](MQTT_NS::error_code ec) {
+                                            if (ec) {
+                                                locked_cout() << "pub error:" << ec.message() << std::endl;
+                                            }
                                         }
                                     );
+                                    BOOST_ASSERT(ci.send_times != 0);
+                                    --ci.send_times;
+                                    if (ci.send_times != 0) {
+                                        ci.tim->expires_at(
+                                            ci.tim->expiry() + std::chrono::milliseconds(pub_interval_ms)
+                                        );
+                                        async_wait_pub(ci);
+                                    }
                                 }
                             }
                         );
@@ -557,17 +561,8 @@ int main(int argc, char **argv) {
                             --ci.idle_count;
                         }
 
-                        ci.tim->cancel();
-                        ci.tim->expires_at(
-                            ci.tim->expiry() + std::chrono::nanoseconds(all_interval_ns)
-                        );
-
                         BOOST_ASSERT(ci.recv_times != 0);
                         --ci.recv_times;
-                        if (ci.recv_times != 0) {
-                            async_wait_pub(ci);
-                        }
-
                         if (--rest_times == 0) finish_proc();
                         return true;
                     };
