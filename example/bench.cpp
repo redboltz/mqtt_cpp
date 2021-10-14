@@ -375,6 +375,15 @@ int main(int argc, char **argv) {
         std::vector<as::io_context> iocs(num_of_iocs);
         BOOST_ASSERT(!iocs.empty());
 
+        std::vector<
+            as::executor_work_guard<
+                as::io_context::executor_type
+            >
+        > guard_iocs;
+        guard_iocs.reserve(iocs.size());
+        for (auto& ioc : iocs) {
+            guard_iocs.emplace_back(ioc.get_executor());
+        }
 
         MQTT_NS::protocol_version version =
             [&] {
@@ -398,25 +407,46 @@ int main(int argc, char **argv) {
 
         auto bench_proc =
             [&](auto& cis) {
+                as::io_context ioc_timer;
+                as::executor_work_guard<as::io_context::executor_type> guard_ioc_timer(ioc_timer.get_executor());
+                as::steady_timer tim_delay{ioc_timer};
+
                 std::atomic<std::size_t> rest_connect{clients};
                 std::atomic<std::size_t> rest_sub{clients};
                 std::atomic<std::uint64_t> rest_times{times * clients};
                 auto sub_proc =
                     [&] {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(sub_delay_ms));
-                        std::cout << "Subscribe" << std::endl;
-                        for (auto& ci : cis) {
-                            std::this_thread::sleep_for(std::chrono::milliseconds(sub_interval_ms));
-                            ci.c->async_subscribe(
-                                topic_prefix + ci.index_str,
-                                qos,
-                                [&](MQTT_NS::error_code ec) {
-                                    if (ec) {
-                                        std::cout << "sub error:" << ec.message() << std::endl;
-                                    }
+                        tim_delay.expires_after(std::chrono::milliseconds(sub_delay_ms));
+                        tim_delay.async_wait(
+                            [&] (boost::system::error_code const& ec) {
+                                if (ec) {
+                                    std::cout << "timer error:" << ec.message() << std::endl;
+                                    return;
                                 }
-                            );
-                        }
+                                std::cout << "Subscribe" << std::endl;
+                                std::size_t index = 0;
+                                for (auto& ci : cis) {
+                                    ci.tim->expires_after(std::chrono::milliseconds(sub_interval_ms) * ++index);
+                                    ci.tim->async_wait(
+                                        [&] (boost::system::error_code const& ec) {
+                                            if (ec) {
+                                                std::cout << "timer error:" << ec.message() << std::endl;
+                                                return;
+                                            }
+                                            ci.c->async_subscribe(
+                                                topic_prefix + ci.index_str,
+                                                qos,
+                                                [&](MQTT_NS::error_code ec) {
+                                                    if (ec) {
+                                                        std::cout << "sub error:" << ec.message() << std::endl;
+                                                    }
+                                                }
+                                            );
+                                        }
+                                    );
+                                }
+                            }
+                        );
                     };
 
                 using ci_t = typename std::remove_reference_t<decltype(cis.front())>;
@@ -521,6 +551,8 @@ int main(int argc, char **argv) {
                             ci.c->async_force_disconnect();
                         }
                         std::cout << "Finish" << std::endl;
+                        for (auto& guard_ioc : guard_iocs) guard_ioc.reset();
+                        guard_ioc_timer.reset();
                     };
 
                 using packet_id_t = typename std::remove_reference_t<decltype(*cis.front().c)>::packet_id_t;
@@ -647,24 +679,40 @@ int main(int argc, char **argv) {
                     );
                 }
 
+                std::size_t index = 0;
                 for (auto& ci : cis) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(con_interval_ms));
-                    MQTT_NS::v5::properties props;
-                    if (sei != 0) {
-                        props.emplace_back(
-                            MQTT_NS::v5::property::session_expiry_interval(sei)
-                        );
-                    }
-                    ci.c->async_connect(
-                        MQTT_NS::force_move(props),
-                        [&](MQTT_NS::error_code ec) {
+                    auto tim = std::make_shared<as::steady_timer>(ioc_timer);
+                    tim->expires_after(std::chrono::milliseconds(con_interval_ms) * ++index);
+                    tim->async_wait(
+                        [&, tim] (boost::system::error_code const& ec) {
                             if (ec) {
-                                std::cerr << "async_connect error: " << ec.message() << std::endl;
+                                std::cout << "timer error:" << ec.message() << std::endl;
+                                return;
                             }
-                            ci.init_timer(ci.c->get_executor());
+                            MQTT_NS::v5::properties props;
+                            if (sei != 0) {
+                                props.emplace_back(
+                                    MQTT_NS::v5::property::session_expiry_interval(sei)
+                                );
+                            }
+                            ci.c->async_connect(
+                                MQTT_NS::force_move(props),
+                                [&](MQTT_NS::error_code ec) {
+                                    if (ec) {
+                                        std::cerr << "async_connect error: " << ec.message() << std::endl;
+                                    }
+                                    ci.init_timer(ci.c->get_executor());
+                                }
+                            );
                         }
                     );
                 }
+
+                std::thread th_timer {
+                    [&] {
+                        ioc_timer.run();
+                    }
+                };
                 std::vector<std::thread> ths;
                 ths.reserve(num_of_iocs * threads_per_ioc);
                 for (auto& ioc : iocs) {
@@ -677,6 +725,7 @@ int main(int argc, char **argv) {
                     }
                 }
                 for (auto& th : ths) th.join();
+                th_timer.join();
             };
 
         std::cout << "Prepare clients" << std::endl;
