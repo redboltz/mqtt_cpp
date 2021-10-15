@@ -136,8 +136,9 @@ BOOST_AUTO_TEST_CASE( response_topic ) {
 }
 
 BOOST_AUTO_TEST_CASE( correlation_data ) {
-    MQTT_NS::v5::property::correlation_data v1 { "abc"_mb };
-    BOOST_TEST(boost::lexical_cast<std::string>(v1) == "abc");
+    std::string s = "a\0bc";
+    MQTT_NS::v5::property::correlation_data v1 { MQTT_NS::buffer(MQTT_NS::string_view(s)) };
+    BOOST_TEST(v1.val() == std::string("a\0bc"));
 }
 
 BOOST_AUTO_TEST_CASE( assigned_client_identifier ) {

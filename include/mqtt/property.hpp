@@ -310,10 +310,10 @@ public:
         : detail::string_property(id::response_topic, force_move(val), already_checked) {}
 };
 
-class correlation_data : public detail::string_property {
+class correlation_data : public detail::binary_property {
 public:
-    explicit correlation_data(buffer val, bool already_checked = false)
-        : detail::string_property(id::correlation_data, force_move(val), already_checked) {}
+    explicit correlation_data(buffer val)
+        : detail::binary_property(id::correlation_data, force_move(val)) {}
 };
 
 class subscription_identifier : public detail::variable_property {
