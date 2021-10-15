@@ -6398,7 +6398,7 @@ private:
             );
         } break;
         case v5::property::id::correlation_data: {
-            process_string(
+            process_binary(
                 force_move(self),
                 force_move(session_life_keeper),
                 force_move(buf),
@@ -6412,7 +6412,7 @@ private:
                     auto& body = variant_get<buffer>(var);
                     auto rest = property_length_rest - length_bytes - body.size();
                     props.emplace_back(
-                        v5::property::correlation_data(force_move(body), true)
+                        v5::property::correlation_data(force_move(body))
                     );
                     process_property_id(
                         force_move(self),
