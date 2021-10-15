@@ -312,7 +312,7 @@ int main(int argc, char **argv) {
                 return MQTT_NS::nullopt;
             } ();
         auto cid_prefix = vm["cid_prefix"].as<std::string>();
-        auto topic_prefix = vm["cid_prefix"].as<std::string>();
+        auto topic_prefix = vm["topic_prefix"].as<std::string>();
 
         auto cacert =
             [&] () -> MQTT_NS::optional<std::string> {
