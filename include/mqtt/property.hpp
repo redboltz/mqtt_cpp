@@ -11,7 +11,7 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
-#include <ostream>
+#include <iosfwd>
 #include <iomanip>
 
 #include <boost/asio/buffer.hpp>
