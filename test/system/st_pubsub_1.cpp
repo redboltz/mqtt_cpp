@@ -3083,6 +3083,7 @@ BOOST_AUTO_TEST_CASE( publish_dup_function_buffer ) {
 }
 
 BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
+    using namespace std::literals::string_literals;
     auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
         auto& c = cs[0];
         clear_ordered();
@@ -3109,14 +3110,13 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
             // disconnect
             cont("h_close"),
         };
-        std::string correlation_data_str = "correlation \0data"; //binary including 0
         MQTT_NS::v5::properties ps {
             MQTT_NS::v5::property::payload_format_indicator(MQTT_NS::v5::property::payload_format_indicator::string),
             MQTT_NS::v5::property::message_expiry_interval(0x12345678UL),
             MQTT_NS::v5::property::content_type("content type"_mb),
             MQTT_NS::v5::property::topic_alias(0x1234U),
             MQTT_NS::v5::property::response_topic("response topic"_mb),
-            MQTT_NS::v5::property::correlation_data(MQTT_NS::buffer(MQTT_NS::string_view(correlation_data_str))),
+            MQTT_NS::v5::property::correlation_data("correlation \0data"_mb),
             MQTT_NS::v5::property::user_property("key1"_mb, "val1"_mb),
             MQTT_NS::v5::property::user_property("key2"_mb, "val2"_mb),
         };
@@ -3209,7 +3209,7 @@ BOOST_AUTO_TEST_CASE( pub_sub_prop ) {
                                 BOOST_TEST(t.val() == "response topic");
                             },
                             [&](MQTT_NS::v5::property::correlation_data const& t) {
-                                BOOST_TEST(t.val() == std::string("correlation \0data"));
+                                BOOST_TEST(t.val() == std::string("correlation \0data"s));
                             },
                             [&](MQTT_NS::v5::property::user_property const& t) {
                                 switch (user_prop_count++) {

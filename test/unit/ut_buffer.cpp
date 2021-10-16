@@ -43,6 +43,18 @@ BOOST_AUTO_TEST_CASE( allocate2 ) {
     BOOST_TEST(ss2.has_life());
 }
 
+BOOST_AUTO_TEST_CASE( literals ) {
+    using namespace MQTT_NS::literals;
+    using namespace std::literals::string_literals;
+    auto buf1 = "abcde"_mb;
+    BOOST_TEST(buf1.size() == 5);
+    BOOST_TEST(buf1 == "abcde"s);
+
+    auto buf2 = "ab\0cde"_mb;
+    BOOST_TEST(buf2.size() == 6);
+    BOOST_TEST(buf2 == "ab\0cde"s);
+}
+
 #if 0
 // CI doesn't work due to -std=c++1z.
 // I couldn't set -std=c++17 on CI
