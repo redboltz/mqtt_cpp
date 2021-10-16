@@ -11,6 +11,8 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <iosfwd>
+#include <iomanip>
 
 #include <boost/asio/buffer.hpp>
 #include <boost/numeric/conversion/cast.hpp>
@@ -46,6 +48,7 @@ enum class ostream_format {
     int_cast,
     key_val,
     binary_string,
+    json_like
 };
 
 template <std::size_t N>
@@ -176,7 +179,7 @@ struct binary_property {
         return buf_;
     }
 
-    static constexpr ostream_format const of_ = ostream_format::direct;
+    static constexpr ostream_format const of_ = ostream_format::json_like;
     property::id id_;
     buffer buf_;
     boost::container::static_vector<char, 2> length_;
@@ -731,6 +734,52 @@ std::enable_if_t< Property::of_ == detail::ostream_format::binary_string, std::o
 operator<<(std::ostream& o, Property const& p) {
     // Note this only compiles because both strings below are the same length.
     o << ((p.val() == payload_format_indicator::binary) ? "binary" : "string");
+    return o;
+}
+
+template <typename Property>
+std::enable_if_t< Property::of_ == detail::ostream_format::json_like, std::ostream& >
+operator<<(std::ostream& o, Property const& p) {
+    auto const& v = p.val();
+    for (auto const c : v) {
+        switch (c) {
+        case '\\':
+            o << "\\\\";
+            break;
+        case '"':
+            o << "\\\"";
+            break;
+        case '/':
+            o << "\\/";
+            break;
+        case '\b':
+            o << "\\b";
+            break;
+        case '\f':
+            o << "\\f";
+            break;
+        case '\n':
+            o << "\\n";
+            break;
+        case '\r':
+            o << "\\r";
+            break;
+        case '\t':
+            o << "\\t";
+            break;
+        default: {
+            unsigned int code = static_cast<unsigned int>(c);
+            if (code < 0x20 || code >= 0x7f) {
+                std::ios::fmtflags flags(o.flags());
+                o << "\\u" << std::hex << std::setw(4) << std::setfill('0') << (code & 0xff);
+                o.flags(flags);
+            }
+            else {
+                o << c;
+            }
+        } break;
+        }
+    }
     return o;
 }
 
