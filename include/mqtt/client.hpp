@@ -406,26 +406,6 @@ public:
     }
 
     /**
-     * @brief Set client id.
-     * @param id client id
-     *
-     * This function should be called before calling connect().<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
-     * 3.1.3.1 Client Identifier
-     */
-    void set_client_id(std::string id) {
-        client_id_ = force_move(id);
-    }
-
-    /**
-     * @brief Get the client id.
-     * @return The client id of this client.
-     */
-    std::string const& get_client_id() const {
-        return client_id_;
-    }
-
-    /**
      * @brief Set clean session.
      * @param cs clean session
      *
@@ -1173,7 +1153,7 @@ private:
         // sync base::connect() refer to parameters only in the function.
         // So they can be passed as view.
         base::connect(
-            buffer(string_view(client_id_)),
+            buffer(string_view(base::get_client_id())),
             ( user_name_ ? buffer(string_view(user_name_.value()))
                          : optional<buffer>() ),
             ( password_  ? buffer(string_view(password_.value()))
@@ -1189,7 +1169,7 @@ private:
         // sync base::connect() refer to parameters only in the function.
         // So they can be passed as view.
         base::async_connect(
-            buffer(string_view(client_id_)),
+            buffer(string_view(base::get_client_id())),
             ( user_name_ ? buffer(string_view(user_name_.value()))
                          : optional<buffer>() ),
             ( password_  ? buffer(string_view(password_.value()))
@@ -1563,7 +1543,6 @@ private:
     std::string port_;
     std::uint16_t keep_alive_sec_{0};
     std::chrono::steady_clock::duration ping_duration_{std::chrono::steady_clock::duration::zero()};
-    std::string client_id_;
     optional<will> will_;
     optional<std::string> user_name_;
     optional<std::string> password_;

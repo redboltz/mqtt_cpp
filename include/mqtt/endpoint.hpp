@@ -850,6 +850,26 @@ public:
     }
 
     /**
+     * @brief Get the client id.
+     * @return The client id of this client.
+     */
+    std::string const& get_client_id() const {
+        return client_id_;
+    }
+
+    /**
+     * @brief Set client id.
+     * @param id client id
+     *
+     * This function should be called before calling connect().<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
+     * 3.1.3.1 Client Identifier
+     */
+    void set_client_id(std::string id) {
+        client_id_ = force_move(id);
+    }
+
+    /**
      * @brief get_total_bytes_received
      * @return The total bytes received on the socket.
      */
@@ -5112,6 +5132,10 @@ protected:
         pid_man_.clear();
     }
 
+    void set_client_id(protocol_version version) {
+        version_ = version;
+    }
+
 private:
     enum class connection_type {
         client,
@@ -5208,6 +5232,7 @@ private:
         std::size_t topic_alias_maximum_count = 0;
         std::size_t maximum_packet_size_count = 0;
         std::size_t receive_maximum_count = 0;
+        std::size_t assigned_client_identifier_count = 0;
         v5::visit_props(
             props,
             [&](v5::property::topic_alias_maximum const& p) {
@@ -5258,6 +5283,23 @@ private:
                     return;
                 }
                 publish_send_max_ = p.val();
+            },
+            [&](v5::property::assigned_client_identifier const& p) {
+                if (type != connection_type::client) {
+                    MQTT_SEND_ERROR(protocol_error);
+                    ret = false;
+                    return;
+                }
+                if (++assigned_client_identifier_count == 2) {
+                    MQTT_SEND_ERROR(protocol_error);
+                    ret = false;
+                    return;
+                }
+                if (assigned_client_identifier_count > 2) {
+                    ret = false;
+                    return;
+                }
+                set_client_id(std::string(p.val()));
             },
             [](auto&&) {
             }
@@ -7556,7 +7598,7 @@ private:
                         ep_.publish_send_queue_.clear();
                     }
                 }
-                if (!ep_.set_values_from_props_on_connection(connection_type::server, props_)) return;
+                if (!ep_.set_values_from_props_on_connection(connection_type::client, props_)) return;
                 {
                     auto connack_proc =
                         [this]
@@ -11656,6 +11698,8 @@ private:
     std::atomic<bool> connected_{false};
     std::atomic<bool> mqtt_connected_{false};
     std::atomic<bool> shutdown_requested_{false};
+
+    std::string client_id_;
 
     std::array<char, 10>  buf_;
     std::uint8_t fixed_header_;

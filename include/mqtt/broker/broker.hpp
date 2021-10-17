@@ -25,6 +25,7 @@
 #include <mqtt/broker/retained_topic_map.hpp>
 #include <mqtt/broker/shared_target_impl.hpp>
 #include <mqtt/broker/mutex.hpp>
+#include <mqtt/broker/uuid.hpp>
 
 MQTT_BROKER_NS_BEGIN
 
@@ -1032,20 +1033,66 @@ private:
             }
         }
 
-        // If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1 [MQTT-3.1.3-7].
-        // If it's a not a clean session, but no client id is provided, we would have no way to map this
-        // connection's session to a new connection later. So the connection must be rejected.
+        v5::properties connack_props;
+
         switch (ep.get_protocol_version()) {
         case protocol_version::v3_1_1:
-            if (client_id.empty() && !clean_start) {
-                if (connack_) ep.async_connack(false, connect_return_code::identifier_rejected);
-                return false;
+            if (client_id.empty()) {
+                if (clean_start) {
+                    ep.set_client_id(create_uuid_string());
+                }
+                else {
+                    // https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349242
+                    // If the Client supplies a zero-byte ClientId,
+                    // the Client MUST also set CleanSession to 1 [MQTT-3.1.3-7].
+                    // If it's a not a clean session, but no client id is provided,
+                    // we would have no way to map this connection's session to a new connection later.
+                    // So the connection must be rejected.
+                    if (connack_) {
+                        ep.async_connack(
+                            false,
+                            connect_return_code::identifier_rejected,
+                            [&ep, spep = force_move(spep)]
+                            (error_code ec) mutable {
+                                if (ec) {
+                                    MQTT_LOG("mqtt_broker", info)
+                                        << MQTT_ADD_VALUE(address, spep.get())
+                                        << ec.message();
+                                }
+                                ep.async_force_disconnect(
+                                    [spep = force_move(spep)]
+                                    (error_code ec) {
+                                        if (ec) {
+                                            MQTT_LOG("mqtt_broker", info)
+                                                << MQTT_ADD_VALUE(address, spep.get())
+                                                << ec.message();
+                                        }
+                                    }
+                                );
+                            }
+                        );
+                    }
+                    return false;
+                }
             }
             break;
         case protocol_version::v5:
-            if (client_id.empty() && !clean_start) {
-                if (connack_) ep.async_connack(false, v5::connect_reason_code::client_identifier_not_valid);
-                return false;
+            if (client_id.empty()) {
+                // https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059
+                //  A Server MAY allow a Client to supply a ClientID that has a length of zero bytes,
+                // however if it does so the Server MUST treat this as a special case and assign a
+                // unique ClientID to that Client [MQTT-3.1.3-6]. It MUST then process the
+                // CONNECT packet as if the Client had provided that unique ClientID,
+                // and MUST return the Assigned Client Identifier in the CONNACK packet [MQTT-3.1.3-7].
+                // If the Server rejects the ClientID it MAY respond to the CONNECT packet with a CONNACK
+                // using Reason Code 0x85 (Client Identifier not valid) as described in section 4.13
+                // Handling errors, and then it MUST close the Network Connection [MQTT-3.1.3-8].
+                //
+                // mqtt_cpp author's note: On v5.0, no Clean Start restriction is described.
+                ep.set_client_id(create_uuid_string());
+                connack_props.emplace_back(
+                    v5::property::assigned_client_identifier(buffer(string_view(ep.get_client_id())))
+                );
             }
             break;
         default:
@@ -1068,14 +1115,15 @@ private:
                     );
                     break;
                 case protocol_version::v5:
+                    // connack_props_ member varible is for testing
                     if (connack_props_.empty()) {
+                        // connack_props local variable is is for real case
+                        connack_props.emplace_back(v5::property::topic_alias_maximum{topic_alias_max});
+                        connack_props.emplace_back(v5::property::receive_maximum{receive_maximum_max});
                         if (connack_) ep.async_connack(
                             session_present,
                             v5::connect_reason_code::success,
-                            v5::properties{
-                                v5::property::topic_alias_maximum{topic_alias_max},
-                                v5::property::receive_maximum{receive_maximum_max}
-                            },
+                            force_move(connack_props),
                             [finish = force_move(finish)]
                             (error_code ec) {
                                 finish(ec);
@@ -1083,6 +1131,7 @@ private:
                         );
                     }
                     else {
+                        // use connack_props_ for testing
                         if (connack_) ep.async_connack(
                             session_present,
                             v5::connect_reason_code::success,
