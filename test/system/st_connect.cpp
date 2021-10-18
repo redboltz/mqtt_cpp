@@ -1936,6 +1936,70 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
     do_combi_test_sync(test);
 }
 
+BOOST_AUTO_TEST_CASE( request_response ) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
+        auto& c = cs[0];
+        clear_ordered();
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
+        }
+
+        c->set_client_id("cid1");
+        c->set_clean_session(true);
+        BOOST_TEST(c->connected() == false);
+
+        checker chk = {
+            // connect
+            cont("h_connack"),
+            // disconnect
+            cont("h_close"),
+        };
+
+        c->set_v5_connack_handler(
+            [&chk, &c]
+            (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties props) {
+                MQTT_CHK("h_connack");
+                BOOST_TEST(c->connected() == true);
+                BOOST_TEST(sp == false);
+                BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
+
+                std::size_t times = 0;
+                MQTT_NS::v5::visit_props(
+                    props,
+                    [&](MQTT_NS::v5::property::response_topic const&) {
+                        ++times;
+                    },
+                    [](auto){}
+                );
+                BOOST_TEST(times == 1);
+
+                c->disconnect();
+                BOOST_TEST(c->connected() == true);
+                return true;
+            });
+        c->set_close_handler(
+            [&chk, &finish]
+            () {
+                MQTT_CHK("h_close");
+                finish();
+            });
+        c->set_error_handler(
+            []
+            (MQTT_NS::error_code) {
+                BOOST_CHECK(false);
+            });
+        c->connect(
+            MQTT_NS::v5::properties{
+                MQTT_NS::v5::property::request_response_information(true)
+            }
+        );
+        ioc.run();
+        BOOST_TEST(chk.all());
+    };
+    do_combi_test_sync(test);
+}
+
 BOOST_AUTO_TEST_CASE( session_taken_over ) {
     auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& /*b*/) {
         auto& c1 = cs[0];

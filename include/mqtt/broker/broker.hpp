@@ -1014,11 +1014,22 @@ private:
 
         optional<std::chrono::steady_clock::duration> session_expiry_interval;
         optional<std::chrono::steady_clock::duration> will_expiry_interval;
+        v5::properties connack_props;
 
         if (ep.get_protocol_version() == protocol_version::v5) {
-            auto v = get_property<v5::property::session_expiry_interval>(props);
-            if (v && v.value().val() != 0) {
-                session_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
+            {
+                auto v = get_property<v5::property::session_expiry_interval>(props);
+                if (v && v.value().val() != 0) {
+                    session_expiry_interval.emplace(std::chrono::seconds(v.value().val()));
+                }
+            }
+            {
+                auto v = get_property<v5::property::request_response_information>(props);
+                if (v && v.value().val() == 1) {
+                    connack_props.emplace_back(
+                        v5::property::response_topic(allocate_buffer(create_uuid_string()))
+                    );
+                }
             }
 
             if (will) {
@@ -1032,8 +1043,6 @@ private:
                 h_connect_props_(props);
             }
         }
-
-        v5::properties connack_props;
 
         switch (ep.get_protocol_version()) {
         case protocol_version::v3_1_1:
