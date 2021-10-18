@@ -487,10 +487,20 @@ BOOST_AUTO_TEST_CASE( nocid ) {
         case MQTT_NS::protocol_version::v5:
             c->set_v5_connack_handler(
                 [&chk, &c]
-                (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties /*props*/) {
+                (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties props) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
+                    std::size_t times = 0;
+                    MQTT_NS::v5::visit_props(
+                        props,
+                        [&](MQTT_NS::v5::property::assigned_client_identifier const& p) {
+                            ++times;
+                            BOOST_TEST(p.val() == c->get_client_id());
+                        },
+                        [](auto){}
+                    );
+                    BOOST_TEST(times == 1);
                     c->disconnect();
                     return true;
                 });
@@ -542,12 +552,27 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
                 });
             break;
         case MQTT_NS::protocol_version::v5:
+            // On v5, a combination of empty client_id and clean_start:false is accepted.
+            // Because the client can know the assigned client_id.
+            // Even if session_expiry_interval != 0 and store the disconnected session,
+            // the client can access the session using assigned client_id
             c->set_v5_connack_handler(
-                [&chk]
-                (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties /*props*/) {
+                [&chk, &c]
+                (bool sp, MQTT_NS::v5::connect_reason_code connect_reason_code, MQTT_NS::v5::properties props) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
-                    BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::client_identifier_not_valid);
+                    BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
+                    std::size_t times = 0;
+                    MQTT_NS::v5::visit_props(
+                        props,
+                        [&](MQTT_NS::v5::property::assigned_client_identifier const& p) {
+                            ++times;
+                            BOOST_TEST(p.val() == c->get_client_id());
+                        },
+                        [](auto){}
+                    );
+                    BOOST_TEST(times == 1);
+                    c->force_disconnect();
                     return true;
                 });
             break;
