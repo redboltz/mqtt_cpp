@@ -19,7 +19,7 @@ MQTT_BROKER_NS_BEGIN
 
 inline std::string create_uuid_string() {
     // See https://github.com/boostorg/uuid/issues/121
-    auto gen = boost::uuids::random_generator();
+    static thread_local auto gen = boost::uuids::random_generator();
     return boost::uuids::to_string(gen());
 }
 
