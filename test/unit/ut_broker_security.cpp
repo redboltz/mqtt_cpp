@@ -99,6 +99,10 @@ BOOST_AUTO_TEST_CASE(check_publish) {
     BOOST_CHECK(security.auth_pub("sub/topic", "u1") == MQTT_NS::broker::security::authorization::type::allow);
     BOOST_CHECK(security.auth_pub("sub/topic1", "u1") == MQTT_NS::broker::security::authorization::type::deny);
 
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("topic"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("sub/topic"), "u1") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("sub/topic1"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+
 }
 
 BOOST_AUTO_TEST_SUITE_END()

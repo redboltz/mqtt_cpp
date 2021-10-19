@@ -2137,12 +2137,19 @@ private:
         publish_options pubopts,
         v5::properties props
     ) {
+        // Get auth rights for this topic
+        auto auth_users = security.auth_sub(std::string(topic));
 
         // publish the message to subscribers.
         // retain is delivered as the original only if rap_value is rap::retain.
         // On MQTT v3.1.1, rap_value is always rap::dont.
         auto deliver =
-            [&] (session_state& ss, subscription& sub) {
+            [&] (session_state& ss, subscription& sub, auto const& auth_users) {
+
+                // See if this session is authorized to subscribe this topic
+                auto allowed = security.auth_sub_user(auth_users, ss.get_username());
+                if (allowed != security::authorization::type::allow) return;
+
                 publish_options new_pubopts = std::min(pubopts.get_qos(), sub.subopts.get_qos());
                 if (sub.subopts.get_rap() == rap::retain && pubopts.get_retain() == MQTT_NS::retain::yes) {
                     new_pubopts |= MQTT_NS::retain::yes;
@@ -2185,7 +2192,7 @@ private:
                         // publisher is the same as subscriber, then skip it.
                         if (sub.subopts.get_nl() == nl::yes &&
                             sub.ss.get().client_id() ==  source_ss.client_id()) return;
-                        deliver(sub.ss.get(), sub);
+                        deliver(sub.ss.get(), sub, auth_users);
                     }
                     else {
                         // Shared subscriptions
@@ -2193,7 +2200,7 @@ private:
                         std::tie(std::ignore, inserted) = sent.emplace(sub.share_name, sub.topic_filter);
                         if (inserted) {
                             if (auto ssr_opt = shared_targets_.get_target(sub.share_name, sub.topic_filter)) {
-                                deliver(ssr_opt.value().get(), sub);
+                                deliver(ssr_opt.value().get(), sub, auth_users);
                             }
                         }
                     }

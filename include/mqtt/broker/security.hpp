@@ -47,7 +47,7 @@ struct security
     {
         std::string topic;
         enum class type {
-            allow, deny
+            deny, allow
         };
 
         type type_;
@@ -70,7 +70,9 @@ struct security
     std::map<std::string, authorization> authorization_;
     MQTT_NS::optional<std::string> anonymous;
 
-    MQTT_NS::broker::multiple_subscription_map<std::string, authorization::type> auth_pub_map;
+    using auth_map_type = MQTT_NS::broker::multiple_subscription_map<std::string, authorization::type>;
+    auth_map_type auth_pub_map;
+    auth_map_type auth_sub_map;
 
     MQTT_NS::optional<std::string> login_anonymous() {
         return anonymous;
@@ -118,6 +120,14 @@ struct security
         for(auto const &i: security.authorization_) {
             for(auto const& j: i.second.sub) {
                 validate_entry(security, "topic " + i.first, j);
+
+                if(is_valid_user_name(j)) {
+                    security.auth_sub_map.insert_or_assign(i.first, j, i.second.type_);
+                }
+                else if(is_valid_group_name(j)) {
+                    for(auto const& z: security.groups_[j].members)
+                        security.auth_sub_map.insert_or_assign(i.first, z, i.second.type_);
+                }
             }
             for(auto const& j: i.second.pub) {
                 validate_entry(security, "topic " + i.first, j);
@@ -198,7 +208,7 @@ struct security
         validate(security);
     }
 
-    authorization::type auth_pub(std::string const& topic, std::string const& username) {
+    authorization::type auth_pub(std::string const& topic, std::string const& username) const {
         authorization::type result_type = authorization::type::deny;
 
         auth_pub_map.find(topic, [&](std::string const &allowed_username, authorization::type type) {
@@ -206,6 +216,22 @@ struct security
         });
 
         return result_type;
+    }
+
+    std::map<std::string, authorization::type> auth_sub(std::string const& topic) const {
+        std::map<std::string, authorization::type> result;
+
+        auth_sub_map.find(topic, [&](std::string const &allowed_username, authorization::type type) {
+            result[allowed_username] = type;
+        });
+
+        return result;
+    }
+
+    static authorization::type auth_sub_user(std::map<std::string, authorization::type> const& result, std::string const& username) {
+        auto i = result.find(username);
+        if(i == result.end()) return authorization::type::deny;
+        return i->second;
     }
 };
 
