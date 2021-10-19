@@ -1015,7 +1015,7 @@ private:
         optional<std::chrono::steady_clock::duration> session_expiry_interval;
         optional<std::chrono::steady_clock::duration> will_expiry_interval;
         v5::properties connack_props;
-
+        bool response_topic_requested = false;
         if (ep.get_protocol_version() == protocol_version::v5) {
             {
                 auto v = get_property<v5::property::session_expiry_interval>(props);
@@ -1026,9 +1026,7 @@ private:
             {
                 auto v = get_property<v5::property::request_response_information>(props);
                 if (v && v.value().val() == 1) {
-                    connack_props.emplace_back(
-                        v5::property::response_topic(allocate_buffer(create_uuid_string()))
-                    );
+                    response_topic_requested = true;
                 }
             }
 
@@ -1109,8 +1107,34 @@ private:
             break;
         }
 
+        auto set_response_topic =
+            [this, response_topic_requested, &connack_props](session_state& s) {
+                if (response_topic_requested) {
+                    auto response_topic = [&] {
+                        if (auto rt_opt = s.get_response_topic()) {
+                            return rt_opt.value();
+                        }
+                        auto rt = create_uuid_string();
+                        s.set_response_topic(rt);
+                        return rt;
+                    } ();
+                    s.set_clean_handler(
+                        [this, response_topic] {
+                            std::lock_guard<mutex> g(mtx_retains_);
+                            retains_.erase(response_topic);
+                        }
+                    );
+                    connack_props.emplace_back(
+                        v5::property::response_topic(
+                            allocate_buffer(response_topic)
+                        )
+                    );
+                }
+            };
+
         auto send_connack =
-            [&](bool session_present, std::function<void(error_code)> finish = [](error_code){}) {
+            [this, &ep, &connack_props]
+            (bool session_present, std::function<void(error_code)> finish = [](error_code){}) {
                 // Reply to the connect message.
                 switch (ep.get_protocol_version()) {
                 case protocol_version::v3_1_1:
@@ -1158,6 +1182,7 @@ private:
                 }
             };
 
+
         /**
          * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Toc514345311
          * 3.1.2.4 Clean Start
@@ -1192,6 +1217,8 @@ private:
                 force_move(will_expiry_interval),
                 force_move(session_expiry_interval)
             );
+            // set_response_topic never modify key part
+            set_response_topic(const_cast<session_state&>(*it));
             send_connack(false);
         }
         else if (it->online()) {
@@ -1204,6 +1231,8 @@ private:
                         << MQTT_ADD_VALUE(address, this)
                         << "cid:" << client_id
                         << "online connection exists, discard old one due to new one's clean_start and renew";
+                    // set_response_topic never modify key part
+                    set_response_topic(const_cast<session_state&>(*it));
                     send_connack(false);
                     idx.modify(
                         it,
@@ -1222,6 +1251,8 @@ private:
                         << MQTT_ADD_VALUE(address, this)
                         << "cid:" << client_id
                         << "online connection exists, inherit old one and renew";
+                    // set_response_topic never modify key part
+                    set_response_topic(const_cast<session_state&>(*it));
                     send_connack(
                         true,
                         [
@@ -1279,6 +1310,8 @@ private:
                     force_move(session_expiry_interval)
                 );
                 BOOST_ASSERT(inserted);
+                // set_response_topic never modify key part
+                set_response_topic(const_cast<session_state&>(*it));
                 send_connack(false);
             }
         }
@@ -1290,6 +1323,8 @@ private:
                     << MQTT_ADD_VALUE(address, this)
                     << "cid:" << client_id
                     << "offline connection exists, discard old one due to new one's clean_start and renew";
+                // set_response_topic never modify key part
+                set_response_topic(const_cast<session_state&>(*it));
                 send_connack(false);
                 idx.modify(
                     it,
@@ -1309,6 +1344,8 @@ private:
                     << MQTT_ADD_VALUE(address, this)
                     << "cid:" << client_id
                     << "offline connection exists, inherit old one and renew";
+                // set_response_topic never modify key part
+                set_response_topic(const_cast<session_state&>(*it));
                 send_connack(
                     true,
                     [
