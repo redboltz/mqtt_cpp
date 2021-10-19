@@ -281,10 +281,15 @@ struct session_state {
         }
     }
 
+    void set_clean_handler(std::function<void()> handler) {
+        clean_handler_ = force_move(handler);
+    }
+
     void clean() {
         MQTT_LOG("mqtt_broker", trace)
             << MQTT_ADD_VALUE(address, this)
             << "clean";
+        if (clean_handler_) clean_handler_();
         {
             std::lock_guard<mutex> g(mtx_inflight_messages_);
             inflight_messages_.clear();
@@ -509,6 +514,14 @@ struct session_state {
         return session_expiry_interval_;
     }
 
+    void set_response_topic(std::string topic) {
+        response_topic_.emplace(force_move(topic));
+    }
+
+    optional<std::string> get_response_topic() const {
+        return response_topic_;
+    }
+
 private:
     void send_will_impl() {
         if (!will_value_) return;
@@ -576,6 +589,9 @@ private:
     bool remain_after_close_;
 
     std::set<packet_id_t> qos2_publish_handled_;
+
+    optional<std::string> response_topic_;
+    std::function<void()> clean_handler_;
 };
 
 class session_states {

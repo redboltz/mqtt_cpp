@@ -43,6 +43,7 @@ ENDIF ()
 
 IF (MQTT_TEST_5)
     LIST (APPEND check_PROGRAMS
+        st_reqres.cpp
         st_resend.cpp
         st_retain_1.cpp
         st_resend_new_client.cpp
