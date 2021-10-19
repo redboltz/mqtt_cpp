@@ -63,6 +63,17 @@ struct security
     std::map<std::string, authorization> authorization_;
     MQTT_NS::optional<std::string> anonymous;
 
+    MQTT_NS::optional<std::string> login_anonymous() {
+        return anonymous;
+    }
+
+    MQTT_NS::optional<std::string> login(std::string const& username, std::string const& password) const {
+        MQTT_NS::optional<std::string> empty_result;
+        auto i = authentication_.find(username);
+        if (i == authentication_.end()) return empty_result;
+        return i->second.password == password ? username : empty_result;
+    }
+
     static bool is_valid_group_name(std::string const& name) {
         return !name.empty() && name[0] == '@'; // TODO: validate utf-8
     }

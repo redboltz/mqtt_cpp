@@ -27,6 +27,8 @@
 #include <mqtt/broker/mutex.hpp>
 #include <mqtt/broker/uuid.hpp>
 
+#include <mqtt/broker/security.hpp>
+
 MQTT_BROKER_NS_BEGIN
 
 namespace mi = boost::multi_index;
@@ -293,6 +295,13 @@ public:
      */
     void set_connack(bool b) {
         connack_ = b;
+    }
+
+    /**
+     * @brief return a reference to the broker security data structure
+     */
+    broker::security& get_security() {
+        return security;
     }
 
     // [end] for test setting
@@ -983,6 +992,32 @@ public:
     }
 
 private:
+    static void force_disconnect(con_sp_t spep) {
+        auto p = spep.get();
+        p->async_force_disconnect(
+            [spep = force_move(spep)]
+            (error_code ec) {
+                if (ec) {
+                    MQTT_LOG("mqtt_broker", info)
+                        << MQTT_ADD_VALUE(address, spep.get())
+                        << ec.message();
+                }
+            }
+        );
+    };
+
+    static void disconnect_and_force_disconnect(con_sp_t spep, v5::disconnect_reason_code rc) {
+        auto p = spep.get();
+        p->async_disconnect(
+            rc,
+            v5::properties{},
+            [spep = force_move(spep)]
+            (error_code) mutable {
+                force_disconnect(force_move(spep));
+            }
+        );
+    };
+
     /**
      * @brief connect_proc Process an incoming CONNECT packet
      *
@@ -1003,14 +1038,32 @@ private:
     bool connect_handler(
         con_sp_t spep,
         buffer client_id,
-        optional<buffer> /*username*/,
-        optional<buffer> /*password*/,
+        optional<buffer> noauth_username,
+        optional<buffer> password,
         optional<will> will,
         bool clean_start,
         std::uint16_t /*keep_alive*/,
         v5::properties props
     ) {
         auto& ep = *spep;
+
+        optional<std::string> username;
+        if (!noauth_username && !password)
+            username = security.login_anonymous();
+        else if (noauth_username && password)
+            username = security.login(std::string(*noauth_username), std::string(*password));
+
+        if (!username) {
+            MQTT_LOG("mqtt_broker", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "User failed to login: " << (noauth_username ? std::string(*noauth_username) : std::string("anonymous user"));
+            disconnect_and_force_disconnect(spep, v5::disconnect_reason_code::not_authorized);
+            return true;
+        }
+
+        MQTT_LOG("mqtt_broker", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "User logged in as: " << *username;
 
         v5::properties connack_props;
         connect_param cp = handle_connect_props(ep, props, will);
@@ -1476,35 +1529,6 @@ private:
                 else {
                     ss.clear_will();
                 }
-            };
-
-        auto force_disconnect =
-            [](con_sp_t spep) {
-                auto p = spep.get();
-                p->async_force_disconnect(
-                    [spep = force_move(spep)]
-                    (error_code ec) {
-                        if (ec) {
-                            MQTT_LOG("mqtt_broker", info)
-                                << MQTT_ADD_VALUE(address, spep.get())
-                                << ec.message();
-                        }
-                    }
-                );
-            };
-
-        auto disconnect_and_force_disconnect =
-            [force_disconnect]
-            (con_sp_t spep, v5::disconnect_reason_code rc) mutable {
-                auto p = spep.get();
-                p->async_disconnect(
-                    rc,
-                    v5::properties{},
-                    [spep = force_move(spep), force_disconnect = force_move(force_disconnect)]
-                    (error_code) mutable {
-                        force_disconnect(force_move(spep));
-                    }
-                );
             };
 
         if (session_clear) {
@@ -2236,6 +2260,9 @@ private:
     as::io_context& timer_ioc_; ///< The boost asio context to run this broker on.
     as::steady_timer tim_disconnect_; ///< Used to delay disconnect handling for testing
     optional<std::chrono::steady_clock::duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
+
+    // Authorization and authentication settings
+    broker::security security;
 
     mutable mutex mtx_subs_map_;
     sub_con_map subs_map_;   /// subscription information

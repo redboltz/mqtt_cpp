@@ -3,7 +3,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
-
+#define BOOST_UUID_FORCE_AUTO_LINK
 #include <mqtt/config.hpp>
 #include <mqtt/setup_log.hpp>
 #include <mqtt/broker/broker.hpp>
@@ -360,6 +360,15 @@ void run_broker(boost::program_options::variables_map const& vm) {
             << " threads_per_ioc:" << threads_per_ioc
             << " total threads:" << num_of_iocs * threads_per_ioc;
 
+        std::string auth_file = vm["auth_file"].as<std::string>();
+        if (!auth_file.empty()) {
+            MQTT_LOG("mqtt_broker", info)
+                << "auth_file:" << auth_file;
+
+            std::ifstream input(auth_file);
+            MQTT_NS::broker::security::load(input, b.get_security());
+        }
+
         as::io_context accept_ioc;
 
         std::mutex mtx_con_iocs;
@@ -531,6 +540,11 @@ int main(int argc, char **argv) {
                 "certificate_reload_interval",
                 boost::program_options::value<unsigned int>()->default_value(0),
                 "Reload interval for the certificate and private key files (hours)\n 0 - Disabled"
+            )
+            (
+                "auth_file",
+                boost::program_options::value<std::string>()->default_value("auth.json"),
+                "Authentication file"
             )
             ;
 

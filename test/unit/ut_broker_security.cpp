@@ -42,6 +42,12 @@ BOOST_AUTO_TEST_CASE(json_load) {
 
     BOOST_CHECK(security.anonymous);
     BOOST_CHECK(*security.anonymous == "anonymous");
+
+    BOOST_CHECK(security.login_anonymous());
+    BOOST_CHECK(security.login("u1", "mypassword"));
+    BOOST_CHECK(!security.login("u1", "invalidpassword"));
+    BOOST_CHECK(!security.login("u3", "invalidpassword"));
+
 }
 
 BOOST_AUTO_TEST_CASE(check_errors) {
