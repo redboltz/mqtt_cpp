@@ -59,6 +59,10 @@ BOOST_AUTO_TEST_CASE(check_errors) {
     BOOST_CHECK(MQTT_NS::broker::security::is_valid_user_name("test"));
     BOOST_CHECK(!MQTT_NS::broker::security::is_valid_user_name("@test"));
 
+    BOOST_CHECK(MQTT_NS::broker::security::get_auth_type("allow") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(MQTT_NS::broker::security::get_auth_type("deny") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK_THROW(MQTT_NS::broker::security::get_auth_type("invalid"), std::exception);
+
     // Group references non-existing user
     BOOST_CHECK_THROW(load_config(security, "{\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]}]}"), std::exception);
 
@@ -82,6 +86,18 @@ BOOST_AUTO_TEST_CASE(check_errors) {
 
     // Invalid group name
     BOOST_CHECK_THROW(load_config(security, "{\"group\":[{\"name\":\"g1\",\"members\":[\"u1\",\"u2\"]}]}}"), std::exception);
+
+}
+
+BOOST_AUTO_TEST_CASE(check_publish) {
+    MQTT_NS::broker::security security;
+
+    std::string value = "{\"authentication\":[{\"name\":\"u1\",\"method\":\"password\",\"password\":\"mypassword\"},{\"name\":\"u2\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]}],\"authorization\":[{\"topic\":\"#\",\"type\":\"deny\"},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"],\"pub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"],\"pub\":[\"u1\",\"anonymous\"]}]}";
+    BOOST_CHECK_NO_THROW(load_config(security, value));
+
+    BOOST_CHECK(security.auth_pub("topic", "u1") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security.auth_pub("sub/topic", "u1") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_pub("sub/topic1", "u1") == MQTT_NS::broker::security::authorization::type::deny);
 
 }
 

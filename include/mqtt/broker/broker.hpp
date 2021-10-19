@@ -1095,6 +1095,7 @@ private:
                 shared_targets_,
                 spep,
                 client_id,
+                *username,
                 force_move(will),
                 // will_sender
                 [this](auto&&... params) {
@@ -1129,6 +1130,7 @@ private:
                         [&](auto& e) {
                             e.clean();
                             e.update_will(timer_ioc_, force_move(will), cp.will_expiry_interval);
+                            e.set_username(*username);
                             // renew_session_expiry updates index
                             e.renew_session_expiry(force_move(cp.session_expiry_interval));
                         },
@@ -1157,7 +1159,8 @@ private:
                             clean_start,
                             spep,
                             will_expiry_interval = cp.will_expiry_interval,
-                            session_expiry_interval = cp.session_expiry_interval
+                            session_expiry_interval = cp.session_expiry_interval,
+                            &username
                         ](error_code ec) mutable {
                             if (ec) {
                                 MQTT_LOG("mqtt_broker", trace)
@@ -1169,6 +1172,7 @@ private:
                                 it,
                                 [&](auto& e) {
                                     e.renew(spep, clean_start);
+                                    e.set_username(*username);
                                     e.update_will(timer_ioc_, force_move(will), will_expiry_interval);
                                     // renew_session_expiry updates index
                                     e.renew_session_expiry(force_move(session_expiry_interval));
@@ -1195,6 +1199,7 @@ private:
                     shared_targets_,
                     spep,
                     client_id,
+                    *username,
                     force_move(will),
                     // will_sender
                     [this](auto&&... params) {
@@ -1230,6 +1235,7 @@ private:
                         e.clean();
                         e.renew(spep, clean_start);
                         e.update_will(timer_ioc_, force_move(will), cp.will_expiry_interval);
+                        e.set_username(*username);
                         // renew_session_expiry updates index
                         e.renew_session_expiry(force_move(cp.session_expiry_interval));
                     },
@@ -1258,7 +1264,8 @@ private:
                         clean_start,
                         spep,
                         will_expiry_interval = cp.will_expiry_interval,
-                        session_expiry_interval = cp.session_expiry_interval
+                        session_expiry_interval = cp.session_expiry_interval,
+                        username
                     ](error_code ec) mutable {
                         if (ec) {
                             MQTT_LOG("mqtt_broker", trace)
@@ -1270,6 +1277,7 @@ private:
                             it,
                             [&](auto& e) {
                                 e.renew(spep, clean_start);
+                                e.set_username(*username);
                                 e.update_will(timer_ioc_, force_move(will), will_expiry_interval);
                                 // renew_session_expiry updates index
                                 e.renew_session_expiry(force_move(session_expiry_interval));
@@ -1622,6 +1630,9 @@ private:
         // During async operation, spep is valid but it has already been
         // erased from sessions_
         if (it == idx.end()) return true;
+
+        // See if this session is authorized to publish this topic
+        if (security.auth_pub(std::string(topic_name), it->get_username()) == security::authorization::type::deny) return true;
 
         auto send_pubres =
             [&] {

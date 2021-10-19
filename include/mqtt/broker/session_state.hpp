@@ -69,6 +69,7 @@ struct session_state {
         shared_target& shared_targets,
         con_sp_t con,
         buffer client_id,
+        std::string const& username,
         optional<will> will,
         will_sender_t will_sender,
         optional<std::chrono::steady_clock::duration> will_expiry_interval,
@@ -80,6 +81,7 @@ struct session_state {
          con_(force_move(con)),
          version_(con_->get_protocol_version()),
          client_id_(force_move(client_id)),
+         username_(username),
          session_expiry_interval_(force_move(session_expiry_interval)),
          tim_will_delay_(timer_ioc_),
          will_sender_(force_move(will_sender)),
@@ -491,6 +493,13 @@ struct session_state {
         return client_id_;
     }
 
+    void set_username(std::string const& username) {
+        username_ = username;
+    }
+    std::string const &get_username() const {
+        return username_;
+    }
+
     void renew(con_sp_t con, bool clean_start) {
         tim_will_delay_.cancel();
         if (clean_start) {
@@ -572,6 +581,8 @@ private:
     con_sp_t con_;
     protocol_version version_;
     buffer client_id_;
+
+    std::string username_;
 
     optional<std::chrono::steady_clock::duration> session_expiry_interval_;
     std::shared_ptr<as::steady_timer> tim_session_expiry_;

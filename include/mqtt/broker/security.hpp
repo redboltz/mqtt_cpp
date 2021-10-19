@@ -10,6 +10,7 @@
 #include <string>
 
 #include <mqtt/broker/broker_namespace.hpp>
+#include <mqtt/broker/subscription_map.hpp>
 #include <mqtt/optional.hpp>
 
 #include <map>
@@ -37,18 +38,24 @@ struct security
         authentication(method method_ = method::password, MQTT_NS::optional<std::string> const &password = MQTT_NS::optional<std::string>())
             : method_(method_), password(password)
         { }
+
+        std::vector<std::string> groups;
     };
 
 
     struct authorization
     {
         std::string topic;
-        std::string type;
+        enum class type {
+            allow, deny
+        };
+
+        type type_;
         std::vector<std::string> sub;
         std::vector<std::string> pub;
 
-        authorization(std::string const &topic, std::string const &type)
-            : topic(topic), type(type)
+        authorization(std::string const& topic, type const& type_)
+            : topic(topic), type_(type_)
         { }
     };
 
@@ -63,6 +70,8 @@ struct security
     std::map<std::string, authorization> authorization_;
     MQTT_NS::optional<std::string> anonymous;
 
+    MQTT_NS::broker::multiple_subscription_map<std::string, authorization::type> auth_pub_map;
+
     MQTT_NS::optional<std::string> login_anonymous() {
         return anonymous;
     }
@@ -70,8 +79,15 @@ struct security
     MQTT_NS::optional<std::string> login(std::string const& username, std::string const& password) const {
         MQTT_NS::optional<std::string> empty_result;
         auto i = authentication_.find(username);
-        if (i == authentication_.end()) return empty_result;
+        if (i == authentication_.end() || i->second.method_ != security::authentication::method::password)
+            return empty_result;
         return i->second.password == password ? username : empty_result;
+    }
+
+    static authorization::type get_auth_type(std::string const& type) {
+        if(type == "allow") return authorization::type::allow;
+        if(type == "deny") return authorization::type::deny;
+        throw std::runtime_error("An invalid authorization type was specified: " + type);
     }
 
     static bool is_valid_group_name(std::string const& name) {
@@ -89,11 +105,13 @@ struct security
             throw std::runtime_error("An invalid username name was specified for " + context + ": " + name);
     }
 
-    static void validate(security const &security)
+    static void validate(security &security)
     {
         for(auto const& i: security.groups_) {
-            for(auto const& j: i.second.members) {
-                validate_entry(security, "group " + i.first, j);
+            for(auto const& j: i.second.members) {           
+                auto iter = security.authentication_.find(j);
+                if(is_valid_user_name(j) && iter == security.authentication_.end())
+                    throw std::runtime_error("An invalid username name was specified for group " + i.first + ": " + j);
             }
         }
 
@@ -103,6 +121,14 @@ struct security
             }
             for(auto const& j: i.second.pub) {
                 validate_entry(security, "topic " + i.first, j);
+
+                if(is_valid_user_name(j)) {
+                    security.auth_pub_map.insert_or_assign(i.first, j, i.second.type_);
+                }
+                else if(is_valid_group_name(j)) {
+                    for(auto const& z: security.groups_[j].members)
+                        security.auth_pub_map.insert_or_assign(i.first, z, i.second.type_);
+                }
             }
         }
     }
@@ -140,7 +166,9 @@ struct security
             group group;
             if(i.second.get_child_optional("members")) {
                 for(auto const& j: i.second.get_child("members")) {
-                    group.members.push_back(j.second.get_value<std::string>());
+                    auto username = j.second.get_value<std::string>();
+                    if(!is_valid_user_name(username)) throw std::runtime_error("An invalid user name was specified: " + username);
+                    group.members.push_back(username);
                 }
             }
 
@@ -151,9 +179,9 @@ struct security
             std::string name = i.second.get<std::string>("topic");
             //if(!is_valid_topic(name)) throw std::runtime_error("An invalid topic was specified: " + name);
 
-            std::string method = i.second.get<std::string>("type");
+            auto type = get_auth_type(i.second.get<std::string>("type"));
 
-            authorization auth(name, method);
+            authorization auth(name, type);
             if(i.second.get_child_optional("sub")) {
                 for(auto const& j: i.second.get_child("sub"))
                     auth.sub.push_back(j.second.get_value<std::string>());
@@ -168,6 +196,16 @@ struct security
         }
 
         validate(security);
+    }
+
+    authorization::type auth_pub(std::string const& topic, std::string const& username) {
+        authorization::type result_type = authorization::type::deny;
+
+        auth_pub_map.find(topic, [&](std::string const &allowed_username, authorization::type type) {
+            if (allowed_username == username) result_type = type;
+        });
+
+        return result_type;
     }
 };
 
