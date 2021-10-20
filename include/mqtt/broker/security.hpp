@@ -33,9 +33,9 @@ struct security
         };
 
         method method_;
-        MQTT_NS::optional<std::string> password;
+        optional<std::string> password;
 
-        authentication(method method_ = method::password, MQTT_NS::optional<std::string> const &password = MQTT_NS::optional<std::string>())
+        authentication(method method_ = method::password, optional<std::string> const &password = optional<std::string>())
             : method_(method_), password(password)
         { }
 
@@ -65,85 +65,34 @@ struct security
         std::vector<std::string> members;
     };
 
-    std::map<std::string, authentication> authentication_;
-    std::map<std::string, group> groups_;
-    std::map<std::string, authorization> authorization_;
-    MQTT_NS::optional<std::string> anonymous;
 
-    using auth_map_type = MQTT_NS::broker::multiple_subscription_map<std::string, authorization::type>;
-    auth_map_type auth_pub_map;
-    auth_map_type auth_sub_map;
-
-    MQTT_NS::optional<std::string> login_anonymous() {
+    optional<std::string> login_anonymous() {
         return anonymous;
     }
 
-    MQTT_NS::optional<std::string> login(std::string const& username, std::string const& password) const {
-        MQTT_NS::optional<std::string> empty_result;
-        auto i = authentication_.find(username);
+    optional<std::string> login(string_view const& username, string_view const& password) const {
+        optional<std::string> empty_result;
+        auto i = authentication_.find(std::string(username));
         if (i == authentication_.end() || i->second.method_ != security::authentication::method::password)
             return empty_result;
-        return i->second.password == password ? username : empty_result;
+        return *(i->second.password) == password ? std::string(username) : empty_result;
     }
 
-    static authorization::type get_auth_type(std::string const& type) {
+    static authorization::type get_auth_type(string_view const& type) {
         if(type == "allow") return authorization::type::allow;
         if(type == "deny") return authorization::type::deny;
-        throw std::runtime_error("An invalid authorization type was specified: " + type);
+        throw std::runtime_error("An invalid authorization type was specified: " + std::string(type));
     }
 
-    static bool is_valid_group_name(std::string const& name) {
+    static bool is_valid_group_name(string_view const& name) {
         return !name.empty() && name[0] == '@'; // TODO: validate utf-8
     }
 
-    static bool is_valid_user_name(std::string const& name) {
+    static bool is_valid_user_name(string_view const& name) {
         return !name.empty() && name[0] != '@'; // TODO: validate utf-8
     }
 
-    static void validate_entry(security const& security, std::string const& context, std::string const& name) {
-        if(is_valid_group_name(name) && security.groups_.find(name) == security.groups_.end())
-            throw std::runtime_error("An invalid group name was specified for " + context + ": " + name);
-        if(is_valid_user_name(name) && security.authentication_.find(name) == security.authentication_.end())
-            throw std::runtime_error("An invalid username name was specified for " + context + ": " + name);
-    }
-
-    static void validate(security &security)
-    {
-        for(auto const& i: security.groups_) {
-            for(auto const& j: i.second.members) {           
-                auto iter = security.authentication_.find(j);
-                if(is_valid_user_name(j) && iter == security.authentication_.end())
-                    throw std::runtime_error("An invalid username name was specified for group " + i.first + ": " + j);
-            }
-        }
-
-        for(auto const &i: security.authorization_) {
-            for(auto const& j: i.second.sub) {
-                validate_entry(security, "topic " + i.first, j);
-
-                if(is_valid_user_name(j)) {
-                    security.auth_sub_map.insert_or_assign(i.first, j, i.second.type_);
-                }
-                else if(is_valid_group_name(j)) {
-                    for(auto const& z: security.groups_[j].members)
-                        security.auth_sub_map.insert_or_assign(i.first, z, i.second.type_);
-                }
-            }
-            for(auto const& j: i.second.pub) {
-                validate_entry(security, "topic " + i.first, j);
-
-                if(is_valid_user_name(j)) {
-                    security.auth_pub_map.insert_or_assign(i.first, j, i.second.type_);
-                }
-                else if(is_valid_group_name(j)) {
-                    for(auto const& z: security.groups_[j].members)
-                        security.auth_pub_map.insert_or_assign(i.first, z, i.second.type_);
-                }
-            }
-        }
-    }
-
-    static void load(std::istream &input, security &security) {
+    void load_json(std::istream& input) {
         // Create a root
         boost::property_tree::ptree root;
         boost::property_tree::read_json(input, root);
@@ -157,16 +106,16 @@ struct security
             if(method == "password") {
                 std::string password = i.second.get<std::string>("password");
                 authentication auth(authentication::method::password, password);
-                security.authentication_.insert( { name, auth });
+                authentication_.insert( { name, auth });
             } else if(method == "client_cert") {
                 authentication auth(authentication::method::client_cert);
-                security.authentication_.insert({ name, auth });
+                authentication_.insert({ name, auth });
             } else if(method == "anonymous") {
-                if(security.anonymous) throw std::runtime_error("Only a single anonymous user can be configured, anonymous user: " + *security.anonymous);
-                security.anonymous = name;
+                if(anonymous) throw std::runtime_error("Only a single anonymous user can be configured, anonymous user: " + *anonymous);
+                anonymous = name;
 
                 authentication auth(authentication::method::anonymous);
-                security.authentication_.insert( { name, auth });
+                authentication_.insert( { name, auth });
             } else throw std::runtime_error("An invalid method was specified: " + method);
         }
         for(auto const& i: root.get_child("group")) {
@@ -182,7 +131,7 @@ struct security
                 }
             }
 
-            security.groups_.insert({ name, group });
+            groups_.insert({ name, group });
         }
 
         for(auto const& i: root.get_child("authorization")) {
@@ -202,13 +151,13 @@ struct security
                     auth.pub.push_back(j.second.get_value<std::string>());
             }
 
-            security.authorization_.insert({ name, auth });
+            authorization_.insert({ name, auth });
         }
 
-        validate(security);
+        validate();
     }
 
-    authorization::type auth_pub(std::string const& topic, std::string const& username) const {
+    authorization::type auth_pub(string_view const& topic, string_view const& username) const {
         authorization::type result_type = authorization::type::deny;
 
         auth_pub_map.find(topic, [&](std::string const &allowed_username, authorization::type type) {
@@ -218,7 +167,7 @@ struct security
         return result_type;
     }
 
-    std::map<std::string, authorization::type> auth_sub(std::string const& topic) const {
+    std::map<std::string, authorization::type> auth_sub(string_view const& topic) const {
         std::map<std::string, authorization::type> result;
 
         auth_sub_map.find(topic, [&](std::string const &allowed_username, authorization::type type) {
@@ -233,6 +182,59 @@ struct security
         if(i == result.end()) return authorization::type::deny;
         return i->second;
     }
+
+private:
+    void validate_entry(std::string const& context, std::string const& name) {
+        if(is_valid_group_name(name) && groups_.find(name) == groups_.end())
+            throw std::runtime_error("An invalid group name was specified for " + context + ": " + name);
+        if(is_valid_user_name(name) && authentication_.find(name) == authentication_.end())
+            throw std::runtime_error("An invalid username name was specified for " + context + ": " + name);
+    }
+
+    void validate()
+    {
+        for(auto const& i: groups_) {
+            for(auto const& j: i.second.members) {
+                auto iter = authentication_.find(j);
+                if(is_valid_user_name(j) && iter == authentication_.end())
+                    throw std::runtime_error("An invalid username name was specified for group " + i.first + ": " + j);
+            }
+        }
+
+        for(auto const &i: authorization_) {
+            for(auto const& j: i.second.sub) {
+                validate_entry("topic " + i.first, j);
+
+                if(is_valid_user_name(j)) {
+                    auth_sub_map.insert_or_assign(i.first, j, i.second.type_);
+                }
+                else if(is_valid_group_name(j)) {
+                    for(auto const& z: groups_[j].members)
+                        auth_sub_map.insert_or_assign(i.first, z, i.second.type_);
+                }
+            }
+            for(auto const& j: i.second.pub) {
+                validate_entry("topic " + i.first, j);
+
+                if(is_valid_user_name(j)) {
+                    auth_pub_map.insert_or_assign(i.first, j, i.second.type_);
+                }
+                else if(is_valid_group_name(j)) {
+                    for(auto const& z: groups_[j].members)
+                        auth_pub_map.insert_or_assign(i.first, z, i.second.type_);
+                }
+            }
+        }
+    }
+
+    std::map<std::string, authentication> authentication_;
+    std::map<std::string, group> groups_;
+    std::map<std::string, authorization> authorization_;
+    optional<std::string> anonymous;
+
+    using auth_map_type = multiple_subscription_map<std::string, authorization::type>;
+    auth_map_type auth_pub_map;
+    auth_map_type auth_sub_map;
 };
 
 MQTT_BROKER_NS_END

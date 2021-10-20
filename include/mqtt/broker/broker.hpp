@@ -1051,7 +1051,7 @@ private:
         if (!noauth_username && !password)
             username = security.login_anonymous();
         else if (noauth_username && password)
-            username = security.login(std::string(*noauth_username), std::string(*password));
+            username = security.login(*noauth_username, *password);
 
         if (!username) {
             MQTT_LOG("mqtt_broker", trace)
@@ -1632,7 +1632,7 @@ private:
         if (it == idx.end()) return true;
 
         // See if this session is authorized to publish this topic
-        if (security.auth_pub(std::string(topic_name), it->get_username()) == security::authorization::type::deny) return true;
+        if (security.auth_pub(topic_name, it->get_username()) == security::authorization::type::deny) return true;
 
         auto send_pubres =
             [&] {
@@ -2138,7 +2138,7 @@ private:
         v5::properties props
     ) {
         // Get auth rights for this topic
-        auto auth_users = security.auth_sub(std::string(topic));
+        auto auth_users = security.auth_sub(topic);
 
         // publish the message to subscribers.
         // retain is delivered as the original only if rap_value is rap::retain.

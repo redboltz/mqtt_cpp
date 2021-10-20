@@ -366,7 +366,7 @@ void run_broker(boost::program_options::variables_map const& vm) {
                 << "auth_file:" << auth_file;
 
             std::ifstream input(auth_file);
-            MQTT_NS::broker::security::load(input, b.get_security());
+            b.get_security().load_json(input);
         }
 
         as::io_context accept_ioc;
