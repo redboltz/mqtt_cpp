@@ -19,6 +19,10 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/optional.hpp>
 
+#include <boost/algorithm/hex.hpp>
+#include <boost/algorithm/string.hpp>
+#include <openssl/evp.h>
+
 MQTT_BROKER_NS_BEGIN
 
 struct security
@@ -70,12 +74,33 @@ struct security
         return anonymous;
     }
 
+    template<typename T>
+    static inline std::string to_hex(T const start, T const end)
+    {
+        std::string result;
+        boost::algorithm::hex(start, end, std::back_inserter(result));
+        return result;
+    }
+
+    static inline std::string hash(std::string const &message)
+    {
+        std::shared_ptr<EVP_MD_CTX> mdctx(EVP_MD_CTX_new(), EVP_MD_CTX_free);
+        EVP_DigestInit_ex(mdctx.get(), EVP_sha256(), NULL);
+        EVP_DigestUpdate(mdctx.get(), message.data(), message.size());
+
+        std::vector<unsigned char> digest(EVP_MD_size(EVP_sha256()));
+        unsigned int digest_size = digest.size();
+
+        EVP_DigestFinal_ex(mdctx.get(), digest.data(), &digest_size);
+        return to_hex(digest.data(), digest.data() + digest_size);
+    }
+
     optional<std::string> login(string_view const& username, string_view const& password) const {
         optional<std::string> empty_result;
         auto i = authentication_.find(std::string(username));
         if (i == authentication_.end() || i->second.method_ != security::authentication::method::password)
             return empty_result;
-        return *(i->second.password) == password ? std::string(username) : empty_result;
+        return boost::iequals(*(i->second.password), hash(hash_type + ":" + salt + ":" + std::string(password))) ? std::string(username) : empty_result;
     }
 
     static authorization::type get_auth_type(string_view const& type) {
@@ -154,6 +179,8 @@ struct security
             authorization_.insert({ name, auth });
         }
 
+        hash_type = root.get<std::string>("config.hash", "aes256");
+        salt = root.get<std::string>("config.salt", "mqtt_cpp");
         validate();
     }
 
@@ -183,6 +210,18 @@ struct security
         return i->second;
     }
 
+    std::map<std::string, authentication> authentication_;
+    std::map<std::string, group> groups_;
+    std::map<std::string, authorization> authorization_;
+    optional<std::string> anonymous;
+
+    using auth_map_type = multiple_subscription_map<std::string, authorization::type>;
+    auth_map_type auth_pub_map;
+    auth_map_type auth_sub_map;
+
+    std::string salt;
+    std::string hash_type;
+
 private:
     void validate_entry(std::string const& context, std::string const& name) {
         if(is_valid_group_name(name) && groups_.find(name) == groups_.end())
@@ -193,6 +232,9 @@ private:
 
     void validate()
     {
+        if (hash_type != "aes256")
+            throw std::runtime_error("An invalid hash type was selected: " + hash_type);
+
         for(auto const& i: groups_) {
             for(auto const& j: i.second.members) {
                 auto iter = authentication_.find(j);
@@ -227,14 +269,6 @@ private:
         }
     }
 
-    std::map<std::string, authentication> authentication_;
-    std::map<std::string, group> groups_;
-    std::map<std::string, authorization> authorization_;
-    optional<std::string> anonymous;
-
-    using auth_map_type = multiple_subscription_map<std::string, authorization::type>;
-    auth_map_type auth_pub_map;
-    auth_map_type auth_sub_map;
 };
 
 MQTT_BROKER_NS_END

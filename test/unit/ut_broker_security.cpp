@@ -8,28 +8,31 @@
 #include "../common/global_fixture.hpp"
 
 #include <mqtt/broker/security.hpp>
-
 #include <sstream>
+
+#include <boost/algorithm/hex.hpp>
+#include <openssl/evp.h>
 
 BOOST_AUTO_TEST_SUITE(ut_broker_security)
 
 void load_config(MQTT_NS::broker::security &security, std::string const& value)
 {
     std::stringstream input(value);
-    MQTT_NS::broker::security::load(input, security);
+    security.load_json(input);
 }
 
 BOOST_AUTO_TEST_CASE(json_load) {
     MQTT_NS::broker::security security;
 
-    std::string value = "{\"authentication\":[{\"name\":\"u1\",\"method\":\"password\",\"password\":\"mypassword\"},{\"name\":\"u2\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]}],\"authorization\":[{\"topic\":\"#\",\"type\":\"deny\"},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"]}]}";
+    std::string value = "{\"authentication\":[{\"name\":\"u1\",\"method\":\"password\",\"password\":\"75c111ce6542425228c157b1187076ed86e837f6085e3bb30b976114f70abc40\"},{\"name\":\"u2\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\",\"anonymous\"]}],\"authorization\":[{\"topic\":\"#\",\"type\":\"allow\",\"pub\":[\"@g1\"]},{\"topic\":\"#\",\"type\":\"deny\",\"sub\":[\"@g1\"]},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"],\"pub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"],\"pub\":[\"u1\",\"anonymous\"]}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}";
+
     BOOST_CHECK_NO_THROW(load_config(security, value));
 
     BOOST_CHECK(security.authentication_.size() == 3);
 
     BOOST_CHECK(security.authentication_["u1"].method_ == MQTT_NS::broker::security::authentication::method::password);
     BOOST_CHECK(security.authentication_["u1"].password);
-    BOOST_CHECK(*security.authentication_["u1"].password == "mypassword");
+    BOOST_CHECK(boost::iequals(*security.authentication_["u1"].password, MQTT_NS::broker::security::hash("aes256:salt:mypassword")));
 
     BOOST_CHECK(security.authentication_["u2"].method_ == MQTT_NS::broker::security::authentication::method::client_cert);
     BOOST_CHECK(!security.authentication_["u2"].password);
@@ -38,7 +41,7 @@ BOOST_AUTO_TEST_CASE(json_load) {
     BOOST_CHECK(!security.authentication_["anonymous"].password);
 
     BOOST_CHECK(security.groups_.size() == 1);
-    BOOST_CHECK(security.groups_["@g1"].members.size() == 2);
+    BOOST_CHECK(security.groups_["@g1"].members.size() == 3);
 
     BOOST_CHECK(security.anonymous);
     BOOST_CHECK(*security.anonymous == "anonymous");
@@ -102,6 +105,10 @@ BOOST_AUTO_TEST_CASE(check_publish) {
     BOOST_CHECK(security.auth_sub_user(security.auth_sub("topic"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
     BOOST_CHECK(security.auth_sub_user(security.auth_sub("sub/topic"), "u1") == MQTT_NS::broker::security::authorization::type::allow);
     BOOST_CHECK(security.auth_sub_user(security.auth_sub("sub/topic1"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+}
+
+BOOST_AUTO_TEST_CASE(test_hash) {
+    BOOST_CHECK(MQTT_NS::broker::security::hash("a quick brown fox jumps over the lazy dog") == "8F1AD6DFFF1A460EB4AB78A5A7C3576209628EA200C1DBC70BDA69938B401309");
 
 }
 
