@@ -150,6 +150,11 @@ int main(int argc, char **argv) {
                 "publish delay after all subscribed (ms)"
             )
             (
+                "pub_after_idle_delay_ms",
+                boost::program_options::value<std::size_t>()->default_value(1000),
+                "publish delay after idle publishes are finished (ms)"
+            )
+            (
                 "pub_interval_ms",
                 boost::program_options::value<std::size_t>()->default_value(10),
                 "publish interval for each clients (ms)"
@@ -335,6 +340,7 @@ int main(int argc, char **argv) {
         auto sub_delay_ms = vm["sub_delay_ms"].as<std::size_t>();
         auto sub_interval_ms = vm["sub_interval_ms"].as<std::size_t>();
         auto pub_delay_ms = vm["pub_delay_ms"].as<std::size_t>();
+        auto pub_after_idle_delay_ms = vm["pub_after_idle_delay_ms"].as<std::size_t>();
         auto pub_interval_ms = vm["pub_interval_ms"].as<std::size_t>();
 
         std::uint64_t pub_interval_us = pub_interval_ms * 1000;
@@ -474,10 +480,14 @@ int main(int argc, char **argv) {
                                     );
                                     BOOST_ASSERT(ci.send_times != 0);
                                     --ci.send_times;
+                                    auto next_tp = ci.tim->expiry() + std::chrono::milliseconds(pub_interval_ms);
+                                    if (ci.send_idle_count > 0) {
+                                        if (--ci.send_idle_count == 0) {
+                                            next_tp += std::chrono::milliseconds(pub_after_idle_delay_ms);
+                                        }
+                                    }
                                     if (ci.send_times != 0) {
-                                        ci.tim->expires_at(
-                                            ci.tim->expiry() + std::chrono::milliseconds(pub_interval_ms)
-                                        );
+                                        ci.tim->expires_at(next_tp);
                                         async_wait_pub(ci);
                                     }
                                 }
@@ -567,7 +577,7 @@ int main(int argc, char **argv) {
                             locked_cout() << "retained publish received and ignored topic:" << topic_name << std::endl;
                             return true;
                         }
-                        if (ci.idle_count == 0) {
+                        if (ci.recv_idle_count == 0) {
                             auto recv = std::chrono::steady_clock::now();
                             auto dur_us = std::chrono::duration_cast<std::chrono::microseconds>(
                                 recv - ci.sent.at(ci.recv_times - 1)
@@ -590,7 +600,7 @@ int main(int argc, char **argv) {
                             ci.rtt_us.emplace_back(dur_us);
                         }
                         else {
-                            --ci.idle_count;
+                            --ci.recv_idle_count;
                         }
 
                         BOOST_ASSERT(ci.recv_times != 0);
@@ -736,7 +746,8 @@ int main(int argc, char **argv) {
                 :index_str{(boost::format("%08d") % index).str()},
                  send_times{times},
                  recv_times{times},
-                 idle_count{idle_count}
+                 send_idle_count{idle_count},
+                 recv_idle_count{idle_count}
             {
                 payload_str.resize(payload_size);
                 sent.resize(times);
@@ -777,7 +788,8 @@ int main(int argc, char **argv) {
             std::string payload_str;
             std::size_t send_times;
             std::size_t recv_times;
-            std::size_t idle_count;
+            std::size_t send_idle_count;
+            std::size_t recv_idle_count;
             std::vector<std::chrono::steady_clock::time_point> sent;
             std::vector<std::size_t> rtt_us;
             std::shared_ptr<as::steady_timer> tim;
