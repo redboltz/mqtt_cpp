@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
             (
                 "detail_report",
                 boost::program_options::value<bool>()->default_value(false),
-                "report for each client's max mid min"
+                "report for each client's max mid avg min"
             )
             (
                 "pub_idle_count",
@@ -515,6 +515,8 @@ int main(int argc, char **argv) {
                         std::string maxmax_cid;
                         std::size_t maxmid = 0;
                         std::string maxmid_cid;
+                        std::size_t maxavg = 0;
+                        std::string maxavg_cid;
                         std::size_t maxmin = 0;
                         std::string maxmin_cid;
                         for (auto& ci : cis) {
@@ -522,6 +524,11 @@ int main(int argc, char **argv) {
                             std::string cid = ci.c->get_client_id();
                             std::size_t max = ci.rtt_us.back();
                             std::size_t mid = ci.rtt_us.at(ci.rtt_us.size() / 2);
+                            std::size_t avg = std::accumulate(
+                                ci.rtt_us.begin(),
+                                ci.rtt_us.end(),
+                                std::size_t(0)
+                            ) / ci.rtt_us.size();
                             std::size_t min = ci.rtt_us.front();
                             if (maxmax < max) {
                                 maxmax = max;
@@ -530,6 +537,10 @@ int main(int argc, char **argv) {
                             if (maxmid < mid) {
                                 maxmid = mid;
                                 maxmid_cid = cid;
+                            }
+                            if (maxavg < avg) {
+                                maxavg = avg;
+                                maxavg_cid = cid;
                             }
                             if (maxmin < min) {
                                 maxmin = min;
@@ -540,6 +551,7 @@ int main(int argc, char **argv) {
                                     << cid << " :"
                                     << " max:" << boost::format("%+12d") % max << " us | "
                                     << " mid:" << boost::format("%+12d") % mid << " us | "
+                                    << " avg:" << boost::format("%+12d") % avg << " us | "
                                     << " min:" << boost::format("%+12d") % min << " us | "
                                     << std::endl;
                             }
@@ -552,6 +564,10 @@ int main(int argc, char **argv) {
                             << "maxmid:" << boost::format("%+12d") % maxmid << " us "
                             << "(" << boost::format("%+8d") % (maxmid / 1000) << " ms ) "
                             << "client_id:" << maxmid_cid << std::endl;
+                        std::cout
+                            << "maxavg:" << boost::format("%+12d") % maxavg << " us "
+                            << "(" << boost::format("%+8d") % (maxavg / 1000) << " ms ) "
+                            << "client_id:" << maxavg_cid << std::endl;
                         std::cout
                             << "maxmin:" << boost::format("%+12d") % maxmin << " us "
                             << "(" << boost::format("%+8d") % (maxmin / 1000) << " ms ) "
