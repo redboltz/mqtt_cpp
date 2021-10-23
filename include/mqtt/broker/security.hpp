@@ -21,7 +21,10 @@
 
 #include <boost/algorithm/hex.hpp>
 #include <boost/algorithm/string.hpp>
+
+#if MQTT_USE_TLS
 #include <openssl/evp.h>
+#endif
 
 MQTT_BROKER_NS_BEGIN
 
@@ -82,18 +85,25 @@ struct security
         return result;
     }
 
+#if defined(MQTT_USE_TLS)
     static inline std::string hash(std::string const &message)
     {
         std::shared_ptr<EVP_MD_CTX> mdctx(EVP_MD_CTX_new(), EVP_MD_CTX_free);
         EVP_DigestInit_ex(mdctx.get(), EVP_sha256(), NULL);
         EVP_DigestUpdate(mdctx.get(), message.data(), message.size());
 
-        std::vector<unsigned char> digest(EVP_MD_size(EVP_sha256()));
-        unsigned int digest_size = digest.size();
+        std::vector<unsigned char> digest(static_cast<std::size_t>(EVP_MD_size(EVP_sha256())));
+        unsigned int digest_size = static_cast<unsigned int>(digest.size());
 
         EVP_DigestFinal_ex(mdctx.get(), digest.data(), &digest_size);
         return to_hex(digest.data(), digest.data() + digest_size);
     }
+#else
+    static inline std::string hash(std::string const &message)
+    {
+        return message;
+    }
+#endif
 
     optional<std::string> login(string_view const& username, string_view const& password) const {
         optional<std::string> empty_result;

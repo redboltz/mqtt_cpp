@@ -3,7 +3,6 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
-#define BOOST_UUID_FORCE_AUTO_LINK
 #include <mqtt/config.hpp>
 #include <mqtt/setup_log.hpp>
 #include <mqtt/broker/broker.hpp>
@@ -366,7 +365,10 @@ void run_broker(boost::program_options::variables_map const& vm) {
                 << "auth_file:" << auth_file;
 
             std::ifstream input(auth_file);
-            b.get_security().load_json(input);
+
+            MQTT_NS::broker::security security;
+            security.load_json(input);
+            b.set_security(MQTT_NS::force_move(security));
         }
 
         as::io_context accept_ioc;

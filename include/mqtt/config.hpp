@@ -52,5 +52,6 @@
 
 #endif // defined(MQTT_NO_TS_EXECUTORS)
 
+#define BOOST_UUID_FORCE_AUTO_LINK
 
 #endif // MQTT_CONFIG_HPP

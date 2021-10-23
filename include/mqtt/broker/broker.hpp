@@ -298,10 +298,10 @@ public:
     }
 
     /**
-     * @brief return a reference to the broker security data structure
+     * @brief configure the security settings
      */
-    broker::security& get_security() {
-        return security;
+    void set_security(broker::security &&security) {
+        this->security = security;
     }
 
     // [end] for test setting
@@ -1048,17 +1048,22 @@ private:
         auto& ep = *spep;
 
         optional<std::string> username;
-        if (!noauth_username && !password)
-            username = security.login_anonymous();
-        else if (noauth_username && password)
-            username = security.login(*noauth_username, *password);
+        if (security) {
+            if (!noauth_username && !password)
+                username = security->login_anonymous();
+            else if (noauth_username && password)
+                username = security->login(*noauth_username, *password);
 
-        if (!username) {
-            MQTT_LOG("mqtt_broker", trace)
-                << MQTT_ADD_VALUE(address, this)
-                << "User failed to login: " << (noauth_username ? std::string(*noauth_username) : std::string("anonymous user"));
-            disconnect_and_force_disconnect(spep, v5::disconnect_reason_code::not_authorized);
-            return true;
+            if (!username) {
+                MQTT_LOG("mqtt_broker", trace)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "User failed to login: " << (noauth_username ? std::string(*noauth_username) : std::string("anonymous user"));
+                disconnect_and_force_disconnect(spep, v5::disconnect_reason_code::not_authorized);
+                return true;
+            }
+        } else
+        {
+            username = "nouser";
         }
 
         MQTT_LOG("mqtt_broker", trace)
@@ -1160,7 +1165,7 @@ private:
                             spep,
                             will_expiry_interval = cp.will_expiry_interval,
                             session_expiry_interval = cp.session_expiry_interval,
-                            &username
+                            username
                         ](error_code ec) mutable {
                             if (ec) {
                                 MQTT_LOG("mqtt_broker", trace)
@@ -1632,7 +1637,7 @@ private:
         if (it == idx.end()) return true;
 
         // See if this session is authorized to publish this topic
-        if (security.auth_pub(topic_name, it->get_username()) == security::authorization::type::deny) return true;
+        if (security && security->auth_pub(topic_name, it->get_username()) == security::authorization::type::deny) return true;
 
         auto send_pubres =
             [&] {
@@ -2138,7 +2143,9 @@ private:
         v5::properties props
     ) {
         // Get auth rights for this topic
-        auto auth_users = security.auth_sub(topic);
+        std::map<std::string, broker::security::authorization::type> auth_users;
+        if (security)
+            auth_users = security->auth_sub(topic);
 
         // publish the message to subscribers.
         // retain is delivered as the original only if rap_value is rap::retain.
@@ -2147,7 +2154,7 @@ private:
             [&] (session_state& ss, subscription& sub, auto const& auth_users) {
 
                 // See if this session is authorized to subscribe this topic
-                auto allowed = security.auth_sub_user(auth_users, ss.get_username());
+                auto allowed = security ? security->auth_sub_user(auth_users, ss.get_username()) : security::authorization::type::allow;
                 if (allowed != security::authorization::type::allow) return;
 
                 publish_options new_pubopts = std::min(pubopts.get_qos(), sub.subopts.get_qos());
@@ -2280,7 +2287,7 @@ private:
     optional<std::chrono::steady_clock::duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
 
     // Authorization and authentication settings
-    broker::security security;
+    optional<broker::security> security;
 
     mutable mutex mtx_subs_map_;
     sub_con_map subs_map_;   /// subscription information

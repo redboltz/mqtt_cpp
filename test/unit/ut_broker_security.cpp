@@ -8,10 +8,6 @@
 #include "../common/global_fixture.hpp"
 
 #include <mqtt/broker/security.hpp>
-#include <sstream>
-
-#include <boost/algorithm/hex.hpp>
-#include <openssl/evp.h>
 
 BOOST_AUTO_TEST_SUITE(ut_broker_security)
 
@@ -32,7 +28,10 @@ BOOST_AUTO_TEST_CASE(json_load) {
 
     BOOST_CHECK(security.authentication_["u1"].method_ == MQTT_NS::broker::security::authentication::method::password);
     BOOST_CHECK(security.authentication_["u1"].password);
+
+#if defined(MQTT_USE_TLS)
     BOOST_CHECK(boost::iequals(*security.authentication_["u1"].password, MQTT_NS::broker::security::hash("aes256:salt:mypassword")));
+#endif
 
     BOOST_CHECK(security.authentication_["u2"].method_ == MQTT_NS::broker::security::authentication::method::client_cert);
     BOOST_CHECK(!security.authentication_["u2"].password);
@@ -47,9 +46,12 @@ BOOST_AUTO_TEST_CASE(json_load) {
     BOOST_CHECK(*security.anonymous == "anonymous");
 
     BOOST_CHECK(security.login_anonymous());
+
+#if defined(MQTT_USE_TLS)
     BOOST_CHECK(security.login("u1", "mypassword"));
     BOOST_CHECK(!security.login("u1", "invalidpassword"));
     BOOST_CHECK(!security.login("u3", "invalidpassword"));
+#endif
 
 }
 
@@ -108,7 +110,10 @@ BOOST_AUTO_TEST_CASE(check_publish) {
 }
 
 BOOST_AUTO_TEST_CASE(test_hash) {
+
+#if defined(MQTT_USE_TLS)
     BOOST_CHECK(MQTT_NS::broker::security::hash("a quick brown fox jumps over the lazy dog") == "8F1AD6DFFF1A460EB4AB78A5A7C3576209628EA200C1DBC70BDA69938B401309");
+#endif
 
 }
 
