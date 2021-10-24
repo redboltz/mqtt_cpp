@@ -127,6 +127,25 @@ struct security
         return !name.empty() && name[0] != '@'; // TODO: validate utf-8
     }
 
+    void default_config()
+    {
+        hash_type = "aes256";
+        salt = "salt";
+
+        char const *username = "anonymous";
+        authentication login(authentication::method::anonymous);
+        authentication_.insert({ username, login});
+        anonymous = username;
+
+        char const *topic = "#";
+        authorization auth(topic, authorization::type::allow);
+        auth.sub.push_back(username);
+        auth.pub.push_back(username);
+        authorization_.insert({ topic, auth });
+
+        validate();
+    }
+
     void load_json(std::istream& input) {
         // Create a root
         boost::property_tree::ptree root;
@@ -277,8 +296,7 @@ private:
                 }
             }
         }
-    }
-
+    }   
 };
 
 MQTT_BROKER_NS_END

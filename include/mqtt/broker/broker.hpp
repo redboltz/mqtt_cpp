@@ -261,7 +261,9 @@ public:
     broker_t(as::io_context& timer_ioc)
         :timer_ioc_(timer_ioc),
          tim_disconnect_(timer_ioc_)
-    {}
+    {
+        security.default_config();
+    }
 
     // [begin] for test setting
     /**
@@ -1048,22 +1050,17 @@ private:
         auto& ep = *spep;
 
         optional<std::string> username;
-        if (security) {
-            if (!noauth_username && !password)
-                username = security->login_anonymous();
-            else if (noauth_username && password)
-                username = security->login(*noauth_username, *password);
+        if (!noauth_username && !password)
+            username = security.login_anonymous();
+        else if (noauth_username && password)
+            username = security.login(*noauth_username, *password);
 
-            if (!username) {
-                MQTT_LOG("mqtt_broker", trace)
-                    << MQTT_ADD_VALUE(address, this)
-                    << "User failed to login: " << (noauth_username ? std::string(*noauth_username) : std::string("anonymous user"));
-                disconnect_and_force_disconnect(spep, v5::disconnect_reason_code::not_authorized);
-                return true;
-            }
-        } else
-        {
-            username = "nouser";
+        if (!username) {
+            MQTT_LOG("mqtt_broker", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "User failed to login: " << (noauth_username ? std::string(*noauth_username) : std::string("anonymous user"));
+            disconnect_and_force_disconnect(spep, v5::disconnect_reason_code::not_authorized);
+            return true;
         }
 
         MQTT_LOG("mqtt_broker", trace)
@@ -1637,7 +1634,7 @@ private:
         if (it == idx.end()) return true;
 
         // See if this session is authorized to publish this topic
-        if (security && security->auth_pub(topic_name, it->get_username()) == security::authorization::type::deny) return true;
+        if (security.auth_pub(topic_name, it->get_username()) != security::authorization::type::allow) return true;
 
         auto send_pubres =
             [&] {
@@ -2143,9 +2140,7 @@ private:
         v5::properties props
     ) {
         // Get auth rights for this topic
-        std::map<std::string, broker::security::authorization::type> auth_users;
-        if (security)
-            auth_users = security->auth_sub(topic);
+        auto auth_users = security.auth_sub(topic);
 
         // publish the message to subscribers.
         // retain is delivered as the original only if rap_value is rap::retain.
@@ -2154,7 +2149,7 @@ private:
             [&] (session_state& ss, subscription& sub, auto const& auth_users) {
 
                 // See if this session is authorized to subscribe this topic
-                auto allowed = security ? security->auth_sub_user(auth_users, ss.get_username()) : security::authorization::type::allow;
+                auto allowed = security.auth_sub_user(auth_users, ss.get_username());
                 if (allowed != security::authorization::type::allow) return;
 
                 publish_options new_pubopts = std::min(pubopts.get_qos(), sub.subopts.get_qos());
@@ -2287,7 +2282,7 @@ private:
     optional<std::chrono::steady_clock::duration> delay_disconnect_; ///< Used to delay disconnect handling for testing
 
     // Authorization and authentication settings
-    optional<broker::security> security;
+    broker::security security;
 
     mutable mutex mtx_subs_map_;
     sub_con_map subs_map_;   /// subscription information

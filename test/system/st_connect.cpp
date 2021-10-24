@@ -20,8 +20,6 @@ BOOST_AUTO_TEST_CASE( connect ) {
         auto& c = cs[0];
         clear_ordered();
         c->set_client_id("cid1");
-        c->set_user_name("dummy");
-        c->set_password("dummy");
         c->set_clean_session(true);
         BOOST_TEST(c->connected() == false);
 

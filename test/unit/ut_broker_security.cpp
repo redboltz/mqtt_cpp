@@ -17,6 +17,24 @@ void load_config(MQTT_NS::broker::security &security, std::string const& value)
     security.load_json(input);
 }
 
+BOOST_AUTO_TEST_CASE(default_config) {
+    MQTT_NS::broker::security security;
+    security.default_config();
+
+    BOOST_CHECK(security.authentication_["anonymous"].method_ == MQTT_NS::broker::security::authentication::method::anonymous);
+    BOOST_CHECK(!security.authentication_["anonymous"].password);
+
+    BOOST_CHECK(security.login_anonymous());
+
+    BOOST_CHECK(security.auth_pub("topic", "anonymous") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_pub("sub/topic", "anonymous") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_pub("sub/topic1", "anonymous") == MQTT_NS::broker::security::authorization::type::allow);
+
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("topic"), "anonymous") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("sub/topic"), "anonymous") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("sub/topic1"), "anonymous") == MQTT_NS::broker::security::authorization::type::allow);
+}
+
 BOOST_AUTO_TEST_CASE(json_load) {
     MQTT_NS::broker::security security;
 
