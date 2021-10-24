@@ -1,4 +1,4 @@
-// Copyright Takatoshi Kondo 2021
+// Copyright Wouter van Kleunen 2021
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -208,8 +208,8 @@ struct security
             authorization_.insert({ name, auth });
         }
 
-        hash_type = root.get<std::string>("config.hash", "aes256");
-        salt = root.get<std::string>("config.salt", "mqtt_cpp");
+        hash_type = root.get<std::string>("config.hash");
+        salt = root.get<std::string>("config.salt");
         validate();
     }
 

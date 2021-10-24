@@ -87,22 +87,22 @@ BOOST_AUTO_TEST_CASE(check_errors) {
     BOOST_CHECK_THROW(MQTT_NS::broker::security::get_auth_type("invalid"), std::exception);
 
     // Group references non-existing user
-    BOOST_CHECK_THROW(load_config(security, "{\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]}]}"), std::exception);
+    BOOST_CHECK_THROW(load_config(security, "{\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}"), std::exception);
 
     // Auth references non-existing user
-    BOOST_CHECK_THROW(load_config(security, "{\"authorization\":[{\"topic\":\"#\",\"type\":\"deny\"},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"]}]}"), std::exception);
+    BOOST_CHECK_THROW(load_config(security, "{\"authorization\":[{\"topic\":\"#\",\"type\":\"deny\"},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"]}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}"), std::exception);
 
     // Duplicate user
-    BOOST_CHECK_THROW(load_config(security, "{\"authentication\":[{\"name\":\"u1\",\"method\":\"password\",\"password\":\"mypassword\"},{\"name\":\"u1\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}]}"), std::exception);
+    BOOST_CHECK_THROW(load_config(security, "{\"authentication\":[{\"name\":\"u1\",\"method\":\"password\",\"password\":\"mypassword\"},{\"name\":\"u1\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}"), std::exception);
 
     // Duplicate anonymous
-    BOOST_CHECK_THROW(load_config(security, "{\"authentication\":[{\"name\":\"u1\",\"method\":\"anonymous\",\"password\":\"mypassword\"},{\"name\":\"u1\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}]}"), std::exception);
+    BOOST_CHECK_THROW(load_config(security, "{\"authentication\":[{\"name\":\"u1\",\"method\":\"anonymous\",\"password\":\"mypassword\"},{\"name\":\"u1\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}"), std::exception);
 
     // Duplicate group
-    BOOST_CHECK_THROW(load_config(security, "{\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]},{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]}]}"), std::exception);
+    BOOST_CHECK_THROW(load_config(security, "{\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]},{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}"), std::exception);
 
     // Non-existing group
-    BOOST_CHECK_THROW(load_config(security, "{\"authorization\":[{\"topic\":\"#\",\"type\":\"deny\"},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@nonexist\"]}]}"), std::exception);
+    BOOST_CHECK_THROW(load_config(security, "{\"authorization\":[{\"topic\":\"#\",\"type\":\"deny\"},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@nonexist\"]}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}"), std::exception);
 
     // Invalid username
     BOOST_CHECK_THROW(load_config(security, "{\"authentication\":[{\"name\":\"@u1\",\"method\":\"anonymous\"}]}"), std::exception);
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(check_errors) {
 BOOST_AUTO_TEST_CASE(check_publish) {
     MQTT_NS::broker::security security;
 
-    std::string value = "{\"authentication\":[{\"name\":\"u1\",\"method\":\"password\",\"password\":\"mypassword\"},{\"name\":\"u2\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]}],\"authorization\":[{\"topic\":\"#\",\"type\":\"deny\"},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"],\"pub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"],\"pub\":[\"u1\",\"anonymous\"]}]}";
+    std::string value = "{\"authentication\":[{\"name\":\"u1\",\"method\":\"password\",\"password\":\"mypassword\"},{\"name\":\"u2\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]}],\"authorization\":[{\"topic\":\"#\",\"type\":\"deny\"},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"],\"pub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"],\"pub\":[\"u1\",\"anonymous\"]}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}";
     BOOST_CHECK_NO_THROW(load_config(security, value));
 
     BOOST_CHECK(security.auth_pub("topic", "u1") == MQTT_NS::broker::security::authorization::type::deny);
