@@ -18,6 +18,17 @@
 
 namespace as = boost::asio;
 
+// moved to global to avoid MSVC error
+enum class phase {
+    connect,
+    sub_delay,
+    subscribe,
+    pub_delay,
+    idle,
+    pub_after_idle_delay,
+    publish
+};
+
 int main(int argc, char **argv) {
     try {
         boost::program_options::options_description desc;
@@ -169,6 +180,11 @@ int main(int argc, char **argv) {
                 boost::program_options::value<std::size_t>()->default_value(1),
                 "ideling publish count. it is useful to ignore authorization cache."
             )
+            (
+                "progress_timer_sec",
+                boost::program_options::value<std::size_t>()->default_value(10),
+                "report progress timer for each given seconds."
+            )
 #if defined(MQTT_USE_LOG)
             (
                 "verbose",
@@ -268,6 +284,14 @@ int main(int argc, char **argv) {
             return -1;
         }
 
+        std::chrono::steady_clock::time_point tp_start = std::chrono::steady_clock::now();
+        std::chrono::steady_clock::time_point tp_sub_delay;
+        std::chrono::steady_clock::time_point tp_subscribe;
+        std::chrono::steady_clock::time_point tp_pub_delay;
+        std::chrono::steady_clock::time_point tp_idle;
+        std::chrono::steady_clock::time_point tp_pub_after_idle_delay;
+        std::chrono::steady_clock::time_point tp_publish;
+
         auto detail_report = vm["detail_report"].as<bool>();
         auto host = vm["host"].as<std::string>();
         auto port = vm["port"].as<std::uint16_t>();
@@ -302,6 +326,7 @@ int main(int argc, char **argv) {
         }
         auto pub_idle_count = vm["pub_idle_count"].as<std::size_t>();
         times += pub_idle_count;
+
         auto username =
             [&] () -> MQTT_NS::optional<std::string> {
                 if (vm.count("username")) {
@@ -342,6 +367,8 @@ int main(int argc, char **argv) {
         auto pub_delay_ms = vm["pub_delay_ms"].as<std::size_t>();
         auto pub_after_idle_delay_ms = vm["pub_after_idle_delay_ms"].as<std::size_t>();
         auto pub_interval_ms = vm["pub_interval_ms"].as<std::size_t>();
+
+        auto progress_timer_sec = vm["progress_timer_sec"].as<std::size_t>();
 
         std::uint64_t pub_interval_us = pub_interval_ms * 1000;
         std::cout << "pub_interval:" << pub_interval_us << " us" << std::endl;
@@ -413,15 +440,25 @@ int main(int argc, char **argv) {
 
         auto bench_proc =
             [&](auto& cis) {
+                std::atomic<phase> ph{phase::connect};
+
+                as::io_context ioc_progress_timer;
+                auto tim_progress = std::make_shared<as::steady_timer>(ioc_progress_timer);
+
                 as::io_context ioc_timer;
                 as::executor_work_guard<as::io_context::executor_type> guard_ioc_timer(ioc_timer.get_executor());
                 as::steady_timer tim_delay{ioc_timer};
 
                 std::atomic<std::size_t> rest_connect{clients};
                 std::atomic<std::size_t> rest_sub{clients};
+                std::atomic<std::size_t> rest_idle{pub_idle_count * clients};
                 std::atomic<std::uint64_t> rest_times{times * clients};
+
+                // ==== begin local lambda expressions
                 auto sub_proc =
                     [&] {
+                        ph.store(phase::sub_delay);
+                        tp_sub_delay = std::chrono::steady_clock::now();
                         tim_delay.expires_after(std::chrono::milliseconds(sub_delay_ms));
                         tim_delay.async_wait(
                             [&] (boost::system::error_code const& ec) {
@@ -429,6 +466,8 @@ int main(int argc, char **argv) {
                                     std::cout << "timer error:" << ec.message() << std::endl;
                                     return;
                                 }
+                                ph.store(phase::subscribe);
+                                tp_subscribe = std::chrono::steady_clock::now();
                                 std::cout << "Subscribe" << std::endl;
                                 std::size_t index = 0;
                                 for (auto& ci : cis) {
@@ -478,39 +517,106 @@ int main(int argc, char **argv) {
                                             }
                                         }
                                     );
+
                                     BOOST_ASSERT(ci.send_times != 0);
                                     --ci.send_times;
-                                    auto next_tp = ci.tim->expiry() + std::chrono::milliseconds(pub_interval_ms);
-                                    if (ci.send_idle_count > 0) {
-                                        if (--ci.send_idle_count == 0) {
-                                            next_tp += std::chrono::milliseconds(pub_after_idle_delay_ms);
+
+                                    switch (ph.load()) {
+                                    case phase::idle:
+                                        BOOST_ASSERT(ci.send_idle_count != 0);
+                                        if (--ci.send_idle_count != 0) {
+                                            ci.tim->expires_at(
+                                                ci.tim->expiry() +
+                                                std::chrono::milliseconds(pub_interval_ms)
+                                            );
+                                            async_wait_pub(ci);
                                         }
-                                    }
-                                    if (ci.send_times != 0) {
-                                        ci.tim->expires_at(next_tp);
-                                        async_wait_pub(ci);
-                                    }
+                                        break;
+                                    case phase::publish:
+                                        if (ci.send_times != 0) {
+                                            ci.tim->expires_at(
+                                                ci.tim->expiry() +
+                                                std::chrono::milliseconds(pub_interval_ms)
+                                            );
+                                            async_wait_pub(ci);
+                                        }
+                                        break;
+                                    default:
+                                        BOOST_ASSERT(false);
+                                        break;
+                                    };
                                 }
                             }
                         );
                     };
 
-                auto pub_proc =
+                auto pub_idle_proc =
                     [&] {
-                        std::cout << "Publish" << std::endl;
+                        ph.store(phase::idle);
+                        tp_idle = std::chrono::steady_clock::now();
+                        locked_cout() << "Publish (idle)" << std::endl;
                         std::size_t index = 0;
                         for (auto& ci : cis) {
                             auto tp =
-                                std::chrono::milliseconds(pub_delay_ms) +
                                 std::chrono::nanoseconds(all_interval_ns) * index++;
                             ci.tim->expires_after(tp);
                             async_wait_pub(ci);
                         }
                     };
 
+                auto pub_idle_delay_proc =
+                    [&] {
+                        locked_cout() << "Publish (idle) delay" << std::endl;
+                        ph.store(phase::pub_delay);
+                        tp_pub_delay = std::chrono::steady_clock::now();
+                        tim_delay.expires_after(std::chrono::milliseconds(pub_delay_ms));
+                        tim_delay.async_wait(
+                            [&] (boost::system::error_code const& ec) {
+                                if (ec) {
+                                    locked_cout() << "pub_idle_delay timer error:" << ec.message() << std::endl;
+                                    return;
+                                }
+                                pub_idle_proc();
+                            }
+                        );
+                    };
+
+                auto pub_proc =
+                    [&] {
+                        ph.store(phase::publish);
+                        tp_publish = std::chrono::steady_clock::now();
+                        locked_cout() << "Publish (measure)" << std::endl;
+                        std::size_t index = 0;
+                        for (auto& ci : cis) {
+                            auto tp =
+                                std::chrono::milliseconds(pub_after_idle_delay_ms) +
+                                std::chrono::nanoseconds(all_interval_ns) * index++;
+                            ci.tim->expires_after(tp);
+                            async_wait_pub(ci);
+                        }
+                    };
+
+                auto pub_after_idle_delay_proc =
+                    [&] {
+                        ph.store(phase::pub_after_idle_delay);
+                        tp_pub_after_idle_delay = std::chrono::steady_clock::now();
+                        tp_pub_after_idle_delay = std::chrono::steady_clock::now();
+                        locked_cout() << "Publish (measure) delay" << std::endl;
+                        tim_delay.expires_after(std::chrono::milliseconds(pub_after_idle_delay_ms));
+                        tim_delay.async_wait(
+                            [&] (boost::system::error_code const& ec) {
+                                if (ec) {
+                                    locked_cout() << "pub_after_idle_delay timer error:" << ec.message() << std::endl;
+                                    return;
+                                }
+                                pub_proc();
+                            }
+                        );
+                    };
+
                 auto finish_proc =
                     [&] {
-                        std::cout << "Report" << std::endl;
+                        locked_cout() << "Report" << std::endl;
                         std::size_t maxmax = 0;
                         std::string maxmax_cid;
                         std::size_t maxmid = 0;
@@ -547,7 +653,7 @@ int main(int argc, char **argv) {
                                 maxmin_cid = cid;
                             }
                             if (detail_report) {
-                                std::cout
+                                locked_cout()
                                     << cid << " :"
                                     << " max:" << boost::format("%+12d") % max << " us | "
                                     << " mid:" << boost::format("%+12d") % mid << " us | "
@@ -556,19 +662,19 @@ int main(int argc, char **argv) {
                                     << std::endl;
                             }
                         }
-                        std::cout
+                        locked_cout()
                             << "maxmax:" << boost::format("%+12d") % maxmax << " us "
                             << "(" << boost::format("%+8d") % (maxmax / 1000) << " ms ) "
                             << "client_id:" << maxmax_cid << std::endl;
-                        std::cout
+                        locked_cout()
                             << "maxmid:" << boost::format("%+12d") % maxmid << " us "
                             << "(" << boost::format("%+8d") % (maxmid / 1000) << " ms ) "
                             << "client_id:" << maxmid_cid << std::endl;
-                        std::cout
+                        locked_cout()
                             << "maxavg:" << boost::format("%+12d") % maxavg << " us "
                             << "(" << boost::format("%+8d") % (maxavg / 1000) << " ms ) "
                             << "client_id:" << maxavg_cid << std::endl;
-                        std::cout
+                        locked_cout()
                             << "maxmin:" << boost::format("%+12d") % maxmin << " us "
                             << "(" << boost::format("%+8d") % (maxmin / 1000) << " ms ) "
                             << "client_id:" << maxmin_cid << std::endl;
@@ -576,7 +682,7 @@ int main(int argc, char **argv) {
                         for (auto& ci : cis) {
                             ci.c->async_force_disconnect();
                         }
-                        std::cout << "Finish" << std::endl;
+                        locked_cout() << "Finish" << std::endl;
                         for (auto& guard_ioc : guard_iocs) guard_ioc.reset();
                         guard_ioc_timer.reset();
                     };
@@ -593,13 +699,19 @@ int main(int argc, char **argv) {
                             locked_cout() << "retained publish received and ignored topic:" << topic_name << std::endl;
                             return true;
                         }
-                        if (ci.recv_idle_count == 0) {
+                        BOOST_ASSERT(rest_times > 0);
+                        --rest_times;
+                        if (rest_idle > 0) {
+                            --ci.recv_times;
+                            if (--rest_idle == 0) pub_after_idle_delay_proc();
+                        }
+                        else {
                             auto recv = std::chrono::steady_clock::now();
                             auto dur_us = std::chrono::duration_cast<std::chrono::microseconds>(
                                 recv - ci.sent.at(ci.recv_times - 1)
                             ).count();
                             if (limit_ms != 0 && static_cast<unsigned long>(dur_us) > limit_ms * 1000) {
-                                std::cout << "RTT over " << limit_ms << " ms" << std::endl;
+                                std::cout << "RTT:" << (dur_us / 1000) << "ms over " << limit_ms << "ms" << std::endl;
                             }
                             if (compare) {
                                 if (contents != ci.recv_payload()) {
@@ -614,16 +726,15 @@ int main(int argc, char **argv) {
                                 locked_cout() << "  received: " << topic_name << std::endl;
                             }
                             ci.rtt_us.emplace_back(dur_us);
-                        }
-                        else {
-                            --ci.recv_idle_count;
+                            BOOST_ASSERT(ci.recv_times != 0);
+                            --ci.recv_times;
+                            if (rest_times == 0) finish_proc();
                         }
 
-                        BOOST_ASSERT(ci.recv_times != 0);
-                        --ci.recv_times;
-                        if (--rest_times == 0) finish_proc();
                         return true;
                     };
+
+                // ==== end local lambda expressions
 
                 for (auto& ci : cis) {
                     ci.c->set_auto_pub_response(true);
@@ -664,7 +775,14 @@ int main(int argc, char **argv) {
                             if (results.front() == MQTT_NS::suback_return_code::success_maximum_qos_0 ||
                                 results.front() == MQTT_NS::suback_return_code::success_maximum_qos_1 ||
                                 results.front() == MQTT_NS::suback_return_code::success_maximum_qos_2) {
-                                if (--rest_sub == 0) pub_proc();
+                                if (--rest_sub == 0) {
+                                    if (pub_idle_count == 0) {
+                                        pub_after_idle_delay_proc();
+                                    }
+                                    else {
+                                        pub_idle_delay_proc();
+                                    }
+                                }
                             }
                             return true;
                         }
@@ -678,7 +796,14 @@ int main(int argc, char **argv) {
                             if (reasons.front() == MQTT_NS::v5::suback_reason_code::granted_qos_0 ||
                                 reasons.front() == MQTT_NS::v5::suback_reason_code::granted_qos_1 ||
                                 reasons.front() == MQTT_NS::v5::suback_reason_code::granted_qos_2) {
-                                if (--rest_sub == 0) pub_proc();
+                                if (--rest_sub == 0) {
+                                    if (pub_idle_count == 0) {
+                                        pub_after_idle_delay_proc();
+                                    }
+                                    else {
+                                        pub_idle_delay_proc();
+                                    }
+                                }
                             }
                             return true;
                         }
@@ -704,6 +829,83 @@ int main(int argc, char **argv) {
                         }
                     );
                 }
+
+                std::function <void()> tim_progress_proc;
+                tim_progress_proc =
+                    [&, wp = std::weak_ptr<as::steady_timer>(tim_progress)] {
+                        if (auto sp = wp.lock()) {
+                            sp->expires_after(std::chrono::seconds(progress_timer_sec));
+                            sp->async_wait(
+                                [&] (boost::system::error_code const& ec) {
+                                    if (!ec) {
+                                        std::string ph_str;
+                                        auto now = std::chrono::steady_clock::now();
+                                        std::chrono::steady_clock::time_point tp_base;
+
+                                        switch(ph.load()) {
+                                        case phase::connect:
+                                            ph_str = "connect";
+                                            tp_base = tp_start;
+                                            break;
+                                        case phase::sub_delay:
+                                            ph_str = "sub_delay";
+                                            tp_base = tp_sub_delay;
+                                            break;
+                                        case phase::subscribe:
+                                            ph_str = "subscribe";
+                                            tp_base = tp_subscribe;
+                                            break;
+                                        case phase::pub_delay:
+                                            ph_str = "pub_delay";
+                                            tp_base = tp_pub_delay;
+                                            break;
+                                        case phase::idle:
+                                            ph_str = "idle";
+                                            tp_base = tp_idle;
+                                            break;
+                                        case phase::pub_after_idle_delay:
+                                            ph_str = "pub_after_idle_delay";
+                                            tp_base = tp_pub_after_idle_delay;
+                                            break;
+                                        case phase::publish:
+                                            ph_str = "publish";
+                                            tp_base = tp_publish;
+                                            break;
+                                        default:
+                                            BOOST_ASSERT(false);
+                                            break;
+                                        }
+                                        auto dur_ph = std::chrono::duration_cast<std::chrono::seconds>(
+                                            now - tp_base
+                                        ).count();
+                                        auto dur_total = std::chrono::duration_cast<std::chrono::seconds>(
+                                            now - tp_start
+                                        ).count();
+                                        locked_cout()
+                                            << "[progress] "
+                                            << (
+                                                boost::format("%-24s: %3d:%02d | total: %3d:%02d") %
+                                                ph_str %
+                                                (dur_ph / 60) % (dur_ph % 60) %
+                                                (dur_total / 60) % (dur_total % 60)
+                                               )
+                                            << std::endl;
+                                        tim_progress_proc();
+                                    }
+                                }
+                            );
+                        }
+                    };
+
+                if (progress_timer_sec > 0) {
+                    tim_progress_proc();
+                }
+                std::thread th_progress_timer {
+                    [&] {
+                        ioc_progress_timer.run();
+                    }
+                };
+
 
                 std::size_t index = 0;
                 for (auto& ci : cis) {
@@ -752,6 +954,8 @@ int main(int argc, char **argv) {
                 }
                 for (auto& th : ths) th.join();
                 th_timer.join();
+                tim_progress->cancel();
+                th_progress_timer.join();
             };
 
         std::cout << "Prepare clients" << std::endl;
@@ -989,7 +1193,8 @@ int main(int argc, char **argv) {
         }
 
 
-    } catch(std::exception &e) {
+    }
+    catch(std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 }
