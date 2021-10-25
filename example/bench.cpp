@@ -18,6 +18,17 @@
 
 namespace as = boost::asio;
 
+// moved to global to avoid MSVC error
+enum class phase {
+    connect,
+    sub_delay,
+    subscribe,
+    pub_delay,
+    idle,
+    pub_after_idle_delay,
+    publish
+};
+
 int main(int argc, char **argv) {
     try {
         boost::program_options::options_description desc;
@@ -429,16 +440,6 @@ int main(int argc, char **argv) {
 
         auto bench_proc =
             [&](auto& cis) {
-                enum class phase {
-                    connect,
-                    sub_delay,
-                    subscribe,
-                    pub_delay,
-                    idle,
-                    pub_after_idle_delay,
-                    publish
-                };
-
                 std::atomic<phase> ph{phase::connect};
 
                 as::io_context ioc_progress_timer;
