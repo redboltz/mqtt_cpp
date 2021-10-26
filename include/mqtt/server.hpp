@@ -426,7 +426,7 @@ private:
                             return;
                         }
                         auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
-                        if (*username) sp->set_preauthed_user_name(username->value());
+                        sp->set_preauthed_user_name(*username);
                         if (h_accept_) h_accept_(force_move(sp));
                     }
                 );
@@ -995,7 +995,7 @@ private:
                                             return;
                                         }
                                         auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
-                                        if (*username) sp->set_preauthed_user_name(username->value());
+                                        sp->set_preauthed_user_name(*username);
                                         if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 );
@@ -1022,7 +1022,7 @@ private:
                                         // a static assertion that socket is a const object when
                                         // TLS is enabled, and WS is enabled, with Boost 1.70, and gcc 8.3.0
                                         auto sp = std::make_shared<endpoint_t>(ioc_con, socket, version_);                                        
-                                        if (*username) sp->set_preauthed_user_name(username->value());
+                                        sp->set_preauthed_user_name(*username);
                                         if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 );

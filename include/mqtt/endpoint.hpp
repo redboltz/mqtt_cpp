@@ -11706,8 +11706,8 @@ private:
     }
 
 public:
-    void set_preauthed_user_name(std::string user_name) {
-        preauthed_user_name_.emplace(force_move(user_name));
+    void set_preauthed_user_name(optional<std::string> const& user_name) {
+        preauthed_user_name_ = user_name;
     }
     optional<std::string> get_preauthed_user_name() const {
         return preauthed_user_name_;

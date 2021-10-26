@@ -74,7 +74,7 @@ bool verify_certificate(bool preverified, boost::asio::ssl::verify_context& ctx,
     cname.resize(0xffff);
     auto size = X509_NAME_get_text_by_NID(name, NID_commonName, &cname[0], static_cast<int>(cname.size()));
     cname.resize(static_cast<std::size_t>(size));
-    MQTT_LOG("mqtt_broker", info) << "[clicrt] CNAME:" << cname << std::endl;
+    MQTT_LOG("mqtt_broker", info) << "[clicrt] CNAME:" << cname;
     *username = cname;
     return true;
 }
