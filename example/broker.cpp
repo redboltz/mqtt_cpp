@@ -17,7 +17,6 @@ namespace as = boost::asio;
 using con_t = MQTT_NS::server<>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
 
-
 class server_no_tls {
 public:
     server_no_tls(
@@ -65,6 +64,21 @@ private:
 
 #if defined(MQTT_USE_TLS)
 
+bool verify_certificate(bool preverified, boost::asio::ssl::verify_context& ctx, std::shared_ptr<MQTT_NS::optional<std::string>> const& username) {
+    if (!preverified) return true;
+    int depth = X509_STORE_CTX_get_error_depth(ctx.native_handle());
+    if (depth > 0) return true;
+    X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+    X509_NAME* name = X509_get_subject_name(cert);
+    std::string cname;
+    cname.resize(0xffff);
+    auto size = X509_NAME_get_text_by_NID(name, NID_commonName, &cname[0], static_cast<int>(cname.size()));
+    cname.resize(static_cast<std::size_t>(size));
+    MQTT_LOG("mqtt_broker", info) << "[clicrt] CNAME:" << cname << std::endl;
+    *username = cname;
+    return true;
+}
+
 class server_tls {
 public:
     server_tls(
@@ -89,6 +103,8 @@ public:
             [](MQTT_NS::error_code /*ec*/) {
             }
         );
+
+        server_.set_verify_callback(verify_certificate);
 
         server_.set_accept_handler(
             [&](std::shared_ptr<MQTT_NS::server_tls<>::endpoint_t> spep) {
@@ -204,6 +220,8 @@ public:
             }
         );
 
+        server_.set_verify_callback(verify_certificate);
+
         server_.set_accept_handler(
             [&](std::shared_ptr<MQTT_NS::server_tls_ws<>::endpoint_t> spep) {
                 b_.handle_accept(MQTT_NS::force_move(spep));
@@ -304,7 +322,7 @@ void reload_ctx(Server& server, as::steady_timer& reload_timer,
         return;
     }
 
-    server.get_ssl_context() = std::move(context);
+    server.get_ssl_context() = MQTT_NS::force_move(context);
 }
 
 template<typename Server>
@@ -321,9 +339,6 @@ void load_ctx(Server& server, as::steady_timer& reload_timer, boost::program_opt
            name, true);
 }
 #endif // defined(MQTT_USE_TLS)
-
-
-
 
 void run_broker(boost::program_options::variables_map const& vm) {
     try {

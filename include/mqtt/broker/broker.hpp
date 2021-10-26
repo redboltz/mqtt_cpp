@@ -1050,7 +1050,11 @@ private:
         auto& ep = *spep;
 
         optional<std::string> username;
-        if (!noauth_username && !password)
+        if (ep.get_preauthed_user_name()) {
+            if (security.login_cert(ep.get_preauthed_user_name().value()))
+                username = ep.get_preauthed_user_name();
+        }
+        else if (!noauth_username && !password)
             username = security.login_anonymous();
         else if (noauth_username && password)
             username = security.login(*noauth_username, *password);
@@ -1065,7 +1069,7 @@ private:
 
         MQTT_LOG("mqtt_broker", trace)
             << MQTT_ADD_VALUE(address, this)
-            << "User logged in as: " << *username;
+            << "User logged in as: '" << *username << "'";
 
         v5::properties connack_props;
         connect_param cp = handle_connect_props(ep, props, will);

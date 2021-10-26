@@ -364,11 +364,18 @@ public:
         return ctx_;
     }
 
+    using verify_cb_t = std::function<bool (bool, boost::asio::ssl::verify_context&, std::shared_ptr<optional<std::string>> const&) >;
+
+    void set_verify_callback(verify_cb_t verify_cb) {
+        verify_cb_with_username_ = verify_cb;
+    }
+
 private:
     void do_accept() {
         if (close_request_) return;
         auto& ioc_con = ioc_con_getter_();
         auto socket = std::make_shared<socket_t>(ioc_con, ctx_);
+
         auto ps = socket.get();
         acceptor_.value().async_accept(
             ps->lowest_layer(),
@@ -396,9 +403,22 @@ private:
                     }
                 );
                 auto ps = socket.get();
+
+                auto username = std::make_shared<optional<std::string>>(); // shared_ptr for username
+                auto verify_cb_ = [this, username] // copy capture socket shared_ptr
+                    (bool preverified, boost::asio::ssl::verify_context& ctx) {
+                        // user can set username in the callback
+                        return verify_cb_with_username_
+                            ? verify_cb_with_username_(preverified, ctx, username)
+                            : false;
+                };
+
+                ctx_.set_verify_mode(MQTT_NS::tls::verify_peer);
+                ctx_.set_verify_callback(verify_cb_);
+
                 ps->async_handshake(
                     tls::stream_base::server,
-                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
+                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con, username]
                     (error_code ec) mutable {
                         *underlying_finished = true;
                         tim->cancel();
@@ -406,6 +426,7 @@ private:
                             return;
                         }
                         auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
+                        if (*username) sp->set_preauthed_user_name(username->value());
                         if (h_accept_) h_accept_(force_move(sp));
                     }
                 );
@@ -415,6 +436,8 @@ private:
     }
 
 private:
+    verify_cb_t verify_cb_with_username_;
+
     as::ip::tcp::endpoint ep_;
     as::io_context& ioc_accept_;
     as::io_context* ioc_con_ = nullptr;
@@ -864,6 +887,12 @@ public:
      */
     tls::context const& get_ssl_context() const {
         return ctx_;
+    }    
+
+    using verify_cb_t = std::function<bool (bool, boost::asio::ssl::verify_context&, std::shared_ptr<optional<std::string>> const&) >;
+
+    void set_verify_callback(verify_cb_t verify_cb) {
+        verify_cb_with_username_ = verify_cb;
     }
 
 private:
@@ -899,9 +928,22 @@ private:
                 );
 
                 auto ps = socket.get();
+
+                auto username = std::make_shared<optional<std::string>>(); // shared_ptr for username
+                auto verify_cb_ = [this, username] // copy capture socket shared_ptr
+                    (bool preverified, boost::asio::ssl::verify_context& ctx) {
+                        // user can set username in the callback
+                        return verify_cb_with_username_
+                            ? verify_cb_with_username_(preverified, ctx, username)
+                            : false;
+                };
+
+                ctx_.set_verify_mode(MQTT_NS::tls::verify_peer);
+                ctx_.set_verify_callback(verify_cb_);
+
                 ps->next_layer().async_handshake(
                     tls::stream_base::server,
-                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
+                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con, username]
                     (error_code ec) mutable {
                         if (ec) {
                             *underlying_finished = true;
@@ -915,7 +957,7 @@ private:
                             ps->next_layer(),
                             *sb,
                             *request,
-                            [this, socket = force_move(socket), sb, request, tim, underlying_finished, &ioc_con]
+                            [this, socket = force_move(socket), sb, request, tim, underlying_finished, &ioc_con, username]
                             (error_code ec, std::size_t) mutable {
                                 if (ec) {
                                     *underlying_finished = true;
@@ -945,7 +987,7 @@ private:
                                 }
                                 ps->async_accept(
                                     *request,
-                                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
+                                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con, username]
                                     (error_code ec) mutable {
                                         *underlying_finished = true;
                                         tim->cancel();
@@ -953,6 +995,7 @@ private:
                                             return;
                                         }
                                         auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
+                                        if (*username) sp->set_preauthed_user_name(username->value());
                                         if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 );
@@ -968,7 +1011,7 @@ private:
                                             m.insert(it->name(), it->value());
                                         }
                                     },
-                                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
+                                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con, username]
                                     (error_code ec) mutable {
                                         *underlying_finished = true;
                                         tim->cancel();
@@ -978,7 +1021,8 @@ private:
                                         // TODO: The use of force_move on this line of code causes
                                         // a static assertion that socket is a const object when
                                         // TLS is enabled, and WS is enabled, with Boost 1.70, and gcc 8.3.0
-                                        auto sp = std::make_shared<endpoint_t>(ioc_con, socket, version_);
+                                        auto sp = std::make_shared<endpoint_t>(ioc_con, socket, version_);                                        
+                                        if (*username) sp->set_preauthed_user_name(username->value());
                                         if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 );
@@ -996,6 +1040,8 @@ private:
     }
 
 private:
+    verify_cb_t verify_cb_with_username_;
+
     as::ip::tcp::endpoint ep_;
     as::io_context& ioc_accept_;
     as::io_context* ioc_con_ = nullptr;

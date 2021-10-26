@@ -105,6 +105,11 @@ struct security
     }
 #endif
 
+    bool login_cert(string_view const& username) const {
+        auto i = authentication_.find(std::string(username));
+        return (i != authentication_.end() && i->second.method_ == security::authentication::method::client_cert);
+    }
+
     optional<std::string> login(string_view const& username, string_view const& password) const {
         optional<std::string> empty_result;
         auto i = authentication_.find(std::string(username));
