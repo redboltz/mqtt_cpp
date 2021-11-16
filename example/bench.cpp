@@ -96,6 +96,11 @@ int main(int argc, char **argv) {
                 "set session expiry interval to client"
             )
             (
+                "start_index",
+                boost::program_options::value<std::size_t>()->default_value(0),
+                "start index of clients and topics"
+            )
+            (
                 "times",
                 boost::program_options::value<std::size_t>()->default_value(1000),
                 "number of publishes for each client"
@@ -319,6 +324,7 @@ int main(int argc, char **argv) {
         auto compare = vm["compare"].as<bool>();
 
         auto clients = vm["clients"].as<std::size_t>();
+        auto start_index = vm["start_index"].as<std::size_t>();
         auto times = vm["times"].as<std::size_t>();
         if (times == 0) {
             std::cout << "times must be greater than 0" << std::endl;
@@ -1044,7 +1050,7 @@ int main(int argc, char **argv) {
                         port,
                         version
                     ),
-                    i,
+                    i + start_index,
                     payload_size,
                     times,
                     pub_idle_count
@@ -1081,7 +1087,7 @@ int main(int argc, char **argv) {
                         port,
                         version
                     ),
-                    i,
+                    i + start_index,
                     payload_size,
                     times,
                     pub_idle_count
@@ -1128,7 +1134,7 @@ int main(int argc, char **argv) {
                         ws_path ? ws_path.value() : std::string(),
                         version
                     ),
-                    i,
+                    i + start_index,
                     payload_size,
                     times,
                     pub_idle_count
@@ -1171,7 +1177,7 @@ int main(int argc, char **argv) {
                         ws_path ? ws_path.value() : std::string(),
                         version
                     ),
-                    i,
+                    i + start_index,
                     payload_size,
                     times,
                     pub_idle_count
