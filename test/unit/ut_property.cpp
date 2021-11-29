@@ -374,9 +374,9 @@ BOOST_AUTO_TEST_CASE(comparison) {
 
         MQTT_NS::v5::properties ps1 { v1, v2 };
         MQTT_NS::v5::properties ps2 { v2, v1 };
-        BOOST_TEST(v1 == v1);
-        BOOST_TEST(v1 != v2);
-        BOOST_TEST(v1 < v2);
+        BOOST_TEST(ps1 == ps1);
+        BOOST_TEST(ps1 != ps2);
+        BOOST_TEST(ps1 < ps2);
     }
 }
 
