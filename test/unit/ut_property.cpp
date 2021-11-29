@@ -13,6 +13,7 @@
 
 #include <mqtt/optional.hpp>
 #include <mqtt/property.hpp>
+#include <mqtt/property_variant.hpp>
 
 BOOST_AUTO_TEST_SUITE(ut_property)
 
@@ -174,6 +175,209 @@ BOOST_AUTO_TEST_CASE( reason_string ) {
 BOOST_AUTO_TEST_CASE( user_property ) {
     MQTT_NS::v5::property::user_property v1 { "abc"_mb, "def"_mb };
     BOOST_TEST(boost::lexical_cast<std::string>(v1) == "abc:def");
+}
+
+BOOST_AUTO_TEST_CASE(comparison) {
+    {
+        MQTT_NS::v5::property::payload_format_indicator v1 { MQTT_NS::v5::property::payload_format_indicator::binary };
+        MQTT_NS::v5::property::payload_format_indicator v2 { MQTT_NS::v5::property::payload_format_indicator::string };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::message_expiry_interval v1 { 1234 };
+        MQTT_NS::v5::property::message_expiry_interval v2 { 5678 };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::subscription_identifier v1 { 1234 };
+        MQTT_NS::v5::property::subscription_identifier v2 { 5678 };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::session_expiry_interval v1 { 1234 };
+        MQTT_NS::v5::property::session_expiry_interval v2 { 5678 };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::server_keep_alive v1 { 1234 };
+        MQTT_NS::v5::property::server_keep_alive v2 { 5678 };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::request_problem_information v1 { false };
+        MQTT_NS::v5::property::request_problem_information v2 { true };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::will_delay_interval v1 { 1234 };
+        MQTT_NS::v5::property::will_delay_interval v2 { 5678 };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::request_response_information v1 { false };
+        MQTT_NS::v5::property::request_response_information v2 { true };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::receive_maximum v1 { 1234 };
+        MQTT_NS::v5::property::receive_maximum v2 { 5678 };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::topic_alias_maximum v1 { 1234 };
+        MQTT_NS::v5::property::topic_alias_maximum v2 { 5678 };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::topic_alias v1 { 1234 };
+        MQTT_NS::v5::property::topic_alias v2 { 5678 };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::maximum_qos v1 { MQTT_NS::qos::at_most_once };
+        MQTT_NS::v5::property::maximum_qos v2 { MQTT_NS::qos::at_least_once };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::retain_available v1 { false };
+        MQTT_NS::v5::property::retain_available v2 { true };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::maximum_packet_size v1 { 1234 };
+        MQTT_NS::v5::property::maximum_packet_size v2 { 5678 };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::wildcard_subscription_available v1 { false };
+        MQTT_NS::v5::property::wildcard_subscription_available v2 { true };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::subscription_identifier_available v1 { false };
+        MQTT_NS::v5::property::subscription_identifier_available v2 { true };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::shared_subscription_available v1 { false };
+        MQTT_NS::v5::property::shared_subscription_available v2 { true };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::content_type v1 { "abc"_mb };
+        MQTT_NS::v5::property::content_type v2 { "def"_mb };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::response_topic v1 { "abc"_mb };
+        MQTT_NS::v5::property::response_topic v2 { "def"_mb };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::correlation_data v1 { "ab\0c"_mb };
+        MQTT_NS::v5::property::correlation_data v2 { "ab\0f"_mb };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::assigned_client_identifier v1 { "abc"_mb };
+        MQTT_NS::v5::property::assigned_client_identifier v2 { "def"_mb };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::authentication_method v1 { "abc"_mb };
+        MQTT_NS::v5::property::authentication_method v2 { "def"_mb };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::authentication_data v1 { "abc"_mb };
+        MQTT_NS::v5::property::authentication_data v2 { "def"_mb };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::response_information v1 { "abc"_mb };
+        MQTT_NS::v5::property::response_information v2 { "def"_mb };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::server_reference v1 { "abc"_mb };
+        MQTT_NS::v5::property::server_reference v2 { "def"_mb };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::reason_string v1 { "abc"_mb };
+        MQTT_NS::v5::property::reason_string v2 { "def"_mb };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+    {
+        MQTT_NS::v5::property::user_property v1 { "abc"_mb, "def"_mb };
+        MQTT_NS::v5::property::user_property v2 { "abc"_mb, "ghi"_mb };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
+
+    {
+        MQTT_NS::v5::property::user_property v1 { "abc"_mb, "def"_mb };
+        MQTT_NS::v5::property::user_property v2 { "abc"_mb, "ghi"_mb };
+
+        MQTT_NS::v5::properties ps1 { v1, v2 };
+        MQTT_NS::v5::properties ps2 { v2, v1 };
+        BOOST_TEST(v1 == v1);
+        BOOST_TEST(v1 != v2);
+        BOOST_TEST(v1 < v2);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
