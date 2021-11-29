@@ -130,6 +130,55 @@ inline void fill(property_variant const& pv, Iterator b, Iterator e) {
     MQTT_NS::visit(vis, pv);
 }
 
+struct less_than_visitor {
+    template <typename T>
+    bool operator()(T const& lhs, T const& rhs) const {
+        return lhs < rhs;
+    }
+    template <typename T, typename U>
+    bool operator()(T const& lhs, U const& rhs) const {
+        return lhs.id() < rhs.id();
+    }
+};
+
+inline
+bool operator<(property_variant const& lhs, property_variant const& rhs) {
+    return MQTT_NS::visit(
+        less_than_visitor(),
+        lhs,
+        rhs
+    );
+}
+
+struct equal_visitor {
+    template <typename T>
+    bool operator()(T const& lhs, T const& rhs) const {
+        return lhs == rhs;
+    }
+    template <typename T, typename U>
+    bool operator()(T const&, U const&) const {
+        return false;
+    }
+};
+
+inline
+bool operator==(property_variant const& lhs, property_variant const& rhs) {
+    return MQTT_NS::visit(
+        equal_visitor(),
+        lhs,
+        rhs
+    );
+}
+
+inline
+bool operator!=(property_variant const& lhs, property_variant const& rhs) {
+    return !MQTT_NS::visit(
+        equal_visitor(),
+        lhs,
+        rhs
+    );
+}
+
 template <typename... Visitors>
 inline
 void

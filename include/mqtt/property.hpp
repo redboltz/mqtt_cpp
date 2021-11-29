@@ -17,6 +17,7 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 #include <boost/container/static_vector.hpp>
+#include <boost/operators.hpp>
 
 #include <mqtt/namespace.hpp>
 #include <mqtt/optional.hpp>
@@ -52,7 +53,7 @@ enum class ostream_format {
 };
 
 template <std::size_t N>
-struct n_bytes_property {
+struct n_bytes_property : private boost::totally_ordered<n_bytes_property<N>> {
     explicit n_bytes_property(property::id id)
         :id_(id) {}
 
@@ -110,12 +111,20 @@ struct n_bytes_property {
         return 2;
     }
 
+    friend bool operator<(n_bytes_property<N> const& lhs, n_bytes_property<N> const& rhs) {
+        return std::tie(lhs.id_, lhs.buf_) < std::tie(rhs.id_, rhs.buf_);
+    }
+
+    friend bool operator==(n_bytes_property<N> const& lhs, n_bytes_property<N> const& rhs) {
+        return std::tie(lhs.id_, lhs.buf_) == std::tie(rhs.id_, rhs.buf_);
+    }
+
     static constexpr ostream_format const of_ = ostream_format::direct;
     property::id id_;
     boost::container::static_vector<char, N> buf_;
 };
 
-struct binary_property {
+struct binary_property : private boost::totally_ordered<binary_property> {
     binary_property(property::id id, buffer buf)
         :id_(id),
          buf_(force_move(buf)),
@@ -179,6 +188,14 @@ struct binary_property {
         return buf_;
     }
 
+    friend bool operator<(binary_property const& lhs, binary_property const& rhs) {
+        return std::tie(lhs.id_, lhs.buf_) < std::tie(rhs.id_, rhs.buf_);
+    }
+
+    friend bool operator==(binary_property const& lhs, binary_property const& rhs) {
+        return std::tie(lhs.id_, lhs.buf_) == std::tie(rhs.id_, rhs.buf_);
+    }
+
     static constexpr ostream_format const of_ = ostream_format::json_like;
     property::id id_;
     buffer buf_;
@@ -195,7 +212,7 @@ struct string_property : binary_property {
     }
 };
 
-struct variable_property {
+struct variable_property : private boost::totally_ordered<variable_property> {
     variable_property(property::id id, std::size_t value)
         :id_(id)  {
         variable_push(value_, value);
@@ -250,6 +267,18 @@ struct variable_property {
 
     constexpr std::size_t val() const {
         return std::get<0>(variable_length(value_));
+    }
+
+    friend bool operator<(variable_property const& lhs, variable_property const& rhs) {
+        auto const& lval = lhs.val();
+        auto const& rval = rhs.val();
+        return std::tie(lhs.id_, lval) < std::tie(rhs.id_, rval);
+    }
+
+    friend bool operator==(variable_property const& lhs, variable_property const& rhs) {
+        auto const& lval = lhs.val();
+        auto const& rval = rhs.val();
+        return std::tie(lhs.id_, lval) == std::tie(rhs.id_, rval);
     }
 
     static constexpr ostream_format const of_ = ostream_format::direct;
@@ -534,7 +563,7 @@ public:
 };
 
 
-class user_property {
+class user_property : private boost::totally_ordered<user_property> {
 public:
     user_property(buffer key, buffer val, bool key_already_checked = false, bool val_already_checked = false)
         : key_(force_move(key), key_already_checked), val_(force_move(val), val_already_checked) {}
@@ -612,6 +641,14 @@ public:
 
     constexpr buffer const& val() const {
         return val_.buf;
+    }
+
+    friend bool operator<(user_property const& lhs, user_property const& rhs) {
+        return std::tie(lhs.id_, lhs.key_.buf, lhs.val_.buf) < std::tie(rhs.id_, rhs.key_.buf, rhs.val_.buf);
+    }
+
+    friend bool operator==(user_property const& lhs, user_property const& rhs) {
+        return std::tie(lhs.id_, lhs.key_.buf, lhs.val_.buf) == std::tie(rhs.id_, rhs.key_.buf, rhs.val_.buf);
     }
 
     static constexpr detail::ostream_format const of_ = detail::ostream_format::key_val;
