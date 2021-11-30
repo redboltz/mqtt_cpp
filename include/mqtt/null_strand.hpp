@@ -49,7 +49,12 @@ struct null_strand {
     }
     template <typename Func, typename Allocator>
     void dispatch(Func&& f, Allocator) const {
-        std::forward<Func>(f)();
+        as::dispatch(
+            ioc_,
+            [f = std::forward<Func>(f)] () mutable {
+                std::move(f)();
+            }
+        );
     }
     void on_work_started() const noexcept {}
     void on_work_finished() const noexcept {}
