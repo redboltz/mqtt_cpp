@@ -26,6 +26,7 @@ public:
     virtual void async_write(std::vector<as::const_buffer>, std::function<void(error_code, std::size_t)>) = 0;
     virtual std::size_t write(std::vector<as::const_buffer>, boost::system::error_code&) = 0;
     virtual void post(std::function<void()>) = 0;
+    virtual void dispatch(std::function<void()>) = 0;
     virtual as::ip::tcp::socket::lowest_layer_type& lowest_layer() = 0;
     virtual any native_handle() = 0;
     virtual void clean_shutdown_and_close(boost::system::error_code&) = 0;

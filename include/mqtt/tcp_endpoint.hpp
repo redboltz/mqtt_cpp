@@ -76,6 +76,13 @@ public:
         );
     }
 
+    MQTT_ALWAYS_INLINE void dispatch(std::function<void()> handler) override final {
+        as::dispatch(
+            strand_,
+            force_move(handler)
+        );
+    }
+
     MQTT_ALWAYS_INLINE as::ip::tcp::socket::lowest_layer_type& lowest_layer() override final {
         return tcp_.lowest_layer();
     }
