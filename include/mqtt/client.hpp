@@ -1114,6 +1114,7 @@ protected:
 #if defined(MQTT_USE_TLS)
         ctx_.set_verify_mode(tls::verify_peer);
 #endif // defined(MQTT_USE_TLS)
+        setup_socket(socket_);
     }
 
 private:
