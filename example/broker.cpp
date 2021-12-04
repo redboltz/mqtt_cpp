@@ -6,6 +6,8 @@
 
 #include <mqtt/config.hpp>
 #include <mqtt/setup_log.hpp>
+#include <mqtt/null_mutex.hpp>
+#include <mqtt/strand.hpp>
 #include <mqtt/broker/broker.hpp>
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
@@ -15,7 +17,7 @@
 
 namespace as = boost::asio;
 
-using con_t = MQTT_NS::server<>::endpoint_t;
+using con_t = MQTT_NS::server<MQTT_NS::strand, MQTT_NS::null_mutex>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
 
 
@@ -60,7 +62,7 @@ public:
     }
 
 private:
-    MQTT_NS::server<> server_;
+    MQTT_NS::server<MQTT_NS::strand, MQTT_NS::null_mutex> server_;
     MQTT_NS::broker::broker_t& b_;
 };
 
@@ -92,7 +94,7 @@ public:
         );
 
         server_.set_accept_handler(
-            [&](std::shared_ptr<MQTT_NS::server_tls<>::endpoint_t> spep) {
+            [&](std::shared_ptr<MQTT_NS::server_tls<MQTT_NS::strand, MQTT_NS::null_mutex>::endpoint_t> spep) {
                 b_.handle_accept(MQTT_NS::force_move(spep));
             }
         );
@@ -125,7 +127,7 @@ public:
     }
 
 private:
-    MQTT_NS::server_tls<> server_;
+    MQTT_NS::server_tls<MQTT_NS::strand, MQTT_NS::null_mutex> server_;
     MQTT_NS::broker::broker_t& b_;
 };
 
@@ -156,7 +158,7 @@ public:
         );
 
         server_.set_accept_handler(
-            [&](std::shared_ptr<MQTT_NS::server_ws<>::endpoint_t> spep) {
+            [&](std::shared_ptr<MQTT_NS::server_ws<MQTT_NS::strand, MQTT_NS::null_mutex>::endpoint_t> spep) {
                 b_.handle_accept(MQTT_NS::force_move(spep));
             }
         );
@@ -173,7 +175,7 @@ public:
     }
 
 private:
-    MQTT_NS::server_ws<> server_;
+    MQTT_NS::server_ws<MQTT_NS::strand, MQTT_NS::null_mutex> server_;
     MQTT_NS::broker::broker_t& b_;
 };
 
@@ -206,7 +208,7 @@ public:
         );
 
         server_.set_accept_handler(
-            [&](std::shared_ptr<MQTT_NS::server_tls_ws<>::endpoint_t> spep) {
+            [&](std::shared_ptr<MQTT_NS::server_tls_ws<MQTT_NS::strand, MQTT_NS::null_mutex>::endpoint_t> spep) {
                 b_.handle_accept(MQTT_NS::force_move(spep));
             }
         );
@@ -239,7 +241,7 @@ public:
     }
 
 private:
-    MQTT_NS::server_tls_ws<> server_;
+    MQTT_NS::server_tls_ws<MQTT_NS::strand, MQTT_NS::null_mutex> server_;
     MQTT_NS::broker::broker_t& b_;
 };
 

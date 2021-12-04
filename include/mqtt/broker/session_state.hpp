@@ -109,7 +109,7 @@ struct session_state {
     }
 
     bool online() const {
-        return bool(con_);
+        return online_;
     }
 
     template <typename SessionExpireHandler>
@@ -155,7 +155,7 @@ struct session_state {
             }
         );
         qos2_publish_handled_ = con_->get_qos2_publish_handled_pids();
-        con_.reset();
+        online_ = false;
 
         if (session_expiry_interval_ &&
             session_expiry_interval_.value() != std::chrono::seconds(session_never_expire)) {
@@ -198,7 +198,6 @@ struct session_state {
 
         BOOST_ASSERT(online());
 
-        std::lock_guard<mutex> g(mtx_offline_messages_);
         if (offline_messages_.empty()) {
             auto qos_value = pubopts.get_qos();
             if (qos_value == qos::at_least_once ||
@@ -260,25 +259,36 @@ struct session_state {
         publish_options pubopts,
         v5::properties props) {
 
-        if (online()) {
-            publish(
-                timer_ioc,
-                force_move(pub_topic),
-                force_move(contents),
+        con_->socket().dispatch(
+            [
+                this,
+                &timer_ioc,
+                pub_topic = force_move(pub_topic),
+                contents = force_move(contents),
                 pubopts,
-                force_move(props)
-            );
-        }
-        else {
-            std::lock_guard<mutex> g(mtx_offline_messages_);
-            offline_messages_.push_back(
-                timer_ioc,
-                force_move(pub_topic),
-                force_move(contents),
-                pubopts,
-                force_move(props)
-            );
-        }
+                props = force_move(props)
+            ]
+            () mutable {
+                if (online()) {
+                    publish(
+                        timer_ioc,
+                        force_move(pub_topic),
+                        force_move(contents),
+                        pubopts,
+                        force_move(props)
+                    );
+                }
+                else {
+                    offline_messages_.push_back(
+                        timer_ioc,
+                        force_move(pub_topic),
+                        force_move(contents),
+                        pubopts,
+                        force_move(props)
+                    );
+                }
+            }
+        );
     }
 
     void set_clean_handler(std::function<void()> handler) {
@@ -295,7 +305,6 @@ struct session_state {
             inflight_messages_.clear();
         }
         {
-            std::lock_guard<mutex> g(mtx_offline_messages_);
             offline_messages_.clear();
         }
         shared_targets_.erase(*this);
@@ -473,13 +482,11 @@ struct session_state {
 
     void send_all_offline_messages() {
         BOOST_ASSERT(con_);
-        std::lock_guard<mutex> g(mtx_offline_messages_);
         offline_messages_.send_until_fail(*con_);
     }
 
     void send_offline_messages_by_packet_id_release() {
         BOOST_ASSERT(con_);
-        std::lock_guard<mutex> g(mtx_offline_messages_);
         offline_messages_.send_until_fail(*con_);
     }
 
@@ -504,6 +511,7 @@ struct session_state {
             con->restore_qos2_publish_handled_pids(qos2_publish_handled_);
         }
         con_ = force_move(con);
+        online_ = true;
     }
 
     con_sp_t const& con() const {
@@ -579,7 +587,6 @@ private:
     mutable mutex mtx_inflight_messages_;
     inflight_messages inflight_messages_;
 
-    mutable mutex mtx_offline_messages_;
     offline_messages offline_messages_;
 
     std::set<sub_con_map::handle> handles_; // to efficient remove
@@ -592,6 +599,8 @@ private:
 
     optional<std::string> response_topic_;
     std::function<void()> clean_handler_;
+
+    bool online_ = true;
 };
 
 class session_states {

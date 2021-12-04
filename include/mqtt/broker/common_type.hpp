@@ -11,10 +11,12 @@
 
 #include <mqtt/broker/broker_namespace.hpp>
 #include <mqtt/server.hpp>
+#include <mqtt/null_mutex.hpp>
+#include <mqtt/strand.hpp>
 
 MQTT_BROKER_NS_BEGIN
 
-using endpoint_t = server<>::endpoint_t;
+using endpoint_t = server<MQTT_NS::strand, MQTT_NS::null_mutex>::endpoint_t;
 using con_sp_t = std::shared_ptr<endpoint_t>;
 using con_wp_t = std::weak_ptr<endpoint_t>;
 using packet_id_t = endpoint_t::packet_id_t;

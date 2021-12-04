@@ -16,7 +16,7 @@
 namespace mi = boost::multi_index;
 namespace as = boost::asio;
 
-using con_t = MQTT_NS::server<>::endpoint_t;
+using con_t = MQTT_NS::server<MQTT_NS::strand, MQTT_NS::null_mutex>::endpoint_t;
 using con_sp_t = std::shared_ptr<con_t>;
 
 class test_server_no_tls {
@@ -55,7 +55,7 @@ public:
     }
 
 private:
-    MQTT_NS::server<> server_;
+    MQTT_NS::server<MQTT_NS::strand, MQTT_NS::null_mutex> server_;
     MQTT_NS::broker::broker_t& b_;
 };
 
