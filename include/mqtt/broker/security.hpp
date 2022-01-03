@@ -14,6 +14,7 @@
 #include <mqtt/optional.hpp>
 
 #include <map>
+#include <set>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -51,18 +52,19 @@ struct security
 
 
     struct authorization
-    {
-        std::string topic;
+    {        
         enum class type {
             deny, allow
         };
 
-        type type_;
+        type sub_type;
         std::vector<std::string> sub;
+
+        type pub_type;
         std::vector<std::string> pub;
 
-        authorization(std::string const& topic, type const& type_)
-            : topic(topic), type_(type_)
+        authorization()
+            : sub_type(type::deny), pub_type(type::deny)
         { }
     };
 
@@ -143,8 +145,10 @@ struct security
         anonymous = username;
 
         char const *topic = "#";
-        authorization auth(topic, authorization::type::allow);
+        authorization auth;
+        auth.sub_type = authorization::type::allow;
         auth.sub.push_back(username);
+        auth.pub_type = authorization::type::allow;
         auth.pub.push_back(username);
         authorization_.insert({ topic, auth });
 
@@ -199,23 +203,45 @@ struct security
 
             auto type = get_auth_type(i.second.get<std::string>("type"));
 
-            authorization auth(name, type);
+            authorization &auth = authorization_[name];
             if(i.second.get_child_optional("sub")) {
                 for(auto const& j: i.second.get_child("sub"))
                     auth.sub.push_back(j.second.get_value<std::string>());
+                auth.sub_type = type;
             }
 
             if(i.second.get_child_optional("pub")) {
                 for(auto const& j: i.second.get_child("pub"))
                     auth.pub.push_back(j.second.get_value<std::string>());
-            }
-
-            authorization_.insert({ name, auth });
+                auth.pub_type = type;
+            }            
         }
 
         hash_type = root.get<std::string>("config.hash");
         salt = root.get<std::string>("config.salt");
         validate();
+    }
+
+    std::vector<std::pair<std::string, authorization::type>> get_auth_sub_by_user(string_view username) const {
+        std::set<std::string> username_and_groups;
+        username_and_groups.insert(std::string(username));
+
+        for (auto const &i: groups_) {
+            if (std::find(i.second.members.begin(), i.second.members.end(), username) != i.second.members.end()) {
+                username_and_groups.insert(i.first);
+            }
+        }
+
+        std::vector<std::pair<std::string, authorization::type>> result;
+        for(auto const &i: authorization_) {
+            for (auto const &j: i.second.sub) {
+                if (username_and_groups.find(j) != username_and_groups.end()) {
+                    result.push_back(std::make_pair(i.first, i.second.sub_type));
+                }
+            }
+        }
+
+        return result;
     }
 
     authorization::type auth_pub(string_view const& topic, string_view const& username) const {
@@ -282,22 +308,22 @@ private:
                 validate_entry("topic " + i.first, j);
 
                 if(is_valid_user_name(j)) {
-                    auth_sub_map.insert_or_assign(i.first, j, i.second.type_);
+                    auth_sub_map.insert_or_assign(i.first, j, i.second.sub_type);
                 }
                 else if(is_valid_group_name(j)) {
                     for(auto const& z: groups_[j].members)
-                        auth_sub_map.insert_or_assign(i.first, z, i.second.type_);
+                        auth_sub_map.insert_or_assign(i.first, z, i.second.sub_type);
                 }
             }
             for(auto const& j: i.second.pub) {
                 validate_entry("topic " + i.first, j);
 
                 if(is_valid_user_name(j)) {
-                    auth_pub_map.insert_or_assign(i.first, j, i.second.type_);
+                    auth_pub_map.insert_or_assign(i.first, j, i.second.pub_type);
                 }
                 else if(is_valid_group_name(j)) {
                     for(auto const& z: groups_[j].members)
-                        auth_pub_map.insert_or_assign(i.first, z, i.second.type_);
+                        auth_pub_map.insert_or_assign(i.first, z, i.second.pub_type);
                 }
             }
         }
