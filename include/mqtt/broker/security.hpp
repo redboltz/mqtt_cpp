@@ -19,6 +19,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/optional.hpp>
+#include <boost/iterator/function_output_iterator.hpp>
 
 #include <boost/algorithm/hex.hpp>
 #include <boost/algorithm/string.hpp>
@@ -58,10 +59,10 @@ struct security
         };
 
         type sub_type;
-        std::vector<std::string> sub;
+        std::set<std::string> sub;
 
         type pub_type;
-        std::vector<std::string> pub;
+        std::set<std::string> pub;
 
         authorization()
             : sub_type(type::deny), pub_type(type::deny)
@@ -147,9 +148,9 @@ struct security
         char const *topic = "#";
         authorization auth;
         auth.sub_type = authorization::type::allow;
-        auth.sub.push_back(username);
+        auth.sub.insert(username);
         auth.pub_type = authorization::type::allow;
-        auth.pub.push_back(username);
+        auth.pub.insert(username);
         authorization_.insert({ topic, auth });
 
         validate();
@@ -206,13 +207,13 @@ struct security
             authorization &auth = authorization_[name];
             if(i.second.get_child_optional("sub")) {
                 for(auto const& j: i.second.get_child("sub"))
-                    auth.sub.push_back(j.second.get_value<std::string>());
+                    auth.sub.insert(j.second.get_value<std::string>());
                 auth.sub_type = type;
             }
 
             if(i.second.get_child_optional("pub")) {
                 for(auto const& j: i.second.get_child("pub"))
-                    auth.pub.push_back(j.second.get_value<std::string>());
+                    auth.pub.insert(j.second.get_value<std::string>());
                 auth.pub_type = type;
             }            
         }
@@ -234,10 +235,17 @@ struct security
 
         std::vector<std::pair<std::string, authorization::type>> result;
         for(auto const &i: authorization_) {
-            for (auto const &j: i.second.sub) {
-                if (username_and_groups.find(j) != username_and_groups.end()) {
-                    result.push_back(std::make_pair(i.first, i.second.sub_type));
-                }
+            bool sets_intersect = false;
+            auto store_intersect = [&sets_intersect](std::string const &) mutable { sets_intersect = true; };
+
+            std::set_intersection(
+                i.second.sub.begin(), i.second.sub.end(),
+                username_and_groups.begin(), username_and_groups.end(),
+                boost::make_function_output_iterator(std::ref(store_intersect))
+            );
+
+            if (sets_intersect) {
+                result.push_back(std::make_pair(i.first, i.second.sub_type));
             }
         }
 
@@ -268,6 +276,141 @@ struct security
         auto i = result.find(username);
         if(i == result.end()) return authorization::type::deny;
         return i->second;
+    }
+
+    static bool is_hash(std::string const &level) { return level == "#"; }
+    static bool is_plus(std::string const &level) { return level == "+"; }
+    static bool is_literal(std::string const &level) { return !is_hash(level) && !is_plus(level); }
+
+    static optional<std::string> is_subscribe_allowed(std::vector<std::string> const &authorized_filter, std::vector<std::string> const &subscription_filter)
+    {
+        optional<std::string> result;
+        auto append_result = [&result](std::string const &token) {
+              if (result) {
+                  result.value() += topic_filter_separator + token;
+              } else {
+                  result = optional<std::string>(token);
+              }
+          };
+
+        auto filter_begin = authorized_filter.begin();
+        auto subscription_begin = subscription_filter.begin();
+
+        while (filter_begin < authorized_filter.end() && subscription_begin < subscription_filter.end()) {
+            auto auth = *filter_begin;
+            ++filter_begin;
+
+            auto sub = *subscription_begin;
+            ++subscription_begin;
+
+            if (is_hash(auth)) {
+                append_result(sub);
+
+                while (subscription_begin < subscription_filter.end()) {
+                    append_result(*subscription_begin);
+                    ++subscription_begin;
+                }
+
+                return result;
+            }
+
+           if (is_hash(sub)) {
+                append_result(auth);
+
+                while(filter_begin < authorized_filter.end()) {
+                    append_result(*filter_begin);
+                    ++filter_begin;
+                }
+
+                return result;
+            }
+
+            if (is_plus(auth)) {
+                append_result(sub);
+            }  else if (is_plus(sub)) {
+                append_result(auth);
+            } else
+            {
+                if (auth != sub)  {
+                    return optional<std::string>();
+                }
+
+                append_result(auth);
+            }
+        }
+
+        if ( filter_begin < authorized_filter.end() || subscription_begin < subscription_filter.end()) {
+            return optional<std::string>();
+        }
+
+        return result;
+    }
+
+    static optional<std::string> is_subscribe_allowed(std::string const &authorized_filter, std::string const &subscription_filter)
+    {
+        return is_subscribe_allowed(get_topic_filter_tokens(authorized_filter), get_topic_filter_tokens(subscription_filter));
+    }
+
+    static bool is_subscribe_denied(std::vector<std::string> const &deny_filter, std::vector<std::string> const &subscription_filter)
+    {
+        auto filter_begin = deny_filter.begin();
+        auto subscription_begin = subscription_filter.begin();
+
+        while (filter_begin < deny_filter.end() && subscription_begin < subscription_filter.end()) {
+            std::string deny = *filter_begin;
+            ++filter_begin;
+
+            std::string sub = *subscription_begin;
+            ++subscription_begin;
+
+            if(deny != sub) {
+                if (is_hash(deny)) {
+                    return true;
+                }
+
+                if (is_hash(sub)) {
+                    return false;
+                }
+
+                if (is_plus(deny)) {
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        return (filter_begin == deny_filter.end() && subscription_begin == subscription_filter.end());
+    }
+
+    static bool is_subscribe_denied(std::string const &deny_filter, std::string const &subscription_filter)
+    {
+        return is_subscribe_denied(get_topic_filter_tokens(deny_filter), get_topic_filter_tokens(subscription_filter));
+    }
+
+    std::vector<std::string> get_auth_sub_topics(std::string const &username, std::string const &topic)
+    {
+        auto result = get_auth_sub_by_user(username);
+
+        std::vector<std::string> auth_topics;
+        for(auto const &i: result) {
+            if (i.second == authorization::type::allow) {
+                auto entry = is_subscribe_allowed(i.first, topic);
+                if (entry) {
+                    auth_topics.push_back(entry.value());
+                }
+            } else {
+                for(auto j = auth_topics.begin(); j != auth_topics.end(); ) {
+                    if (is_subscribe_denied(i.first, topic)) {
+                        j = auth_topics.erase(j);
+                    } else {
+                        ++j;
+                    }
+                }
+            }
+        }
+
+        return auth_topics;
     }
 
     std::map<std::string, authentication> authentication_;
@@ -328,6 +471,17 @@ private:
             }
         }
     }   
+
+    static std::vector<std::string> get_topic_filter_tokens(MQTT_NS::string_view topic_filter) {
+        std::vector<std::string> result;
+        MQTT_NS::broker::topic_filter_tokenizer(topic_filter, [&result](auto str) {
+            result.push_back(std::string(str));
+            return true;
+        });
+
+        return result;
+    }
+
 };
 
 MQTT_BROKER_NS_END
