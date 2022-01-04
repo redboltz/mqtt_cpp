@@ -278,9 +278,9 @@ struct security
         return i->second;
     }
 
-    static bool is_hash(std::string const &level) { return level == "#"; }
-    static bool is_plus(std::string const &level) { return level == "+"; }
-    static bool is_literal(std::string const &level) { return !is_hash(level) && !is_plus(level); }
+    static bool is_hash(string_view const &level) { return level == "#"; }
+    static bool is_plus(string_view const &level) { return level == "+"; }
+    static bool is_literal(string_view const &level) { return !is_hash(level) && !is_plus(level); }
 
     static optional<std::string> is_subscribe_allowed(std::vector<std::string> const &authorized_filter, std::vector<std::string> const &subscription_filter)
     {
@@ -346,7 +346,7 @@ struct security
         return result;
     }
 
-    static optional<std::string> is_subscribe_allowed(std::string const &authorized_filter, std::string const &subscription_filter)
+    static optional<std::string> is_subscribe_allowed(string_view const &authorized_filter, string_view const &subscription_filter)
     {
         return is_subscribe_allowed(get_topic_filter_tokens(authorized_filter), get_topic_filter_tokens(subscription_filter));
     }
@@ -383,12 +383,12 @@ struct security
         return (filter_begin == deny_filter.end() && subscription_begin == subscription_filter.end());
     }
 
-    static bool is_subscribe_denied(std::string const &deny_filter, std::string const &subscription_filter)
+    static bool is_subscribe_denied(string_view const &deny_filter, string_view const &subscription_filter)
     {
         return is_subscribe_denied(get_topic_filter_tokens(deny_filter), get_topic_filter_tokens(subscription_filter));
     }
 
-    std::vector<std::string> get_auth_sub_topics(std::string const &username, std::string const &topic)
+    std::vector<std::string> get_auth_sub_topics(string_view const &username, string_view const &topic)
     {
         auto result = get_auth_sub_by_user(username);
 
@@ -472,9 +472,9 @@ private:
         }
     }   
 
-    static std::vector<std::string> get_topic_filter_tokens(MQTT_NS::string_view topic_filter) {
+    static std::vector<std::string> get_topic_filter_tokens(string_view topic_filter) {
         std::vector<std::string> result;
-        MQTT_NS::broker::topic_filter_tokenizer(topic_filter, [&result](auto str) {
+        topic_filter_tokenizer(topic_filter, [&result](auto str) {
             result.push_back(std::string(str));
             return true;
         });

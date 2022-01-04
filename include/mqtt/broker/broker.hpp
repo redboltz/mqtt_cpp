@@ -1955,25 +1955,31 @@ private:
             std::vector<suback_return_code> res;
             res.reserve(entries.size());
             for (auto& e : entries) {
-                res.emplace_back(qos_to_suback_return_code(e.subopts.get_qos())); // converts to granted_qos_x
-                ssr.get().subscribe(
-                    force_move(e.share_name),
-                    e.topic_filter,
-                    e.subopts,
-                    [&] {
-                        std::shared_lock<mutex> g(mtx_retains_);
-                        retains_.find(
-                            e.topic_filter,
-                            [&](retain_t const& r) {
-                                retain_deliver.emplace_back(
-                                    [&publish_proc, &r, qos_value = e.subopts.get_qos(), sid] {
-                                        publish_proc(r, qos_value, sid);
-                                    }
-                                );
-                            }
-                        );
-                    }
-                );
+                if (!security.get_auth_sub_topics(ss.get_username(), e.topic_filter).empty() ) {
+                    res.emplace_back(qos_to_suback_return_code(e.subopts.get_qos())); // converts to granted_qos_x
+                    ssr.get().subscribe(
+                        force_move(e.share_name),
+                        e.topic_filter,
+                        e.subopts,
+                        [&] {
+                            std::shared_lock<mutex> g(mtx_retains_);
+                            retains_.find(
+                                e.topic_filter,
+                                [&](retain_t const& r) {
+                                    retain_deliver.emplace_back(
+                                        [&publish_proc, &r, qos_value = e.subopts.get_qos(), sid] {
+                                            publish_proc(r, qos_value, sid);
+                                        }
+                                    );
+                                }
+                            );
+                        }
+                    );
+                } else
+                {
+                    // User not authorized to subscribe to topic filter
+                    res.emplace_back(suback_return_code::failure);
+                }
             }
             // Acknowledge the subscriptions, and the registered QOS settings
             ep.async_suback(
@@ -1999,26 +2005,32 @@ private:
             std::vector<v5::suback_reason_code> res;
             res.reserve(entries.size());
             for (auto& e : entries) {
-                res.emplace_back(v5::qos_to_suback_reason_code(e.subopts.get_qos())); // converts to granted_qos_x
-                ssr.get().subscribe(
-                    force_move(e.share_name),
-                    e.topic_filter,
-                    e.subopts,
-                    [&] {
-                        std::shared_lock<mutex> g(mtx_retains_);
-                        retains_.find(
-                            e.topic_filter,
-                            [&](retain_t const& r) {
-                                retain_deliver.emplace_back(
-                                    [&publish_proc, &r, qos_value = e.subopts.get_qos(), sid] {
-                                        publish_proc(r, qos_value, sid);
-                                    }
-                                );
-                            }
-                        );
-                    },
-                    sid
-                );
+                if (!security.get_auth_sub_topics(ss.get_username(), e.topic_filter).empty() ) {
+                    res.emplace_back(v5::qos_to_suback_reason_code(e.subopts.get_qos())); // converts to granted_qos_x
+                    ssr.get().subscribe(
+                        force_move(e.share_name),
+                        e.topic_filter,
+                        e.subopts,
+                        [&] {
+                            std::shared_lock<mutex> g(mtx_retains_);
+                            retains_.find(
+                                e.topic_filter,
+                                [&](retain_t const& r) {
+                                    retain_deliver.emplace_back(
+                                        [&publish_proc, &r, qos_value = e.subopts.get_qos(), sid] {
+                                            publish_proc(r, qos_value, sid);
+                                        }
+                                    );
+                                }
+                            );
+                        },
+                        sid
+                    );
+                } else
+                {
+                    // User not authorized to subscribe to topic filter
+                    res.emplace_back(v5::suback_reason_code::not_authorized);
+                }
             }
             if (h_subscribe_props_) h_subscribe_props_(props);
             // Acknowledge the subscriptions, and the registered QOS settings
