@@ -309,11 +309,11 @@ struct security
             ++filter_begin;
 
             if (is_hash(auth)) {
-                append_result(string_view(subscription_begin, std::distance(subscription_begin, subscription_filter.end())));
+                append_result(string_view(subscription_begin, static_cast<size_t>(std::distance(subscription_begin, subscription_filter.end()))));
                 return result;
             }
 
-            auto sub = string_view(subscription_begin, std::distance(subscription_begin, subscription_next));
+            auto sub = string_view(subscription_begin, static_cast<size_t>(std::distance(subscription_begin, subscription_next)));
             if (is_hash(sub)) {
                 append_result(auth);
 
