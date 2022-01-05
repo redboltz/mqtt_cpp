@@ -287,39 +287,34 @@ struct security
     static bool is_plus(string_view const &level) { return level == "+"; }
     static bool is_literal(string_view const &level) { return !is_hash(level) && !is_plus(level); }
 
-    static optional<std::string> is_subscribe_allowed(std::vector<std::string> const &authorized_filter, std::vector<std::string> const &subscription_filter)
+    static optional<std::string> is_subscribe_allowed(std::vector<std::string> const &authorized_filter, string_view const &subscription_filter)
     {
         optional<std::string> result;
-        auto append_result = [&result](std::string const &token) {
+        auto append_result = [&result](string_view const &token) {
               if (result) {
-                  result.value() += topic_filter_separator + token;
+                  result.value() += topic_filter_separator;
+                  result.value().append(token.data(), token.size());
               } else {
                   result = optional<std::string>(token);
               }
           };
 
         auto filter_begin = authorized_filter.begin();
+
         auto subscription_begin = subscription_filter.begin();
+        auto subscription_next = topic_filter_tokenizer_next(subscription_begin, subscription_filter.end());
 
         while (filter_begin < authorized_filter.end() && subscription_begin < subscription_filter.end()) {
             auto auth = *filter_begin;
             ++filter_begin;
 
-            auto sub = *subscription_begin;
-            ++subscription_begin;
-
             if (is_hash(auth)) {
-                append_result(sub);
-
-                while (subscription_begin < subscription_filter.end()) {
-                    append_result(*subscription_begin);
-                    ++subscription_begin;
-                }
-
+                append_result(string_view(subscription_begin, std::distance(subscription_begin, subscription_filter.end())));
                 return result;
             }
 
-           if (is_hash(sub)) {
+            auto sub = string_view(subscription_begin, std::distance(subscription_begin, subscription_next));
+            if (is_hash(sub)) {
                 append_result(auth);
 
                 while(filter_begin < authorized_filter.end()) {
@@ -342,6 +337,10 @@ struct security
 
                 append_result(auth);
             }
+
+            subscription_begin = std::next(subscription_next);
+            if (subscription_next == subscription_filter.end()) break;
+            subscription_next = topic_filter_tokenizer_next(subscription_begin, subscription_filter.end());
         }
 
         if ( filter_begin < authorized_filter.end() || subscription_begin < subscription_filter.end()) {
@@ -349,11 +348,6 @@ struct security
         }
 
         return result;
-    }
-
-    static optional<std::string> is_subscribe_allowed(std::vector<std::string> const &authorized_filter, string_view const &subscription_filter)
-    {
-        return is_subscribe_allowed(authorized_filter, get_topic_filter_tokens(subscription_filter));
     }
 
     static bool is_subscribe_denied(std::vector<std::string> const &deny_filter, string_view const &subscription_filter)

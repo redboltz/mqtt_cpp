@@ -16,12 +16,17 @@ MQTT_BROKER_NS_BEGIN
 
 static constexpr char topic_filter_separator = '/';
 
+template<typename Iterator>
+inline Iterator topic_filter_tokenizer_next(Iterator first, Iterator last) {
+    return std::find(first, last, topic_filter_separator);
+}
+
 template<typename Iterator, typename Output>
 inline void topic_filter_tokenizer(Iterator first, Iterator last, Output write) {
-    auto pos = std::find(first, last, topic_filter_separator);
+    auto pos = topic_filter_tokenizer_next(first, last);
     while (write(first, pos) && pos != last) {
         first = std::next(pos);
-        pos = std::find(first, last, topic_filter_separator);
+        pos = topic_filter_tokenizer_next(first, last);
     }
 }
 
