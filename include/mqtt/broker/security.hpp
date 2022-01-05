@@ -58,6 +58,8 @@ struct security
             deny, allow
         };
 
+        std::vector<std::string> topic_tokens;
+
         type sub_type;
         std::set<std::string> sub;
 
@@ -147,6 +149,7 @@ struct security
 
         char const *topic = "#";
         authorization auth;
+        auth.topic_tokens = get_topic_filter_tokens("#");
         auth.sub_type = authorization::type::allow;
         auth.sub.insert(username);
         auth.pub_type = authorization::type::allow;
@@ -205,6 +208,8 @@ struct security
             auto type = get_auth_type(i.second.get<std::string>("type"));
 
             authorization &auth = authorization_[name];
+            auth.topic_tokens = get_topic_filter_tokens(name);
+
             if(i.second.get_child_optional("sub")) {
                 for(auto const& j: i.second.get_child("sub"))
                     auth.sub.insert(j.second.get_value<std::string>());
@@ -346,46 +351,49 @@ struct security
         return result;
     }
 
-    static optional<std::string> is_subscribe_allowed(string_view const &authorized_filter, string_view const &subscription_filter)
+    static optional<std::string> is_subscribe_allowed(std::vector<std::string> const &authorized_filter, string_view const &subscription_filter)
     {
-        return is_subscribe_allowed(get_topic_filter_tokens(authorized_filter), get_topic_filter_tokens(subscription_filter));
+        return is_subscribe_allowed(authorized_filter, get_topic_filter_tokens(subscription_filter));
     }
 
-    static bool is_subscribe_denied(std::vector<std::string> const &deny_filter, std::vector<std::string> const &subscription_filter)
+    static bool is_subscribe_denied(std::vector<std::string> const &deny_filter, string_view const &subscription_filter)
     {
+        bool result = true;
         auto filter_begin = deny_filter.begin();
-        auto subscription_begin = subscription_filter.begin();
 
-        while (filter_begin < deny_filter.end() && subscription_begin < subscription_filter.end()) {
+        topic_filter_tokenizer(subscription_filter, [&](auto sub) {
+            if (filter_begin == deny_filter.end()) {
+                result = false;
+                return false;
+            };
+
             std::string deny = *filter_begin;
             ++filter_begin;
 
-            std::string sub = *subscription_begin;
-            ++subscription_begin;
-
             if(deny != sub) {
                 if (is_hash(deny)) {
-                    return true;
+                    result = true;
+                    return false;
                 }
 
                 if (is_hash(sub)) {
+                    result = false;
                     return false;
                 }
 
                 if (is_plus(deny)) {
-                    return true;
+                    result = true;
+                    return false;
                 }
 
+                result = false;
                 return false;
-            }
-        }
+            }    
 
-        return (filter_begin == deny_filter.end() && subscription_begin == subscription_filter.end());
-    }
+            return true;
+        });
 
-    static bool is_subscribe_denied(string_view const &deny_filter, string_view const &subscription_filter)
-    {
-        return is_subscribe_denied(get_topic_filter_tokens(deny_filter), get_topic_filter_tokens(subscription_filter));
+        return result;
     }
 
     std::vector<std::string> get_auth_sub_topics(string_view const &username, string_view const &topic)
@@ -395,13 +403,13 @@ struct security
         std::vector<std::string> auth_topics;
         for(auto const &i: result) {
             if (i.second == authorization::type::allow) {
-                auto entry = is_subscribe_allowed(i.first, topic);
+                auto entry = is_subscribe_allowed(authorization_[i.first].topic_tokens, topic);
                 if (entry) {
                     auth_topics.push_back(entry.value());
                 }
             } else {
                 for(auto j = auth_topics.begin(); j != auth_topics.end(); ) {
-                    if (is_subscribe_denied(i.first, topic)) {
+                    if (is_subscribe_denied(authorization_[i.first].topic_tokens, topic)) {
                         j = auth_topics.erase(j);
                     } else {
                         ++j;
@@ -411,6 +419,17 @@ struct security
         }
 
         return auth_topics;
+    }
+
+    // Get the individual path elements of the topic filter
+    static std::vector<std::string> get_topic_filter_tokens(string_view topic_filter) {
+        std::vector<std::string> result;
+        topic_filter_tokenizer(topic_filter, [&result](auto str) {
+            result.push_back(std::string(str));
+            return true;
+        });
+
+        return result;
     }
 
     std::map<std::string, authentication> authentication_;
@@ -471,16 +490,6 @@ private:
             }
         }
     }   
-
-    static std::vector<std::string> get_topic_filter_tokens(string_view topic_filter) {
-        std::vector<std::string> result;
-        topic_filter_tokenizer(topic_filter, [&result](auto str) {
-            result.push_back(std::string(str));
-            return true;
-        });
-
-        return result;
-    }
 
 };
 

@@ -136,27 +136,43 @@ BOOST_AUTO_TEST_CASE(test_hash) {
 }
 
 BOOST_AUTO_TEST_CASE(authorized_check) {
-    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed("example/value/a", "example/value/a").value() == "example/value/a");
-    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed("example/+/a", "example/value/a").value() == "example/value/a");
-    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed("example/value/a", "example/+/a").value() == "example/value/a");
-    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed("example/#", "example/value/a").value() == "example/value/a");
-    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed("example/value/a", "example/#").value() == "example/value/a");
-    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed("example/deny", "example/test"));
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/value/a"), "example/value/a").value() == "example/value/a");
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/+/a"), "example/value/a").value() == "example/value/a");
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/value/a"), "example/+/a").value() == "example/value/a");
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/#"), "example/value/a").value() == "example/value/a");
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/value/a"), "example/#").value() == "example/value/a");
+    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/deny"), "example/test"));
 }
 
 BOOST_AUTO_TEST_CASE(deny_check) {
-    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_denied("example/value/a", "example/value/a"));
-    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_denied("example/value/a", "example/value/b"));
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_denied(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/value/a"), "example/value/a"));
+    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_denied(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/value/a"), "example/value/b"));
 
-    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_denied("example/+/a", "example/value/a"));
-    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_denied("example/+/a", "example/+/a"));
-    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_denied("example/value/a", "example/+/a"));
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_denied(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/+/a"), "example/value/a"));
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_denied(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/+/a"), "example/+/a"));
+    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_denied(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/value/a"), "example/+/a"));
 
-    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_denied("example/#", "example/#"));
-    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_denied("example/#", "example/+"));
-    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_denied("example/+", "example/#"));
-    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_denied("example/#", "example/value"));
-    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_denied("example/value", "example/#"));
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_denied(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/#"), "example/#"));
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_denied(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/#"), "example/+"));
+    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_denied(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/+"), "example/#"));
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_denied(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/#"), "example/value"));
+    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_denied(
+        MQTT_NS::broker::security::get_topic_filter_tokens("example/value"), "example/#"));
 }
 
 BOOST_AUTO_TEST_CASE(auth_check) {
@@ -164,8 +180,7 @@ BOOST_AUTO_TEST_CASE(auth_check) {
     std::string value = "{\"authentication\":[{\"name\":\"u1\",\"method\":\"password\",\"password\":\"75c111ce6542425228c157b1187076ed86e837f6085e3bb30b976114f70abc40\"},{\"name\":\"u2\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\",\"anonymous\"]}],\"authorization\":[{\"topic\":\"#\",\"type\":\"allow\",\"pub\":[\"@g1\"]},{\"topic\":\"#\",\"type\":\"deny\",\"sub\":[\"@g1\"]},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"],\"pub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"],\"pub\":[\"u1\",\"anonymous\"]}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}";
     BOOST_CHECK_NO_THROW(load_config(security, value));
 
-    auto result = security.get_auth_sub_by_user("u1");
-    BOOST_CHECK(result.size() == 3);
+    BOOST_CHECK(security.get_auth_sub_by_user("u1").size() == 3);
 
     BOOST_CHECK(!security.get_auth_sub_topics("u1", "sub/test").empty());
     BOOST_CHECK(security.get_auth_sub_topics("u1", "sub/topic1").empty());
