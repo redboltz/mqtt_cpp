@@ -21,7 +21,7 @@ BOOST_AUTO_TEST_CASE(default_config) {
     MQTT_NS::broker::security security;
     security.default_config();
 
-    BOOST_CHECK(security.authentication_["anonymous"].method_ == MQTT_NS::broker::security::authentication::method::anonymous);
+    BOOST_CHECK(security.authentication_["anonymous"].auth_method == MQTT_NS::broker::security::authentication::method::anonymous);
     BOOST_CHECK(!security.authentication_["anonymous"].password);
 
     BOOST_CHECK(security.login_anonymous());
@@ -44,17 +44,17 @@ BOOST_AUTO_TEST_CASE(json_load) {
 
     BOOST_CHECK(security.authentication_.size() == 3);
 
-    BOOST_CHECK(security.authentication_["u1"].method_ == MQTT_NS::broker::security::authentication::method::password);
+    BOOST_CHECK(security.authentication_["u1"].auth_method == MQTT_NS::broker::security::authentication::method::password);
     BOOST_CHECK(security.authentication_["u1"].password);
 
 #if defined(MQTT_USE_TLS)
     BOOST_CHECK(boost::iequals(*security.authentication_["u1"].password, MQTT_NS::broker::security::hash("aes256:salt:mypassword")));
 #endif
 
-    BOOST_CHECK(security.authentication_["u2"].method_ == MQTT_NS::broker::security::authentication::method::client_cert);
+    BOOST_CHECK(security.authentication_["u2"].auth_method == MQTT_NS::broker::security::authentication::method::client_cert);
     BOOST_CHECK(!security.authentication_["u2"].password);
 
-    BOOST_CHECK(security.authentication_["anonymous"].method_ == MQTT_NS::broker::security::authentication::method::anonymous);
+    BOOST_CHECK(security.authentication_["anonymous"].auth_method == MQTT_NS::broker::security::authentication::method::anonymous);
     BOOST_CHECK(!security.authentication_["anonymous"].password);
 
     BOOST_CHECK(security.groups_.size() == 1);

@@ -27,6 +27,7 @@
 #include <mqtt/broker/mutex.hpp>
 #include <mqtt/broker/uuid.hpp>
 
+#include <mqtt/broker/constant.hpp>
 #include <mqtt/broker/security.hpp>
 
 MQTT_BROKER_NS_BEGIN
@@ -302,8 +303,8 @@ public:
     /**
      * @brief configure the security settings
      */
-    void set_security(broker::security &&security) {
-        this->security = security;
+    void set_security(broker::security&& security) {
+        this->security = force_move(security);
     }
 
     // [end] for test setting
@@ -1054,10 +1055,12 @@ private:
             if (security.login_cert(ep.get_preauthed_user_name().value()))
                 username = ep.get_preauthed_user_name();
         }
-        else if (!noauth_username && !password)
+        else if (!noauth_username && !password) {
             username = security.login_anonymous();
-        else if (noauth_username && password)
+        }
+        else if (noauth_username && password) {
             username = security.login(*noauth_username, *password);
+        }
 
         if (!username) {
             MQTT_LOG("mqtt_broker", trace)
@@ -1955,7 +1958,7 @@ private:
             std::vector<suback_return_code> res;
             res.reserve(entries.size());
             for (auto& e : entries) {
-                if (!security.get_auth_sub_topics(ss.get_username(), e.topic_filter).empty() ) {
+                if (security.is_subscribe_authorized(ss.get_username(), e.topic_filter)) {
                     res.emplace_back(qos_to_suback_return_code(e.subopts.get_qos())); // converts to granted_qos_x
                     ssr.get().subscribe(
                         force_move(e.share_name),
@@ -1975,8 +1978,8 @@ private:
                             );
                         }
                     );
-                } else
-                {
+                }
+                else {
                     // User not authorized to subscribe to topic filter
                     res.emplace_back(suback_return_code::failure);
                 }
@@ -2005,7 +2008,7 @@ private:
             std::vector<v5::suback_reason_code> res;
             res.reserve(entries.size());
             for (auto& e : entries) {
-                if (!security.get_auth_sub_topics(ss.get_username(), e.topic_filter).empty() ) {
+                if (security.is_subscribe_authorized(ss.get_username(), e.topic_filter)) {
                     res.emplace_back(v5::qos_to_suback_reason_code(e.subopts.get_qos())); // converts to granted_qos_x
                     ssr.get().subscribe(
                         force_move(e.share_name),
@@ -2026,8 +2029,8 @@ private:
                         },
                         sid
                     );
-                } else
-                {
+                }
+                else {
                     // User not authorized to subscribe to topic filter
                     res.emplace_back(v5::suback_reason_code::not_authorized);
                 }
@@ -2156,6 +2159,7 @@ private:
         v5::properties props
     ) {
         // Get auth rights for this topic
+        // auth_users prepared once here, and then referred multiple times in subs_map_.modify() for efficiency
         auto auth_users = security.auth_sub(topic);
 
         // publish the message to subscribers.
@@ -2164,9 +2168,9 @@ private:
         auto deliver =
             [&] (session_state& ss, subscription& sub, auto const& auth_users) {
 
-                // See if this session is authorized to subscribe this topic
-                auto allowed = security.auth_sub_user(auth_users, ss.get_username());
-                if (allowed != security::authorization::type::allow) return;
+                // See if this session is authorized to subscribe this topic                
+                if (security::auth_sub_user(auth_users, ss.get_username()) !=
+                    security::authorization::type::allow) return;
 
                 publish_options new_pubopts = std::min(pubopts.get_qos(), sub.subopts.get_qos());
                 if (sub.subopts.get_rap() == rap::retain && pubopts.get_retain() == MQTT_NS::retain::yes) {

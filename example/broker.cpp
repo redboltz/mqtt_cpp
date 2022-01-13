@@ -65,13 +65,13 @@ private:
 #if defined(MQTT_USE_TLS)
 
 bool verify_certificate(bool preverified, boost::asio::ssl::verify_context& ctx, std::shared_ptr<MQTT_NS::optional<std::string>> const& username) {
-    if (!preverified) return true;
+    if (!preverified) return false;
     int depth = X509_STORE_CTX_get_error_depth(ctx.native_handle());
-    if (depth > 0) return true;
+    if (depth > 0) return false;
     X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
     X509_NAME* name = X509_get_subject_name(cert);
     std::string cname;
-    cname.resize(0xffff);
+    cname.resize(MQTT_NS::broker::max_cname_size);
     auto size = X509_NAME_get_text_by_NID(name, NID_commonName, &cname[0], static_cast<int>(cname.size()));
     cname.resize(static_cast<std::size_t>(size));
     MQTT_LOG("mqtt_broker", info) << "[clicrt] CNAME:" << cname;
