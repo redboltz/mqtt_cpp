@@ -1062,21 +1062,25 @@ private:
             username = security.login(*noauth_username, *password);
         }
 
-        if (!username) {
+        v5::properties connack_props;
+        connect_param cp = handle_connect_props(ep, props, will);
+        if (!handle_empty_client_id(spep, client_id, clean_start, connack_props)) return false;
+
+        if (!username) {         
             MQTT_LOG("mqtt_broker", trace)
                 << MQTT_ADD_VALUE(address, this)
                 << "User failed to login: " << (noauth_username ? std::string(*noauth_username) : std::string("anonymous user"));
-            disconnect_and_force_disconnect(spep, v5::disconnect_reason_code::not_authorized);
+
+            send_connack(ep, false, false, force_move(connack_props), [spep](error_code){
+                disconnect_and_force_disconnect(spep, v5::disconnect_reason_code::not_authorized);
+            });
+
             return true;
         }
 
         MQTT_LOG("mqtt_broker", trace)
             << MQTT_ADD_VALUE(address, this)
             << "User logged in as: '" << *username << "'";
-
-        v5::properties connack_props;
-        connect_param cp = handle_connect_props(ep, props, will);
-        if (!handle_empty_client_id(spep, client_id, clean_start, connack_props)) return false;
 
         /**
          * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Toc514345311
@@ -1117,7 +1121,7 @@ private:
                 // set_response_topic never modify key part
                 set_response_topic(const_cast<session_state&>(*it), connack_props);
             }
-            send_connack(ep, false, force_move(connack_props));
+            send_connack(ep, false, true, force_move(connack_props));
         }
         else if (it->online()) {
             // online overwrite
@@ -1133,7 +1137,7 @@ private:
                         // set_response_topic never modify key part
                         set_response_topic(const_cast<session_state&>(*it), connack_props);
                     }
-                    send_connack(ep, false, force_move(connack_props));
+                    send_connack(ep, false, true, force_move(connack_props));
                     idx.modify(
                         it,
                         [&](auto& e) {
@@ -1158,7 +1162,7 @@ private:
                     }
                     send_connack(
                         ep,
-                        true,
+                        true, true,
                         force_move(connack_props),
                         [
                             this,
@@ -1222,7 +1226,7 @@ private:
                     // set_response_topic never modify key part
                     set_response_topic(const_cast<session_state&>(*it), connack_props);
                 }
-                send_connack(ep, false, force_move(connack_props));
+                send_connack(ep, false, true, force_move(connack_props));
             }
         }
         else {
@@ -1237,7 +1241,7 @@ private:
                     // set_response_topic never modify key part
                     set_response_topic(const_cast<session_state&>(*it), connack_props);
                 }
-                send_connack(ep, false, force_move(connack_props));
+                send_connack(ep, false, true, force_move(connack_props));
                 idx.modify(
                     it,
                     [&](auto& e) {
@@ -1263,7 +1267,7 @@ private:
                 }
                 send_connack(
                     ep,
-                    true,
+                    true, true,
                     force_move(connack_props),
                     [
                         this,
@@ -1345,7 +1349,7 @@ private:
 
     void send_connack(
         endpoint_t& ep,
-        bool session_present,
+        bool session_present, bool authorized,
         v5::properties props,
         std::function<void(error_code)> finish = [](error_code){}
     ) {
@@ -1354,7 +1358,7 @@ private:
         case protocol_version::v3_1_1:
             if (connack_) ep.async_connack(
                 session_present,
-                connect_return_code::accepted,
+                authorized ? connect_return_code::accepted : connect_return_code::not_authorized,
                 [finish = force_move(finish)]
                 (error_code ec) {
                     finish(ec);
@@ -1369,7 +1373,7 @@ private:
                 props.emplace_back(v5::property::receive_maximum{receive_maximum_max});
                 if (connack_) ep.async_connack(
                     session_present,
-                    v5::connect_reason_code::success,
+                    authorized ? v5::connect_reason_code::success : v5::connect_reason_code::not_authorized,
                     force_move(props),
                     [finish = force_move(finish)]
                     (error_code ec) {
@@ -1381,7 +1385,7 @@ private:
                 // use connack_props_ for testing
                 if (connack_) ep.async_connack(
                     session_present,
-                    v5::connect_reason_code::success,
+                    authorized ? v5::connect_reason_code::success : v5::connect_reason_code::not_authorized,
                     connack_props_,
                     [finish = force_move(finish)]
                     (error_code ec) {
