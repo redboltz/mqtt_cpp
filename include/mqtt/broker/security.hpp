@@ -202,7 +202,7 @@ struct security {
 
         for (auto const& i: root.get_child("authorization")) {
             std::string name = i.second.get<std::string>("topic");
-            //if(!is_valid_topic(name)) throw std::runtime_error("An invalid topic was specified: " + name);
+            if(!validate_topic_filter(name)) throw std::runtime_error("An invalid topic filter was specified: " + name);
 
             auto type = get_auth_type(i.second.get<std::string>("type"));
 

@@ -19,7 +19,7 @@
 #include <mqtt/optional.hpp>
 #include <mqtt/buffer.hpp>
 
-#include <mqtt/broker/topic_filter_tokenizer.hpp>
+#include <mqtt/broker/topic_filter.hpp>
 
 MQTT_BROKER_NS_BEGIN
 
