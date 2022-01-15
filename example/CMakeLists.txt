@@ -12,6 +12,7 @@ LIST (APPEND exec_PROGRAMS
     redirect.cpp
     broker.cpp
     bench.cpp
+    client_cli.cpp
 )
 
 FIND_PACKAGE (Boost 1.67.0 REQUIRED COMPONENTS program_options)
