@@ -21,6 +21,7 @@
 #include <mqtt/remaining_length.hpp>
 #include <mqtt/reason_code.hpp>
 #include <mqtt/session_present.hpp>
+#include <mqtt/unique_scope_guard.hpp>
 #include <mqtt/utf8encoded_strings.hpp>
 #include <mqtt/variant.hpp>
 #include <mqtt/visitor_util.hpp>

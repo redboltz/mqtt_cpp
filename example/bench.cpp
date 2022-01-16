@@ -238,7 +238,12 @@ int main(int argc, char **argv) {
         for (auto const& e : vm) {
             std::cout << boost::format("%-16s") % e.first.c_str() << " : ";
             if (auto p = boost::any_cast<std::string>(&e.second.value())) {
-                std::cout << *p;
+                if (e.first.c_str() == std::string("password")) {
+                    std::cout << "********";
+                }
+                else {
+                    std::cout << *p;
+                }
             }
             else if (auto p = boost::any_cast<std::size_t>(&e.second.value())) {
                 std::cout << *p;

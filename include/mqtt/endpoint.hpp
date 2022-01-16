@@ -5132,10 +5132,6 @@ protected:
         pid_man_.clear();
     }
 
-    void set_client_id(protocol_version version) {
-        version_ = version;
-    }
-
 private:
     enum class connection_type {
         client,

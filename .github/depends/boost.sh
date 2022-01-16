@@ -32,10 +32,9 @@ while getopts "b:t:" c; do
       ;;
   esac
 done
-
-wget https://sourceforge.net/projects/boost/files/boost/1.76.0/boost_1_76_0.tar.bz2
-tar xf boost_1_76_0.tar.bz2
-cd boost_1_76_0
+wget https://boostorg.jfrog.io/artifactory/main/release/1.78.0/source/boost_1_78_0.tar.bz2
+tar xf boost_1_78_0.tar.bz2
+cd boost_1_78_0
 ./bootstrap.sh
 
 build()
