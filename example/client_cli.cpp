@@ -11,72 +11,90 @@
 
 #include <mqtt_client_cpp.hpp>
 
-inline void print_props(MQTT_NS::v5::properties const& props) {
+inline void print_props(std::string prefix, MQTT_NS::v5::properties const& props) {
     for (auto const& p : props) {
         MQTT_NS::visit(
             MQTT_NS::make_lambda_visitor(
-                [&](MQTT_NS::v5::property::session_expiry_interval const& t) {
-                    std::cout << "prop: session_expiry_interval: " << t.val() << std::endl;
+                [&](MQTT_NS::v5::property::payload_format_indicator const& t) {
+                    std::cout << prefix << "payload_format_indicator: " << t.val() << std::endl;
                 },
-                [&](MQTT_NS::v5::property::receive_maximum const& t) {
-                    std::cout << "prop: receive_maximum: " << t.val() << std::endl;
+                [&](MQTT_NS::v5::property::message_expiry_interval const& t) {
+                    std::cout << prefix << "message_expiry_interval: " << t.val() << std::endl;
                 },
-                [&](MQTT_NS::v5::property::maximum_qos const& t) {
-                    std::cout << "prop: maximum_qos: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::retain_available const& t) {
-                    std::cout << "prop: retain_available: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::maximum_packet_size const& t) {
-                    std::cout << "prop: maximum_packet_size: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::assigned_client_identifier const& t) {
-                    std::cout << "prop: assigned_client_identifier_ref: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::topic_alias_maximum const& t) {
-                    std::cout << "prop: topic_alias_maximum: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::topic_alias const& t) {
-                    std::cout << "prop: topic_alias: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::reason_string const& t) {
-                    std::cout << "prop: reason_string_ref: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::user_property const& t) {
-                    std::cout << "prop: user_property_ref: " << t.key() << ":" << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::wildcard_subscription_available const& t) {
-                    std::cout << "prop: wildcard_subscription_available: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::subscription_identifier_available const& t) {
-                    std::cout << "prop: subscription_identifier_available: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::subscription_identifier const& t) {
-                    std::cout << "prop: subscription_identifier: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::shared_subscription_available const& t) {
-                    std::cout << "prop: shared_subscription_available: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::server_keep_alive const& t) {
-                    std::cout << "prop: server_keep_alive: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::response_information const& t) {
-                    std::cout << "prop: response_information_ref: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::server_reference const& t) {
-                    std::cout << "prop: server_reference_ref: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::authentication_method const& t) {
-                    std::cout << "prop: authentication_method_ref: " << t.val() << std::endl;
-                },
-                [&](MQTT_NS::v5::property::authentication_data const& t) {
-                    std::cout << "prop: authentication_data_ref: " << t.val() << std::endl;
+                [&](MQTT_NS::v5::property::content_type const& t) {
+                    std::cout << prefix << "content_type: " << t.val() << std::endl;
                 },
                 [&](MQTT_NS::v5::property::response_topic const& t) {
-                    std::cout << "prop: response_topic: " << t.val() << std::endl;
+                    std::cout << prefix << "response_topic: " << t.val() << std::endl;
                 },
                 [&](MQTT_NS::v5::property::correlation_data const& t) {
-                    std::cout << "prop: correlation_data: " << t.val() << std::endl;
+                    std::cout << prefix << "correlation_data: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::subscription_identifier const& t) {
+                    std::cout << prefix << "subscription_identifier: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::session_expiry_interval const& t) {
+                    std::cout << prefix << "session_expiry_interval: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::assigned_client_identifier const& t) {
+                    std::cout << prefix << "assigned_client_identifier: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::server_keep_alive const& t) {
+                    std::cout << prefix << "server_keep_alive: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::authentication_method const& t) {
+                    std::cout << prefix << "authentication_method: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::authentication_data const& t) {
+                    std::cout << prefix << "authentication_data: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::request_problem_information const& t) {
+                    std::cout << prefix << "request_problem_information: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::will_delay_interval const& t) {
+                    std::cout << prefix << "will_delay_interval: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::request_response_information const& t) {
+                    std::cout << prefix << "request_response_information: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::response_information const& t) {
+                    std::cout << prefix << "response_information: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::server_reference const& t) {
+                    std::cout << prefix << "server_reference: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::reason_string const& t) {
+                    std::cout << prefix << "reason_string: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::receive_maximum const& t) {
+                    std::cout << prefix << "receive_maximum: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::topic_alias_maximum const& t) {
+                    std::cout << prefix << "topic_alias_maximum: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::topic_alias const& t) {
+                    std::cout << prefix << "topic_alias: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::maximum_qos const& t) {
+                    std::cout << prefix << "maximum_qos: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::retain_available const& t) {
+                    std::cout << prefix << "retain_available: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::user_property const& t) {
+                    std::cout << prefix << "user_property: " << t.key() << ":" << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::maximum_packet_size const& t) {
+                    std::cout << prefix << "maximum_packet_size: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::wildcard_subscription_available const& t) {
+                    std::cout << prefix << "wildcard_subscription_available: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::subscription_identifier_available const& t) {
+                    std::cout << prefix << "subscription_identifier_available: " << t.val() << std::endl;
+                },
+                [&](MQTT_NS::v5::property::shared_subscription_available const& t) {
+                    std::cout << prefix << "shared_subscription_available: " << t.val() << std::endl;
                 },
                 [&](auto&& ...) {
                     BOOST_ASSERT(false);
@@ -136,10 +154,16 @@ get_opts_props(std::stringstream& ss) {
 template <typename Endpoint>
 inline void console_input_handler(
     boost::system::error_code const& ec,
-    std::size_t len,
+    std::size_t /*len*/,
     boost::asio::posix::stream_descriptor& console_input,
     boost::asio::streambuf& buf,
     Endpoint& ep) {
+
+    if (ec) {
+        ep.disconnect();
+        std::cerr << "console input error ec:" << ec.message() << std::endl;
+        return;
+    }
 
     std::istream is(&buf);
     std::string line;
@@ -329,7 +353,12 @@ int main(int argc, char* argv[]) {
         for (auto const& e : vm) {
             std::cout << boost::format("  %-16s") % e.first.c_str() << " : ";
             if (auto p = boost::any_cast<std::string>(&e.second.value())) {
-                std::cout << *p;
+                if (e.first.c_str() == std::string("password")) {
+                    std::cout << "********";
+                }
+                else {
+                    std::cout << *p;
+                }
             }
             else if (auto p = boost::any_cast<std::size_t>(&e.second.value())) {
                 std::cout << *p;
@@ -458,20 +487,20 @@ int main(int argc, char* argv[]) {
             auto publish_handler =
                 []
                 (
-                    auto& client,
                     MQTT_NS::optional<packet_id_t> packet_id,
                     MQTT_NS::publish_options pubopts,
                     MQTT_NS::buffer topic_name,
                     MQTT_NS::buffer contents,
                     MQTT_NS::v5::properties props) {
 
+                    std::cout << "<   topic    :" << topic_name << std::endl;
                     if (packet_id) {
-                        std::cout << "< packet_id:" << *packet_id << std::endl;
+                        std::cout << "<   packet_id:" << *packet_id << std::endl;
                     }
-                    std::cout << "< qos      :" << pubopts.get_qos() << std::endl;
-                    std::cout << "< retain   :" << pubopts.get_retain() << std::endl;
-                    std::cout << "< dup      :" << pubopts.get_dup() << std::endl;
-                    std::cout << "< payload  :";
+                    std::cout << "<   qos      :" << pubopts.get_qos() << std::endl;
+                    std::cout << "<   retain   :" << pubopts.get_retain() << std::endl;
+                    std::cout << "<   dup      :" << pubopts.get_dup() << std::endl;
+                    std::cout << "<   payload  :";
                     for (char c : contents) {
                         switch (c) {
                         case '\\':
@@ -515,7 +544,8 @@ int main(int argc, char* argv[]) {
                         }
                     }
                     std::cout << std::endl;
-                    print_props(props);
+                    std::cout << "<   props:" << std::endl;
+                    print_props("<     ", props);
                     print_menu();
                     return true;
                 };
@@ -523,8 +553,9 @@ int main(int argc, char* argv[]) {
             client.set_connack_handler(
                 [&]
                 (bool sp, MQTT_NS::connect_return_code connack_return_code) {
-                    std::cout << "< connack (v3.1.1) rc:" << connack_return_code << std::endl;
-                    std::cout << "< session_present:" << sp << std::endl;
+                    std::cout << "< connack (v3.1.1)" << std::endl;
+                    std::cout << "<   return_code:" << connack_return_code << std::endl;
+                    std::cout << "<   session_present:" << sp << std::endl;
                     if (connack_return_code == MQTT_NS::connect_return_code::accepted) {
                         print_menu();
                         boost::asio::async_read_until(
@@ -545,9 +576,12 @@ int main(int argc, char* argv[]) {
             );
             client.set_v5_connack_handler(
                 [&]
-                (bool sp, MQTT_NS::v5::connect_reason_code reason_code, MQTT_NS::v5::properties /*props*/) {
-                    std::cout << "< connack (v5) rc:" << reason_code << std::endl;
-                    std::cout << "< session_present:" << sp << std::endl;
+                (bool sp, MQTT_NS::v5::connect_reason_code reason_code, MQTT_NS::v5::properties props) {
+                    std::cout << "< connack (v5)" << std::endl;
+                    std::cout << "<   reason_code:" << reason_code << std::endl;
+                    std::cout << "<   session_present:" << sp << std::endl;
+                    std::cout << "<   props:" << std::endl;
+                    print_props("<     ", props);
                     if (reason_code == MQTT_NS::v5::connect_reason_code::success) {
                         print_menu();
                         boost::asio::async_read_until(
@@ -575,7 +609,6 @@ int main(int argc, char* argv[]) {
                     std::cout << "< publish (v3.1.1)"  << std::endl;
                     return
                         publish_handler(
-                            client,
                             packet_id,
                             pubopts,
                             topic_name,
@@ -594,7 +627,6 @@ int main(int argc, char* argv[]) {
                     std::cout << "< publish (v5)"  << std::endl;
                     return
                         publish_handler(
-                            client,
                             packet_id,
                             pubopts,
                             topic_name,
@@ -603,13 +635,90 @@ int main(int argc, char* argv[]) {
                         );
                 }
             );
+            client.set_puback_handler(
+                [&]
+                (packet_id_t packet_id){
+                    std::cout << "< puback (v3.1.1)" << std::endl;
+                    std::cout << "<   packet_id:" << packet_id << std::endl;
+                    return true;
+                }
+            );
+            client.set_v5_puback_handler( // use v5 handler
+                [&]
+                (packet_id_t packet_id, MQTT_NS::v5::puback_reason_code reason_code, MQTT_NS::v5::properties props){
+                    std::cout << "< puback (v5)" << std::endl;
+                    std::cout << "<   packet_id:" << packet_id << std::endl;
+                    std::cout << "<   reason_code:" << reason_code << std::endl;
+                    std::cout << "<   props:" << std::endl;
+                    print_props("<     ", props);
+                    return true;
+                }
+            );
+            client.set_pubrec_handler(
+                []
+                (packet_id_t packet_id){
+                    std::cout << "< pubrec (v3.1.1)" << std::endl;
+                    std::cout << "<   packet_id:" << packet_id << std::endl;
+                    return true;
+                }
+            );
+            client.set_v5_pubrec_handler( // use v5 handler
+                [&]
+                (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code reason_code, MQTT_NS::v5::properties props){
+                    std::cout << "< pubrec (v5)" << std::endl;
+                    std::cout << "<   packet_id:" << packet_id << std::endl;
+                    std::cout << "<   reason_code:" << reason_code << std::endl;
+                    std::cout << "<   props:" << std::endl;
+                    print_props("<     ", props);
+                    return true;
+                }
+            );
+            client.set_pubrel_handler(
+                []
+                (packet_id_t packet_id){
+                    std::cout << "< pubrel (v3.1.1)" << std::endl;
+                    std::cout << "<   packet_id:" << packet_id << std::endl;
+                    return true;
+                }
+            );
+            client.set_v5_pubrel_handler( // use v5 handler
+                [&]
+                (packet_id_t packet_id, MQTT_NS::v5::pubrel_reason_code reason_code, MQTT_NS::v5::properties props){
+                    std::cout << "< pubrel (v5)" << std::endl;
+                    std::cout << "<   packet_id:" << packet_id << std::endl;
+                    std::cout << "<   reason_code:" << reason_code << std::endl;
+                    std::cout << "<   props:" << std::endl;
+                    print_props("<     ", props);
+                    return true;
+                }
+            );
+            client.set_pubcomp_handler(
+                [&]
+                (packet_id_t packet_id){
+                    std::cout << "< pubcomp (v3.1.1)" << std::endl;
+                    std::cout << "<   packet_id:" << packet_id << std::endl;
+                    return true;
+                }
+            );
+            client.set_v5_pubcomp_handler( // use v5 handler
+                [&]
+                (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code reason_code, MQTT_NS::v5::properties props){
+                    std::cout << "< pubcomp (v5)" << std::endl;
+                    std::cout << "<   packet_id:" << packet_id << std::endl;
+                    std::cout << "<   reason_code:" << reason_code << std::endl;
+                    std::cout << "<   props:" << std::endl;
+                    print_props("<     ", props);
+                    return true;
+                }
+            );
             client.set_suback_handler(
                 [&]
                 (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results){
-                    std::cout << "<suback (v3.1.1) packet_id:" << packet_id << std::endl;
-                    std::cout << "< subac_return_code:" << packet_id << std::endl;
+                    std::cout << "< suback (v3.1.1)" << std::endl;
+                    std::cout << "<   packet_id: " << packet_id << std::endl;
+                    std::cout << "<   return_code:" << packet_id << std::endl;
                     for (auto const& e: results) {
-                        std::cout << "< " << e << std::endl;
+                        std::cout << "<   " << e << std::endl;
                     }
                     print_menu();
                     return true;
@@ -620,11 +729,14 @@ int main(int argc, char* argv[]) {
                 (packet_id_t packet_id,
                  std::vector<MQTT_NS::v5::suback_reason_code> reasons,
                  MQTT_NS::v5::properties props){
-                    std::cout << "< suback (v5) received. packet_id: " << packet_id << std::endl;
-                    std::cout << "< suback_reason_code:" << packet_id << std::endl;
+                    std::cout << "< suback (v5)" << std::endl;
+                    std::cout << "<   packet_id: " << packet_id << std::endl;
+                    std::cout << "<   reason_code:" << packet_id << std::endl;
                     for (auto const& e: reasons) {
-                        std::cout << "<   " << e << std::endl;
+                        std::cout << "<     " << e << std::endl;
                     }
+                    std::cout << "<   props:" << std::endl;
+                    print_props("<     ", props);
                     print_menu();
                     return true;
                 }
@@ -632,7 +744,8 @@ int main(int argc, char* argv[]) {
             client.set_unsuback_handler(
                 [&]
                 (packet_id_t packet_id){
-                    std::cout << "< unsuback (v3.1.1) packet_id:" << packet_id << std::endl;
+                    std::cout << "< unsuback (v3.1.1)" << std::endl;
+                    std::cout << "<   packet_id: " << packet_id << std::endl;
                     print_menu();
                     return true;
                 }
@@ -642,11 +755,14 @@ int main(int argc, char* argv[]) {
                 (packet_id_t packet_id,
                  std::vector<MQTT_NS::v5::unsuback_reason_code> reasons,
                  MQTT_NS::v5::properties props){
-                    std::cout << "< unsuback (v5) received. packet_id: " << packet_id << std::endl;
-                    std::cout << "< unsuback_reason_code:" << std::endl;
+                    std::cout << "< unsuback (v5)" << std::endl;
+                    std::cout << "<   packet_id: " << packet_id << std::endl;
+                    std::cout << "<   unsuback_reason_code:" << std::endl;
                     for (auto const& e: reasons) {
-                        std::cout << "<   " << e << std::endl;
+                        std::cout << "<     " << e << std::endl;
                     }
+                    std::cout << "<   props:" << std::endl;
+                    print_props("<     ", props);
                     print_menu();
                     return true;
                 }
@@ -654,11 +770,11 @@ int main(int argc, char* argv[]) {
 
             client.set_close_handler(
                 []() {
-                    std::cout << "closed." << std::endl;
+                    std::cout << "< closed." << std::endl;
                 });
             client.set_error_handler(
                 [](boost::system::error_code const& ec) {
-                    std::cout << ec.message() << std::endl;
+                    std::cout << "< error:" << ec.message() << std::endl;
                 });
             client.connect();
             ioc.run();
