@@ -776,7 +776,13 @@ int main(int argc, char* argv[]) {
                 [](boost::system::error_code const& ec) {
                     std::cout << "< error:" << ec.message() << std::endl;
                 });
-            client.connect();
+            MQTT_NS::v5::properties props;
+            if (sei != 0) {
+                props.emplace_back(
+                    MQTT_NS::v5::property::session_expiry_interval(sei)
+                );
+            }
+            client.connect(MQTT_NS::force_move(props));
             ioc.run();
         };
 
