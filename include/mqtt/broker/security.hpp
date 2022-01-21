@@ -34,17 +34,21 @@ struct security {
 
     struct authentication {
         enum class method {
-            password,
+            sha256,
+            plain_password,
             client_cert,
             anonymous
         };
 
-        authentication(method method_ = method::password, optional<std::string> const& password = optional<std::string>())
-            : auth_method(method_), password(password)
+        authentication(method method_ = method::sha256,
+                       optional<std::string> const& digest = optional<std::string>(),
+                       optional<std::string> const& salt = optional<std::string>())
+            : auth_method(method_), digest(digest), salt(salt)
         { }
 
         method auth_method;
-        optional<std::string> password;
+        optional<std::string> digest;
+        optional<std::string> salt;        
 
         std::vector<std::string> groups;
     };
@@ -86,7 +90,7 @@ struct security {
     }
 
 #if defined(MQTT_USE_TLS)
-    static std::string hash(string_view const& message) {
+    static std::string sha256hash(string_view const& message) {
         std::shared_ptr<EVP_MD_CTX> mdctx(EVP_MD_CTX_new(), EVP_MD_CTX_free);
         EVP_DigestInit_ex(mdctx.get(), EVP_sha256(), NULL);
         EVP_DigestUpdate(mdctx.get(), message.data(), message.size());
@@ -98,7 +102,7 @@ struct security {
         return to_hex(digest.data(), digest.data() + digest_size);
     }
 #else
-    static std::string hash(string_view const &message) {
+    static std::string sha256hash(string_view const &message) {
         return std::string(message);
     }
 #endif
@@ -111,9 +115,14 @@ struct security {
     optional<std::string> login(string_view const& username, string_view const& password) const {
         optional<std::string> empty_result;
         auto i = authentication_.find(std::string(username));
-        if (i == authentication_.end() || i->second.auth_method != security::authentication::method::password)
-            return empty_result;
-        return boost::iequals(*(i->second.password), hash(hash_type + ":" + salt + ":" + std::string(password))) ? std::string(username) : empty_result;
+        if (i != authentication_.end() && i->second.auth_method == security::authentication::method::sha256) {
+            return boost::iequals(i->second.digest.value(), sha256hash(std::string("sha256:") + i->second.salt.value() + ":" + std::string(password))) ? std::string(username) : empty_result;
+        }
+        else if (i != authentication_.end() && i->second.auth_method == security::authentication::method::plain_password) {
+            return i->second.digest.value() == password ? std::string(username) : empty_result;
+        }
+
+        return empty_result;
     }
 
     static authorization::type get_auth_type(string_view const& type) {
@@ -131,9 +140,6 @@ struct security {
     }
 
     void default_config() {
-        hash_type = "aes256";
-        salt = "salt";
-
         char const *username = "anonymous";
         authentication login(authentication::method::anonymous);
         authentication_.insert({ username, login});
@@ -162,9 +168,17 @@ struct security {
 
             std::string method = i.second.get<std::string>("method");
 
-            if (method == "password") {
-                std::string password = i.second.get<std::string>("password");
-                authentication auth(authentication::method::password, password);
+            if (method == "sha256") {
+                std::string digest = i.second.get<std::string>("digest");
+                std::string salt = i.second.get<std::string>("salt");
+
+                authentication auth(authentication::method::sha256, digest, salt);
+                authentication_.insert( { name, auth });
+            }
+            else if (method == "plain_password") {
+                std::string digest = i.second.get<std::string>("password");
+
+                authentication auth(authentication::method::plain_password, digest);
                 authentication_.insert( { name, auth });
             }
             else if (method == "client_cert") {
@@ -222,8 +236,6 @@ struct security {
             }            
         }
 
-        hash_type = root.get<std::string>("config.hash");
-        salt = root.get<std::string>("config.salt");
         validate();
     }
 
@@ -444,9 +456,6 @@ struct security {
     auth_map_type auth_pub_map;
     auth_map_type auth_sub_map;
 
-    std::string salt;
-    std::string hash_type;
-
 private:
     void validate_entry(std::string const& context, std::string const& name) {
         if (is_valid_group_name(name) && groups_.find(name) == groups_.end())
@@ -455,15 +464,12 @@ private:
             throw std::runtime_error("An invalid username name was specified for " + context + ": " + name);
     }
 
-    void validate() {
-        if (hash_type != "aes256")
-            throw std::runtime_error("An invalid hash type was selected: " + hash_type);
-
+    void validate() {        
         for (auto const& i: groups_) {
             for (auto const& j: i.second.members) {
                 auto iter = authentication_.find(j);
                 if(is_valid_user_name(j) && iter == authentication_.end())
-                    throw std::runtime_error("An invalid username name was specified for group " + i.first + ": " + j);
+                    throw std::runtime_error("An invalid username name was specified for group " + i.first + ": " + j);                                
             }
         }
 

@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_CASE(default_config) {
     security.default_config();
 
     BOOST_CHECK(security.authentication_["anonymous"].auth_method == MQTT_NS::broker::security::authentication::method::anonymous);
-    BOOST_CHECK(!security.authentication_["anonymous"].password);
+    BOOST_CHECK(!security.authentication_["anonymous"].digest);
 
     BOOST_CHECK(security.login_anonymous());
 
@@ -38,24 +38,31 @@ BOOST_AUTO_TEST_CASE(default_config) {
 BOOST_AUTO_TEST_CASE(json_load) {
     MQTT_NS::broker::security security;
 
-    std::string value = "{\"authentication\":[{\"name\":\"u1\",\"method\":\"password\",\"password\":\"75c111ce6542425228c157b1187076ed86e837f6085e3bb30b976114f70abc40\"},{\"name\":\"u2\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\",\"anonymous\"]}],\"authorization\":[{\"topic\":\"#\",\"type\":\"allow\",\"pub\":[\"@g1\"]},{\"topic\":\"#\",\"type\":\"deny\",\"sub\":[\"@g1\"]},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"],\"pub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"],\"pub\":[\"u1\",\"anonymous\"]}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}";
+    std::string value = "{\"authentication\":[{\"name\":\"u1\",\"method\":\"sha256\",\"salt\":\"salt\",\"digest\":\"694073aa885f21f4dc23af70b5d2d30dc115dcfc0c5661113ca8bab2373d741d\"},{\"name\":\"u2\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"u3\",\"method\":\"plain_password\",\"password\":\"mypassword\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\",\"anonymous\"]}],\"authorization\":[{\"topic\":\"#\",\"type\":\"allow\",\"pub\":[\"@g1\"]},{\"topic\":\"#\",\"type\":\"deny\",\"sub\":[\"@g1\"]},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"],\"pub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"],\"pub\":[\"u1\",\"anonymous\"]}]}";
 
     BOOST_CHECK_NO_THROW(load_config(security, value));
 
-    BOOST_CHECK(security.authentication_.size() == 3);
+    BOOST_CHECK(security.authentication_.size() == 4);
 
-    BOOST_CHECK(security.authentication_["u1"].auth_method == MQTT_NS::broker::security::authentication::method::password);
-    BOOST_CHECK(security.authentication_["u1"].password);
+    BOOST_CHECK(security.authentication_["u1"].auth_method == MQTT_NS::broker::security::authentication::method::sha256);
+    BOOST_CHECK(security.authentication_["u1"].digest.value() == "694073aa885f21f4dc23af70b5d2d30dc115dcfc0c5661113ca8bab2373d741d");
+    BOOST_CHECK(security.authentication_["u1"].salt.value() == "salt");
 
 #if defined(MQTT_USE_TLS)
-    BOOST_CHECK(boost::iequals(*security.authentication_["u1"].password, MQTT_NS::broker::security::hash("aes256:salt:mypassword")));
+    BOOST_CHECK(boost::iequals(*security.authentication_["u1"].digest, MQTT_NS::broker::security::sha256hash("sha256:salt:mypassword")));
 #endif
 
     BOOST_CHECK(security.authentication_["u2"].auth_method == MQTT_NS::broker::security::authentication::method::client_cert);
-    BOOST_CHECK(!security.authentication_["u2"].password);
+    BOOST_CHECK(!security.authentication_["u2"].digest);
+    BOOST_CHECK(!security.authentication_["u2"].salt);
+
+    BOOST_CHECK(security.authentication_["u3"].auth_method == MQTT_NS::broker::security::authentication::method::plain_password);
+    BOOST_CHECK(security.authentication_["u3"].digest.value() == "mypassword");
+    BOOST_CHECK(!security.authentication_["u3"].salt);
 
     BOOST_CHECK(security.authentication_["anonymous"].auth_method == MQTT_NS::broker::security::authentication::method::anonymous);
-    BOOST_CHECK(!security.authentication_["anonymous"].password);
+    BOOST_CHECK(!security.authentication_["anonymous"].digest);
+    BOOST_CHECK(!security.authentication_["anonymous"].salt);
 
     BOOST_CHECK(security.groups_.size() == 1);
     BOOST_CHECK(security.groups_["@g1"].members.size() == 3);
@@ -67,10 +74,11 @@ BOOST_AUTO_TEST_CASE(json_load) {
 
 #if defined(MQTT_USE_TLS)
     BOOST_CHECK(security.login("u1", "mypassword"));
-    BOOST_CHECK(!security.login("u1", "invalidpassword"));
-    BOOST_CHECK(!security.login("u3", "invalidpassword"));
+    BOOST_CHECK(!security.login("u1", "invalidpassword"));    
 #endif
 
+    BOOST_CHECK(security.login("u3", "mypassword"));
+    BOOST_CHECK(!security.login("u3", "invalidpassword"));
 }
 
 BOOST_AUTO_TEST_CASE(check_errors) {
@@ -93,10 +101,10 @@ BOOST_AUTO_TEST_CASE(check_errors) {
     BOOST_CHECK_THROW(load_config(security, "{\"authorization\":[{\"topic\":\"#\",\"type\":\"deny\"},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"]}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}"), std::exception);
 
     // Duplicate user
-    BOOST_CHECK_THROW(load_config(security, "{\"authentication\":[{\"name\":\"u1\",\"method\":\"password\",\"password\":\"mypassword\"},{\"name\":\"u1\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}"), std::exception);
+    BOOST_CHECK_THROW(load_config(security, "{\"authentication\":[{\"name\":\"u1\",\"method\":\"client_cert\"},{\"name\":\"u1\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}]}"), std::exception);
 
     // Duplicate anonymous
-    BOOST_CHECK_THROW(load_config(security, "{\"authentication\":[{\"name\":\"u1\",\"method\":\"anonymous\",\"password\":\"mypassword\"},{\"name\":\"u1\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}"), std::exception);
+    BOOST_CHECK_THROW(load_config(security, "{\"authentication\":[{\"name\":\"u1\",\"method\":\"client_cert\"},{\"name\":\"u1\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}]}"), std::exception);
 
     // Duplicate group
     BOOST_CHECK_THROW(load_config(security, "{\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]},{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}"), std::exception);
@@ -115,7 +123,7 @@ BOOST_AUTO_TEST_CASE(check_errors) {
 BOOST_AUTO_TEST_CASE(check_publish) {
     MQTT_NS::broker::security security;
 
-    std::string value = "{\"authentication\":[{\"name\":\"u1\",\"method\":\"password\",\"password\":\"mypassword\"},{\"name\":\"u2\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]}],\"authorization\":[{\"topic\":\"#\",\"type\":\"deny\"},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"],\"pub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"],\"pub\":[\"u1\",\"anonymous\"]}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}";
+    std::string value = "{\"authentication\":[{\"name\":\"u1\",\"method\":\"sha256\",\"salt\":\"salt\",\"digest\":\"mypassword\"},{\"name\":\"u2\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\"]}],\"authorization\":[{\"topic\":\"#\",\"type\":\"deny\"},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"],\"pub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"],\"pub\":[\"u1\",\"anonymous\"]}]}";
     BOOST_CHECK_NO_THROW(load_config(security, value));
 
     BOOST_CHECK(security.auth_pub("topic", "u1") == MQTT_NS::broker::security::authorization::type::deny);
@@ -130,7 +138,7 @@ BOOST_AUTO_TEST_CASE(check_publish) {
 BOOST_AUTO_TEST_CASE(test_hash) {
 
 #if defined(MQTT_USE_TLS)
-    BOOST_CHECK(MQTT_NS::broker::security::hash("a quick brown fox jumps over the lazy dog") == "8F1AD6DFFF1A460EB4AB78A5A7C3576209628EA200C1DBC70BDA69938B401309");
+    BOOST_CHECK(MQTT_NS::broker::security::sha256hash("a quick brown fox jumps over the lazy dog") == "8F1AD6DFFF1A460EB4AB78A5A7C3576209628EA200C1DBC70BDA69938B401309");
 #endif
 
 }
@@ -177,7 +185,7 @@ BOOST_AUTO_TEST_CASE(deny_check) {
 
 BOOST_AUTO_TEST_CASE(auth_check) {
     MQTT_NS::broker::security security;
-    std::string value = "{\"authentication\":[{\"name\":\"u1\",\"method\":\"password\",\"password\":\"75c111ce6542425228c157b1187076ed86e837f6085e3bb30b976114f70abc40\"},{\"name\":\"u2\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\",\"anonymous\"]}],\"authorization\":[{\"topic\":\"#\",\"type\":\"allow\",\"pub\":[\"@g1\"]},{\"topic\":\"#\",\"type\":\"deny\",\"sub\":[\"@g1\"]},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"],\"pub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"],\"pub\":[\"u1\",\"anonymous\"]}],\"config\":{\"hash\":\"aes256\",\"salt\":\"salt\"}}";
+    std::string value = "{\"authentication\":[{\"name\":\"u1\",\"method\":\"sha256\",\"salt\":\"salt\",\"digest\":\"75c111ce6542425228c157b1187076ed86e837f6085e3bb30b976114f70abc40\"},{\"name\":\"u2\",\"method\":\"client_cert\",\"field\":\"CNAME\"},{\"name\":\"anonymous\",\"method\":\"anonymous\"}],\"group\":[{\"name\":\"@g1\",\"members\":[\"u1\",\"u2\",\"anonymous\"]}],\"authorization\":[{\"topic\":\"#\",\"type\":\"allow\",\"pub\":[\"@g1\"]},{\"topic\":\"#\",\"type\":\"deny\",\"sub\":[\"@g1\"]},{\"topic\":\"sub/#\",\"type\":\"allow\",\"sub\":[\"@g1\"],\"pub\":[\"@g1\"]},{\"topic\":\"sub/topic1\",\"type\":\"deny\",\"sub\":[\"u1\",\"anonymous\"],\"pub\":[\"u1\",\"anonymous\"]}]}";
     BOOST_CHECK_NO_THROW(load_config(security, value));
 
     BOOST_CHECK(security.get_auth_sub_by_user("u1").size() == 3);
