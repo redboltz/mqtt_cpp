@@ -394,7 +394,9 @@ BOOST_AUTO_TEST_CASE(auth_check) {
 
     BOOST_CHECK_NO_THROW(load_config(security, test_1));
 
-    BOOST_CHECK(security.get_auth_sub_by_user("u1").size() == 3);
+    std::size_t count = 0;
+    security.get_auth_sub_by_user("u1", [&count](auto const &) { ++count; });
+    BOOST_CHECK(count == 3);
 
     BOOST_CHECK(!security.get_auth_sub_topics("u1", "sub/test").empty());
     BOOST_CHECK(security.get_auth_sub_topics("u1", "sub/topic1").empty());

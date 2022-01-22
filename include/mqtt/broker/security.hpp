@@ -245,7 +245,8 @@ struct security {
         validate();
     }
 
-    std::vector<std::reference_wrapper<const authorization>> get_auth_sub_by_user(string_view username) const {
+    template<typename T>
+    void get_auth_sub_by_user(string_view username, T&& callback) const {
         std::set<std::string> username_and_groups;
         username_and_groups.insert(std::string(username));
 
@@ -255,7 +256,6 @@ struct security {
             }
         }
 
-        std::vector<std::reference_wrapper<const authorization>> result;
         for (auto const &i: authorization_) {
 
             if (i.sub_type != authorization::type::none) {
@@ -269,12 +269,10 @@ struct security {
                 );
 
                 if (sets_intersect) {
-                    result.push_back(std::cref(i));
+                    callback(i);
                 }
             }
         }
-
-        return result;
     }
 
     authorization::type auth_pub(string_view const& topic, string_view const& username) const {
@@ -410,19 +408,17 @@ struct security {
     }
 
     std::vector<std::string> get_auth_sub_topics(string_view const &username, string_view const &topic_filter) const {
-        auto result = get_auth_sub_by_user(username);
-
         std::vector<std::string> auth_topics;
-        for (auto& i: result) {
-            if (i.get().sub_type == authorization::type::allow) {
-                auto entry = is_subscribe_allowed(i.get().topic_tokens, topic_filter);
+        get_auth_sub_by_user(username, [&](authorization const &i) {
+            if (i.sub_type == authorization::type::allow) {
+                auto entry = is_subscribe_allowed(i.topic_tokens, topic_filter);
                 if (entry) {
                     auth_topics.push_back(entry.value());
                 }
             }
             else {
                 for (auto j = auth_topics.begin(); j != auth_topics.end(); ) {
-                    if (is_subscribe_denied(i.get().topic_tokens, topic_filter)) {
+                    if (is_subscribe_denied(i.topic_tokens, topic_filter)) {
                         j = auth_topics.erase(j);
                     }
                     else {
@@ -430,8 +426,7 @@ struct security {
                     }
                 }
             }
-        }
-
+        });
         return auth_topics;
     }
 
