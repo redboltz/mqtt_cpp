@@ -842,9 +842,8 @@ private:
 
         v5::properties connack_props;
         connect_param cp = handle_connect_props(ep, props, will);
-        if (!handle_empty_client_id(spep, client_id, clean_start, connack_props)) return false;
 
-        if (!username) {         
+        if (!username) {
             MQTT_LOG("mqtt_broker", trace)
                 << MQTT_ADD_VALUE(address, this)
                 << "User failed to login: " << (noauth_username ? std::string(*noauth_username) : std::string("anonymous user"));
@@ -855,6 +854,8 @@ private:
 
             return true;
         }
+
+        if (!handle_empty_client_id(spep, client_id, *username, clean_start, connack_props)) return false;
 
         MQTT_LOG("mqtt_broker", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -1204,6 +1205,7 @@ private:
     bool handle_empty_client_id(
         con_sp_t spep,
         buffer const& client_id,
+        std::string const &username,
         bool clean_start,
         v5::properties& connack_props
     ) {
@@ -1212,7 +1214,7 @@ private:
         case protocol_version::v3_1_1:
             if (client_id.empty()) {
                 if (clean_start) {
-                    ep.set_client_id(create_uuid_string());
+                    ep.set_client_id(username + "-" + create_uuid_string());
                 }
                 else {
                     // https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349242
@@ -1262,7 +1264,7 @@ private:
                 // Handling errors, and then it MUST close the Network Connection [MQTT-3.1.3-8].
                 //
                 // mqtt_cpp author's note: On v5.0, no Clean Start restriction is described.
-                ep.set_client_id(create_uuid_string());
+                ep.set_client_id(username + "-" + create_uuid_string());
                 connack_props.emplace_back(
                     v5::property::assigned_client_identifier(buffer(string_view(ep.get_client_id())))
                 );

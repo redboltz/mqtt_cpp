@@ -56,14 +56,16 @@ struct security {
 
     struct authorization {
         enum class type {
-            deny, allow
+            deny, allow, none
         };
 
-        authorization()
-            : sub_type(type::deny), pub_type(type::deny)
+        authorization(string_view const &topic)
+            : topic(topic), sub_type(type::none), pub_type(type::none)
         { }
 
         std::vector<std::string> topic_tokens;
+
+        std::string topic;
 
         type sub_type;
         std::set<std::string> sub;
@@ -146,13 +148,13 @@ struct security {
         anonymous = username;
 
         char const *topic = "#";
-        authorization auth;
+        authorization auth(topic);
         auth.topic_tokens = get_topic_filter_tokens("#");
         auth.sub_type = authorization::type::allow;
         auth.sub.insert(username);
         auth.pub_type = authorization::type::allow;
         auth.pub.insert(username);
-        authorization_.insert({ topic, auth });
+        authorization_.push_back(auth);
 
         validate();
     }
@@ -196,22 +198,24 @@ struct security {
                 throw std::runtime_error("An invalid method was specified: " + method);
             }
         }
-        for (auto const& i: root.get_child("group")) {
-            std::string name = i.second.get<std::string>("name");
-            if(!is_valid_group_name(name)) throw std::runtime_error("An invalid group name was specified: " + name);
+        if (root.get_child_optional("group")) {
+            for (auto const& i: root.get_child("group")) {
+                std::string name = i.second.get<std::string>("name");
+                if(!is_valid_group_name(name)) throw std::runtime_error("An invalid group name was specified: " + name);
 
-            group group;
-            if (i.second.get_child_optional("members")) {
-                for (auto const& j: i.second.get_child("members")) {
-                    auto username = j.second.get_value<std::string>();
-                    if (!is_valid_user_name(username)) {
-                        throw std::runtime_error("An invalid user name was specified: " + username);
+                group group;
+                if (i.second.get_child_optional("members")) {
+                    for (auto const& j: i.second.get_child("members")) {
+                        auto username = j.second.get_value<std::string>();
+                        if (!is_valid_user_name(username)) {
+                            throw std::runtime_error("An invalid user name was specified: " + username);
+                        }
+                        group.members.push_back(username);
                     }
-                    group.members.push_back(username);
                 }
-            }
 
-            groups_.insert({ name, group });
+                groups_.insert({ name, group });
+            }
         }
 
         for (auto const& i: root.get_child("authorization")) {
@@ -220,7 +224,7 @@ struct security {
 
             auto type = get_auth_type(i.second.get<std::string>("type"));
 
-            authorization &auth = authorization_[name];
+            authorization auth(name);
             auth.topic_tokens = get_topic_filter_tokens(name);
 
             if (i.second.get_child_optional("sub")) {
@@ -234,12 +238,14 @@ struct security {
                     auth.pub.insert(j.second.get_value<std::string>());
                 auth.pub_type = type;
             }            
+
+            authorization_.push_back(auth);
         }
 
         validate();
     }
 
-    std::vector<std::pair<std::string, authorization::type>> get_auth_sub_by_user(string_view username) const {
+    std::vector<std::reference_wrapper<const authorization>> get_auth_sub_by_user(string_view username) const {
         std::set<std::string> username_and_groups;
         username_and_groups.insert(std::string(username));
 
@@ -249,19 +255,22 @@ struct security {
             }
         }
 
-        std::vector<std::pair<std::string, authorization::type>> result;
+        std::vector<std::reference_wrapper<const authorization>> result;
         for (auto const &i: authorization_) {
-            bool sets_intersect = false;
-            auto store_intersect = [&sets_intersect](std::string const &) mutable { sets_intersect = true; };
 
-            std::set_intersection(
-                i.second.sub.begin(), i.second.sub.end(),
-                username_and_groups.begin(), username_and_groups.end(),
-                boost::make_function_output_iterator(std::ref(store_intersect))
-            );
+            if (i.sub_type != authorization::type::none) {
+                bool sets_intersect = false;
+                auto store_intersect = [&sets_intersect](std::string const &) mutable { sets_intersect = true; };
 
-            if (sets_intersect) {
-                result.push_back(std::make_pair(i.first, i.second.sub_type));
+                std::set_intersection(
+                    i.sub.begin(), i.sub.end(),
+                    username_and_groups.begin(), username_and_groups.end(),
+                    boost::make_function_output_iterator(std::ref(store_intersect))
+                );
+
+                if (sets_intersect) {
+                    result.push_back(std::cref(i));
+                }
             }
         }
 
@@ -405,15 +414,15 @@ struct security {
 
         std::vector<std::string> auth_topics;
         for (auto& i: result) {
-            if (i.second == authorization::type::allow) {
-                auto entry = is_subscribe_allowed(authorization_.at(i.first).topic_tokens, topic_filter);
+            if (i.get().sub_type == authorization::type::allow) {
+                auto entry = is_subscribe_allowed(i.get().topic_tokens, topic_filter);
                 if (entry) {
                     auth_topics.push_back(entry.value());
                 }
             }
             else {
                 for (auto j = auth_topics.begin(); j != auth_topics.end(); ) {
-                    if (is_subscribe_denied(authorization_.at(i.first).topic_tokens, topic_filter)) {
+                    if (is_subscribe_denied(i.get().topic_tokens, topic_filter)) {
                         j = auth_topics.erase(j);
                     }
                     else {
@@ -449,7 +458,7 @@ struct security {
 
     std::map<std::string, authentication> authentication_;
     std::map<std::string, group> groups_;
-    std::map<std::string, authorization> authorization_;
+    std::vector<authorization> authorization_;
     optional<std::string> anonymous;
 
     using auth_map_type = multiple_subscription_map<std::string, authorization::type>;
@@ -474,26 +483,26 @@ private:
         }
 
         for (auto const &i: authorization_) {
-            for (auto const& j: i.second.sub) {
-                validate_entry("topic " + i.first, j);
+            for (auto const& j: i.sub) {
+                validate_entry("topic " + i.topic, j);
 
                 if (is_valid_user_name(j)) {
-                    auth_sub_map.insert_or_assign(i.first, j, i.second.sub_type);
+                    auth_sub_map.insert_or_assign(i.topic, j, i.sub_type);
                 }
                 else if (is_valid_group_name(j)) {
                     for (auto const& z: groups_[j].members)
-                        auth_sub_map.insert_or_assign(i.first, z, i.second.sub_type);
+                        auth_sub_map.insert_or_assign(i.topic, z, i.sub_type);
                 }
             }
-            for (auto const& j: i.second.pub) {
-                validate_entry("topic " + i.first, j);
+            for (auto const& j: i.pub) {
+                validate_entry("topic " + i.topic, j);
 
                 if(is_valid_user_name(j)) {
-                    auth_pub_map.insert_or_assign(i.first, j, i.second.pub_type);
+                    auth_pub_map.insert_or_assign(i.topic, j, i.pub_type);
                 }
                 else if(is_valid_group_name(j)) {
                     for (auto const& z: groups_[j].members)
-                        auth_pub_map.insert_or_assign(i.first, z, i.second.pub_type);
+                        auth_pub_map.insert_or_assign(i.topic, z, i.pub_type);
                 }
             }
         }
