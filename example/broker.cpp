@@ -374,17 +374,19 @@ void run_broker(boost::program_options::variables_map const& vm) {
             << " threads_per_ioc:" << threads_per_ioc
             << " total threads:" << num_of_iocs * threads_per_ioc;
 
-        std::string auth_file = vm["auth_file"].as<std::string>();
-        if (!auth_file.empty()) {
-            MQTT_LOG("mqtt_broker", info)
-                << "auth_file:" << auth_file;
+		if (vm.count("auth_file")) {
+			std::string auth_file = vm["auth_file"].as<std::string>();
+			if (!auth_file.empty()) {
+				MQTT_LOG("mqtt_broker", info)
+					<< "auth_file:" << auth_file;
 
-            std::ifstream input(auth_file);
+				std::ifstream input(auth_file);
 
-            MQTT_NS::broker::security security;
-            security.load_json(input);
-            b.set_security(MQTT_NS::force_move(security));
-        }
+				MQTT_NS::broker::security security;
+				security.load_json(input);
+				b.set_security(MQTT_NS::force_move(security));
+			}
+		}
 
         as::io_context accept_ioc;
 
@@ -560,7 +562,7 @@ int main(int argc, char **argv) {
             )
             (
                 "auth_file",
-                boost::program_options::value<std::string>()->default_value("auth.json"),
+                boost::program_options::value<std::string>(),
                 "Authentication file"
             )
             ;
