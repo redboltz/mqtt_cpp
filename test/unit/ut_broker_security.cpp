@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(json_load) {
                 "name": "u1",
                 "method": "sha256",
                 "salt": "salt",
-                "digest": "694073aa885f21f4dc23af70b5d2d30dc115dcfc0c5661113ca8bab2373d741d"
+                "digest": "38ea2e5e88fcd692fe177c6cada15e9b2db6e70bee0a0d6678c8d3b2a9aae2ad"
             }, {
                 "name": "u2",
                 "method": "client_cert",
@@ -88,11 +88,11 @@ BOOST_AUTO_TEST_CASE(json_load) {
     BOOST_CHECK(security.authentication_.size() == 4);
 
     BOOST_CHECK(security.authentication_["u1"].auth_method == MQTT_NS::broker::security::authentication::method::sha256);
-    BOOST_CHECK(security.authentication_["u1"].digest.value() == "694073aa885f21f4dc23af70b5d2d30dc115dcfc0c5661113ca8bab2373d741d");
+    BOOST_CHECK(security.authentication_["u1"].digest.value() == "38ea2e5e88fcd692fe177c6cada15e9b2db6e70bee0a0d6678c8d3b2a9aae2ad");
     BOOST_CHECK(security.authentication_["u1"].salt.value() == "salt");
 
 #if defined(MQTT_USE_TLS)
-    BOOST_CHECK(boost::iequals(*security.authentication_["u1"].digest, MQTT_NS::broker::security::sha256hash("sha256:salt:mypassword")));
+    BOOST_CHECK(boost::iequals(*security.authentication_["u1"].digest, MQTT_NS::broker::security::sha256hash("saltmypassword")));
 #endif
 
     BOOST_CHECK(security.authentication_["u2"].auth_method == MQTT_NS::broker::security::authentication::method::client_cert);

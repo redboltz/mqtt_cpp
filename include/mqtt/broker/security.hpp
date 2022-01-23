@@ -118,7 +118,7 @@ struct security {
         optional<std::string> empty_result;
         auto i = authentication_.find(std::string(username));
         if (i != authentication_.end() && i->second.auth_method == security::authentication::method::sha256) {
-            return boost::iequals(i->second.digest.value(), sha256hash(std::string("sha256:") + i->second.salt.value() + ":" + std::string(password))) ? std::string(username) : empty_result;
+            return boost::iequals(i->second.digest.value(), sha256hash(i->second.salt.value() + std::string(password))) ? std::string(username) : empty_result;
         }
         else if (i != authentication_.end() && i->second.auth_method == security::authentication::method::plain_password) {
             return i->second.digest.value() == password ? std::string(username) : empty_result;
