@@ -37,7 +37,8 @@ struct security {
             sha256,
             plain_password,
             client_cert,
-            anonymous
+            anonymous,
+            unauthorized
         };
 
         authentication(method method_ = method::sha256,
@@ -79,9 +80,14 @@ struct security {
         std::vector<std::string> members;
     };
 
-
-    optional<std::string> login_anonymous() {
+    /** Return username of anonymous user */
+    optional<std::string> const &login_anonymous() const {
         return anonymous;
+    }
+
+    /** Return username of unauthorized user */
+    optional<std::string> const &login_unauthorized() const {
+        return unauthorized;
     }
 
     template<typename T>
@@ -192,6 +198,13 @@ struct security {
                 anonymous = name;
 
                 authentication auth(authentication::method::anonymous);
+                authentication_.insert( { name, auth });
+            }
+            else if (method == "unauthorized") {
+                if(unauthorized) throw std::runtime_error("Only a single unauthorized user can be configured, unauthorized user: " + *unauthorized);
+                unauthorized = name;
+
+                authentication auth(authentication::method::unauthorized);
                 authentication_.insert( { name, auth });
             }
             else {
@@ -455,6 +468,7 @@ struct security {
     std::map<std::string, group> groups_;
     std::vector<authorization> authorization_;
     optional<std::string> anonymous;
+    optional<std::string> unauthorized;
 
     using auth_map_type = multiple_subscription_map<std::string, authorization::type>;
     auth_map_type auth_pub_map;
