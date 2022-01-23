@@ -813,7 +813,7 @@ private:
      *
      * @param clean_start - if the clean-start flag is set on the CONNECT message.
      * @param spep - varient of shared pointers to underlying connection type.
-     * @param client_id - the id that the client wants to use
+     * @param req_client_id - the id that the client wants to use (username will be prepended)
      * @param will - the last-will-and-testiment of the connection, if any.
      */
     bool connect_handler(
@@ -855,11 +855,13 @@ private:
             return true;
         }
 
-        if (!handle_empty_client_id(spep, client_id, *username, clean_start, connack_props)) return false;
+        if (!handle_empty_client_id(spep, client_id, *username, clean_start, connack_props)) {
+            return false;
+        }
 
         MQTT_LOG("mqtt_broker", trace)
             << MQTT_ADD_VALUE(address, this)
-            << "User logged in as: '" << *username << "'";
+            << "User logged in as: '" << *username << "', client_id: " << client_id;
 
         /**
          * http://docs.oasis-open.org/mqtt/mqtt/v5.0/cs02/mqtt-v5.0-cs02.html#_Toc514345311
@@ -869,15 +871,17 @@ private:
          *  the Session Present flag in CONNACK is always set to 0 if Clean Start is set to 1.
          */
 
+        buffer full_client_id = allocate_buffer(*username + "-" + std::string(client_id));
+
         // Find any sessions that have the same client_id
         std::lock_guard<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_cid>();
-        auto it = idx.lower_bound(client_id);
-        if (it == idx.end() || it->client_id() != client_id) {
+        auto it = idx.lower_bound(full_client_id);
+        if (it == idx.end() || it->client_id() != full_client_id) {
             // new connection
             MQTT_LOG("mqtt_broker", trace)
                 << MQTT_ADD_VALUE(address, this)
-                << "cid:" << client_id
+                << "cid:" << full_client_id
                 << " new connection inserted.";
             it = idx.emplace_hint(
                 it,
@@ -886,7 +890,7 @@ private:
                 subs_map_,
                 shared_targets_,
                 spep,
-                client_id,
+                full_client_id,
                 *username,
                 force_move(will),
                 // will_sender
@@ -910,7 +914,7 @@ private:
                     // discard offline session
                     MQTT_LOG("mqtt_broker", trace)
                         << MQTT_ADD_VALUE(address, this)
-                        << "cid:" << client_id
+                        << "cid:" << full_client_id
                         << "online connection exists, discard old one due to new one's clean_start and renew";
                     if (cp.response_topic_requested) {
                         // set_response_topic never modify key part
@@ -933,7 +937,7 @@ private:
                     // inherit online session if previous session's session exists
                     MQTT_LOG("mqtt_broker", trace)
                         << MQTT_ADD_VALUE(address, this)
-                        << "cid:" << client_id
+                        << "cid:" << full_client_id
                         << "online connection exists, inherit old one and renew";
                     if (cp.response_topic_requested) {
                         // set_response_topic never modify key part
@@ -981,7 +985,7 @@ private:
                 // new connection
                 MQTT_LOG("mqtt_broker", trace)
                     << MQTT_ADD_VALUE(address, this)
-                    << "cid:" << client_id
+                    << "cid:" << full_client_id
                     << "online connection exists, discard old one due to session_expiry and renew";
                 bool inserted;
                 std::tie(it, inserted) = idx.emplace(
@@ -990,7 +994,7 @@ private:
                     subs_map_,
                     shared_targets_,
                     spep,
-                    client_id,
+                    full_client_id,
                     *username,
                     force_move(will),
                     // will_sender
@@ -1014,7 +1018,7 @@ private:
                 // discard offline session
                 MQTT_LOG("mqtt_broker", trace)
                     << MQTT_ADD_VALUE(address, this)
-                    << "cid:" << client_id
+                    << "cid:" << full_client_id
                     << "offline connection exists, discard old one due to new one's clean_start and renew";
                 if (cp.response_topic_requested) {
                     // set_response_topic never modify key part
@@ -1038,7 +1042,7 @@ private:
                 // inherit offline session
                 MQTT_LOG("mqtt_broker", trace)
                     << MQTT_ADD_VALUE(address, this)
-                    << "cid:" << client_id
+                    << "cid:" << full_client_id
                     << "offline connection exists, inherit old one and renew";
                 if (cp.response_topic_requested) {
                     // set_response_topic never modify key part
