@@ -1428,16 +1428,13 @@ private:
         // erased from sessions_
         if (it == idx.end()) return true;
 
-        // See if this session is authorized to publish this topic
-        if (security.auth_pub(topic_name, it->get_username()) != security::authorization::type::allow) return true;
-
         auto send_pubres =
-            [&] {
+            [&] (bool authorized = true) {
                 switch (pubopts.get_qos()) {
                 case qos::at_least_once:
                     ep.async_puback(
                         packet_id.value(),
-                        v5::puback_reason_code::success,
+                        authorized ? v5::puback_reason_code::success : v5::puback_reason_code::not_authorized,
                         puback_props_,
                         [spep = force_move(spep)]
                         (error_code ec) {
@@ -1452,7 +1449,7 @@ private:
                 case qos::exactly_once: {
                     ep.async_pubrec(
                         packet_id.value(),
-                        v5::pubrec_reason_code::success,
+                        authorized ? v5::pubrec_reason_code::success : v5::pubrec_reason_code::not_authorized,
                         pubrec_props_,
                         [spep = force_move(spep)]
                         (error_code ec) {
@@ -1468,6 +1465,14 @@ private:
                     break;
                 }
             };
+
+        // See if this session is authorized to publish this topic
+        if (security.auth_pub(topic_name, it->get_username()) != security::authorization::type::allow) {
+
+            // Publish not authorized
+            send_pubres(false);
+            return true;
+        }
 
         v5::properties forward_props;
 
