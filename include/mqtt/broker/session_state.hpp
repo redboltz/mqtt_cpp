@@ -634,7 +634,11 @@ private:
             >,
             mi::ordered_unique<
                 mi::tag<tag_cid>,
-                BOOST_MULTI_INDEX_MEMBER(session_state, buffer, client_id_)
+                mi::composite_key<
+                    session_state,
+                    BOOST_MULTI_INDEX_MEMBER(session_state, std::string, username_),
+                    BOOST_MULTI_INDEX_MEMBER(session_state, buffer, client_id_)
+                >
             >,
             mi::ordered_non_unique<
                 mi::tag<tag_tim>,
