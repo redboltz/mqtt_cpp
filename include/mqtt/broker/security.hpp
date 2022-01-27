@@ -12,6 +12,7 @@
 #include <mqtt/broker/broker_namespace.hpp>
 #include <mqtt/broker/subscription_map.hpp>
 #include <mqtt/optional.hpp>
+#include <mqtt/log.hpp>
 
 #include <map>
 #include <set>
@@ -43,13 +44,13 @@ struct security {
 
         authentication(method method_ = method::sha256,
                        optional<std::string> const& digest = optional<std::string>(),
-                       optional<std::string> const& salt = optional<std::string>())
+                       std::string const& salt = std::string())
             : auth_method(method_), digest(digest), salt(salt)
         { }
 
         method auth_method;
         optional<std::string> digest;
-        optional<std::string> salt;        
+        std::string salt;
 
         std::vector<std::string> groups;
     };
@@ -124,7 +125,7 @@ struct security {
         optional<std::string> empty_result;
         auto i = authentication_.find(std::string(username));
         if (i != authentication_.end() && i->second.auth_method == security::authentication::method::sha256) {
-            return boost::iequals(i->second.digest.value(), sha256hash(i->second.salt.value() + std::string(password))) ? std::string(username) : empty_result;
+            return boost::iequals(i->second.digest.value(), sha256hash(i->second.salt + std::string(password))) ? std::string(username) : empty_result;
         }
         else if (i != authentication_.end() && i->second.auth_method == security::authentication::method::plain_password) {
             return i->second.digest.value() == password ? std::string(username) : empty_result;
@@ -178,7 +179,7 @@ struct security {
 
             if (method == "sha256") {
                 std::string digest = i.second.get<std::string>("digest");
-                std::string salt = i.second.get<std::string>("salt");
+                std::string salt = i.second.get<std::string>("salt", "");
 
                 authentication auth(authentication::method::sha256, digest, salt);
                 authentication_.insert( { name, auth });
@@ -491,7 +492,22 @@ private:
             }
         }
 
+        std::string unsalted;
+        for (auto const &i: authentication_) {
+            if (i.second.auth_method == authentication::method::sha256 && i.second.salt.empty()) {
+                if (!unsalted.empty()) unsalted += ", ";
+                unsalted += i.first;
+            }
+        }
+
+        if (!unsalted.empty()) {
+            MQTT_LOG("mqtt_broker", warning)
+                << "The following users have no salt specified: "
+                << unsalted;
+        }
+
         for (auto const &i: authorization_) {
+
             for (auto const& j: i.sub) {
                 validate_entry("topic " + i.topic, j);
 

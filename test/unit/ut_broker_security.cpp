@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(json_load) {
 
     BOOST_CHECK(security.authentication_["u1"].auth_method == MQTT_NS::broker::security::authentication::method::sha256);
     BOOST_CHECK(security.authentication_["u1"].digest.value() == "38ea2e5e88fcd692fe177c6cada15e9b2db6e70bee0a0d6678c8d3b2a9aae2ad");
-    BOOST_CHECK(security.authentication_["u1"].salt.value() == "salt");
+    BOOST_CHECK(security.authentication_["u1"].salt == "salt");
 
 #if defined(MQTT_USE_TLS)
     BOOST_CHECK(boost::iequals(*security.authentication_["u1"].digest, MQTT_NS::broker::security::sha256hash("saltmypassword")));
@@ -97,15 +97,15 @@ BOOST_AUTO_TEST_CASE(json_load) {
 
     BOOST_CHECK(security.authentication_["u2"].auth_method == MQTT_NS::broker::security::authentication::method::client_cert);
     BOOST_CHECK(!security.authentication_["u2"].digest);
-    BOOST_CHECK(!security.authentication_["u2"].salt);
+    BOOST_CHECK(security.authentication_["u2"].salt.empty());
 
     BOOST_CHECK(security.authentication_["u3"].auth_method == MQTT_NS::broker::security::authentication::method::plain_password);
     BOOST_CHECK(security.authentication_["u3"].digest.value() == "mypassword");
-    BOOST_CHECK(!security.authentication_["u3"].salt);
+    BOOST_CHECK(security.authentication_["u3"].salt.empty());
 
     BOOST_CHECK(security.authentication_["anonymous"].auth_method == MQTT_NS::broker::security::authentication::method::anonymous);
     BOOST_CHECK(!security.authentication_["anonymous"].digest);
-    BOOST_CHECK(!security.authentication_["anonymous"].salt);
+    BOOST_CHECK(security.authentication_["anonymous"].salt.empty());
 
     BOOST_CHECK(security.groups_.size() == 1);
     BOOST_CHECK(security.groups_["@g1"].members.size() == 3);
