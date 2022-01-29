@@ -840,8 +840,8 @@ private:
             username = security.login(*noauth_username, *password);
         }
 
-        // If login fails, try the unauthorized user
-        if (!username) username = security.login_unauthorized();
+        // If login fails, try the unauthenticated user
+        if (!username) username = security.login_unauthenticated();
 
         v5::properties connack_props;
         connect_param cp = handle_connect_props(ep, props, will);
