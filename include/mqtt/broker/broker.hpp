@@ -858,9 +858,14 @@ private:
             return true;
         }
 
-        if (!handle_empty_client_id(spep, client_id, clean_start, connack_props)) {
-            return false;
-        }
+		if (client_id.empty()) {
+	        if (!handle_empty_client_id(spep, client_id, clean_start, connack_props)) {
+    	        return false;
+        	}
+
+			// A new client id was generated
+			client_id = buffer(string_view(spep->get_client_id()));
+		}
 
         MQTT_LOG("mqtt_broker", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -878,7 +883,7 @@ private:
         std::lock_guard<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_cid>();
         auto it = idx.lower_bound(std::make_tuple(*username, client_id));
-        if (it == idx.end() || it->client_id() != client_id) {
+        if (it == idx.end() || it->client_id() != client_id || it->get_username() != *username) {
             // new connection
             MQTT_LOG("mqtt_broker", trace)
                 << MQTT_ADD_VALUE(address, this)
