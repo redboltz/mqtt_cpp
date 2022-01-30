@@ -17,6 +17,19 @@ void load_config(MQTT_NS::broker::security &security, std::string const& value)
     security.load_json(input);
 }
 
+std::string json_remove_comments(std::string const& value) {
+    std::stringstream value_input(value);
+    return MQTT_NS::broker::json_remove_comments(value_input);
+}
+BOOST_AUTO_TEST_CASE(json_comments) {
+    BOOST_CHECK(json_remove_comments("test") == "test");
+    BOOST_CHECK(json_remove_comments("#test\ntest") == "\ntest");
+    BOOST_CHECK(json_remove_comments("'#test'") == "'#test'");
+    BOOST_CHECK(json_remove_comments("\"#test\"") == "\"#test\"");
+    BOOST_CHECK(json_remove_comments("\"'#test'\"") == "\"'#test'\"");
+    BOOST_CHECK(json_remove_comments("'\"#test\"'") == "'\"#test\"'");
+}
+
 BOOST_AUTO_TEST_CASE(default_config) {
     MQTT_NS::broker::security security;
     security.default_config();
@@ -39,7 +52,7 @@ BOOST_AUTO_TEST_CASE(json_load) {
     MQTT_NS::broker::security security;
 
     std::string value = R"*(
-        {
+        { # JSON Comment
             "authentication": [{
                 "name": "u1",
                 "method": "sha256",
@@ -57,28 +70,28 @@ BOOST_AUTO_TEST_CASE(json_load) {
                 "name": "anonymous",
                 "method": "anonymous"
             }],
-            "group": [{
+            "groups": [{
                 "name": "@g1",
                 "members": ["u1", "u2", "anonymous"]
             }],
             "authorization": [{
                 "topic": "#",
-                "type": "allow",
-                "pub": ["@g1"]
+                "allow": { "pub": ["@g1"] }
             }, {
                 "topic": "#",
-                "type": "deny",
-                "sub": ["@g1"]
+                "deny": { "sub": ["@g1"] }
             }, {
                 "topic": "sub/#",
-                "type": "allow",
-                "sub": ["@g1"],
-                "pub": ["@g1"]
+                "allow": {
+                    "sub": ["@g1"],
+                    "pub": ["@g1"]
+                }
             }, {
                 "topic": "sub/topic1",
-                "type": "deny",
-                "sub": ["u1", "anonymous"],
-                "pub": ["u1", "anonymous"]
+                "deny": {
+                    "sub": ["u1", "anonymous"],
+                    "pub": ["u1", "anonymous"]
+                }
             }]
         }
         )*";
@@ -139,8 +152,8 @@ BOOST_AUTO_TEST_CASE(check_errors) {
 
     // Group references non-existing user
     std::string nonexisting_1 = R"*(
-            {
-                "group": [{
+            {  # JSON Comment
+                "groups": [{
                     "name": "@g1",
                     "members": ["u1", "u2"]
                 }]
@@ -157,12 +170,14 @@ BOOST_AUTO_TEST_CASE(check_errors) {
                     "type": "deny"
                 }, {
                     "topic": "sub/#",
-                    "type": "allow",
-                    "sub": ["@g1"]
+                    "allow": {
+                        "sub": ["@g1"]
+                    }
                 }, {
                     "topic": "sub/topic1",
-                    "type": "deny",
-                    "sub": ["u1", "anonymous"]
+                    "deny": {
+                        "sub": ["u1", "anonymous"]
+                    }
                 }]
             }
         )*";
@@ -202,7 +217,7 @@ BOOST_AUTO_TEST_CASE(check_errors) {
     // Duplicate group
     std::string duplicate_group = R"*(
             {
-                "group": [{
+                "groups": [{
                     "name": "@g1",
                     "members": ["u1", "u2"]
                 }, {
@@ -221,8 +236,7 @@ BOOST_AUTO_TEST_CASE(check_errors) {
                     "type": "deny"
                 }, {
                     "topic": "sub/#",
-                    "type": "allow",
-                    "sub": ["@nonexist"]
+                    "allow": { "sub": ["@nonexist"] }
                 }]
             }
         )*";
@@ -242,7 +256,7 @@ BOOST_AUTO_TEST_CASE(check_errors) {
     // Invalid group name
     std::string invalid_group_name = R"*(
             {
-                "group": [{
+                "groups": [{
                     "name": "g1",
                     "members": ["u1", "u2"]
                 }]
@@ -270,23 +284,28 @@ BOOST_AUTO_TEST_CASE(check_publish) {
                     "name": "anonymous",
                     "method": "anonymous"
                 }],
-                "group": [{
+                "groups": [{
                     "name": "@g1",
                     "members": ["u1", "u2"]
                 }],
                 "authorization": [{
                     "topic": "#",
-                    "type": "deny"
+                    "deny": {
+                        "sub": ["@g1"],
+                        "pub": ["@g1"]
+                    }
                 }, {
                     "topic": "sub/#",
-                    "type": "allow",
-                    "sub": ["@g1"],
-                    "pub": ["@g1"]
+                    "allow": {
+                        "sub": ["@g1"],
+                        "pub": ["@g1"]
+                    }
                 }, {
                     "topic": "sub/topic1",
-                    "type": "deny",
-                    "sub": ["u1", "anonymous"],
-                    "pub": ["u1", "anonymous"]
+                    "deny": {
+                        "sub": ["u1", "anonymous"],
+                        "pub": ["u1", "anonymous"]
+                    }
                 }]
             }
         )*";
@@ -352,6 +371,7 @@ BOOST_AUTO_TEST_CASE(deny_check) {
 BOOST_AUTO_TEST_CASE(auth_check) {
     MQTT_NS::broker::security security;
     std::string test_1 = R"*(
+            # JSON Comment
             {
                 "authentication": [{
                     "name": "u1",
@@ -366,28 +386,28 @@ BOOST_AUTO_TEST_CASE(auth_check) {
                     "name": "anonymous",
                     "method": "anonymous"
                 }],
-                "group": [{
+                "groups": [{
                     "name": "@g1",
                     "members": ["u1", "u2", "anonymous"]
                 }],
                 "authorization": [{
                     "topic": "#",
-                    "type": "allow",
-                    "pub": ["@g1"]
+                    "allow": { "pub": ["@g1"] }
                 }, {
                     "topic": "#",
-                    "type": "deny",
-                    "sub": ["@g1"]
+                    "deny": { "sub": ["@g1"] }
                 }, {
                     "topic": "sub/#",
-                    "type": "allow",
-                    "sub": ["@g1"],
-                    "pub": ["@g1"]
+                    "allow": {
+                        "sub": ["@g1"],
+                        "pub": ["@g1"]
+                    }
                 }, {
                     "topic": "sub/topic1",
-                    "type": "deny",
-                    "sub": ["u1", "anonymous"],
-                    "pub": ["u1", "anonymous"]
+                    "deny": {
+                        "sub": ["u1", "anonymous"],
+                        "pub": ["u1", "anonymous"]
+                    }
                 }]
             }
         )*";
@@ -403,6 +423,7 @@ BOOST_AUTO_TEST_CASE(auth_check) {
     BOOST_CHECK(security.get_auth_sub_topics("u1", "example/topic1").empty());
 
     std::string test_2 = R"*(
+            # JSON Comment
             {
                 "authentication": [
                     {
@@ -420,14 +441,14 @@ BOOST_AUTO_TEST_CASE(auth_check) {
                 "authorization": [
                     {
                         "topic": "#",
-                        "type": "deny",
-                        "sub": ["u1","u2"]
+                        "deny": { "sub": ["u1","u2"] }
                     }
                     ,
                     {
                         "topic": "#",
-                        "type": "allow",
-                        "sub": ["u1"]
+                        "allow": {
+                            "sub": ["u1"]
+                        }
                     }
                 ]
             }
@@ -439,5 +460,6 @@ BOOST_AUTO_TEST_CASE(auth_check) {
     BOOST_CHECK(!security.get_auth_sub_topics("u1", "sub/test").empty());
     BOOST_CHECK(security.get_auth_sub_topics("u2", "sub/test").empty());
 }
+
 
 BOOST_AUTO_TEST_SUITE_END()

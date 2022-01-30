@@ -31,6 +31,31 @@
 
 MQTT_BROKER_NS_BEGIN
 
+/** Remove comments from a JSON file (comments start with # and are not inside ' ' or " ") */
+static inline std::string json_remove_comments(std::istream& input)
+{
+    bool inside_comment = false;
+    bool inside_single_quote = false;
+    bool inside_double_quote = false;
+
+    std::ostringstream result;
+
+    while(true) {
+        char c;
+        if(input.get(c).eof()) break;
+
+        if (!inside_double_quote && !inside_single_quote && c == '#') inside_comment = true;
+        if (!inside_double_quote && c == '\'') inside_single_quote = !inside_single_quote;
+        if (!inside_single_quote && c == '"') inside_double_quote = !inside_double_quote;
+        if (!inside_double_quote && c == '\n') inside_comment = false;
+
+        if(!inside_comment) result << c;        
+    }
+
+    return result.str();
+}
+
+
 struct security {
 
     struct authentication {
@@ -169,7 +194,9 @@ struct security {
     void load_json(std::istream& input) {
         // Create a root
         boost::property_tree::ptree root;
-        boost::property_tree::read_json(input, root);
+
+        std::istringstream input_without_comments(json_remove_comments(input));
+        boost::property_tree::read_json(input_without_comments, root);
 
         for (auto const& i: root.get_child("authentication")) {
             std::string name = i.second.get<std::string>("name");
@@ -212,8 +239,8 @@ struct security {
                 throw std::runtime_error("An invalid method was specified: " + method);
             }
         }
-        if (root.get_child_optional("group")) {
-            for (auto const& i: root.get_child("group")) {
+        if (root.get_child_optional("groups")) {
+            for (auto const& i: root.get_child("groups")) {
                 std::string name = i.second.get<std::string>("name");
                 if(!is_valid_group_name(name)) throw std::runtime_error("An invalid group name was specified: " + name);
 
@@ -236,28 +263,44 @@ struct security {
             std::string name = i.second.get<std::string>("topic");
             if(!validate_topic_filter(name)) throw std::runtime_error("An invalid topic filter was specified: " + name);
 
-            auto type = get_auth_type(i.second.get<std::string>("type"));
-
             authorization auth(name);
             auth.topic_tokens = get_topic_filter_tokens(name);
 
-            if (i.second.get_child_optional("sub")) {
-                for(auto const& j: i.second.get_child("sub"))
-                    auth.sub.insert(j.second.get_value<std::string>());
-                auth.sub_type = type;
+            if (i.second.get_child_optional("allow")) {
+                auto &allow = i.second.get_child("allow");
+                if (allow.get_child_optional("sub")) {
+                    for(auto const& j: allow.get_child("sub"))
+                        auth.sub.insert(j.second.get_value<std::string>());
+                    auth.sub_type = authorization::type::allow;
+                }
+
+                if (allow.get_child_optional("pub")) {
+                    for (auto const& j: allow.get_child("pub"))
+                        auth.pub.insert(j.second.get_value<std::string>());
+                    auth.pub_type = authorization::type::allow;
+                }
             }
 
-            if (i.second.get_child_optional("pub")) {
-                for (auto const& j: i.second.get_child("pub"))
-                    auth.pub.insert(j.second.get_value<std::string>());
-                auth.pub_type = type;
-            }            
+            if (i.second.get_child_optional("deny")) {
+                auto &deny = i.second.get_child("deny");
+                if (deny.get_child_optional("sub")) {
+                    for(auto const& j: deny.get_child("sub"))
+                        auth.sub.insert(j.second.get_value<std::string>());
+                    auth.sub_type = authorization::type::deny;
+                }
 
+                if (deny.get_child_optional("pub")) {
+                    for (auto const& j: deny.get_child("pub"))
+                        auth.pub.insert(j.second.get_value<std::string>());
+                    auth.pub_type = authorization::type::deny;
+                }
+
+            }
             authorization_.push_back(auth);
         }
 
         validate();
-    }
+    }        
 
     template<typename T>
     void get_auth_sub_by_user(string_view username, T&& callback) const {
