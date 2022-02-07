@@ -140,6 +140,7 @@ void client_proc(
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/member.hpp>
+#include <boost/multi_index/composite_key.hpp>
 #include <mqtt_server_cpp.hpp>
 
 namespace mi = boost::multi_index;
@@ -158,10 +159,19 @@ struct sub_con {
 
 struct tag_topic {};
 struct tag_con {};
+struct tag_con_topic {};
 
 using mi_sub_con = mi::multi_index_container<
     sub_con,
     mi::indexed_by<
+        mi::ordered_unique<
+            mi::tag<tag_con_topic>,
+            mi::composite_key<
+                sub_con,
+                BOOST_MULTI_INDEX_MEMBER(sub_con, con_sp_t, con),
+                BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, topic)
+            >
+        >,
         mi::ordered_non_unique<
             mi::tag<tag_topic>,
             BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, topic)
@@ -353,10 +363,13 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                  std::vector<MQTT_NS::unsubscribe_entry> entries,
                  MQTT_NS::v5::properties /*props*/) {
                     locked_cout() << "[server] unsubscribe received. packet_id: " << packet_id << std::endl;
-                    for (auto const& e : entries) {
-                        subs.erase(e.topic_filter);
-                    }
                     auto sp = wp.lock();
+                    for (auto const& e : entries) {
+                        auto it = subs.find(std::make_tuple(sp, e.topic_filter));
+                        if (it != subs.end()) {
+                            subs.erase(it);
+                        }
+                    }
                     BOOST_ASSERT(sp);
                     sp->unsuback(packet_id);
                     return true;
