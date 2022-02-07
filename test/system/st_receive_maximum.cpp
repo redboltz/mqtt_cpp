@@ -153,6 +153,136 @@ BOOST_AUTO_TEST_CASE( sync ) {
     do_combi_test_sync(test);
 }
 
+BOOST_AUTO_TEST_CASE( sync_manual_pubrel ) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
+        clear_ordered();
 
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
+        }
+
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
+        c->set_clean_session(false);
+        c->set_maximum_packet_size_recv(50);
+
+        b.set_connack_props(
+            MQTT_NS::v5::properties {
+                MQTT_NS::v5::property::receive_maximum(2)
+            }
+        );
+        checker chk = {
+            // connect
+            cont("h_connack"),
+            // pubrel
+            cont("h_pubcomp"),
+            // disconnect
+            cont("h_close"),
+        };
+
+        c->set_v5_connack_handler(
+            [&]
+            (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
+                MQTT_CHK("h_connack");
+                BOOST_TEST(sp == false);
+                BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
+                c->pubrel(1);
+                return true;
+            });
+        c->set_v5_pubcomp_handler(
+            [&]
+            (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
+                MQTT_CHK("h_pubcomp");
+                BOOST_TEST(packet_id == 1);
+                c->disconnect();
+                return true;
+            }
+        );
+        c->set_close_handler(
+            [&]
+            () {
+                MQTT_CHK("h_close");
+                finish();
+            });
+        c->set_error_handler(
+            []
+            (MQTT_NS::error_code) {
+                BOOST_CHECK(false);
+            });
+        c->connect();
+
+        ioc.run();
+        BOOST_TEST(chk.all());
+    };
+    do_combi_test_sync(test);
+}
+
+BOOST_AUTO_TEST_CASE( async_manual_pubrel ) {
+    auto test = [](boost::asio::io_context& ioc, auto& cs, auto finish, auto& b) {
+        auto& c = cs[0];
+        clear_ordered();
+
+        if (c->get_protocol_version() != MQTT_NS::protocol_version::v5) {
+            finish();
+            return;
+        }
+
+        using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
+        c->set_client_id("cid1");
+        c->set_clean_session(false);
+        c->set_maximum_packet_size_recv(50);
+
+        b.set_connack_props(
+            MQTT_NS::v5::properties {
+                MQTT_NS::v5::property::receive_maximum(2)
+            }
+        );
+        checker chk = {
+            // connect
+            cont("h_connack"),
+            // pubrel
+            cont("h_pubcomp"),
+            // disconnect
+            cont("h_close"),
+        };
+
+        c->set_v5_connack_handler(
+            [&]
+            (bool sp, MQTT_NS::v5::connect_reason_code connack_return_code, MQTT_NS::v5::properties /*props*/) {
+                MQTT_CHK("h_connack");
+                BOOST_TEST(sp == false);
+                BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
+                c->async_pubrel(1);
+                return true;
+            });
+        c->set_v5_pubcomp_handler(
+            [&]
+            (packet_id_t packet_id, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
+                MQTT_CHK("h_pubcomp");
+                BOOST_TEST(packet_id == 1);
+                c->async_disconnect();
+                return true;
+            }
+        );
+        c->set_close_handler(
+            [&]
+            () {
+                MQTT_CHK("h_close");
+                finish();
+            });
+        c->set_error_handler(
+            []
+            (MQTT_NS::error_code) {
+                BOOST_CHECK(false);
+            });
+        c->async_connect();
+
+        ioc.run();
+        BOOST_TEST(chk.all());
+    };
+    do_combi_test_async(test);
+}
 
 BOOST_AUTO_TEST_SUITE_END()
