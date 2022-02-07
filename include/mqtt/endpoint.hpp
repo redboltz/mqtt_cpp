@@ -4817,7 +4817,10 @@ public:
                     MQTT_LOG("mqtt_api", info)
                         << MQTT_ADD_VALUE(address, this)
                         << "send_store_message pubrel v5";
-                    resend_pubrel_.insert(m.packet_id());
+                    {
+                        LockGuard<Mutex> lck (resend_pubrel_mtx_);
+                        resend_pubrel_.insert(m.packet_id());
+                    }
                     pubrel_proc(force_move(m), &endpoint::on_serialize_v5_pubrel_message);
                 }
             ),
@@ -4935,7 +4938,10 @@ public:
                     MQTT_LOG("mqtt_api", info)
                         << MQTT_ADD_VALUE(address, this)
                         << "async_send_store_message pubrel v5";
-                    resend_pubrel_.insert(m.packet_id());
+                    {
+                        LockGuard<Mutex> lck (resend_pubrel_mtx_);
+                        resend_pubrel_.insert(m.packet_id());
+                    }
                     pubrel_proc(force_move(m), &endpoint::on_serialize_v5_pubrel_message);
                 }
             ),
@@ -7418,7 +7424,10 @@ private:
                 ep_.mqtt_connected_ = true;
                 {
                     ep_.publish_send_count_ = 0;
-                    ep_.resend_pubrel_.clear();
+                    {
+                        LockGuard<Mutex> lck (ep_.resend_pubrel_mtx_);
+                        ep_.resend_pubrel_.clear();
+                    }
                     {
                         LockGuard<Mutex> lck (ep_.publish_received_mtx_);
                         ep_.publish_received_.clear();
@@ -7584,7 +7593,10 @@ private:
                 ep_.mqtt_connected_ = true;
                 {
                     ep_.publish_send_count_ = 0;
-                    ep_.resend_pubrel_.clear();
+                    {
+                        LockGuard<Mutex> lck (ep_.resend_pubrel_mtx_);
+                        ep_.resend_pubrel_.clear();
+                    }
                     {
                         LockGuard<Mutex> lck (ep_.publish_received_mtx_);
                         ep_.publish_received_.clear();
@@ -8711,7 +8723,13 @@ private:
                     }
                     break;
                 case protocol_version::v5:
-                    if (erased && ep_.resend_pubrel_.find(packet_id_) == ep_.resend_pubrel_.end()) {
+                    if (
+                        erased &&
+                        [&] {
+                            LockGuard<Mutex> lck (ep_.resend_pubrel_mtx_);
+                            return ep_.resend_pubrel_.find(packet_id_) == ep_.resend_pubrel_.end();
+                        } ()
+                    ) {
                         ep_.send_publish_queue_one();
                     }
                     if (ep_.on_v5_pubcomp(packet_id_, reason_code_, force_move(props_))) {
@@ -10020,7 +10038,10 @@ private:
                     LockGuard<Mutex> lck (store_mtx_);
 
                     // insert if not registerd (start from pubrel sending case)
-                    pid_man_.register_id(packet_id);
+                    if (pid_man_.register_id(packet_id)) {
+                        LockGuard<Mutex> lck_resend_pubrel (resend_pubrel_mtx_);
+                        resend_pubrel_.insert(packet_id);
+                    }
 
                     auto ret = store_.emplace(
                         packet_id,
@@ -10476,7 +10497,10 @@ private:
                         MQTT_LOG("mqtt_api", info)
                             << MQTT_ADD_VALUE(address, this)
                             << "async_send_store pubrel v5";
-                        resend_pubrel_.insert(m.packet_id());
+                        {
+                            LockGuard<Mutex> lck_resend_pubrel (resend_pubrel_mtx_);
+                            resend_pubrel_.insert(m.packet_id());
+                        }
                         do_sync_write(m);
                         ++it;
                     }
@@ -10814,7 +10838,10 @@ private:
                     LockGuard<Mutex> lck (store_mtx_);
 
                     // insert if not registerd (start from pubrel sending case)
-                    pid_man_.register_id(packet_id);
+                    if (pid_man_.register_id(packet_id)) {
+                        LockGuard<Mutex> lck_resend_pubrel (resend_pubrel_mtx_);
+                        resend_pubrel_.insert(packet_id);
+                    }
 
                     auto ret = store_.emplace(
                         packet_id,
@@ -11375,7 +11402,10 @@ private:
                         MQTT_LOG("mqtt_api", info)
                             << MQTT_ADD_VALUE(address, this)
                             << "async_send_store pubrel v5";
-                        resend_pubrel_.insert(m.packet_id());
+                        {
+                            LockGuard<Mutex> lck_resend_pubrel (resend_pubrel_mtx_);
+                            resend_pubrel_.insert(m.packet_id());
+                        }
                         do_async_write(
                             m,
                             [g]
@@ -11763,6 +11793,8 @@ private:
     };
     Mutex publish_send_queue_mtx_;
     std::deque<publish_send_queue_elem> publish_send_queue_;
+
+    mutable Mutex resend_pubrel_mtx_;
     std::set<packet_id_t> resend_pubrel_;
 };
 
