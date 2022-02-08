@@ -7360,6 +7360,7 @@ private:
                     }
                 );
                 client_id_ = force_move(variant_get<buffer>(var));
+                ep_.set_client_id(std::string(client_id_));
                 if (connect_flags::has_will_flag(connect_flag_)) {
                     if (ep_.version_ == protocol_version::v5) {
                         // will properties
