@@ -375,7 +375,7 @@ struct security {
 
         auto filter_begin = authorized_filter.begin();
 
-        auto subscription_begin = subscription_filter.begin();
+        auto subscription_begin = std::prev(subscription_filter.begin());
         auto subscription_next = topic_filter_tokenizer_next(subscription_begin, subscription_filter.end());
 
         while (filter_begin < authorized_filter.end() && subscription_begin < subscription_filter.end()) {
@@ -383,11 +383,11 @@ struct security {
             ++filter_begin;
 
             if (is_hash(auth)) {
-                append_result(string_view(subscription_begin, static_cast<size_t>(std::distance(subscription_begin, subscription_filter.end()))));
+                append_result(string_view(std::next(subscription_begin), static_cast<size_t>(std::distance(subscription_begin, subscription_filter.end())) - 1));
                 return result;
             }
 
-            auto sub = string_view(subscription_begin, static_cast<size_t>(std::distance(subscription_begin, subscription_next)));
+            auto sub = string_view(std::next(subscription_begin), static_cast<size_t>(std::distance(subscription_begin, subscription_next)) - 1);
             if (is_hash(sub)) {
                 append_result(auth);
 
@@ -413,9 +413,9 @@ struct security {
                 append_result(auth);
             }
 
-            subscription_begin = std::next(subscription_next);
+            subscription_begin = subscription_next;
             if (subscription_next == subscription_filter.end()) break;
-            subscription_next = topic_filter_tokenizer_next(subscription_begin, subscription_filter.end());
+            subscription_next = topic_filter_tokenizer_next(std::next(subscription_begin), subscription_filter.end());
         }
 
         if (filter_begin < authorized_filter.end() || subscription_begin < subscription_filter.end()) {

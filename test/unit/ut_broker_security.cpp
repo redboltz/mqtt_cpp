@@ -21,6 +21,7 @@ std::string json_remove_comments(std::string const& value) {
     std::stringstream value_input(value);
     return MQTT_NS::broker::json_remove_comments(value_input);
 }
+
 BOOST_AUTO_TEST_CASE(json_comments) {
     BOOST_CHECK(json_remove_comments("test") == "test");
     BOOST_CHECK(json_remove_comments("#test\ntest") == "\ntest");
@@ -341,6 +342,32 @@ BOOST_AUTO_TEST_CASE(authorized_check) {
         MQTT_NS::broker::security::get_topic_filter_tokens("example/value/a"), "example/#").value() == "example/value/a");
     BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed(
         MQTT_NS::broker::security::get_topic_filter_tokens("example/deny"), "example/test"));
+
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("+"), "t1").value() == "t1");
+    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("+"), "t1/"));
+    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("+"), "t1/t2"));
+    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("+"), "t1/t2/t3"));
+
+    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("+/+"), "t1"));
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("+/+"), "t1/").value() == "t1/");
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("+/+"), "t1/t2").value() == "t1/t2");
+    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("+/+"), "t1/t2/t3"));
+
+    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("+/"), "t1"));
+    BOOST_CHECK(MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("+/"), "t1/").value() == "t1/");
+    BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed(
+        MQTT_NS::broker::security::get_topic_filter_tokens("+/"), "t1/t2"));
+
 }
 
 BOOST_AUTO_TEST_CASE(deny_check) {
@@ -462,4 +489,86 @@ BOOST_AUTO_TEST_CASE(auth_check) {
 }
 
 
+BOOST_AUTO_TEST_CASE(auth_check_plus) {
+    BOOST_CHECK(MQTT_NS::broker::security::get_topic_filter_tokens("+/").size() == 2);
+    BOOST_CHECK(MQTT_NS::broker::security::get_topic_filter_tokens("+/+/").size() == 3);
+
+    MQTT_NS::broker::security security_1;
+    std::string test_1 = R"*(
+            # JSON Comment
+            {
+                "authentication": [
+                    {
+                        "name": "u1",
+                        "method": "plain_password",
+                        "password": "hoge"
+                    }
+                ],
+                "authorization": [
+					 {
+            			"topic": "+",
+            			"allow": { "pub":["u1"], "sub":["u1"] }
+        			}
+                ]
+            }
+        )*";
+    BOOST_CHECK_NO_THROW(load_config(security_1, test_1));
+
+    BOOST_CHECK(security_1.auth_sub_user(security_1.auth_sub("t1"), "u1") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security_1.auth_sub_user(security_1.auth_sub("t1/"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security_1.auth_sub_user(security_1.auth_sub("t1/t2"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security_1.auth_sub_user(security_1.auth_sub("t1/t2/t3"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+
+    MQTT_NS::broker::security security_2;
+    std::string test_2 = R"*(
+            # JSON Comment
+            {
+                "authentication": [
+                    {
+                        "name": "u1",
+                        "method": "plain_password",
+                        "password": "hoge"
+                    }
+                ],
+                "authorization": [
+  					{
+            			"topic": "+/+",
+            			"allow": { "pub":["u1"], "sub":["u1"] }
+        			}
+                ]
+            }
+        )*";
+    BOOST_CHECK_NO_THROW(load_config(security_2, test_2));
+
+    BOOST_CHECK(security_2.auth_sub_user(security_2.auth_sub("t1"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security_2.auth_sub_user(security_2.auth_sub("t1/t2"), "u1") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security_2.auth_sub_user(security_2.auth_sub("t1/t2/"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security_2.auth_sub_user(security_2.auth_sub("t1/t2/t3"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+
+    MQTT_NS::broker::security security_3;
+    std::string test_3 = R"*(
+            # JSON Comment
+            {
+                "authentication": [
+                    {
+                        "name": "u1",
+                        "method": "plain_password",
+                        "password": "hoge"
+                    }
+                ],
+                "authorization": [
+  					{
+            			"topic": "+/",
+            			"allow": { "pub":["u1"], "sub":["u1"] }
+        			}
+                ]
+            }
+        )*";
+    BOOST_CHECK_NO_THROW(load_config(security_3, test_3));
+
+    BOOST_CHECK(security_3.auth_sub_user(security_3.auth_sub("t1"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security_3.auth_sub_user(security_3.auth_sub("t1/"), "u1") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security_3.auth_sub_user(security_3.auth_sub("t1/t2"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+}
+	
 BOOST_AUTO_TEST_SUITE_END()
