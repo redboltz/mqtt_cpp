@@ -347,6 +347,7 @@ BOOST_AUTO_TEST_CASE(authorized_check) {
         MQTT_NS::broker::security::get_topic_filter_tokens("+"), "t1").value() == "t1");
     BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed(
         MQTT_NS::broker::security::get_topic_filter_tokens("+"), "t1/"));
+
     BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed(
         MQTT_NS::broker::security::get_topic_filter_tokens("+"), "t1/t2"));
     BOOST_CHECK(!MQTT_NS::broker::security::is_subscribe_allowed(
