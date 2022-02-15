@@ -572,4 +572,48 @@ BOOST_AUTO_TEST_CASE(auth_check_plus) {
     BOOST_CHECK(security_3.auth_sub_user(security_3.auth_sub("t1/t2"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
 }
 	
+BOOST_AUTO_TEST_CASE(priority_test) {
+    MQTT_NS::broker::security security;
+    std::string test = R"*(
+            # JSON Comment
+            {
+                "authentication": [
+                    {
+                        "name": "u1",
+                        "method": "plain_password",
+                        "password": "hoge"
+                    }
+                ],
+                "authorization": [
+                    {
+                        "topic": "t1",
+                        "allow": { "pub":["u1"], "sub":["u1"] }
+
+                    }
+                    ,
+                    {
+                        "topic": "#",
+                        "deny": { "pub":["u1"], "sub":["u1"] }
+
+                    }
+                    ,
+                    {
+                        "topic": "t2",
+                        "allow": { "pub":["u1"], "sub":["u1"] }
+                    }
+                ]
+            }
+        )*";
+    BOOST_CHECK_NO_THROW(load_config(security, test));
+
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("t1"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("t2"), "u1") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("t3"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+
+    BOOST_CHECK(security.auth_pub("t1", "u1") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security.auth_pub("t2", "u1") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_pub("t3", "u1") == MQTT_NS::broker::security::authorization::type::deny);
+
+}
+
 BOOST_AUTO_TEST_SUITE_END()

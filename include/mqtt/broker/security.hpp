@@ -314,7 +314,6 @@ struct security {
         }
 
         for (auto const &i: authorization_) {
-
             if (i.sub_type != authorization::type::none) {
                 bool sets_intersect = false;
                 auto store_intersect = [&sets_intersect](std::string const &) mutable { sets_intersect = true; };
@@ -335,8 +334,14 @@ struct security {
     authorization::type auth_pub(string_view const& topic, string_view const& username) const {
         authorization::type result_type = authorization::type::deny;
 
-        auth_pub_map.find(topic, [&](std::string const &allowed_username, authorization::type type) {
-            if (allowed_username == username) result_type = type;
+        std::size_t priority = 0;
+        auth_pub_map.find(topic, [&](std::string const &allowed_username, std::pair<authorization::type, std::size_t> entry) {
+            if (allowed_username == username) {
+                if (entry.second >= priority) {
+                    result_type = entry.first;
+                    priority = entry.second;
+                }
+            }
         });
 
         return result_type;
@@ -345,8 +350,12 @@ struct security {
     std::map<std::string, authorization::type> auth_sub(string_view const& topic) const {
         std::map<std::string, authorization::type> result;
 
-        auth_sub_map.find(topic, [&](std::string const &allowed_username, authorization::type type) {
-            result[allowed_username] = type;
+        std::size_t priority = 0;
+        auth_sub_map.find(topic, [&](std::string const &allowed_username, std::pair<authorization::type, unsigned int> entry) {
+            if (entry.second >= priority) {
+                result[allowed_username] = entry.first;
+                priority = entry.second;
+            }
         });
 
         return result;
@@ -519,7 +528,7 @@ struct security {
     optional<std::string> anonymous;
     optional<std::string> unauthenticated;
 
-    using auth_map_type = multiple_subscription_map<std::string, authorization::type>;
+    using auth_map_type = multiple_subscription_map<std::string, std::pair<authorization::type, unsigned int>>;
     auth_map_type auth_pub_map;
     auth_map_type auth_sub_map;
 
@@ -554,28 +563,30 @@ private:
                 << unsalted;
         }
 
+        std::size_t rule_nr = 0;
         for (auto const &i: authorization_) {
-
             for (auto const& j: i.sub) {
+                ++rule_nr;
                 validate_entry("topic " + i.topic, j);
 
                 if (is_valid_user_name(j)) {
-                    auth_sub_map.insert_or_assign(i.topic, j, i.sub_type);
+                    auth_sub_map.insert_or_assign(i.topic, j, std::make_pair(i.sub_type, rule_nr));
                 }
                 else if (is_valid_group_name(j)) {
                     for (auto const& z: groups_[j].members)
-                        auth_sub_map.insert_or_assign(i.topic, z, i.sub_type);
+                        auth_sub_map.insert_or_assign(i.topic, z, std::make_pair(i.sub_type, rule_nr));
                 }
             }
             for (auto const& j: i.pub) {
+                ++rule_nr;
                 validate_entry("topic " + i.topic, j);
 
                 if(is_valid_user_name(j)) {
-                    auth_pub_map.insert_or_assign(i.topic, j, i.pub_type);
+                    auth_pub_map.insert_or_assign(i.topic, j, std::make_pair(i.pub_type, rule_nr));
                 }
                 else if(is_valid_group_name(j)) {
                     for (auto const& z: groups_[j].members)
-                        auth_pub_map.insert_or_assign(i.topic, z, i.pub_type);
+                        auth_pub_map.insert_or_assign(i.topic, z, std::make_pair(i.pub_type, rule_nr));
                 }
             }
         }
