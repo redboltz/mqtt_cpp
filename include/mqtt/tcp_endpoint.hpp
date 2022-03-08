@@ -90,6 +90,10 @@ public:
         );
     }
 
+    MQTT_ALWAYS_INLINE bool running_in_this_thread() const override final {
+        return strand_.running_in_this_thread();
+    }
+
     MQTT_ALWAYS_INLINE as::ip::tcp::socket::lowest_layer_type& lowest_layer() override final {
         return tcp_.lowest_layer();
     }

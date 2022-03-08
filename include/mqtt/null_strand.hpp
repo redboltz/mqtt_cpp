@@ -56,6 +56,7 @@ struct null_strand {
             }
         );
     }
+    bool running_in_this_thread() const noexcept { return false; }
     void on_work_started() const noexcept {}
     void on_work_finished() const noexcept {}
     as::io_context& context() noexcept{ return ioc_; }
