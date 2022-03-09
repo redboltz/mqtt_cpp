@@ -88,13 +88,14 @@ struct security {
             deny, allow, none
         };
 
-        authorization(string_view const &topic)
-            : topic(topic), sub_type(type::none), pub_type(type::none)
+        authorization(string_view const &topic, std::size_t rule_nr)
+            : topic(topic), rule_nr(rule_nr), sub_type(type::none), pub_type(type::none)
         { }
 
         std::vector<std::string> topic_tokens;
 
         std::string topic;
+        std::size_t rule_nr;
 
         type sub_type;
         std::set<std::string> sub;
@@ -175,6 +176,14 @@ struct security {
         return !name.empty() && name[0] != '@'; // TODO: validate utf-8
     }
 
+    std::size_t get_next_rule_nr() const {
+        std::size_t rule_nr = 0;
+        for(auto const &i: authorization_) {
+            rule_nr = std::max(rule_nr, i.rule_nr);
+        }
+        return rule_nr + 1;
+    }
+
     void default_config() {
         char const *username = "anonymous";
         authentication login(authentication::method::anonymous);
@@ -182,7 +191,7 @@ struct security {
         anonymous = username;
 
         char const *topic = "#";
-        authorization auth(topic);
+        authorization auth(topic, get_next_rule_nr());
         auth.topic_tokens = get_topic_filter_tokens("#");
         auth.sub_type = authorization::type::allow;
         auth.sub.insert(username);
@@ -191,6 +200,57 @@ struct security {
         authorization_.push_back(auth);
 
         validate();
+    }
+
+    std::size_t add_auth(std::string const &topic_filter, std::set<std::string> const &pub, authorization::type auth_pub_type,  std::set<std::string> const &sub, authorization::type auth_sub_type) {
+        for(auto const &j: pub) {
+            if (!is_valid_user_name(j) && !is_valid_group_name(j)) {
+                throw std::runtime_error("An invalid username or groupname was specified for the authorization: " + j);
+            }
+            validate_entry("topic " + topic_filter, j);
+        }
+
+        for(auto const &j: sub) {
+            if (!is_valid_user_name(j) && !is_valid_group_name(j)) {
+                throw std::runtime_error("An invalid username or groupname was specified for the authorization: " + j);
+            }
+            validate_entry("topic " + topic_filter, j);
+        }
+
+        std::size_t rule_nr = get_next_rule_nr();
+        authorization auth(topic_filter, rule_nr);
+        auth.topic_tokens = get_topic_filter_tokens(topic_filter);
+        auth.pub = pub;
+        auth.pub_type = auth_pub_type;
+        auth.sub = sub;
+        auth.sub_type = auth_sub_type;
+
+        for (auto const& j: sub) {
+            auth_sub_map.insert_or_assign(topic_filter, j, std::make_pair(auth_sub_type, rule_nr));
+        }
+        for (auto const& j: pub) {
+            auth_pub_map.insert_or_assign(topic_filter, j, std::make_pair(auth_pub_type, rule_nr));
+        }
+
+        authorization_.push_back(auth);
+        return rule_nr;
+    }
+
+    void remove_auth(std::size_t rule_nr)
+    {
+        for(auto i = authorization_.begin(); i != authorization_.end(); ++i) {
+            if (i->rule_nr == rule_nr) {
+                for (auto const& j: i->sub) {
+                    auth_sub_map.erase(i->topic, j);
+                }
+                for (auto const& j: i->pub) {
+                    auth_pub_map.erase(i->topic, j);
+                }
+
+                authorization_.erase(i);
+                return;
+            }
+        }
     }
 
     void load_json(std::istream& input) {
@@ -269,7 +329,7 @@ struct security {
             std::string name = i.second.get<std::string>("topic");
             if(!validate_topic_filter(name)) throw std::runtime_error("An invalid topic filter was specified: " + name);
 
-            authorization auth(name);
+            authorization auth(name, get_next_rule_nr());
             auth.topic_tokens = get_topic_filter_tokens(name);
 
             if (i.second.get_child_optional("allow")) {
@@ -547,7 +607,9 @@ struct security {
 
     std::map<std::string, authentication> authentication_;
     std::map<std::string, group> groups_;
+
     std::vector<authorization> authorization_;
+
     optional<std::string> anonymous;
     optional<std::string> unauthenticated;
 
@@ -586,22 +648,19 @@ private:
                 << unsalted;
         }
 
-        std::size_t rule_nr = 0;
         for (auto const &i: authorization_) {
             for (auto const& j: i.sub) {
-                ++rule_nr;
                 validate_entry("topic " + i.topic, j);
 
                 if (is_valid_user_name(j) || is_valid_group_name(j)) {
-                    auth_sub_map.insert_or_assign(i.topic, j, std::make_pair(i.sub_type, rule_nr));
+                    auth_sub_map.insert_or_assign(i.topic, j, std::make_pair(i.sub_type, i.rule_nr));
                 }                
             }
             for (auto const& j: i.pub) {
-                ++rule_nr;
                 validate_entry("topic " + i.topic, j);
 
                 if(is_valid_user_name(j) || is_valid_group_name(j)) {
-                    auth_pub_map.insert_or_assign(i.topic, j, std::make_pair(i.pub_type, rule_nr));
+                    auth_pub_map.insert_or_assign(i.topic, j, std::make_pair(i.pub_type, i.rule_nr));
                 }                
             }
         }

@@ -556,6 +556,51 @@ BOOST_AUTO_TEST_CASE(auth_check) {
     BOOST_CHECK(security.get_auth_sub_topics("u2", "sub/test").empty());
 }
 
+BOOST_AUTO_TEST_CASE(auth_check_dynamic) {
+    MQTT_NS::broker::security security;
+    std::string test = R"*(
+            # JSON Comment
+            {
+                "authentication": [
+                    {
+                        "name": "u1",
+                        "method": "plain_password",
+                        "password": "hoge"
+                    },
+                    {
+                        "name": "u2",
+                        "method": "plain_password",
+                        "password": "hoge"
+                    }
+                ],
+                "authorization": [
+                     {
+                        "topic": "t1",
+                        "allow": { "pub":["u1"], "sub":["u1"] }
+                    }
+                ]
+            }
+        )*";
+    BOOST_CHECK_NO_THROW(load_config(security, test));
+
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("t1"), "u1") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("t1"), "u2") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security.auth_pub("t1", "u1") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_pub("t1", "u2") == MQTT_NS::broker::security::authorization::type::deny);
+
+    auto rule_nr = security.add_auth("t1",
+        { "@any" }, MQTT_NS::broker::security::authorization::type::allow,
+        { "u2" }, MQTT_NS::broker::security::authorization::type::allow);
+
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("t1"), "u2") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_pub("t1", "u2") == MQTT_NS::broker::security::authorization::type::allow);
+
+    security.remove_auth(rule_nr);
+
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("t1"), "u2") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security.auth_pub("t1", "u2") == MQTT_NS::broker::security::authorization::type::deny);
+
+}
 
 BOOST_AUTO_TEST_CASE(auth_check_plus) {
     BOOST_CHECK(MQTT_NS::broker::security::get_topic_filter_tokens("+/").size() == 2);

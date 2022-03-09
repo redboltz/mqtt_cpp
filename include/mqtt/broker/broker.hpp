@@ -908,7 +908,7 @@ private:
             );
             if (cp.response_topic_requested) {
                 // set_response_topic never modify key part
-                set_response_topic(const_cast<session_state&>(*it), connack_props);
+                set_response_topic(const_cast<session_state&>(*it), connack_props, *username);
             }
             send_connack(ep, false, true, force_move(connack_props));
         }
@@ -924,7 +924,7 @@ private:
                         << "online connection exists, discard old one due to new one's clean_start and renew";
                     if (cp.response_topic_requested) {
                         // set_response_topic never modify key part
-                        set_response_topic(const_cast<session_state&>(*it), connack_props);
+                        set_response_topic(const_cast<session_state&>(*it), connack_props, *username);
                     }
                     send_connack(ep, false, true, force_move(connack_props));
                     idx.modify(
@@ -947,7 +947,7 @@ private:
                         << "online connection exists, inherit old one and renew";
                     if (cp.response_topic_requested) {
                         // set_response_topic never modify key part
-                        set_response_topic(const_cast<session_state&>(*it), connack_props);
+                        set_response_topic(const_cast<session_state&>(*it), connack_props, *username);
                     }
                     send_connack(
                         ep,
@@ -1013,7 +1013,7 @@ private:
                 BOOST_ASSERT(inserted);
                 if (cp.response_topic_requested) {
                     // set_response_topic never modify key part
-                    set_response_topic(const_cast<session_state&>(*it), connack_props);
+                    set_response_topic(const_cast<session_state&>(*it), connack_props, *username);
                 }
                 send_connack(ep, false, true, force_move(connack_props));
             }
@@ -1028,7 +1028,7 @@ private:
                     << "offline connection exists, discard old one due to new one's clean_start and renew";
                 if (cp.response_topic_requested) {
                     // set_response_topic never modify key part
-                    set_response_topic(const_cast<session_state&>(*it), connack_props);
+                    set_response_topic(const_cast<session_state&>(*it), connack_props, *username);
                 }
                 send_connack(ep, false, true, force_move(connack_props));
                 idx.modify(
@@ -1052,7 +1052,7 @@ private:
                     << "offline connection exists, inherit old one and renew";
                 if (cp.response_topic_requested) {
                     // set_response_topic never modify key part
-                    set_response_topic(const_cast<session_state&>(*it), connack_props);
+                    set_response_topic(const_cast<session_state&>(*it), connack_props, *username);
                 }
                 send_connack(
                     ep,
@@ -1189,7 +1189,11 @@ private:
         }
     }
 
-    void set_response_topic(session_state& s, v5::properties& connack_props) {
+    void remove_rule(std::size_t rule_nr) {
+        security.remove_auth(rule_nr);
+    }
+
+    void set_response_topic(session_state& s, v5::properties& connack_props, std::string const &username) {
         auto response_topic =
             [&] {
                 if (auto rt_opt = s.get_response_topic()) {
@@ -1199,12 +1203,17 @@ private:
                 s.set_response_topic(rt);
                 return rt;
             } ();
-        s.set_clean_handler(
-            [this, response_topic] {
-                std::lock_guard<mutex> g(mtx_retains_);
-                retains_.erase(response_topic);
-            }
-        );
+
+        auto rule_nr = security.add_auth(response_topic,
+            { "@any" }, MQTT_NS::broker::security::authorization::type::allow,
+            { username }, MQTT_NS::broker::security::authorization::type::allow);
+
+        s.set_clean_handler([this, response_topic, rule_nr]() {
+            std::lock_guard<mutex> g(mtx_retains_);
+            retains_.erase(response_topic);
+            remove_rule(rule_nr);
+        });
+
         connack_props.emplace_back(
             v5::property::response_topic(
                 allocate_buffer(response_topic)
