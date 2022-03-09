@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE(json_load) {
     BOOST_CHECK(!security.authentication_["anonymous"].digest);
     BOOST_CHECK(security.authentication_["anonymous"].salt.empty());
 
-    BOOST_CHECK(security.groups_.size() == 1);
+    BOOST_CHECK(security.groups_.size() == 2);
     BOOST_CHECK(security.groups_["@g1"].members.size() == 3);
 
     BOOST_CHECK(security.anonymous);
@@ -229,6 +229,17 @@ BOOST_AUTO_TEST_CASE(check_errors) {
         )*";
     BOOST_CHECK_THROW(load_config(security, duplicate_group), std::exception);
 
+    // Redefine any group
+    std::string redefine_any_group = R"*(
+            {
+                "groups": [{
+                    "name": "@any",
+                    "members": ["u1", "u2"]
+                }]
+            }
+        )*";
+    BOOST_CHECK_THROW(load_config(security, redefine_any_group), std::exception);
+
     // Non-existing group
     std::string non_existing_group = R"*(
             {
@@ -320,6 +331,62 @@ BOOST_AUTO_TEST_CASE(check_publish) {
     BOOST_CHECK(security.auth_sub_user(security.auth_sub("sub/topic"), "u1") == MQTT_NS::broker::security::authorization::type::allow);
     BOOST_CHECK(security.auth_sub_user(security.auth_sub("sub/topic1"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
 }
+
+BOOST_AUTO_TEST_CASE(check_publish_any) {
+    MQTT_NS::broker::security security;
+
+    std::string value = R"*(
+            {
+                "authentication": [{
+                    "name": "u1",
+                    "method": "sha256",
+                    "salt": "salt",
+                    "digest": "mypassword"
+                }, {
+                    "name": "u2",
+                    "method": "client_cert",
+                    "field": "CNAME"
+                }, {
+                    "name": "anonymous",
+                    "method": "anonymous"
+                }],
+                "authorization": [{
+                    "topic": "#",
+                    "deny": {
+                        "sub": ["@any"],
+                        "pub": ["@any"]
+                    }
+                }, {
+                    "topic": "sub/#",
+                    "allow": {
+                        "sub": ["@any"],
+                        "pub": ["@any"]
+                    }
+                }, {
+                    "topic": "sub/topic1",
+                    "deny": {
+                        "sub": ["u1", "anonymous"],
+                        "pub": ["u1", "anonymous"]
+                    }
+                }]
+            }
+        )*";
+    try {
+        load_config(security, value);
+    } catch(std::exception &e) {
+        std::cout << e.what() << std::endl;
+    }
+
+    BOOST_CHECK(security.auth_pub("topic", "u1") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security.auth_pub("sub/topic", "u1") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_pub("sub/topic1", "u1") == MQTT_NS::broker::security::authorization::type::deny);
+
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("topic"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("sub/topic"), "u1") == MQTT_NS::broker::security::authorization::type::allow);
+    BOOST_CHECK(security.auth_sub_user(security.auth_sub("sub/topic1"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
+}
+
+
 
 BOOST_AUTO_TEST_CASE(test_hash) {
 

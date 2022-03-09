@@ -58,6 +58,8 @@ static inline std::string json_remove_comments(std::istream& input)
 
 struct security {
 
+    static constexpr char const *any_group_name = "@any";
+
     struct authentication {
         enum class method {
             sha256,
@@ -198,6 +200,8 @@ struct security {
         std::istringstream input_without_comments(json_remove_comments(input));
         boost::property_tree::read_json(input_without_comments, root);
 
+        groups_.insert({ std::string(any_group_name), group() });
+
         for (auto const& i: root.get_child("authentication")) {
             std::string name = i.second.get<std::string>("name");
             if(!is_valid_user_name(name)) throw std::runtime_error("An invalid username was specified: " + name);
@@ -242,7 +246,9 @@ struct security {
         if (root.get_child_optional("groups")) {
             for (auto const& i: root.get_child("groups")) {
                 std::string name = i.second.get<std::string>("name");
-                if(!is_valid_group_name(name)) throw std::runtime_error("An invalid group name was specified: " + name);
+                if(!is_valid_group_name(name)) {
+                    throw std::runtime_error("An invalid group name was specified: " + name);
+                }
 
                 group group;
                 if (i.second.get_child_optional("members")) {
@@ -308,7 +314,7 @@ struct security {
         username_and_groups.insert(std::string(username));
 
         for (auto const &i: groups_) {
-            if (std::find(i.second.members.begin(), i.second.members.end(), username) != i.second.members.end()) {
+            if (i.first == any_group_name || std::find(i.second.members.begin(), i.second.members.end(), username) != i.second.members.end()) {
                 username_and_groups.insert(i.first);
             }
         }
@@ -334,9 +340,18 @@ struct security {
     authorization::type auth_pub(string_view const& topic, string_view const& username) const {
         authorization::type result_type = authorization::type::deny;
 
+        std::set<std::string> username_and_groups;
+        username_and_groups.insert(std::string(username));
+
+        for (auto const &i: groups_) {
+            if (i.first == any_group_name || std::find(i.second.members.begin(), i.second.members.end(), username) != i.second.members.end()) {
+                username_and_groups.insert(i.first);
+            }
+        }
+
         std::size_t priority = 0;
         auth_pub_map.find(topic, [&](std::string const &allowed_username, std::pair<authorization::type, std::size_t> entry) {
-            if (allowed_username == username) {
+            if (username_and_groups.find(allowed_username) != username_and_groups.end()) {
                 if (entry.second >= priority) {
                     result_type = entry.first;
                     priority = entry.second;
@@ -361,10 +376,18 @@ struct security {
         return result;
     }
 
-    static authorization::type auth_sub_user(std::map<std::string, authorization::type> const& result, std::string const& username) {
+    authorization::type auth_sub_user(std::map<std::string, authorization::type> const& result, std::string const& username) {
         auto i = result.find(username);
-        if (i == result.end()) return authorization::type::deny;
-        return i->second;
+        if (i != result.end()) return i->second;
+
+        for (auto const &i: groups_) {
+            if (i.first == any_group_name || std::find(i.second.members.begin(), i.second.members.end(), username) != i.second.members.end()) {
+                auto j = result.find(i.first);
+                if (j != result.end()) return j->second;
+            }
+        }
+
+        return authorization::type::deny;
     }
 
     static bool is_hash(string_view const &level) { return level == "#"; }
@@ -569,25 +592,17 @@ private:
                 ++rule_nr;
                 validate_entry("topic " + i.topic, j);
 
-                if (is_valid_user_name(j)) {
+                if (is_valid_user_name(j) || is_valid_group_name(j)) {
                     auth_sub_map.insert_or_assign(i.topic, j, std::make_pair(i.sub_type, rule_nr));
-                }
-                else if (is_valid_group_name(j)) {
-                    for (auto const& z: groups_[j].members)
-                        auth_sub_map.insert_or_assign(i.topic, z, std::make_pair(i.sub_type, rule_nr));
-                }
+                }                
             }
             for (auto const& j: i.pub) {
                 ++rule_nr;
                 validate_entry("topic " + i.topic, j);
 
-                if(is_valid_user_name(j)) {
+                if(is_valid_user_name(j) || is_valid_group_name(j)) {
                     auth_pub_map.insert_or_assign(i.topic, j, std::make_pair(i.pub_type, rule_nr));
-                }
-                else if(is_valid_group_name(j)) {
-                    for (auto const& z: groups_[j].members)
-                        auth_pub_map.insert_or_assign(i.topic, z, std::make_pair(i.pub_type, rule_nr));
-                }
+                }                
             }
         }
     }   

@@ -1966,9 +1966,9 @@ private:
         auto deliver =
             [&] (session_state& ss, subscription& sub, auto const& auth_users) {
 
-                // See if this session is authorized to subscribe this topic                
-                if (security::auth_sub_user(auth_users, ss.get_username()) !=
-                    security::authorization::type::allow) return;
+                // See if this session is authorized to subscribe this topic
+                auto access = security.auth_sub_user(auth_users, ss.get_username());
+                if (access != security::authorization::type::allow) return;
 
                 publish_options new_pubopts = std::min(pubopts.get_qos(), sub.subopts.get_qos());
                 if (sub.subopts.get_rap() == rap::retain && pubopts.get_retain() == MQTT_NS::retain::yes) {
