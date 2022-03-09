@@ -199,6 +199,8 @@ struct security {
         auth.pub.insert(username);
         authorization_.push_back(auth);
 
+        groups_.insert({ std::string(any_group_name), group() });
+
         validate();
     }
 
