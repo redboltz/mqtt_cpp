@@ -276,6 +276,17 @@ BOOST_AUTO_TEST_CASE(check_errors) {
         )*";
     BOOST_CHECK_THROW(load_config(security, invalid_group_name), std::exception);
 
+    // Invalid field
+    std::string invalid_field = R"*(
+            {
+                "authentication": [{
+                    "name": "u1",
+                    "method": "client_cert",
+                    "field": "other",
+                }]
+            }
+        )*";
+    BOOST_CHECK_THROW(load_config(security, invalid_field), std::exception);
 }
 
 BOOST_AUTO_TEST_CASE(check_publish) {

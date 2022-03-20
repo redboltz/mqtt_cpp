@@ -278,6 +278,7 @@ template<typename Server>
 void reload_ctx(Server& server, as::steady_timer& reload_timer,
                 std::string const& certificate_filename,
                 std::string const& key_filename,
+                MQTT_NS::optional<std::string> const &verify_file,
                 unsigned int certificate_reload_interval,
                 char const* name, bool first_load = true)
 {
@@ -286,13 +287,13 @@ void reload_ctx(Server& server, as::steady_timer& reload_timer,
     if (certificate_reload_interval > 0) {
         reload_timer.expires_after(std::chrono::hours(certificate_reload_interval));
         reload_timer.async_wait(
-            [&server, &reload_timer, certificate_filename, key_filename, certificate_reload_interval, name]
+            [&server, &reload_timer, certificate_filename, key_filename, certificate_reload_interval, verify_file, name]
             (boost::system::error_code const& e) {
 
             BOOST_ASSERT(!e || e == as::error::operation_aborted);
 
             if (!e) {
-                reload_ctx(server, reload_timer, certificate_filename, key_filename, certificate_reload_interval, name, false);
+                reload_ctx(server, reload_timer, certificate_filename, key_filename, verify_file, certificate_reload_interval, name, false);
             }
         });
     }
@@ -322,6 +323,11 @@ void reload_ctx(Server& server, as::steady_timer& reload_timer,
         return;
     }
 
+    if (verify_file) {
+        context.set_verify_mode(MQTT_NS::tls::verify_peer);
+        context.load_verify_file(*verify_file);
+    }
+
     server.get_ssl_context() = MQTT_NS::force_move(context);
 }
 
@@ -332,9 +338,14 @@ void load_ctx(Server& server, as::steady_timer& reload_timer, boost::program_opt
         throw std::runtime_error("TLS requested but certificate and/or private_key not specified");
     }
 
+    MQTT_NS::optional<std::string> verify_file;
+    if (vm.count("verify_file"))
+        verify_file = vm["verify_file"].as<std::string>();
+
     reload_ctx(server, reload_timer,
            vm["certificate"].as<std::string>(),
            vm["private_key"].as<std::string>(),
+           verify_file,
            vm["certificate_reload_interval"].as<unsigned int>(),
            name, true);
 }
@@ -552,6 +563,11 @@ int main(int argc, char **argv) {
             )
             (
                 "private_key",
+                boost::program_options::value<std::string>(),
+                "Private key file for TLS connections"
+            )
+            (
+                "verify_file",
                 boost::program_options::value<std::string>(),
                 "Private key file for TLS connections"
             )

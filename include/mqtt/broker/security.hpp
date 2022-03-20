@@ -59,6 +59,7 @@ static inline std::string json_remove_comments(std::istream& input)
 struct security {
 
     static constexpr char const *any_group_name = "@any";
+    static constexpr char const *client_cert_field_cname = "CNAME";
 
     struct authentication {
         enum class method {
@@ -284,6 +285,10 @@ struct security {
                 authentication_.insert( { name, auth });
             }
             else if (method == "client_cert") {
+                std::string field = i.second.get<std::string>("field", client_cert_field_cname);
+                if (field != client_cert_field_cname)
+                    throw std::runtime_error("Client certification currently only supported based on CNAME");
+
                 authentication auth(authentication::method::client_cert);
                 authentication_.insert({ name, auth });
             }
