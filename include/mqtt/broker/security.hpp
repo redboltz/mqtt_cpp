@@ -285,10 +285,6 @@ struct security {
                 authentication_.insert( { name, auth });
             }
             else if (method == "client_cert") {
-                std::string field = i.second.get<std::string>("field", client_cert_field_cname);
-                if (field != client_cert_field_cname)
-                    throw std::runtime_error("Client certification currently only supported based on CNAME");
-
                 authentication auth(authentication::method::client_cert);
                 authentication_.insert({ name, auth });
             }

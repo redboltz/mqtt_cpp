@@ -338,6 +338,10 @@ void load_ctx(Server& server, as::steady_timer& reload_timer, boost::program_opt
         throw std::runtime_error("TLS requested but certificate and/or private_key not specified");
     }
 
+
+    if (vm["verify_field"].as<std::string>() != MQTT_NS::broker::security::client_cert_field_cname)
+        throw std::runtime_error("Client certification currently only supported based on CNAME (verify_field)");
+
     MQTT_NS::optional<std::string> verify_file;
     if (vm.count("verify_file"))
         verify_file = vm["verify_file"].as<std::string>();
@@ -556,6 +560,8 @@ int main(int argc, char **argv) {
                 "set verbose level, possible values:\n 0 - Fatal\n 1 - Error\n 2 - Warning\n 3 - Info\n 4 - Debug\n 5 - Trace"
             )
 #endif // defined(MQTT_USE_LOG)
+
+#if defined(MQTT_USE_TLS)
             (
                 "certificate",
                 boost::program_options::value<std::string>(),
@@ -572,10 +578,16 @@ int main(int argc, char **argv) {
                 "Private key file for TLS connections"
             )
             (
+                "verify_field",
+                boost::program_options::value<std::string>()->default_value(MQTT_NS::broker::security::client_cert_field_cname),
+                "Field to be used from certificate for authenticating clients"
+            )
+            (
                 "certificate_reload_interval",
                 boost::program_options::value<unsigned int>()->default_value(0),
                 "Reload interval for the certificate and private key files (hours)\n 0 - Disabled"
             )
+#endif
             (
                 "auth_file",
                 boost::program_options::value<std::string>(),
@@ -604,7 +616,7 @@ int main(int argc, char **argv) {
             ("tls.port", boost::program_options::value<std::uint16_t>(), "default port (TLS)")
         ;
 
-        desc.add(tls_desc);
+        desc.add(tls_desc);        
 #endif // defined(MQTT_USE_TLS)
 
 #if defined(MQTT_USE_WS) && defined(MQTT_USE_TLS)
