@@ -66,13 +66,19 @@ private:
 
 bool verify_certificate(bool preverified, boost::asio::ssl::verify_context& ctx, std::shared_ptr<MQTT_NS::optional<std::string>> const& username) {
     if (!preverified) return false;
-    int depth = X509_STORE_CTX_get_error_depth(ctx.native_handle());
-    if (depth > 0) return false;
+    int error = X509_STORE_CTX_get_error(ctx.native_handle());
+    if (error != X509_V_OK) {
+        int depth = X509_STORE_CTX_get_error_depth(ctx.native_handle());
+        MQTT_LOG("mqtt_broker", error) << "Certificate validation failed, depth: " << depth << ", message: " << X509_verify_cert_error_string(error);
+        return false;
+    }
+
     X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
     X509_NAME* name = X509_get_subject_name(cert);
     std::string cname;
     cname.resize(MQTT_NS::broker::max_cname_size);
     auto size = X509_NAME_get_text_by_NID(name, NID_commonName, &cname[0], static_cast<int>(cname.size()));
+
     cname.resize(static_cast<std::size_t>(size));
     MQTT_LOG("mqtt_broker", info) << "[clicrt] CNAME:" << cname;
     *username = cname;
