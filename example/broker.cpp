@@ -64,7 +64,7 @@ private:
 
 #if defined(MQTT_USE_TLS)
 
-bool verify_certificate(bool preverified, boost::asio::ssl::verify_context& ctx, std::shared_ptr<MQTT_NS::optional<std::string>> const& username) {
+bool verify_certificate(std::string const &verify_field, bool preverified, boost::asio::ssl::verify_context& ctx, std::shared_ptr<MQTT_NS::optional<std::string>> const& username) {
     if (!preverified) return false;
     int error = X509_STORE_CTX_get_error(ctx.native_handle());
     if (error != X509_V_OK) {
@@ -75,13 +75,18 @@ bool verify_certificate(bool preverified, boost::asio::ssl::verify_context& ctx,
 
     X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
     X509_NAME* name = X509_get_subject_name(cert);
-    std::string cname;
-    cname.resize(MQTT_NS::broker::max_cname_size);
-    auto size = X509_NAME_get_text_by_NID(name, NID_commonName, &cname[0], static_cast<int>(cname.size()));
 
-    cname.resize(static_cast<std::size_t>(size));
-    MQTT_LOG("mqtt_broker", info) << "[clicrt] CNAME:" << cname;
-    *username = cname;
+    std::string verify_field_value;
+    auto obj = std::unique_ptr<ASN1_OBJECT, decltype(&ASN1_OBJECT_free)>(OBJ_txt2obj(verify_field.c_str(), 0), &ASN1_OBJECT_free);
+    if (obj) { // return nullptr if error
+        verify_field_value.resize(MQTT_NS::broker::max_cname_size);
+        auto size = X509_NAME_get_text_by_OBJ(name, obj.get(), &verify_field_value[0], static_cast<int>(verify_field_value.size()));
+        // Size equals -1 if field is not found, otherwise, length of value
+        verify_field_value.resize(static_cast<std::size_t>(std::max(size, 0)));
+    }
+
+    MQTT_LOG("mqtt_broker", info) << "[clicrt] " << verify_field << ":" << verify_field_value;
+    *username = verify_field_value;
     return true;
 }
 
@@ -92,7 +97,8 @@ public:
         std::function<as::io_context&()> ioc_con_getter,
         boost::asio::ssl::context&& ctx,
         MQTT_NS::broker::broker_t& b,
-        uint16_t port
+        uint16_t port,
+        std::string const &verify_field
     )
         : server_(
             as::ip::tcp::endpoint(
@@ -110,7 +116,9 @@ public:
             }
         );
 
-        server_.set_verify_callback(verify_certificate);
+        server_.set_verify_callback([&verify_field](bool preverified, boost::asio::ssl::verify_context& ctx, std::shared_ptr<MQTT_NS::optional<std::string>> const& username) {
+            return verify_certificate(verify_field, preverified, ctx, username);
+        });
 
         server_.set_accept_handler(
             [&](std::shared_ptr<MQTT_NS::server_tls<>::endpoint_t> spep) {
@@ -207,7 +215,8 @@ public:
         std::function<as::io_context&()> ioc_con_getter,
         boost::asio::ssl::context&& ctx,
         MQTT_NS::broker::broker_t& b,
-        uint16_t port
+        uint16_t port,
+        std::string const &verify_field
     )
         : server_(
             as::ip::tcp::endpoint(
@@ -226,7 +235,9 @@ public:
             }
         );
 
-        server_.set_verify_callback(verify_certificate);
+        server_.set_verify_callback([&verify_field](bool preverified, boost::asio::ssl::verify_context& ctx, std::shared_ptr<MQTT_NS::optional<std::string>> const& username) {
+            return verify_certificate(verify_field, preverified, ctx, username);
+        });
 
         server_.set_accept_handler(
             [&](std::shared_ptr<MQTT_NS::server_tls_ws<>::endpoint_t> spep) {
@@ -330,7 +341,6 @@ void reload_ctx(Server& server, as::steady_timer& reload_timer,
     }
 
     if (verify_file) {
-        context.set_verify_mode(MQTT_NS::tls::verify_peer);
         context.load_verify_file(*verify_file);
     }
 
@@ -457,8 +467,9 @@ void run_broker(boost::program_options::variables_map const& vm) {
         MQTT_NS::optional<server_tls> s_tls;
         MQTT_NS::optional<as::steady_timer> s_lts_timer;
 
-        if (vm["verify_field"].as<std::string>() != MQTT_NS::broker::security::client_cert_field_cname)
-            throw std::runtime_error("Client certification currently only supported based on CNAME (verify_field)");
+        auto verify_field_obj = std::unique_ptr<ASN1_OBJECT, decltype(&ASN1_OBJECT_free)>(OBJ_txt2obj(vm["verify_field"].as<std::string>().c_str(), 0), &ASN1_OBJECT_free);
+        if (!verify_field_obj)
+            throw std::runtime_error("An invalid verify field was specified: " + vm["verify_field"].as<std::string>());
 
         if (vm.count("tls.port")) {
             s_tls.emplace(
@@ -466,7 +477,8 @@ void run_broker(boost::program_options::variables_map const& vm) {
                 con_ioc_getter,
                 init_ctx(),
                 b,
-                vm["tls.port"].as<std::uint16_t>()
+                vm["tls.port"].as<std::uint16_t>(),
+                vm["verify_field"].as<std::string>()
             );
             s_lts_timer.emplace(accept_ioc);
             load_ctx(s_tls.value(), s_lts_timer.value(), vm, "TLS");
@@ -483,7 +495,8 @@ void run_broker(boost::program_options::variables_map const& vm) {
                 con_ioc_getter,
                 init_ctx(),
                 b,
-                vm["wss.port"].as<std::uint16_t>()
+                vm["wss.port"].as<std::uint16_t>(),
+                vm["verify_field"].as<std::string>()
             );
             s_tls_ws_timer.emplace(accept_ioc);
             load_ctx(s_tls_ws.value(), s_tls_ws_timer.value(), vm, "WSS");
@@ -584,7 +597,7 @@ int main(int argc, char **argv) {
             )
             (
                 "verify_field",
-                boost::program_options::value<std::string>()->default_value(MQTT_NS::broker::security::client_cert_field_cname),
+                boost::program_options::value<std::string>()->default_value("CN"),
                 "Field to be used from certificate for authenticating clients"
             )
             (
