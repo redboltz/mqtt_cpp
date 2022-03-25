@@ -24,18 +24,21 @@ inline Iterator topic_filter_tokenizer_next(Iterator first, Iterator last) {
 }
 
 template<typename Iterator, typename Output>
-inline void topic_filter_tokenizer(Iterator first, Iterator last, Output write) {
+inline std::size_t topic_filter_tokenizer(Iterator first, Iterator last, Output write) {
+    std::size_t count = 1;
     auto pos = topic_filter_tokenizer_next(first, last);
     while (write(first, pos) && pos != last) {
         first = std::next(pos);
         pos = topic_filter_tokenizer_next(first, last);
+        ++count;
     }
+    return count;
 }
 
 
 template<typename Output>
-inline void topic_filter_tokenizer(string_view str, Output write) {
-    topic_filter_tokenizer(
+inline std::size_t topic_filter_tokenizer(string_view str, Output write) {
+    return topic_filter_tokenizer(
         std::begin(str),
         std::end(str),
         [&write](string_view::const_iterator token_begin, string_view::const_iterator token_end) {

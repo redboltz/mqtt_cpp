@@ -529,7 +529,7 @@ struct security {
         bool result = true;
         auto filter_begin = deny_filter.begin();
 
-        topic_filter_tokenizer(subscription_filter, [&](auto sub) {
+        auto tokens_count = topic_filter_tokenizer(subscription_filter, [&](auto sub) {
             if (filter_begin == deny_filter.end()) {
                 result = false;
                 return false;
@@ -551,7 +551,7 @@ struct security {
 
                 if (is_plus(deny)) {
                     result = true;
-                    return false;
+                    return true;
                 }
 
                 result = false;
@@ -561,7 +561,7 @@ struct security {
             return true;
         });
 
-        return result;
+        return result && (tokens_count == deny_filter.size());
     }
 
     std::vector<std::string> get_auth_sub_topics(string_view const &username, string_view const &topic_filter) const {
