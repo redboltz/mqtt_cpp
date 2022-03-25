@@ -338,10 +338,6 @@ void load_ctx(Server& server, as::steady_timer& reload_timer, boost::program_opt
         throw std::runtime_error("TLS requested but certificate and/or private_key not specified");
     }
 
-
-    if (vm["verify_field"].as<std::string>() != MQTT_NS::broker::security::client_cert_field_cname)
-        throw std::runtime_error("Client certification currently only supported based on CNAME (verify_field)");
-
     MQTT_NS::optional<std::string> verify_file;
     if (vm.count("verify_file"))
         verify_file = vm["verify_file"].as<std::string>();
@@ -454,6 +450,9 @@ void run_broker(boost::program_options::variables_map const& vm) {
 #if defined(MQTT_USE_TLS)
         MQTT_NS::optional<server_tls> s_tls;
         MQTT_NS::optional<as::steady_timer> s_lts_timer;
+
+        if (vm["verify_field"].as<std::string>() != MQTT_NS::broker::security::client_cert_field_cname)
+            throw std::runtime_error("Client certification currently only supported based on CNAME (verify_field)");
 
         if (vm.count("tls.port")) {
             s_tls.emplace(
