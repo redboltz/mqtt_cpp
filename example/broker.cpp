@@ -45,7 +45,9 @@ public:
                 b_.handle_accept(MQTT_NS::force_move(spep));
             }
         );
+    }
 
+    void listen() {
         server_.listen();
     }
 
@@ -125,7 +127,9 @@ public:
                 b_.handle_accept(MQTT_NS::force_move(spep));
             }
         );
+    }
 
+    void listen() {
         server_.listen();
     }
 
@@ -189,7 +193,9 @@ public:
                 b_.handle_accept(MQTT_NS::force_move(spep));
             }
         );
+    }
 
+    void listen() {
         server_.listen();
     }
 
@@ -244,7 +250,9 @@ public:
                 b_.handle_accept(MQTT_NS::force_move(spep));
             }
         );
+    }
 
+    void listen() {
         server_.listen();
     }
 
@@ -455,6 +463,7 @@ void run_broker(boost::program_options::variables_map const& vm) {
                 b,
                 vm["tcp.port"].as<std::uint16_t>()
             );
+            s->listen();
         }
 
 #if defined(MQTT_USE_WS)
@@ -466,6 +475,7 @@ void run_broker(boost::program_options::variables_map const& vm) {
                 b,
                 vm["ws.port"].as<std::uint16_t>()
             );
+            s_ws->listen();
         }
 #endif // defined(MQTT_USE_WS)
 
@@ -488,6 +498,7 @@ void run_broker(boost::program_options::variables_map const& vm) {
             );
             s_lts_timer.emplace(accept_ioc);
             load_ctx(s_tls.value(), s_lts_timer.value(), vm, "TLS");
+            s_tls->listen();
         }
 #endif // defined(MQTT_USE_TLS)
 
@@ -506,6 +517,7 @@ void run_broker(boost::program_options::variables_map const& vm) {
             );
             s_tls_ws_timer.emplace(accept_ioc);
             load_ctx(s_tls_ws.value(), s_tls_ws_timer.value(), vm, "WSS");
+            s_tls_ws->listen();
         }
 #endif // defined(MQTT_USE_TLS) && defined(MQTT_USE_WS)
 
