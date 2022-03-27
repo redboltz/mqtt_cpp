@@ -126,6 +126,10 @@ public:
             }
         );
 
+        // server_.listen();
+    }
+
+    void listen() {
         server_.listen();
     }
 
@@ -401,13 +405,13 @@ void run_broker(boost::program_options::variables_map const& vm) {
             << " threads_per_ioc:" << threads_per_ioc
             << " total threads:" << num_of_iocs * threads_per_ioc;
 
-		if (vm.count("auth_file")) {
-			std::string auth_file = vm["auth_file"].as<std::string>();
-			if (!auth_file.empty()) {
-				MQTT_LOG("mqtt_broker", info)
-					<< "auth_file:" << auth_file;
+                if (vm.count("auth_file")) {
+                        std::string auth_file = vm["auth_file"].as<std::string>();
+                        if (!auth_file.empty()) {
+                                MQTT_LOG("mqtt_broker", info)
+                                        << "auth_file:" << auth_file;
 
-				std::ifstream input(auth_file);
+                                std::ifstream input(auth_file);
 
                 if (input) {
                     MQTT_NS::broker::security security;
@@ -418,8 +422,8 @@ void run_broker(boost::program_options::variables_map const& vm) {
                     MQTT_LOG("mqtt_broker", error)
                         << "Authorization file '" << auth_file << "' not found,  broker doesn't use authorization file.";
                 }
-			}
-		}
+                        }
+                }
 
         as::io_context accept_ioc;
 
@@ -488,6 +492,7 @@ void run_broker(boost::program_options::variables_map const& vm) {
             );
             s_lts_timer.emplace(accept_ioc);
             load_ctx(s_tls.value(), s_lts_timer.value(), vm, "TLS");
+            s_tls->listen();
         }
 #endif // defined(MQTT_USE_TLS)
 
@@ -640,7 +645,7 @@ int main(int argc, char **argv) {
             ("tls.port", boost::program_options::value<std::uint16_t>(), "default port (TLS)")
         ;
 
-        desc.add(tls_desc);        
+        desc.add(tls_desc);
 #endif // defined(MQTT_USE_TLS)
 
 #if defined(MQTT_USE_WS) && defined(MQTT_USE_TLS)
