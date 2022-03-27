@@ -305,9 +305,19 @@ int main(int argc, char* argv[]) {
                  "(optional) client_id"
             )
             (
-                "cacert",
+                "verify_file",
                 boost::program_options::value<std::string>(),
                 "CA Certificate file to verify server certificate for mqtts and wss connections"
+            )
+            (
+                "certificate",
+                boost::program_options::value<std::string>(),
+                "Client certificate (chain) file"
+            )
+            (
+                "private_key",
+                boost::program_options::value<std::string>(),
+                "Client certificate key file"
             )
             (
                 "ws_path",
@@ -430,10 +440,24 @@ int main(int argc, char* argv[]) {
                 }
                 return std::string();
             } ();
-        auto cacert =
+        auto verify_file =
             [&] () -> MQTT_NS::optional<std::string> {
-                if (vm.count("cacert")) {
-                    return vm["cacert"].as<std::string>();
+                if (vm.count("verify_file")) {
+                    return vm["verify_file"].as<std::string>();
+                }
+                return MQTT_NS::nullopt;
+            } ();
+        auto certificate =
+            [&] () -> MQTT_NS::optional<std::string> {
+                if (vm.count("certificate")) {
+                    return vm["certificate"].as<std::string>();
+                }
+                return MQTT_NS::nullopt;
+            } ();
+        auto private_key =
+            [&] () -> MQTT_NS::optional<std::string> {
+                if (vm.count("private_key")) {
+                    return vm["private_key"].as<std::string>();
                 }
                 return MQTT_NS::nullopt;
             } ();
@@ -803,6 +827,15 @@ int main(int argc, char* argv[]) {
                 port,
                 version
             );
+            if (verify_file) {
+                client->get_ssl_context().load_verify_file(*verify_file);
+            }
+            if (certificate) {
+                client->get_ssl_context().use_certificate_chain_file(*certificate);
+            }
+            if (private_key) {
+                client->get_ssl_context().use_private_key_file(*private_key, boost::asio::ssl::context::pem);
+            }
             setup(*client);
             return 0;
 #else  // defined(MQTT_USE_TLS)
@@ -835,6 +868,15 @@ int main(int argc, char* argv[]) {
                 ws_path ? ws_path.value() : std::string(),
                 version
             );
+            if (verify_file) {
+                client->get_ssl_context().load_verify_file(*verify_file);
+            }
+            if (certificate) {
+                client->get_ssl_context().use_certificate_chain_file(*certificate);
+            }
+            if (private_key) {
+                client->get_ssl_context().use_private_key_file(*private_key, boost::asio::ssl::context::pem);
+            }
             setup(*client);
             return 0;
 #else  // defined(MQTT_USE_TLS) && defined(MQTT_USE_WS)
