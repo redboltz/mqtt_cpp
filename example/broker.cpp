@@ -409,9 +409,15 @@ void run_broker(boost::program_options::variables_map const& vm) {
 
 				std::ifstream input(auth_file);
 
-				MQTT_NS::broker::security security;
-				security.load_json(input);
-				b.set_security(MQTT_NS::force_move(security));
+                if (input) {
+                    MQTT_NS::broker::security security;
+                    security.load_json(input);
+                    b.set_security(MQTT_NS::force_move(security));
+                } else
+                {
+                    MQTT_LOG("mqtt_broker", error)
+                        << "Authorization file '" << auth_file << "' not found,  broker doesn't use authorization file.";
+                }
 			}
 		}
 
@@ -651,7 +657,7 @@ int main(int argc, char **argv) {
         std::string config_file = vm["cfg"].as<std::string>();
         if (!config_file.empty()) {
             std::ifstream input(vm["cfg"].as<std::string>());
-            if (input.good()) {
+            if (input) {
                 boost::program_options::store(boost::program_options::parse_config_file(input, desc), vm);
             } else
             {

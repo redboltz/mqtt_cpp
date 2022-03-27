@@ -29,6 +29,7 @@ BOOST_AUTO_TEST_CASE(json_comments) {
     BOOST_CHECK(json_remove_comments("\"#test\"") == "\"#test\"");
     BOOST_CHECK(json_remove_comments("\"'#test'\"") == "\"'#test'\"");
     BOOST_CHECK(json_remove_comments("'\"#test\"'") == "'\"#test\"'");
+    BOOST_CHECK(json_remove_comments("") == "");
 }
 
 BOOST_AUTO_TEST_CASE(default_config) {
