@@ -85,10 +85,9 @@ bool verify_certificate(std::string const &verify_field, bool preverified, boost
         auto size = X509_NAME_get_text_by_OBJ(name, obj.get(), &verify_field_value[0], static_cast<int>(verify_field_value.size()));
         // Size equals -1 if field is not found, otherwise, length of value
         verify_field_value.resize(static_cast<std::size_t>(std::max(size, 0)));
+        MQTT_LOG("mqtt_broker", info) << "[clicrt] " << verify_field << ":" << verify_field_value;
+        *username = verify_field_value;
     }
-
-    MQTT_LOG("mqtt_broker", info) << "[clicrt] " << verify_field << ":" << verify_field_value;
-    *username = verify_field_value;
     return true;
 }
 
