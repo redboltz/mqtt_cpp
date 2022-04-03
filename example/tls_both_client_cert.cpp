@@ -357,11 +357,11 @@ int main(int argc, char** argv) {
             if (depth > 0) return true;
             X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
             X509_NAME* name = X509_get_subject_name(cert);
-            std::string cname;
-            cname.resize(0xffff);
-            auto size = X509_NAME_get_text_by_NID(name, NID_commonName, &cname[0], static_cast<int>(cname.size()));
-            cname.resize(static_cast<std::size_t>(size));
-            std::cout << "[clicrt] CNAME:" << cname << std::endl;
+            std::string cn;
+            cn.resize(0xffff);
+            auto size = X509_NAME_get_text_by_NID(name, NID_commonName, &cn[0], static_cast<int>(cn.size()));
+            cn.resize(static_cast<std::size_t>(size));
+            std::cout << "[clicrt] CN:" << cn << std::endl;
             return true;
         }
     );
