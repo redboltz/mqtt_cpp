@@ -611,7 +611,7 @@ int main(int argc, char **argv) {
             (
                 "verify_file",
                 boost::program_options::value<std::string>(),
-                "Private key file for TLS connections"
+                "Root certificate used for verification of the client"
             )
             (
                 "verify_field",
