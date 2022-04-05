@@ -15,7 +15,7 @@ namespace MQTT_NS {
 
 namespace broker {
 
-static constexpr std::size_t max_cname_size = 0xffff;
+static constexpr std::size_t max_cn_size = 0xffff;
 
 } // namespace broker
 

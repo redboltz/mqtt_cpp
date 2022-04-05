@@ -62,8 +62,7 @@ BOOST_AUTO_TEST_CASE(json_load) {
                 "digest": "38ea2e5e88fcd692fe177c6cada15e9b2db6e70bee0a0d6678c8d3b2a9aae2ad"
             }, {
                 "name": "u2",
-                "method": "client_cert",
-                "field": "CNAME"
+                "method": "client_cert"
             }, {
                 "name": "u3",
                 "method": "plain_password",
@@ -132,7 +131,7 @@ BOOST_AUTO_TEST_CASE(json_load) {
 
 #if defined(MQTT_USE_TLS)
     BOOST_CHECK(security.login("u1", "mypassword"));
-    BOOST_CHECK(!security.login("u1", "invalidpassword"));    
+    BOOST_CHECK(!security.login("u1", "invalidpassword"));
 #endif
 
     BOOST_CHECK(security.login("u3", "mypassword"));
@@ -302,8 +301,7 @@ BOOST_AUTO_TEST_CASE(check_publish) {
                     "digest": "mypassword"
                 }, {
                     "name": "u2",
-                    "method": "client_cert",
-                    "field": "CNAME"
+                    "method": "client_cert"
                 }, {
                     "name": "anonymous",
                     "method": "anonymous"
@@ -356,8 +354,7 @@ BOOST_AUTO_TEST_CASE(check_publish_any) {
                     "digest": "mypassword"
                 }, {
                     "name": "u2",
-                    "method": "client_cert",
-                    "field": "CNAME"
+                    "method": "client_cert"
                 }, {
                     "name": "anonymous",
                     "method": "anonymous"
@@ -494,8 +491,7 @@ BOOST_AUTO_TEST_CASE(auth_check) {
                     "digest": "75c111ce6542425228c157b1187076ed86e837f6085e3bb30b976114f70abc40"
                 }, {
                     "name": "u2",
-                    "method": "client_cert",
-                    "field": "CNAME"
+                    "method": "client_cert"
                 }, {
                     "name": "anonymous",
                     "method": "anonymous"
@@ -637,10 +633,10 @@ BOOST_AUTO_TEST_CASE(auth_check_plus) {
                     }
                 ],
                 "authorization": [
-					 {
-            			"topic": "+",
-            			"allow": { "pub":["u1"], "sub":["u1"] }
-        			}
+                                         {
+                                "topic": "+",
+                                "allow": { "pub":["u1"], "sub":["u1"] }
+                                }
                 ]
             }
         )*";
@@ -663,10 +659,10 @@ BOOST_AUTO_TEST_CASE(auth_check_plus) {
                     }
                 ],
                 "authorization": [
-  					{
-            			"topic": "+/+",
-            			"allow": { "pub":["u1"], "sub":["u1"] }
-        			}
+                                        {
+                                "topic": "+/+",
+                                "allow": { "pub":["u1"], "sub":["u1"] }
+                                }
                 ]
             }
         )*";
@@ -689,10 +685,10 @@ BOOST_AUTO_TEST_CASE(auth_check_plus) {
                     }
                 ],
                 "authorization": [
-  					{
-            			"topic": "+/",
-            			"allow": { "pub":["u1"], "sub":["u1"] }
-        			}
+                                        {
+                                "topic": "+/",
+                                "allow": { "pub":["u1"], "sub":["u1"] }
+                                }
                 ]
             }
         )*";
@@ -702,7 +698,7 @@ BOOST_AUTO_TEST_CASE(auth_check_plus) {
     BOOST_CHECK(security_3.auth_sub_user(security_3.auth_sub("t1/"), "u1") == MQTT_NS::broker::security::authorization::type::allow);
     BOOST_CHECK(security_3.auth_sub_user(security_3.auth_sub("t1/t2"), "u1") == MQTT_NS::broker::security::authorization::type::deny);
 }
-	
+
 BOOST_AUTO_TEST_CASE(priority_test) {
     MQTT_NS::broker::security security;
     std::string test = R"*(

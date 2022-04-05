@@ -496,7 +496,7 @@ struct session_state {
     void set_username(std::string const& username) {
         username_ = username;
     }
-    std::string const &get_username() const {
+    std::string const& get_username() const {
         return username_;
     }
 

@@ -66,12 +66,19 @@ private:
 
 #if defined(MQTT_USE_TLS)
 
-bool verify_certificate(std::string const &verify_field, bool preverified, boost::asio::ssl::verify_context& ctx, std::shared_ptr<MQTT_NS::optional<std::string>> const& username) {
+inline
+bool verify_certificate(
+    std::string const& verify_field,
+    bool preverified,
+    boost::asio::ssl::verify_context& ctx,
+    std::shared_ptr<MQTT_NS::optional<std::string>> const& username) {
     if (!preverified) return false;
     int error = X509_STORE_CTX_get_error(ctx.native_handle());
     if (error != X509_V_OK) {
         int depth = X509_STORE_CTX_get_error_depth(ctx.native_handle());
-        MQTT_LOG("mqtt_broker", error) << "Certificate validation failed, depth: " << depth << ", message: " << X509_verify_cert_error_string(error);
+        MQTT_LOG("mqtt_broker", error)
+            << "Certificate validation failed, depth: " << depth
+            << ", message: " << X509_verify_cert_error_string(error);
         return false;
     }
 
@@ -79,16 +86,26 @@ bool verify_certificate(std::string const &verify_field, bool preverified, boost
     X509_NAME* name = X509_get_subject_name(cert);
 
     std::string verify_field_value;
-    auto obj = std::unique_ptr<ASN1_OBJECT, decltype(&ASN1_OBJECT_free)>(OBJ_txt2obj(verify_field.c_str(), 0), &ASN1_OBJECT_free);
+    auto obj = std::unique_ptr<
+        ASN1_OBJECT,
+        decltype(&ASN1_OBJECT_free)
+    >(
+        OBJ_txt2obj(verify_field.c_str(), 0),
+        &ASN1_OBJECT_free
+    );
     if (obj) { // return nullptr if error
-        verify_field_value.resize(MQTT_NS::broker::max_cname_size);
-        auto size = X509_NAME_get_text_by_OBJ(name, obj.get(), &verify_field_value[0], static_cast<int>(verify_field_value.size()));
+        verify_field_value.resize(MQTT_NS::broker::max_cn_size);
+        auto size = X509_NAME_get_text_by_OBJ(
+            name,
+            obj.get(),
+            &verify_field_value[0],
+            static_cast<int>(verify_field_value.size())
+        );
         // Size equals -1 if field is not found, otherwise, length of value
         verify_field_value.resize(static_cast<std::size_t>(std::max(size, 0)));
+        MQTT_LOG("mqtt_broker", info) << "[clicrt] " << verify_field << ":" << verify_field_value;
+        *username = verify_field_value;
     }
-
-    MQTT_LOG("mqtt_broker", info) << "[clicrt] " << verify_field << ":" << verify_field_value;
-    *username = verify_field_value;
     return true;
 }
 
@@ -118,12 +135,19 @@ public:
             }
         );
 
-        server_.set_verify_callback([&verify_field](bool preverified, boost::asio::ssl::verify_context& ctx, std::shared_ptr<MQTT_NS::optional<std::string>> const& username) {
-            return verify_certificate(verify_field, preverified, ctx, username);
-        });
+        server_.set_verify_callback(
+            [&verify_field]
+            (
+                bool preverified,
+                boost::asio::ssl::verify_context& ctx,
+                std::shared_ptr<MQTT_NS::optional<std::string>> const& username
+            ) {
+                return verify_certificate(verify_field, preverified, ctx, username);
+            }
+        );
 
         server_.set_accept_handler(
-            [&](std::shared_ptr<MQTT_NS::server_tls<>::endpoint_t> spep) {
+            [this](std::shared_ptr<MQTT_NS::server_tls<>::endpoint_t> spep) {
                 b_.handle_accept(MQTT_NS::force_move(spep));
             }
         );
@@ -189,7 +213,7 @@ public:
         );
 
         server_.set_accept_handler(
-            [&](std::shared_ptr<MQTT_NS::server_ws<>::endpoint_t> spep) {
+            [this](std::shared_ptr<MQTT_NS::server_ws<>::endpoint_t> spep) {
                 b_.handle_accept(MQTT_NS::force_move(spep));
             }
         );
@@ -241,12 +265,19 @@ public:
             }
         );
 
-        server_.set_verify_callback([&verify_field](bool preverified, boost::asio::ssl::verify_context& ctx, std::shared_ptr<MQTT_NS::optional<std::string>> const& username) {
-            return verify_certificate(verify_field, preverified, ctx, username);
-        });
+        server_.set_verify_callback(
+            [&verify_field]
+            (
+                bool preverified,
+                boost::asio::ssl::verify_context& ctx,
+                std::shared_ptr<MQTT_NS::optional<std::string>> const& username
+            ) {
+                return verify_certificate(verify_field, preverified, ctx, username);
+            }
+        );
 
         server_.set_accept_handler(
-            [&](std::shared_ptr<MQTT_NS::server_tls_ws<>::endpoint_t> spep) {
+            [this](std::shared_ptr<MQTT_NS::server_tls_ws<>::endpoint_t> spep) {
                 b_.handle_accept(MQTT_NS::force_move(spep));
             }
         );
@@ -300,27 +331,44 @@ as::ssl::context init_ctx()
 }
 
 template<typename Server>
-void reload_ctx(Server& server, as::steady_timer& reload_timer,
+void reload_ctx(Server& server,
+                as::steady_timer& reload_timer,
                 std::string const& certificate_filename,
                 std::string const& key_filename,
-                MQTT_NS::optional<std::string> const &verify_file,
+                MQTT_NS::optional<std::string> const& verify_file,
                 unsigned int certificate_reload_interval,
-                char const* name, bool first_load = true)
-{
+                char const* name,
+                bool first_load = true) {
     MQTT_LOG("mqtt_broker", info) << "Reloading certificates for server " << name;
 
     if (certificate_reload_interval > 0) {
         reload_timer.expires_after(std::chrono::hours(certificate_reload_interval));
         reload_timer.async_wait(
-            [&server, &reload_timer, certificate_filename, key_filename, certificate_reload_interval, verify_file, name]
+            [
+                &server,
+                &reload_timer,
+                certificate_filename,
+                key_filename,
+                certificate_reload_interval,
+                verify_file,
+                name
+            ]
             (boost::system::error_code const& e) {
-
-            BOOST_ASSERT(!e || e == as::error::operation_aborted);
-
-            if (!e) {
-                reload_ctx(server, reload_timer, certificate_filename, key_filename, verify_file, certificate_reload_interval, name, false);
+                BOOST_ASSERT(!e || e == as::error::operation_aborted);
+                if (!e) {
+                    reload_ctx(
+                        server,
+                        reload_timer,
+                        certificate_filename,
+                        key_filename,
+                        verify_file,
+                        certificate_reload_interval,
+                        name,
+                        false
+                    );
+                }
             }
-        });
+        );
     }
 
     auto context = init_ctx();
@@ -356,22 +404,29 @@ void reload_ctx(Server& server, as::steady_timer& reload_timer,
 }
 
 template<typename Server>
-void load_ctx(Server& server, as::steady_timer& reload_timer, boost::program_options::variables_map const& vm, char const* name)
-{
+void load_ctx(
+    Server& server,
+    as::steady_timer& reload_timer,
+    boost::program_options::variables_map const& vm,
+    char const* name
+) {
     if (vm.count("certificate") == 0 && vm.count("private_key") == 0) {
         throw std::runtime_error("TLS requested but certificate and/or private_key not specified");
     }
 
     MQTT_NS::optional<std::string> verify_file;
-    if (vm.count("verify_file"))
+    if (vm.count("verify_file")) {
         verify_file = vm["verify_file"].as<std::string>();
-
-    reload_ctx(server, reload_timer,
-           vm["certificate"].as<std::string>(),
-           vm["private_key"].as<std::string>(),
-           verify_file,
-           vm["certificate_reload_interval"].as<unsigned int>(),
-           name, true);
+    }
+    reload_ctx(
+        server,
+        reload_timer,
+        vm["certificate"].as<std::string>(),
+        vm["private_key"].as<std::string>(),
+        verify_file,
+        vm["certificate_reload_interval"].as<unsigned int>(),
+        name, true
+    );
 }
 #endif // defined(MQTT_USE_TLS)
 
@@ -389,7 +444,8 @@ void run_broker(boost::program_options::variables_map const& vm) {
             } ();
         if (num_of_iocs == 0) {
             num_of_iocs = std::thread::hardware_concurrency();
-            MQTT_LOG("mqtt_broker", info) << "iocs set to auto decide (0). Automatically set to " << num_of_iocs;
+            MQTT_LOG("mqtt_broker", info)
+                << "iocs set to auto decide (0). Automatically set to " << num_of_iocs;
         }
 
         auto threads_per_ioc =
@@ -401,7 +457,9 @@ void run_broker(boost::program_options::variables_map const& vm) {
             } ();
         if (threads_per_ioc == 0) {
             threads_per_ioc = std::min(std::size_t(std::thread::hardware_concurrency()), std::size_t(4));
-            MQTT_LOG("mqtt_broker", info) << "threads_per_ioc set to auto decide (0). Automatically set to " << threads_per_ioc;
+            MQTT_LOG("mqtt_broker", info)
+                << "threads_per_ioc set to auto decide (0). Automatically set to "
+                << threads_per_ioc;
         }
 
         MQTT_LOG("mqtt_broker", info)
@@ -409,25 +467,27 @@ void run_broker(boost::program_options::variables_map const& vm) {
             << " threads_per_ioc:" << threads_per_ioc
             << " total threads:" << num_of_iocs * threads_per_ioc;
 
-		if (vm.count("auth_file")) {
-			std::string auth_file = vm["auth_file"].as<std::string>();
-			if (!auth_file.empty()) {
-				MQTT_LOG("mqtt_broker", info)
-					<< "auth_file:" << auth_file;
+        if (vm.count("auth_file")) {
+            std::string auth_file = vm["auth_file"].as<std::string>();
+            if (!auth_file.empty()) {
+                MQTT_LOG("mqtt_broker", info)
+                    << "auth_file:" << auth_file;
 
-				std::ifstream input(auth_file);
+                std::ifstream input(auth_file);
 
                 if (input) {
                     MQTT_NS::broker::security security;
                     security.load_json(input);
                     b.set_security(MQTT_NS::force_move(security));
-                } else
-                {
-                    MQTT_LOG("mqtt_broker", error)
-                        << "Authorization file '" << auth_file << "' not found,  broker doesn't use authorization file.";
                 }
-			}
-		}
+                else {
+                    MQTT_LOG("mqtt_broker", error)
+                        << "Authorization file '"
+                        << auth_file
+                        << "' not found,  broker doesn't use authorization file.";
+                }
+            }
+        }
 
         as::io_context accept_ioc;
 
@@ -483,10 +543,17 @@ void run_broker(boost::program_options::variables_map const& vm) {
         MQTT_NS::optional<server_tls> s_tls;
         MQTT_NS::optional<as::steady_timer> s_lts_timer;
 
-        auto verify_field_obj = std::unique_ptr<ASN1_OBJECT, decltype(&ASN1_OBJECT_free)>(OBJ_txt2obj(vm["verify_field"].as<std::string>().c_str(), 0), &ASN1_OBJECT_free);
-        if (!verify_field_obj)
-            throw std::runtime_error("An invalid verify field was specified: " + vm["verify_field"].as<std::string>());
-
+        auto verify_field_obj =
+            std::unique_ptr<ASN1_OBJECT, decltype(&ASN1_OBJECT_free)>(
+                OBJ_txt2obj(vm["verify_field"].as<std::string>().c_str(), 0),
+                &ASN1_OBJECT_free
+            );
+        if (!verify_field_obj) {
+            throw std::runtime_error(
+                "An invalid verify field was specified: " +
+                vm["verify_field"].as<std::string>()
+            );
+        }
         if (vm.count("tls.port")) {
             s_tls.emplace(
                 accept_ioc,
@@ -652,7 +719,7 @@ int main(int argc, char **argv) {
             ("tls.port", boost::program_options::value<std::uint16_t>(), "default port (TLS)")
         ;
 
-        desc.add(tls_desc);        
+        desc.add(tls_desc);
 #endif // defined(MQTT_USE_TLS)
 
 #if defined(MQTT_USE_WS) && defined(MQTT_USE_TLS)
@@ -671,9 +738,13 @@ int main(int argc, char **argv) {
             std::ifstream input(vm["cfg"].as<std::string>());
             if (input) {
                 boost::program_options::store(boost::program_options::parse_config_file(input, desc), vm);
-            } else
-            {
-                std::cerr << "Configuration file '" << config_file << "' not found,  broker doesn't use configuration file." << std::endl;
+            }
+            else {
+                std::cerr
+                    << "Configuration file '"
+                    << config_file
+                    << "' not found,  broker doesn't use configuration file."
+                    << std::endl;
             }
         }
 
@@ -734,7 +805,8 @@ int main(int argc, char **argv) {
 #endif
 
         run_broker(vm);
-    } catch(std::exception &e) {
+    }
+    catch(std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
 }

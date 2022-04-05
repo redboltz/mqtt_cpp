@@ -887,7 +887,7 @@ public:
      */
     tls::context const& get_ssl_context() const {
         return ctx_;
-    }    
+    }
 
     using verify_cb_t = std::function<bool (bool, boost::asio::ssl::verify_context&, std::shared_ptr<optional<std::string>> const&) >;
 
@@ -1021,7 +1021,7 @@ private:
                                         // TODO: The use of force_move on this line of code causes
                                         // a static assertion that socket is a const object when
                                         // TLS is enabled, and WS is enabled, with Boost 1.70, and gcc 8.3.0
-                                        auto sp = std::make_shared<endpoint_t>(ioc_con, socket, version_);                                        
+                                        auto sp = std::make_shared<endpoint_t>(ioc_con, socket, version_);
                                         sp->set_preauthed_user_name(*username);
                                         if (h_accept_) h_accept_(force_move(sp));
                                     }

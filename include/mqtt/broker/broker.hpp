@@ -39,8 +39,7 @@ class broker_t {
 public:
     broker_t(as::io_context& timer_ioc)
         :timer_ioc_(timer_ioc),
-         tim_disconnect_(timer_ioc_)
-    {
+         tim_disconnect_(timer_ioc_) {
         security.default_config();
     }
 
@@ -830,8 +829,9 @@ private:
 
         optional<std::string> username;
         if (ep.get_preauthed_user_name()) {
-            if (security.login_cert(ep.get_preauthed_user_name().value()))
+            if (security.login_cert(ep.get_preauthed_user_name().value())) {
                 username = ep.get_preauthed_user_name();
+            }
         }
         else if (!noauth_username && !password) {
             username = security.login_anonymous();
@@ -849,23 +849,29 @@ private:
         if (!username) {
             MQTT_LOG("mqtt_broker", trace)
                 << MQTT_ADD_VALUE(address, this)
-                << "User failed to login: " << (noauth_username ? std::string(*noauth_username) : std::string("anonymous user"));
+                << "User failed to login: "
+                << (noauth_username ? std::string(*noauth_username) : std::string("anonymous user"));
 
-            send_connack(ep, false, false, force_move(connack_props), [spep](error_code){
-                disconnect_and_force_disconnect(spep, v5::disconnect_reason_code::not_authorized);
-            });
+            send_connack(
+                ep,
+                false, // session present
+                false, // authenticated
+                force_move(connack_props),
+                [spep](error_code) {
+                    disconnect_and_force_disconnect(spep, v5::disconnect_reason_code::not_authorized);
+                }
+            );
 
             return true;
         }
 
-		if (client_id.empty()) {
-	        if (!handle_empty_client_id(spep, client_id, clean_start, connack_props)) {
-    	        return false;
-        	}
-
-			// A new client id was generated
-			client_id = buffer(string_view(spep->get_client_id()));
-		}
+        if (client_id.empty()) {
+            if (!handle_empty_client_id(spep, client_id, clean_start, connack_props)) {
+                return false;
+            }
+            // A new client id was generated
+            client_id = buffer(string_view(spep->get_client_id()));
+        }
 
         MQTT_LOG("mqtt_broker", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -883,7 +889,10 @@ private:
         std::lock_guard<mutex> g(mtx_sessions_);
         auto& idx = sessions_.get<tag_cid>();
         auto it = idx.lower_bound(std::make_tuple(*username, client_id));
-        if (it == idx.end() || it->client_id() != client_id || it->get_username() != *username) {
+        if (it == idx.end() ||
+            it->client_id() != client_id ||
+            it->get_username() != *username
+        ) {
             // new connection
             MQTT_LOG("mqtt_broker", trace)
                 << MQTT_ADD_VALUE(address, this)
@@ -910,7 +919,12 @@ private:
                 // set_response_topic never modify key part
                 set_response_topic(const_cast<session_state&>(*it), connack_props, *username);
             }
-            send_connack(ep, false, true, force_move(connack_props));
+            send_connack(
+                ep,
+                false, // session present
+                true,  // authenticated
+                force_move(connack_props)
+            );
         }
         else if (it->online()) {
             // online overwrite
@@ -926,7 +940,12 @@ private:
                         // set_response_topic never modify key part
                         set_response_topic(const_cast<session_state&>(*it), connack_props, *username);
                     }
-                    send_connack(ep, false, true, force_move(connack_props));
+                    send_connack(
+                        ep,
+                        false, // session present
+                        true,  // authenticated
+                        force_move(connack_props)
+                    );
                     idx.modify(
                         it,
                         [&](auto& e) {
@@ -951,7 +970,8 @@ private:
                     }
                     send_connack(
                         ep,
-                        true, true,
+                        true, // session present
+                        true, // authenticated
                         force_move(connack_props),
                         [
                             this,
@@ -963,7 +983,8 @@ private:
                             will_expiry_interval = cp.will_expiry_interval,
                             session_expiry_interval = cp.session_expiry_interval,
                             username
-                        ](error_code ec) mutable {
+                        ]
+                        (error_code ec) mutable {
                             if (ec) {
                                 MQTT_LOG("mqtt_broker", trace)
                                     << MQTT_ADD_VALUE(address, this)
@@ -1015,7 +1036,12 @@ private:
                     // set_response_topic never modify key part
                     set_response_topic(const_cast<session_state&>(*it), connack_props, *username);
                 }
-                send_connack(ep, false, true, force_move(connack_props));
+                send_connack(
+                    ep,
+                    false, // session present
+                    true,  // authenticated
+                    force_move(connack_props)
+                );
             }
         }
         else {
@@ -1030,7 +1056,12 @@ private:
                     // set_response_topic never modify key part
                     set_response_topic(const_cast<session_state&>(*it), connack_props, *username);
                 }
-                send_connack(ep, false, true, force_move(connack_props));
+                send_connack(
+                    ep,
+                    false, // session present
+                    true,  // authenticated
+                    force_move(connack_props)
+                );
                 idx.modify(
                     it,
                     [&](auto& e) {
@@ -1056,7 +1087,8 @@ private:
                 }
                 send_connack(
                     ep,
-                    true, true,
+                    true, // session present
+                    true,  // authenticated
                     force_move(connack_props),
                     [
                         this,
@@ -1068,7 +1100,8 @@ private:
                         will_expiry_interval = cp.will_expiry_interval,
                         session_expiry_interval = cp.session_expiry_interval,
                         username
-                    ](error_code ec) mutable {
+                    ]
+                    (error_code ec) mutable {
                         if (ec) {
                             MQTT_LOG("mqtt_broker", trace)
                                 << MQTT_ADD_VALUE(address, this)
@@ -1138,7 +1171,8 @@ private:
 
     void send_connack(
         endpoint_t& ep,
-        bool session_present, bool authorized,
+        bool session_present,
+        bool authenticated,
         v5::properties props,
         std::function<void(error_code)> finish = [](error_code){}
     ) {
@@ -1147,7 +1181,8 @@ private:
         case protocol_version::v3_1_1:
             if (connack_) ep.async_connack(
                 session_present,
-                authorized ? connect_return_code::accepted : connect_return_code::not_authorized,
+                authenticated ? connect_return_code::accepted
+                              : connect_return_code::not_authorized,
                 [finish = force_move(finish)]
                 (error_code ec) {
                     finish(ec);
@@ -1162,7 +1197,8 @@ private:
                 props.emplace_back(v5::property::receive_maximum{receive_maximum_max});
                 if (connack_) ep.async_connack(
                     session_present,
-                    authorized ? v5::connect_reason_code::success : v5::connect_reason_code::not_authorized,
+                    authenticated ? v5::connect_reason_code::success
+                                  : v5::connect_reason_code::not_authorized,
                     force_move(props),
                     [finish = force_move(finish)]
                     (error_code ec) {
@@ -1174,7 +1210,8 @@ private:
                 // use connack_props_ for testing
                 if (connack_) ep.async_connack(
                     session_present,
-                    authorized ? v5::connect_reason_code::success : v5::connect_reason_code::not_authorized,
+                    authenticated ? v5::connect_reason_code::success
+                                  : v5::connect_reason_code::not_authorized,
                     connack_props_,
                     [finish = force_move(finish)]
                     (error_code ec) {
@@ -1204,15 +1241,19 @@ private:
                 return rt;
             } ();
 
-        auto rule_nr = security.add_auth(response_topic,
+        auto rule_nr = security.add_auth(
+            response_topic,
             { "@any" }, MQTT_NS::broker::security::authorization::type::allow,
-            { username }, MQTT_NS::broker::security::authorization::type::allow);
+            { username }, MQTT_NS::broker::security::authorization::type::allow
+        );
 
-        s.set_clean_handler([this, response_topic, rule_nr]() {
-            std::lock_guard<mutex> g(mtx_retains_);
-            retains_.erase(response_topic);
-            remove_rule(rule_nr);
-        });
+        s.set_clean_handler(
+            [this, response_topic, rule_nr]() {
+                std::lock_guard<mutex> g(mtx_retains_);
+                retains_.erase(response_topic);
+                remove_rule(rule_nr);
+            }
+        );
 
         connack_props.emplace_back(
             v5::property::response_topic(
@@ -1448,7 +1489,8 @@ private:
                 case qos::at_least_once:
                     ep.async_puback(
                         packet_id.value(),
-                        authorized ? v5::puback_reason_code::success : v5::puback_reason_code::not_authorized,
+                        authorized ? v5::puback_reason_code::success
+                                   : v5::puback_reason_code::not_authorized,
                         puback_props_,
                         [spep = force_move(spep)]
                         (error_code ec) {
@@ -1463,7 +1505,8 @@ private:
                 case qos::exactly_once: {
                     ep.async_pubrec(
                         packet_id.value(),
-                        authorized ? v5::pubrec_reason_code::success : v5::pubrec_reason_code::not_authorized,
+                        authorized ? v5::pubrec_reason_code::success
+                                   : v5::pubrec_reason_code::not_authorized,
                         pubrec_props_,
                         [spep = force_move(spep)]
                         (error_code ec) {
