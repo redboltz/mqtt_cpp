@@ -11705,6 +11705,16 @@ private:
         return val;
     }
 
+public:
+    void set_preauthed_user_name(optional<std::string> const& user_name) {
+        preauthed_user_name_ = user_name;
+    }
+    optional<std::string> get_preauthed_user_name() const {
+        return preauthed_user_name_;
+    }
+private:
+    optional<std::string> preauthed_user_name_;
+
 protected:
     // Ensure that only code that knows the *exact* type of an object
     // inheriting from this abstract base class can destruct it.
