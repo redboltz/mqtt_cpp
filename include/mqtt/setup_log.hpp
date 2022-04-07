@@ -25,6 +25,15 @@ namespace MQTT_NS {
 
 #if defined(MQTT_USE_LOG)
 
+static constexpr char const* log_color_table[] {
+    "\033[0m", // trace
+    "\033[36m", // debug
+    "\033[32m", // info
+    "\033[33m", // warning
+    "\033[35m", // error
+    "\033[31m", // fatal
+};
+
 /**
  * @brief Setup logging
  * @param threshold
@@ -54,6 +63,7 @@ void setup_log(std::map<std::string, severity_level> threshold) {
             }
             // Adjust severity length example
             if (auto v = boost::log::extract<severity_level>("Severity", rec)) {
+                strm << log_color_table[static_cast<std::size_t>(v.get())];
                 strm << "S:" << std::setw(7) << std::left << v.get() << " ";
             }
             if (auto v = boost::log::extract<channel>("Channel", rec)) {
@@ -76,6 +86,7 @@ void setup_log(std::map<std::string, severity_level> threshold) {
             }
 #endif
             strm << rec[boost::log::expressions::smessage];
+            strm << "\033[0m";
         };
 
     // https://www.boost.org/doc/libs/1_73_0/libs/log/doc/html/log/tutorial/sinks.html

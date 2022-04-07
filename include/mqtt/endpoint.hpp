@@ -1136,7 +1136,7 @@ public:
         v5::properties props = {},
         any life_keeper = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "publish"
             << " pid:" << packet_id
@@ -1212,7 +1212,7 @@ public:
         v5::properties props,
         any life_keeper
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "publish"
             << " pid:" << packet_id
@@ -1265,7 +1265,7 @@ public:
         publish_options pubopts,
         any life_keeper
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "publish"
             << " pid:" << packet_id
@@ -1320,7 +1320,7 @@ public:
         publish_options pubopts = {},
         any life_keeper = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "publish"
             << " pid:" << packet_id
@@ -1394,7 +1394,7 @@ public:
         v5::properties props,
         any life_keeper = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "publish"
             << " pid:" << packet_id
@@ -1952,7 +1952,7 @@ public:
         v5::puback_reason_code reason_code = v5::puback_reason_code::success,
         v5::properties props = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "puback"
             << " pid:" << packet_id
@@ -1978,7 +1978,7 @@ public:
         v5::pubrec_reason_code reason_code = v5::pubrec_reason_code::success,
         v5::properties props = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "pubrec"
             << " pid:" << packet_id
@@ -2012,7 +2012,7 @@ public:
         v5::properties props = {},
         any life_keeper = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "pubrel"
             << " pid:" << packet_id
@@ -2038,7 +2038,7 @@ public:
         v5::pubcomp_reason_code reason_code = v5::pubcomp_reason_code::success,
         v5::properties props = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "pubcomp"
             << " pid:" << packet_id
@@ -2357,7 +2357,7 @@ public:
         publish_options pubopts = {},
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_publish"
             << " pid:" << packet_id
@@ -2420,7 +2420,7 @@ public:
         any life_keeper = {},
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_publish"
             << " pid:" << packet_id
@@ -2486,7 +2486,7 @@ public:
         any life_keeper = {},
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_publish"
             << " pid:" << packet_id
@@ -2544,7 +2544,7 @@ public:
         any life_keeper = {},
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_publish"
             << " pid:" << packet_id
@@ -2597,7 +2597,7 @@ public:
         any life_keeper = {},
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_publish"
             << " pid:" << packet_id
@@ -2675,7 +2675,7 @@ public:
         any life_keeper = {},
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_publish"
             << " pid:" << packet_id
@@ -3831,7 +3831,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_puback"
             << " pid:" << packet_id;
@@ -3860,7 +3860,7 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_puback"
             << " pid:" << packet_id
@@ -3880,7 +3880,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_pubrec"
             << " pid:" << packet_id;
@@ -3909,7 +3909,7 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_pubrec"
             << " pid:" << packet_id
@@ -3929,7 +3929,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_pubrel"
             << " pid:" << packet_id;
@@ -3965,7 +3965,7 @@ public:
         v5::properties props = {},
         Func&& func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_pubrel"
             << " pid:" << packet_id
@@ -4004,7 +4004,7 @@ public:
         any life_keeper = {},
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_pubrel"
             << " pid:" << packet_id
@@ -4024,7 +4024,7 @@ public:
         packet_id_t packet_id,
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_pubcomp"
             << " pid:" << packet_id;
@@ -4053,7 +4053,7 @@ public:
         v5::properties props,
         async_handler_t func = {}
     ) {
-        MQTT_LOG("mqtt_api", info)
+        MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_pubcomp"
             << " pid:" << packet_id
