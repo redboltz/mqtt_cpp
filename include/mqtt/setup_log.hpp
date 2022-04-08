@@ -15,10 +15,10 @@
 // setup_log() could be  a good reference for your own logging setup code.
 
 #include <mqtt/namespace.hpp>
+#include <mqtt/log.hpp>
 
 #if defined(MQTT_USE_LOG)
 
-#include <mqtt/log.hpp>
 #include <mqtt/move.hpp>
 
 #include <boost/filesystem.hpp>

@@ -7,6 +7,8 @@
 #if !defined(MQTT_BROKER_RETAINED_TOPIC_MAP_HPP)
 #define MQTT_BROKER_RETAINED_TOPIC_MAP_HPP
 
+#include <deque>
+
 #include <boost/functional/hash.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
