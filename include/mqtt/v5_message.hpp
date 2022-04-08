@@ -14,7 +14,6 @@
 #include <numeric>
 
 #include <boost/asio/buffer.hpp>
-#include <boost/optional.hpp>
 #include <boost/container/static_vector.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 
@@ -37,6 +36,7 @@
 #include <mqtt/packet_id_type.hpp>
 #include <mqtt/move.hpp>
 #include <mqtt/variant_visit.hpp>
+#include <mqtt/optional.hpp>
 
 #if !defined(MQTT_ALWAYS_SEND_REASON_CODE)
 #define MQTT_ALWAYS_SEND_REASON_CODE false

@@ -19,6 +19,12 @@ using std::string_view;
 
 using std::basic_string_view;
 
+// Make string_view from a pair of iterators (pre C++20)
+template<class Begin, class End>
+string_view make_string_view(Begin&& begin, End&& end) {
+    return string_view(std::forward<Begin>(begin).operator->(), std::forward<End>(end));
+}
+
 } // namespace MQTT_NS
 
 #else  // MQTT_STD_STRING_VIEW
@@ -40,6 +46,11 @@ using string_view = boost::string_view;
 
 template<class CharT, class Traits = std::char_traits<CharT> >
 using basic_string_view = boost::basic_string_view<CharT, Traits>;
+
+template<class Begin, class End>
+string_view make_string_view(Begin&& begin, End&& end) {
+    return string_view(std::forward<Begin>(begin), std::forward<End>(end));
+}
 
 } // namespace MQTT_NS
 
@@ -65,6 +76,11 @@ using string_view = boost::string_ref;
 
 template<class CharT, class Traits = std::char_traits<CharT> >
 using basic_string_view = boost::basic_string_ref<CharT, Traits>;
+
+template<class Begin, class End>
+string_view make_string_view(Begin&& begin, End&& end) {
+    return string_view(std::forward<Begin>(begin), std::forward<End>(end));
+}
 
 } // namespace MQTT_NS
 

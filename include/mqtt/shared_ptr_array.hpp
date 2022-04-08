@@ -47,11 +47,17 @@ using shared_ptr_array = std::shared_ptr<char []>;
 using const_shared_ptr_array = std::shared_ptr<char const []>;
 
 inline shared_ptr_array make_shared_ptr_array(std::size_t size) {
-#if __cplusplus > 201703L // C++20 date is not determined yet
+#ifdef __cpp_lib_shared_ptr_arrays
+#if __cpp_lib_shared_ptr_arrays >= 201711L
+#define MQTT_HAS_STD_MAKE_SHARED_ARRAY
+#endif // __cpp_lib_shared_ptr_arrays >= 201711L
+#endif // __cpp_lib_shared_ptr_arrays
+#ifdef MQTT_HAS_STD_MAKE_SHARED_ARRAY
     return std::make_shared<char[]>(size);
-#else  // __cplusplus > 201703L
+#undef MQTT_HAS_STD_MAKE_SHARED_ARRAY
+#else  // MQTT_HAS_STD_MAKE_SHARED_ARRAY
     return std::shared_ptr<char[]>(new char[size]);
-#endif // __cplusplus > 201703L
+#endif // MQTT_HAS_STD_MAKE_SHARED_ARRAY
 }
 
 } // namespace MQTT_NS

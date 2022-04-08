@@ -358,7 +358,7 @@ public:
     void dump(Output &out) {
         auto const& direct_index = map.template get<direct_index_tag>();
         for (auto const& i : direct_index) {
-            out << i.parent_id << " " << i.name << " " << (i.value ? "init" : "-") << " " << i.count << std::endl;
+            out << i.parent_id << " " << i.name << " " << (i.value ? "init" : "-") << " " << i.count << '\n';
         }
     }
 

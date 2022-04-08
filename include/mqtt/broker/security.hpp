@@ -19,7 +19,6 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/optional.hpp>
 #include <boost/iterator/function_output_iterator.hpp>
 
 #include <boost/algorithm/hex.hpp>
@@ -595,7 +594,7 @@ struct security {
 
             if (is_hash(auth)) {
                 append_result(
-                    string_view(
+                    make_string_view(
                         subscription_begin,
                         static_cast<size_t>(
                             std::distance(
@@ -608,7 +607,7 @@ struct security {
                 return result;
             }
 
-            auto sub = string_view(
+            auto sub = make_string_view(
                 subscription_begin,
                 static_cast<size_t>(
                     std::distance(
