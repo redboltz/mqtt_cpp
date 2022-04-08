@@ -596,12 +596,7 @@ struct security {
                 append_result(
                     make_string_view(
                         subscription_begin,
-                        static_cast<size_t>(
-                            std::distance(
-                                subscription_begin,
-                                subscription_filter.end()
-                            )
-                        )
+                        subscription_filter.end()
                     )
                 );
                 return result;
@@ -609,12 +604,7 @@ struct security {
 
             auto sub = make_string_view(
                 subscription_begin,
-                static_cast<size_t>(
-                    std::distance(
-                        subscription_begin,
-                        subscription_next
-                    )
-                )
+                subscription_next
             );
 
             if (is_hash(sub)) {

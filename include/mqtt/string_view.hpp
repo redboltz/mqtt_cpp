@@ -7,6 +7,8 @@
 #if !defined(MQTT_STRING_VIEW_HPP)
 #define MQTT_STRING_VIEW_HPP
 
+#include <iterator>
+
 #include <mqtt/namespace.hpp>
 
 #ifdef MQTT_STD_STRING_VIEW
@@ -18,29 +20,6 @@ namespace MQTT_NS {
 using std::string_view;
 
 using std::basic_string_view;
-
-namespace detail {
-    
-template<class T>
-T* to_address(T* p) noexcept
-{
-    return p;
-}
- 
-template<class T>
-auto to_address(const T& p) noexcept
-{
-    return detail::to_address(p.operator->());
-}
-
-} // namespace detail
-
-// Make string_view from a potentially fancy iterator and a size. This is a common mistake when 
-// using compilers like GCC which by default define std::string_view::iterator as char*.
-template<class Begin>
-string_view make_string_view(Begin begin, string_view::size_type size) {
-    return string_view(detail::to_address(begin), size);
-}
 
 } // namespace MQTT_NS
 
@@ -63,11 +42,6 @@ using string_view = boost::string_view;
 
 template<class CharT, class Traits = std::char_traits<CharT> >
 using basic_string_view = boost::basic_string_view<CharT, Traits>;
-
-template<class Begin>
-string_view make_string_view(Begin&& begin, string_view::size_type size) {
-    return string_view(std::forward<Begin>(begin), size);
-}
 
 } // namespace MQTT_NS
 
@@ -94,11 +68,6 @@ using string_view = boost::string_ref;
 template<class CharT, class Traits = std::char_traits<CharT> >
 using basic_string_view = boost::basic_string_ref<CharT, Traits>;
 
-template<class Begin>
-string_view make_string_view(Begin&& begin, string_view::size_type size) {
-    return string_view(std::forward<Begin>(begin), size);
-}
-
 } // namespace MQTT_NS
 
 #endif // BOOST_VERSION >= 106100
@@ -107,5 +76,31 @@ string_view make_string_view(Begin&& begin, string_view::size_type size) {
 #endif // !defined(MQTT_NO_BOOST_STRING_VIEW)
 
 #endif // !defined(MQTT_STD_STRING_VIEW)
+
+namespace MQTT_NS {
+
+namespace detail {
+    
+template<class T>
+T* to_address(T* p) noexcept
+{
+    return p;
+}
+ 
+template<class T>
+auto to_address(const T& p) noexcept
+{
+    return detail::to_address(p.operator->());
+}
+
+} // namespace detail
+
+// Make a string_view from a pair of iterators.
+template<typename Begin, typename End>
+string_view make_string_view(Begin begin, End end) {
+    return string_view(detail::to_address(begin), static_cast<string_view::size_type>(std::distance(begin, end)));
+}
+
+} // namespace MQTT_NS
 
 #endif // MQTT_STRING_VIEW_HPP
