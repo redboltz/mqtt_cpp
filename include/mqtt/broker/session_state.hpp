@@ -302,7 +302,6 @@ struct session_state {
         }
         shared_targets_.erase(*this);
         unsubscribe_all();
-        if (con_) con_->async_force_disconnect();
     }
 
     template <typename PublishRetainHandler>
