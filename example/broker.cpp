@@ -10,6 +10,8 @@
 #include <boost/format.hpp>
 
 #include <fstream>
+#include <iostream>
+#include <iomanip>
 #include <algorithm>
 
 namespace as = boost::asio;
