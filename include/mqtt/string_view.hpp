@@ -35,10 +35,11 @@ auto to_address(const T& p) noexcept
 
 } // namespace detail
 
-// Make string_view from a pair of iterators (pre C++20)
-template<class Begin, class End>
-string_view make_string_view(Begin begin, End end) {
-    return string_view(detail::to_address(begin), static_cast<string_view::size_type>(end - begin));
+// Make string_view from a potentially fancy iterator and a size. This is a common mistake when 
+// using compilers like GCC which by default define std::string_view::iterator as char*.
+template<class Begin>
+string_view make_string_view(Begin begin, string_view::size_type size) {
+    return string_view(detail::to_address(begin), size);
 }
 
 } // namespace MQTT_NS
@@ -63,9 +64,9 @@ using string_view = boost::string_view;
 template<class CharT, class Traits = std::char_traits<CharT> >
 using basic_string_view = boost::basic_string_view<CharT, Traits>;
 
-template<class Begin, class End>
-string_view make_string_view(Begin&& begin, End&& end) {
-    return string_view(std::forward<Begin>(begin), std::forward<End>(end));
+template<class Begin>
+string_view make_string_view(Begin&& begin, string_view::size_type size) {
+    return string_view(std::forward<Begin>(begin), size);
 }
 
 } // namespace MQTT_NS
@@ -93,9 +94,9 @@ using string_view = boost::string_ref;
 template<class CharT, class Traits = std::char_traits<CharT> >
 using basic_string_view = boost::basic_string_ref<CharT, Traits>;
 
-template<class Begin, class End>
-string_view make_string_view(Begin&& begin, End&& end) {
-    return string_view(std::forward<Begin>(begin), std::forward<End>(end));
+template<class Begin>
+string_view make_string_view(Begin&& begin, string_view::size_type size) {
+    return string_view(std::forward<Begin>(begin), size);
 }
 
 } // namespace MQTT_NS
