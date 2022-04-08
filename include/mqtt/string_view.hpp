@@ -19,10 +19,26 @@ using std::string_view;
 
 using std::basic_string_view;
 
+namespace detail {
+    
+template<class T>
+T* to_address(T* p) noexcept
+{
+    return p;
+}
+ 
+template<class T>
+auto to_address(const T& p) noexcept
+{
+    return detail::to_address(p.operator->());
+}
+
+} // namespace detail
+
 // Make string_view from a pair of iterators (pre C++20)
 template<class Begin, class End>
-string_view make_string_view(Begin&& begin, End&& end) {
-    return string_view(std::forward<Begin>(begin).operator->(), std::forward<End>(end));
+string_view make_string_view(Begin begin, End end) {
+    return string_view(detail::to_address(begin), static_cast<string_view::size_type>(end - begin));
 }
 
 } // namespace MQTT_NS
