@@ -2147,7 +2147,7 @@ BOOST_AUTO_TEST_CASE( publish_session_before_expire ) {
                         c->set_clean_start(false);
                         c->connect(
                             MQTT_NS::v5::properties {
-                                MQTT_NS::v5::property::session_expiry_interval(2)
+                                MQTT_NS::v5::property::session_expiry_interval(5)
                             }
                         );
                     },
@@ -2291,7 +2291,7 @@ BOOST_AUTO_TEST_CASE( publish_session_after_expire ) {
             [&chk, &c, &tim]
             (MQTT_NS::error_code) {
                 MQTT_CHK("h_error");
-                tim.expires_after(std::chrono::seconds(3)); // after expired
+                tim.expires_after(std::chrono::seconds(4)); // after expired
                 tim.async_wait(
                     [&c] (MQTT_NS::error_code ec) {
                         BOOST_ASSERT( ! ec);
