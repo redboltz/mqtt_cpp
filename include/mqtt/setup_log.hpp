@@ -16,10 +16,15 @@
 
 #include <mqtt/namespace.hpp>
 #include <mqtt/log.hpp>
+
+#if defined(MQTT_USE_LOG)
+
 #include <mqtt/move.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/date_time/posix_time/posix_time_io.hpp>
+
+#endif // defined(MQTT_USE_LOG)
 
 namespace MQTT_NS {
 

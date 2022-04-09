@@ -7,7 +7,11 @@
 #if !defined(MQTT_LOG_HPP)
 #define MQTT_LOG_HPP
 
-#include <tuple>
+#include <cstddef>
+#include <ostream>
+#include <string>
+
+#if defined(MQTT_USE_LOG)
 
 #include <boost/log/core.hpp>
 #include <boost/log/attributes.hpp>
@@ -24,11 +28,11 @@
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/comparison/greater_equal.hpp>
 
+#endif // defined(MQTT_USE_LOG)
+
 #include <mqtt/namespace.hpp>
 
 namespace MQTT_NS {
-
-namespace log = boost::log;
 
 struct channel : std::string {
     using std::string::string;
@@ -72,7 +76,7 @@ inline constexpr null_log const& operator<<(null_log const& o, T const&) { retur
 
 // template arguments are defined in MQTT_NS
 // filter and formatter can distinguish mqtt_cpp's channel and severity by their types
-using global_logger_t = log::sources::severity_channel_logger<severity_level, channel>;
+using global_logger_t = boost::log::sources::severity_channel_logger<severity_level, channel>;
 inline global_logger_t& logger() {
     thread_local global_logger_t l;
     return l;

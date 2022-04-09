@@ -5,6 +5,8 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 #include <iostream>
+#include <iomanip>
+#include <fstream>
 
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
