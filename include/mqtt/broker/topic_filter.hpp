@@ -43,9 +43,10 @@ inline std::size_t topic_filter_tokenizer(string_view str, Output write) {
         std::end(str),
         [&write](string_view::const_iterator token_begin, string_view::const_iterator token_end) {
             return write(
-                string_view(
+                make_string_view(
                     token_begin,
-                    static_cast<std::size_t>(std::distance(token_begin, token_end)))
+                    token_end
+                )
             );
         }
     );

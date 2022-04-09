@@ -19,7 +19,6 @@
 #include <atomic>
 #include <algorithm>
 
-#include <boost/any.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
@@ -149,7 +148,7 @@ constexpr bool check_qos_value(publish_options pubopts) {
 
 template<typename ... Params>
 constexpr bool should_generate_packet_id(Params const& ... params) {
-#if __cplusplus >= 201703L // C++20 date is not determined yet
+#if __cplusplus >= 201703L
     return (check_qos_value(params) || ...); // defaults to false for empty.
 #else  // __cplusplus >= 201703L
     const bool results[] = {false, check_qos_value(params)... };

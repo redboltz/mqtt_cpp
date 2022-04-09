@@ -47,11 +47,11 @@ using shared_ptr_array = std::shared_ptr<char []>;
 using const_shared_ptr_array = std::shared_ptr<char const []>;
 
 inline shared_ptr_array make_shared_ptr_array(std::size_t size) {
-#if __cplusplus > 201703L // C++20 date is not determined yet
+#if __cpp_lib_shared_ptr_arrays >= 201707L
     return std::make_shared<char[]>(size);
-#else  // __cplusplus > 201703L
+#else  // __cpp_lib_shared_ptr_arrays >= 201707L
     return std::shared_ptr<char[]>(new char[size]);
-#endif // __cplusplus > 201703L
+#endif // __cpp_lib_shared_ptr_arrays >= 201707L
 }
 
 } // namespace MQTT_NS
