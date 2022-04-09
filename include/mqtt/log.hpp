@@ -28,7 +28,7 @@
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/comparison/greater_equal.hpp>
 
-#endif
+#endif // defined(MQTT_USE_LOG)
 
 #include <mqtt/namespace.hpp>
 

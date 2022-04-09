@@ -24,7 +24,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/date_time/posix_time/posix_time_io.hpp>
 
-#endif
+#endif // defined(MQTT_USE_LOG)
 
 namespace MQTT_NS {
 
