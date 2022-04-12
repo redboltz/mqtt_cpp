@@ -141,8 +141,13 @@ struct less_than_visitor {
     }
 };
 
+template <typename PropertyVariant>
 inline
-bool operator<(property_variant const& lhs, property_variant const& rhs) {
+std::enable_if_t<
+    std::is_same<PropertyVariant, property_variant>::value,
+    bool
+>
+operator<(PropertyVariant const& lhs, PropertyVariant const& rhs) {
     return MQTT_NS::visit(
         less_than_visitor(),
         lhs,
@@ -161,8 +166,13 @@ struct equal_visitor {
     }
 };
 
+template <typename PropertyVariant>
 inline
-bool operator==(property_variant const& lhs, property_variant const& rhs) {
+std::enable_if_t<
+    std::is_same<PropertyVariant, property_variant>::value,
+    bool
+>
+operator==(PropertyVariant const& lhs, PropertyVariant const& rhs) {
     return MQTT_NS::visit(
         equal_visitor(),
         lhs,
@@ -170,8 +180,13 @@ bool operator==(property_variant const& lhs, property_variant const& rhs) {
     );
 }
 
+template <typename PropertyVariant>
 inline
-bool operator!=(property_variant const& lhs, property_variant const& rhs) {
+std::enable_if_t<
+    std::is_same<PropertyVariant, property_variant>::value,
+    bool
+>
+operator!=(PropertyVariant const& lhs, PropertyVariant const& rhs) {
     return !MQTT_NS::visit(
         equal_visitor(),
         lhs,
