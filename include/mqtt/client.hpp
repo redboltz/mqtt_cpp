@@ -33,6 +33,468 @@ namespace as = boost::asio;
 namespace mi = boost::multi_index;
 
 template <typename Socket, std::size_t PacketIdBytes = 2>
+class client;
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                strand
+            >
+        >
+    >
+>
+make_client(Ioc& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                strand
+            >
+        >
+    >
+>
+make_client(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                null_strand
+            >
+        >
+    >
+>
+make_client_no_strand(Ioc& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                null_strand
+            >
+        >
+    >
+>
+make_client_no_strand(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1);
+
+#if defined(MQTT_USE_WS)
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                strand
+            >
+        >
+    >
+>
+make_client_ws(Ioc& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                strand
+            >
+        >
+    >
+>
+make_client_ws(Ioc& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                null_strand
+            >
+        >
+    >
+>
+make_client_no_strand_ws(Ioc& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                null_strand
+            >
+        >
+    >
+>
+make_client_no_strand_ws(Ioc& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+#endif // defined(MQTT_USE_WS)
+
+#if defined(MQTT_USE_TLS)
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
+            >
+        >
+    >
+>
+make_tls_client(Ioc& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
+            >
+        >
+    >
+>
+make_tls_client(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
+            >
+        >
+    >
+>
+make_tls_client_no_strand(Ioc& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
+            >
+        >
+    >
+>
+make_tls_client_no_strand(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1);
+
+#if defined(MQTT_USE_WS)
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
+            >
+        >
+    >
+>
+make_tls_client_ws(Ioc& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
+            >
+        >
+    >
+>
+make_tls_client_ws(Ioc& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
+            >
+        >
+    >
+>
+make_tls_client_no_strand_ws(Ioc& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
+            >
+        >
+    >
+>
+make_tls_client_no_strand_ws(Ioc& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+#endif // defined(MQTT_USE_WS)
+
+#endif // defined(MQTT_USE_TLS)
+
+
+// 32bit Packet Id (experimental)
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                strand
+            >,
+            4
+        >
+    >
+>
+make_client_32(Ioc& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                strand
+            >,
+            4
+        >
+    >
+>
+make_client_32(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                null_strand
+            >,
+            4
+        >
+    >
+>
+make_client_no_strand_32(Ioc& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                null_strand
+            >,
+            4
+        >
+    >
+>
+make_client_no_strand_32(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1);
+
+#if defined(MQTT_USE_WS)
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                strand
+            >,
+            4
+        >
+    >
+>
+make_client_ws_32(Ioc& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                strand
+            >,
+            4
+        >
+    >
+>
+make_client_ws_32(Ioc& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                null_strand
+            >,
+            4
+        >
+    >
+>
+make_client_no_strand_ws_32(Ioc& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                null_strand
+            >,
+            4
+        >
+    >
+>
+make_client_no_strand_ws_32(Ioc& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+#endif // defined(MQTT_USE_WS)
+
+#if defined(MQTT_USE_TLS)
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
+            >,
+            4
+        >
+    >
+>
+make_tls_client_32(Ioc& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
+            >,
+            4
+        >
+    >
+>
+make_tls_client_32(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
+            >,
+            4
+        >
+    >
+>
+make_tls_client_no_strand_32(Ioc& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
+            >,
+            4
+        >
+    >
+>
+make_tls_client_no_strand_32(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1);
+
+#if defined(MQTT_USE_WS)
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
+            >,
+            4
+        >
+    >
+>
+make_tls_client_ws_32(Ioc& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
+            >,
+            4
+        >
+    >
+>
+make_tls_client_ws_32(Ioc& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
+            >,
+            4
+        >
+    >
+>
+make_tls_client_no_strand_ws_32(Ioc& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+template <typename Ioc>
+std::shared_ptr<
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
+            >,
+            4
+        >
+    >
+>
+make_tls_client_no_strand_ws_32(Ioc& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1);
+
+#endif // defined(MQTT_USE_WS)
+
+#endif // defined(MQTT_USE_TLS)
+
+template <typename Socket, std::size_t PacketIdBytes>
 class client : public endpoint<std::mutex, std::lock_guard, PacketIdBytes> {
     using this_type = client<Socket, PacketIdBytes>;
     using base = endpoint<std::mutex, std::lock_guard, PacketIdBytes>;
@@ -56,6 +518,7 @@ public:
      * @param port port number
      * @return client object
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -66,7 +529,7 @@ public:
             >
         >
     >
-    make_client(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_client(Ioc& ioc, std::string host, std::string port, protocol_version version);
 
     /**
      * @brief Create no tls client without strand.
@@ -75,6 +538,7 @@ public:
      * @param port port number
      * @return client object
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -85,7 +549,7 @@ public:
             >
         >
     >
-    make_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_client_no_strand(Ioc& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
     /**
@@ -97,6 +561,7 @@ public:
      * @return client object.
      *  strand is controlled by ws_endpoint, not endpoint, so client has null_strand template argument.
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -107,7 +572,7 @@ public:
             >
         >
     >
-    make_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_client_ws(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
      * @brief Create no tls websocket client without strand.
@@ -117,6 +582,7 @@ public:
      * @param path path string
      * @return client object
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -127,7 +593,7 @@ public:
             >
         >
     >
-    make_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_client_no_strand_ws(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 
 #if defined(MQTT_USE_TLS)
@@ -138,6 +604,7 @@ public:
      * @param port port number
      * @return client object
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -148,7 +615,7 @@ public:
             >
         >
     >
-    make_tls_client(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_tls_client(Ioc& ioc, std::string host, std::string port, protocol_version version);
 
     /**
      * @brief Create tls client without strand.
@@ -157,6 +624,7 @@ public:
      * @param port port number
      * @return client object
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -167,7 +635,7 @@ public:
             >
         >
     >
-    make_tls_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_tls_client_no_strand(Ioc& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
     /**
@@ -179,6 +647,7 @@ public:
      * @return client object.
      *  strand is controlled by ws_endpoint, not endpoint, so client has null_strand template argument.
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -189,7 +658,7 @@ public:
             >
         >
     >
-    make_tls_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_tls_client_ws(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
      * @brief Create no tls websocket client without strand.
@@ -199,6 +668,7 @@ public:
      * @param path path string
      * @return client object
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -209,7 +679,7 @@ public:
             >
         >
     >
-    make_tls_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_tls_client_no_strand_ws(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_USE_TLS)
 
@@ -220,6 +690,7 @@ public:
      * @param port port number
      * @return client object
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -231,7 +702,7 @@ public:
             >
         >
     >
-    make_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_client_32(Ioc& ioc, std::string host, std::string port, protocol_version version);
 
     /**
      * @brief Create no tls client without strand.
@@ -240,6 +711,7 @@ public:
      * @param port port number
      * @return client object
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -251,7 +723,7 @@ public:
             >
         >
     >
-    make_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_client_no_strand_32(Ioc& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
     /**
@@ -263,6 +735,7 @@ public:
      * @return client object.
      *  strand is controlled by ws_endpoint, not endpoint, so client has null_strand template argument.
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -274,7 +747,7 @@ public:
             >
         >
     >
-    make_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_client_ws_32(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
      * @brief Create no tls websocket client without strand.
@@ -284,6 +757,7 @@ public:
      * @param path path string
      * @return client object
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -295,7 +769,7 @@ public:
             >
         >
     >
-    make_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_client_no_strand_ws_32(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 
 #if defined(MQTT_USE_TLS)
@@ -306,6 +780,7 @@ public:
      * @param port port number
      * @return client object
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -317,7 +792,7 @@ public:
             >
         >
     >
-    make_tls_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_tls_client_32(Ioc& ioc, std::string host, std::string port, protocol_version version);
 
     /**
      * @brief Create tls client without strand.
@@ -326,6 +801,7 @@ public:
      * @param port port number
      * @return client object
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -337,7 +813,7 @@ public:
             >
         >
     >
-    make_tls_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version);
+    make_tls_client_no_strand_32(Ioc& ioc, std::string host, std::string port, protocol_version version);
 
 #if defined(MQTT_USE_WS)
     /**
@@ -349,6 +825,7 @@ public:
      * @return client object.
      *  strand is controlled by ws_endpoint, not endpoint, so client has null_strand template argument.
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -360,7 +837,7 @@ public:
             >
         >
     >
-    make_tls_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_tls_client_ws_32(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version);
 
     /**
      * @brief Create no tls websocket client without strand.
@@ -370,6 +847,7 @@ public:
      * @param path path string
      * @return client object
      */
+    template <typename Ioc>
     friend std::shared_ptr<
         callable_overlay<
             client<
@@ -381,7 +859,7 @@ public:
             >
         >
     >
-    make_tls_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path, protocol_version version);
+    make_tls_client_no_strand_ws_32(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version);
 #endif // defined(MQTT_USE_WS)
 #endif // defined(MQTT_USE_TLS)
 
@@ -1556,17 +2034,19 @@ private:
 #endif // defined(MQTT_USE_WS)
 };
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    as::ip::tcp::socket,
-                    strand
-                >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                strand
             >
         >
     >
-make_client(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_client(Ioc& ioc, std::string host, std::string port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         tcp_endpoint<
             as::ip::tcp::socket,
@@ -1585,17 +2065,19 @@ make_client(as::io_context& ioc, std::string host, std::string port, protocol_ve
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    as::ip::tcp::socket,
-                    strand
-                >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                strand
             >
         >
     >
-make_client(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_client(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_client(
         ioc,
         force_move(host),
@@ -1604,17 +2086,19 @@ make_client(as::io_context& ioc, std::string host, std::uint16_t port, protocol_
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    as::ip::tcp::socket,
-                    null_strand
-                >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                null_strand
             >
         >
     >
-make_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_no_strand(Ioc& ioc, std::string host, std::string port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         tcp_endpoint<
             as::ip::tcp::socket,
@@ -1633,17 +2117,19 @@ make_client_no_strand(as::io_context& ioc, std::string host, std::string port, p
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    as::ip::tcp::socket,
-                    null_strand
-                >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                null_strand
             >
         >
     >
-make_client_no_strand(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_no_strand(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_client_no_strand(
         ioc,
         force_move(host),
@@ -1654,17 +2140,19 @@ make_client_no_strand(as::io_context& ioc, std::string host, std::uint16_t port,
 
 #if defined(MQTT_USE_WS)
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    as::ip::tcp::socket,
-                    strand
-                >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                strand
             >
         >
     >
-make_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_ws(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         ws_endpoint<
             as::ip::tcp::socket,
@@ -1681,17 +2169,19 @@ make_client_ws(as::io_context& ioc, std::string host, std::string port, std::str
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    as::ip::tcp::socket,
-                    strand
-                >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                strand
             >
         >
     >
-make_client_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_ws(Ioc& ioc, std::string host, std::uint16_t port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_client_ws(
         ioc,
         force_move(host),
@@ -1701,17 +2191,19 @@ make_client_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::s
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    as::ip::tcp::socket,
-                    null_strand
-                >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                null_strand
             >
         >
     >
-make_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_no_strand_ws(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         ws_endpoint<
             as::ip::tcp::socket,
@@ -1728,17 +2220,19 @@ make_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    as::ip::tcp::socket,
-                    null_strand
-                >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                null_strand
             >
         >
     >
-make_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_no_strand_ws(Ioc& ioc, std::string host, std::uint16_t port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_client_no_strand_ws(
         ioc,
         force_move(host),
@@ -1752,17 +2246,19 @@ make_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16_t po
 
 #if defined(MQTT_USE_TLS)
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    strand
-                >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
             >
         >
     >
-make_tls_client(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client(Ioc& ioc, std::string host, std::string port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -1781,17 +2277,19 @@ make_tls_client(as::io_context& ioc, std::string host, std::string port, protoco
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    strand
-                >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
             >
         >
     >
-make_tls_client(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_tls_client(
         ioc,
         force_move(host),
@@ -1800,17 +2298,19 @@ make_tls_client(as::io_context& ioc, std::string host, std::uint16_t port, proto
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    null_strand
-                >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
             >
         >
     >
-make_tls_client_no_strand(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_no_strand(Ioc& ioc, std::string host, std::string port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -1829,17 +2329,19 @@ make_tls_client_no_strand(as::io_context& ioc, std::string host, std::string por
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    null_strand
-                >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
             >
         >
     >
-make_tls_client_no_strand(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_no_strand(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_tls_client_no_strand(
         ioc,
         force_move(host),
@@ -1850,17 +2352,19 @@ make_tls_client_no_strand(as::io_context& ioc, std::string host, std::uint16_t p
 
 #if defined(MQTT_USE_WS)
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    strand
-                >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
             >
         >
     >
-make_tls_client_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_ws(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -1877,17 +2381,19 @@ make_tls_client_ws(as::io_context& ioc, std::string host, std::string port, std:
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    strand
-                >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
             >
         >
     >
-make_tls_client_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_ws(Ioc& ioc, std::string host, std::uint16_t port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_tls_client_ws(
         ioc,
         force_move(host),
@@ -1897,17 +2403,19 @@ make_tls_client_ws(as::io_context& ioc, std::string host, std::uint16_t port, st
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    null_strand
-                >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
             >
         >
     >
-make_tls_client_no_strand_ws(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_no_strand_ws(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -1924,17 +2432,19 @@ make_tls_client_no_strand_ws(as::io_context& ioc, std::string host, std::string 
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    null_strand
-                >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
             >
         >
     >
-make_tls_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_no_strand_ws(Ioc& ioc, std::string host, std::uint16_t port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_tls_client_no_strand_ws(
         ioc,
         force_move(host),
@@ -1951,18 +2461,20 @@ make_tls_client_no_strand_ws(as::io_context& ioc, std::string host, std::uint16_
 
 // 32bit Packet Id (experimental)
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    as::ip::tcp::socket,
-                    strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                strand
+            >,
+            4
         >
     >
-make_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_32(Ioc& ioc, std::string host, std::string port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         tcp_endpoint<
             as::ip::tcp::socket,
@@ -1982,18 +2494,20 @@ make_client_32(as::io_context& ioc, std::string host, std::string port, protocol
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    as::ip::tcp::socket,
-                    strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                strand
+            >,
+            4
         >
     >
-make_client_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_32(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_client_32(
         ioc,
         force_move(host),
@@ -2002,18 +2516,20 @@ make_client_32(as::io_context& ioc, std::string host, std::uint16_t port, protoc
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    as::ip::tcp::socket,
-                    null_strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                null_strand
+            >,
+            4
         >
     >
-make_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_no_strand_32(Ioc& ioc, std::string host, std::string port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         tcp_endpoint<
             as::ip::tcp::socket,
@@ -2033,18 +2549,20 @@ make_client_no_strand_32(as::io_context& ioc, std::string host, std::string port
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    as::ip::tcp::socket,
-                    null_strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                as::ip::tcp::socket,
+                null_strand
+            >,
+            4
         >
     >
-make_client_no_strand_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_no_strand_32(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_client_no_strand_32(
         ioc,
         force_move(host),
@@ -2055,18 +2573,20 @@ make_client_no_strand_32(as::io_context& ioc, std::string host, std::uint16_t po
 
 #if defined(MQTT_USE_WS)
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    as::ip::tcp::socket,
-                    strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                strand
+            >,
+            4
         >
     >
-make_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_ws_32(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         ws_endpoint<
             as::ip::tcp::socket,
@@ -2084,18 +2604,20 @@ make_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    as::ip::tcp::socket,
-                    strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                strand
+            >,
+            4
         >
     >
-make_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_ws_32(Ioc& ioc, std::string host, std::uint16_t port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_client_ws_32(
         ioc,
         force_move(host),
@@ -2105,18 +2627,20 @@ make_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    as::ip::tcp::socket,
-                    null_strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                null_strand
+            >,
+            4
         >
     >
-make_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_no_strand_ws_32(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         ws_endpoint<
             as::ip::tcp::socket,
@@ -2134,18 +2658,20 @@ make_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string p
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    as::ip::tcp::socket,
-                    null_strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                as::ip::tcp::socket,
+                null_strand
+            >,
+            4
         >
     >
-make_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_client_no_strand_ws_32(Ioc& ioc, std::string host, std::uint16_t port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_client_no_strand_ws_32(
         ioc,
         force_move(host),
@@ -2159,18 +2685,20 @@ make_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::uint16_t
 
 #if defined(MQTT_USE_TLS)
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
+            >,
+            4
         >
     >
-make_tls_client_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_32(Ioc& ioc, std::string host, std::string port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -2190,18 +2718,20 @@ make_tls_client_32(as::io_context& ioc, std::string host, std::string port, prot
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
+            >,
+            4
         >
     >
-make_tls_client_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_32(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_tls_client_32(
         ioc,
         force_move(host),
@@ -2210,18 +2740,20 @@ make_tls_client_32(as::io_context& ioc, std::string host, std::uint16_t port, pr
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    null_strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
+            >,
+            4
         >
     >
-make_tls_client_no_strand_32(as::io_context& ioc, std::string host, std::string port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_no_strand_32(Ioc& ioc, std::string host, std::string port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         tcp_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -2241,18 +2773,20 @@ make_tls_client_no_strand_32(as::io_context& ioc, std::string host, std::string 
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                tcp_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    null_strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            tcp_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
+            >,
+            4
         >
     >
-make_tls_client_no_strand_32(as::io_context& ioc, std::string host, std::uint16_t port, protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_no_strand_32(Ioc& ioc, std::string host, std::uint16_t port, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_tls_client_no_strand_32(
         ioc,
         force_move(host),
@@ -2263,18 +2797,20 @@ make_tls_client_no_strand_32(as::io_context& ioc, std::string host, std::uint16_
 
 #if defined(MQTT_USE_WS)
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
+            >,
+            4
         >
     >
-make_tls_client_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_ws_32(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -2292,18 +2828,20 @@ make_tls_client_ws_32(as::io_context& ioc, std::string host, std::string port, s
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                strand
+            >,
+            4
         >
     >
-make_tls_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_ws_32(Ioc& ioc, std::string host, std::uint16_t port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_tls_client_ws_32(
         ioc,
         force_move(host),
@@ -2313,18 +2851,20 @@ make_tls_client_ws_32(as::io_context& ioc, std::string host, std::uint16_t port,
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    null_strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
+            >,
+            4
         >
     >
-make_tls_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::string port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_no_strand_ws_32(Ioc& ioc, std::string host, std::string port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     using client_t = client<
         ws_endpoint<
             tls::stream<as::ip::tcp::socket>,
@@ -2342,18 +2882,20 @@ make_tls_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::stri
     );
 }
 
+template <typename Ioc>
 inline std::shared_ptr<
-        callable_overlay<
-            client<
-                ws_endpoint<
-                    tls::stream<as::ip::tcp::socket>,
-                    null_strand
-                >,
-                4
-            >
+    callable_overlay<
+        client<
+            ws_endpoint<
+                tls::stream<as::ip::tcp::socket>,
+                null_strand
+            >,
+            4
         >
     >
-make_tls_client_no_strand_ws_32(as::io_context& ioc, std::string host, std::uint16_t port, std::string path = "/", protocol_version version = protocol_version::v3_1_1) {
+>
+make_tls_client_no_strand_ws_32(Ioc& ioc, std::string host, std::uint16_t port, std::string path, protocol_version version) {
+    static_assert(std::is_same<Ioc, as::io_context>::value, "The type of ioc must be boost::asio::io_context");
     return make_tls_client_no_strand_ws_32(
         ioc,
         force_move(host),
