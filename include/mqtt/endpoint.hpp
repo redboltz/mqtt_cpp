@@ -70,6 +70,7 @@
 #include <mqtt/subscribe_entry.hpp>
 #include <mqtt/shared_subscriptions.hpp>
 #include <mqtt/packet_id_manager.hpp>
+#include <mqtt/store.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -4313,9 +4314,7 @@ public:
      */
     void clear_stored_publish(packet_id_t packet_id) {
         LockGuard<Mutex> lck (store_mtx_);
-        auto& idx = store_.template get<tag_packet_id>();
-        auto r = idx.equal_range(packet_id);
-        idx.erase(std::get<0>(r), std::get<1>(r));
+        store_.erase(packet_id);
         pid_man_.release_id(packet_id);
     }
 
@@ -4328,12 +4327,16 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "for_each_store(ptr, size)";
         LockGuard<Mutex> lck (store_mtx_);
-        auto const& idx = store_.template get<tag_seq>();
-        for (auto const & e : idx) {
-            auto const& m = e.message();
-            auto cb = continuous_buffer(m);
-            f(cb.data(), cb.size());
-        }
+        store_.for_each(
+            [f](
+                basic_store_message_variant<PacketIdBytes> const& message,
+                any const& /*life_keeper*/
+            ) {
+                auto cb = continuous_buffer(message);
+                f(cb.data(), cb.size());
+                return false; // no erase
+            }
+        );
     }
 
     /**
@@ -4345,10 +4348,15 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "for_each_store(store_message_variant)";
         LockGuard<Mutex> lck (store_mtx_);
-        auto const& idx = store_.template get<tag_seq>();
-        for (auto const & e : idx) {
-            f(e.message());
-        }
+        store_.for_each(
+            [f](
+                basic_store_message_variant<PacketIdBytes> const& message,
+                any const& /*life_keeper*/
+            ) {
+                f(message);
+                return false; // no erase
+            }
+        );
     }
 
     /**
@@ -4361,10 +4369,15 @@ public:
 
             << "for_each_store(store_message_variant, life_keeper)";
         LockGuard<Mutex> lck (store_mtx_);
-        auto const& idx = store_.template get<tag_seq>();
-        for (auto const & e : idx) {
-            f(e.message(), e.life_keeper());
-        }
+        store_.for_each(
+            [f](
+                basic_store_message_variant<PacketIdBytes> const& message,
+                any const& life_keeper
+            ) {
+                f(message, life_keeper);
+                return false; // no erase
+            }
+        );
     }
 
     /**
@@ -4513,30 +4526,13 @@ public:
         qos qos_value = msg.get_qos();
         LockGuard<Mutex> lck (store_mtx_);
         if (pid_man_.register_id(packet_id)) {
-            auto ret = store_.emplace(
+            store_.insert_or_update(
                 packet_id,
                 ((qos_value == qos::at_least_once) ? control_packet_type::puback
                                                    : control_packet_type::pubrec),
                 force_move(msg),
                 force_move(life_keeper)
             );
-            // When client want to restore serialized messages,
-            // endpoint might keep the message that has the same packet_id.
-            // In this case, overwrite store_.
-            if (!ret.second) {
-                store_.modify(
-                    ret.first,
-                    [&] (auto& e) {
-                        e = store(
-                            packet_id,
-                            ((qos_value == qos::at_least_once) ? control_packet_type::puback
-                                                               : control_packet_type::pubrec),
-                            force_move(msg),
-                            force_move(life_keeper)
-                        );
-                    }
-                );
-            }
         }
     }
 
@@ -4550,28 +4546,12 @@ public:
         auto packet_id = msg.packet_id();
         LockGuard<Mutex> lck (store_mtx_);
         if (pid_man_.register_id(packet_id)) {
-            auto ret = store_.emplace(
+            store_.insert_or_update(
                 packet_id,
                 control_packet_type::pubcomp,
                 force_move(msg),
                 force_move(life_keeper)
             );
-            // When client want to restore serialized messages,
-            // endpoint might keep the message that has the same packet_id.
-            // In this case, overwrite store_.
-            if (!ret.second) {
-                store_.modify(
-                    ret.first,
-                    [&] (auto& e) {
-                        e = store(
-                            packet_id,
-                            control_packet_type::pubcomp,
-                            force_move(msg),
-                            force_move(life_keeper)
-                        );
-                    }
-                );
-            }
         }
     }
 
@@ -4636,30 +4616,13 @@ public:
         auto qos = msg.get_qos();
         LockGuard<Mutex> lck (store_mtx_);
         if (pid_man_.register_id(packet_id)) {
-            auto ret = store_.emplace(
+            store_.insert_or_update(
                 packet_id,
                 qos == qos::at_least_once ? control_packet_type::puback
                                           : control_packet_type::pubrec,
                 force_move(msg),
                 force_move(life_keeper)
             );
-            // When client want to restore serialized messages,
-            // endpoint might keep the message that has the same packet_id.
-            // In this case, overwrite store_.
-            if (!ret.second) {
-                store_.modify(
-                    ret.first,
-                    [&] (auto& e) {
-                        e = store(
-                            packet_id,
-                            qos == qos::at_least_once ? control_packet_type::puback
-                                                      : control_packet_type::pubrec,
-                            force_move(msg),
-                            force_move(life_keeper)
-                        );
-                    }
-                );
-            }
         }
     }
 
@@ -4675,27 +4638,12 @@ public:
         auto packet_id = msg.packet_id();
         LockGuard<Mutex> lck (store_mtx_);
         if (pid_man_.register_id(packet_id)) {
-            auto ret = store_.emplace(
+            store_.insert_or_update(
                 packet_id,
                 control_packet_type::pubcomp,
                 force_move(msg),
                 force_move(life_keeper)
             );
-            // When client want to restore serialized messages,
-            // endpoint might keep the message that has the same packet_id.
-            // In this case, overwrite store_.
-            if (!ret.second) {
-                store_.modify(
-                    ret.first,
-                    [&] (auto& e) {
-                        e = store(
-                            packet_id,
-                            control_packet_type::pubcomp,
-                            force_move(msg)
-                        );
-                    }
-                );
-            }
         }
     }
 
@@ -4759,14 +4707,15 @@ public:
 
                 LockGuard<Mutex> lck (store_mtx_);
                 pid_man_.register_id(packet_id);
-                auto ret = store_.emplace(
+                auto ret = store_.insert(
                     packet_id,
                     control_packet_type::pubcomp,
                     msg,
                     force_move(life_keeper)
                 );
                 (void)ret;
-                BOOST_ASSERT(ret.second);
+                BOOST_ASSERT(ret);
+
                 (this->*serialize)(msg);
                 do_sync_write(force_move(msg));
             };
@@ -4872,14 +4821,15 @@ public:
 
                 LockGuard<Mutex> lck (store_mtx_);
                 pid_man_.register_id(packet_id);
-                auto ret = store_.emplace(
+                auto ret = store_.insert(
                     packet_id,
                     control_packet_type::pubcomp,
                     msg,
                     force_move(life_keeper)
                 );
                 (void)ret;
-                BOOST_ASSERT(ret.second);
+                BOOST_ASSERT(ret);
+
                 (this->*serialize)(msg);
                 do_async_write(force_move(msg), force_move(func));
             };
@@ -5506,73 +5456,6 @@ private:
         static constexpr std::size_t payload_position_ = 5;
         std::shared_ptr<std::string> buf_;
     };
-
-    struct store {
-        store(
-            packet_id_t id,
-            control_packet_type type,
-            basic_store_message_variant<PacketIdBytes> smv,
-            any life_keeper = any())
-            : packet_id_(id)
-            , expected_control_packet_type_(type)
-            , smv_(force_move(smv))
-            , life_keeper_(force_move(life_keeper)) {}
-        packet_id_t packet_id() const { return packet_id_; }
-        control_packet_type expected_control_packet_type() const { return expected_control_packet_type_; }
-        basic_store_message_variant<PacketIdBytes> const& message() const {
-            return smv_;
-        }
-        basic_store_message_variant<PacketIdBytes>& message() {
-            return smv_;
-        }
-        any const& life_keeper() const {
-            return life_keeper_;
-        }
-        bool is_publish() const {
-            return
-                expected_control_packet_type_ == control_packet_type::puback ||
-                expected_control_packet_type_ == control_packet_type::pubrec;
-        }
-
-    private:
-        packet_id_t packet_id_;
-        control_packet_type expected_control_packet_type_;
-        basic_store_message_variant<PacketIdBytes> smv_;
-        any life_keeper_;
-    };
-
-    struct tag_packet_id {};
-    struct tag_packet_id_type {};
-    struct tag_seq {};
-    using mi_store = mi::multi_index_container<
-        store,
-        mi::indexed_by<
-            mi::ordered_unique<
-                mi::tag<tag_packet_id_type>,
-                mi::composite_key<
-                    store,
-                    mi::const_mem_fun<
-                        store, packet_id_t,
-                        &store::packet_id
-                    >,
-                    mi::const_mem_fun<
-                        store, control_packet_type,
-                        &store::expected_control_packet_type
-                    >
-                >
-            >,
-            mi::ordered_non_unique<
-                mi::tag<tag_packet_id>,
-                mi::const_mem_fun<
-                    store, packet_id_t,
-                    &store::packet_id
-                >
-            >,
-            mi::sequenced<
-                mi::tag<tag_seq>
-            >
-        >
-    >;
 
     void handle_control_packet_type(any session_life_keeper, this_type_sp self) {
         fixed_header_ = static_cast<std::uint8_t>(buf_.front());
@@ -8189,13 +8072,11 @@ private:
                 auto erased =
                     [&] {
                         LockGuard<Mutex> lck (ep_.store_mtx_);
-                        auto& idx = ep_.store_.template get<tag_packet_id_type>();
-                        auto r = idx.equal_range(std::make_tuple(packet_id_, control_packet_type::puback));
+                        if (!ep_.store_.erase(packet_id_, control_packet_type::puback)) {
+                            // puback packet_id is not matched to publish
+                            return false;
+                        }
 
-                        // puback packet_id is not matched to publish
-                        if (std::get<0>(r) == std::get<1>(r)) return false;
-
-                        idx.erase(std::get<0>(r), std::get<1>(r));
                         ep_.pid_man_.release_id(packet_id_);
                         return true;
                     } ();
@@ -8337,13 +8218,11 @@ private:
                 auto erased =
                     [&] {
                         LockGuard<Mutex> lck (ep_.store_mtx_);
-                        auto& idx = ep_.store_.template get<tag_packet_id_type>();
-                        auto r = idx.equal_range(std::make_tuple(packet_id_, control_packet_type::pubrec));
+                        if (!ep_.store_.erase(packet_id_, control_packet_type::pubrec)) {
+                            // pubrec packet_id is not matched to publish
+                            return false;
+                        }
 
-                        // pubrec packet_id is not matched to publish
-                        if (std::get<0>(r) == std::get<1>(r)) return false;
-
-                        idx.erase(std::get<0>(r), std::get<1>(r));
                         // packet_id should be erased here only if reason_code is error.
                         // Otherwise the packet_id is continue to be used for pubrel/pubcomp.
                         if (is_error(reason_code_)) ep_.pid_man_.release_id(packet_id_);
@@ -8697,13 +8576,11 @@ private:
                 auto erased =
                     [&] {
                         LockGuard<Mutex> lck (ep_.store_mtx_);
-                        auto& idx = ep_.store_.template get<tag_packet_id_type>();
-                        auto r = idx.equal_range(std::make_tuple(packet_id_, control_packet_type::pubcomp));
+                        if (!ep_.store_.erase(packet_id_, control_packet_type::pubcomp)) {
+                            // pubcomp packet_id is not matched to pubrel
+                            return false;
+                        }
 
-                        // pubcomp packet_id is not matched to pubrel
-                        if (std::get<0>(r) == std::get<1>(r)) return false;
-
-                        idx.erase(std::get<0>(r), std::get<1>(r));
                         ep_.pid_man_.release_id(packet_id_);
                         return true;
                     } ();
@@ -9875,11 +9752,11 @@ private:
                 (void)ret;
                 BOOST_ASSERT(ret);
             }
-            store_.emplace(
+            store_.insert(
                 packet_id,
                 qos_value == qos::at_least_once
-                ? control_packet_type::puback
-                : control_packet_type::pubrec,
+                    ? control_packet_type::puback
+                    : control_packet_type::pubrec,
                 store_msg,
                 force_move(life_keeper)
             );
@@ -10043,34 +9920,23 @@ private:
                         resend_pubrel_.insert(packet_id);
                     }
 
-                    auto ret = store_.emplace(
-                        packet_id,
-                        control_packet_type::pubcomp,
-                        msg,
-                        force_move(life_keeper)
-                    );
                     // publish store is erased when pubrec is received.
                     // pubrel store is erased when pubcomp is received.
                     // If invalid client send pubrec twice with the same packet id,
                     // then send corresponding pubrel twice is a possible client/server
                     // implementation.
                     // In this case, overwrite store_.
-                    if (!ret.second) {
+                    if (store_.insert_or_update(
+                            packet_id,
+                            control_packet_type::pubcomp,
+                            msg,
+                            force_move(life_keeper)
+                        ) == store_insert_update_result::updated
+                    ) {
                         MQTT_LOG("mqtt_impl", warning)
                             << MQTT_ADD_VALUE(address, this)
                             << "overwrite pubrel"
                             << " packet_id:" << packet_id;
-                        store_.modify(
-                            ret.first,
-                            [&] (auto& e) {
-                                e = store(
-                                    packet_id,
-                                    control_packet_type::pubcomp,
-                                    msg,
-                                    life_keeper
-                                );
-                            }
-                        );
                     }
                 }
 
@@ -10112,14 +9978,14 @@ private:
                     // insert if not registerd (start from pubrel sending case)
                     pid_man_.register_id(packet_id);
 
-                    auto ret = store_.emplace(
+                    auto ret = store_.insert(
                         packet_id,
                         control_packet_type::pubcomp,
                         msg,
                         force_move(life_keeper)
                     );
                     (void)ret;
-                    BOOST_ASSERT(ret.second);
+                    BOOST_ASSERT(ret);
                 }
 
                 (this->*serialize)(msg);
@@ -10435,79 +10301,80 @@ private:
     void send_store() {
         // packet_id has already been registered
         LockGuard<Mutex> lck (store_mtx_);
-        auto& idx = store_.template get<tag_seq>();
-        for (auto it = idx.begin(), end = idx.end(); it != end;) {
-            auto msg = it->message();
-            MQTT_NS::visit(
-                make_lambda_visitor(
-                    [&](v3_1_1::basic_publish_message<PacketIdBytes>& m) {
-                        MQTT_LOG("mqtt_api", info)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "async_send_store publish v3.1.1";
-                        if (maximum_packet_size_send_ < size<PacketIdBytes>(m)) {
-                            pid_man_.release_id(m.packet_id());
-                            MQTT_LOG("mqtt_impl", warning)
+        store_.for_each(
+            [&] (
+                basic_store_message_variant<PacketIdBytes> const& message,
+                any const& /*life_keeper*/
+            ) {
+                auto erase = false;
+                MQTT_NS::visit(
+                    make_lambda_visitor(
+                        [&](v3_1_1::basic_publish_message<PacketIdBytes> const& m) {
+                            MQTT_LOG("mqtt_api", info)
                                 << MQTT_ADD_VALUE(address, this)
-                                << "over maximum packet size message removed. packet_id:" << m.packet_id();
-                            it = idx.erase(it);
-                            return;
-                        }
-                        do_sync_write(m);
-                        ++it;
-                    },
-                    [&](v3_1_1::basic_pubrel_message<PacketIdBytes>& m) {
-                        MQTT_LOG("mqtt_api", info)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "async_send_store pubrel v3.1.1";
-                        do_sync_write(m);
-                        ++it;
-                    },
-                    [&](v5::basic_publish_message<PacketIdBytes>& m) {
-                        MQTT_LOG("mqtt_api", info)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "async_send_store publish v5";
-                        any life_keeper;
-                        auto msg_lk = apply_topic_alias(m, force_move(life_keeper));
-                        if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
-                            pid_man_.release_id(m.packet_id());
-                            MQTT_LOG("mqtt_impl", warning)
+                                << "async_send_store publish v3.1.1";
+                            if (maximum_packet_size_send_ < size<PacketIdBytes>(m)) {
+                                pid_man_.release_id(m.packet_id());
+                                MQTT_LOG("mqtt_impl", warning)
+                                    << MQTT_ADD_VALUE(address, this)
+                                    << "over maximum packet size message removed. packet_id:" << m.packet_id();
+                                erase = true;
+                                return;
+                            }
+                            do_sync_write(m);
+                        },
+                        [&](v3_1_1::basic_pubrel_message<PacketIdBytes> const& m) {
+                            MQTT_LOG("mqtt_api", info)
                                 << MQTT_ADD_VALUE(address, this)
-                                << "over maximum packet size message removed. packet_id:" << m.packet_id();
-                            it = idx.erase(it);
-                            return;
-                        }
-                        if (publish_send_count_.load() == publish_send_max_) {
-                            LockGuard<Mutex> lck (publish_send_queue_mtx_);
-                            publish_send_queue_.emplace_back(
-                                force_move(std::get<0>(msg_lk)),
-                                false,
-                                force_move(std::get<1>(msg_lk))
-                            );
-                        }
-                        else {
-                            MQTT_LOG("mqtt_impl", trace)
+                                << "async_send_store pubrel v3.1.1";
+                            do_sync_write(m);
+                        },
+                        [&](v5::basic_publish_message<PacketIdBytes> const& m) {
+                            MQTT_LOG("mqtt_api", info)
                                 << MQTT_ADD_VALUE(address, this)
-                                << "increment publish_send_count_:" << publish_send_count_.load();
-                            ++publish_send_count_;
-                            do_sync_write(force_move(std::get<0>(msg_lk)));
+                                << "async_send_store publish v5";
+                            any life_keeper;
+                            auto msg_lk = apply_topic_alias(m, force_move(life_keeper));
+                            if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
+                                pid_man_.release_id(m.packet_id());
+                                MQTT_LOG("mqtt_impl", warning)
+                                    << MQTT_ADD_VALUE(address, this)
+                                    << "over maximum packet size message removed. packet_id:" << m.packet_id();
+                                erase = true;
+                                return;
+                            }
+                            if (publish_send_count_.load() == publish_send_max_) {
+                                LockGuard<Mutex> lck (publish_send_queue_mtx_);
+                                publish_send_queue_.emplace_back(
+                                    force_move(std::get<0>(msg_lk)),
+                                    false,
+                                    force_move(std::get<1>(msg_lk))
+                                );
+                            }
+                            else {
+                                MQTT_LOG("mqtt_impl", trace)
+                                    << MQTT_ADD_VALUE(address, this)
+                                    << "increment publish_send_count_:" << publish_send_count_.load();
+                                ++publish_send_count_;
+                                do_sync_write(force_move(std::get<0>(msg_lk)));
+                            }
+                        },
+                        [&](v5::basic_pubrel_message<PacketIdBytes> const& m) {
+                            MQTT_LOG("mqtt_api", info)
+                                << MQTT_ADD_VALUE(address, this)
+                                << "async_send_store pubrel v5";
+                            {
+                                LockGuard<Mutex> lck_resend_pubrel (resend_pubrel_mtx_);
+                                resend_pubrel_.insert(m.packet_id());
+                            }
+                            do_sync_write(m);
                         }
-                        ++it;
-                    },
-                    [&](v5::basic_pubrel_message<PacketIdBytes>& m) {
-                        MQTT_LOG("mqtt_api", info)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "async_send_store pubrel v5";
-                        {
-                            LockGuard<Mutex> lck_resend_pubrel (resend_pubrel_mtx_);
-                            resend_pubrel_.insert(m.packet_id());
-                        }
-                        do_sync_write(m);
-                        ++it;
-                    }
-                ),
-                msg
-            );
-        }
+                    ),
+                    message
+                );
+                return erase;
+            }
+        );
     }
 
     // Blocking write
@@ -10843,34 +10710,23 @@ private:
                         resend_pubrel_.insert(packet_id);
                     }
 
-                    auto ret = store_.emplace(
-                        packet_id,
-                        control_packet_type::pubcomp,
-                        msg,
-                        life_keeper
-                    );
-                    // publish store is erased when pubrec is received.
-                    // pubrel store is erased when pubcomp is received.
-                    // If invalid client send pubrec twice with the same packet id,
-                    // then send corresponding pubrel twice is a possible client/server
-                    // implementation.
-                    // In this case, overwrite store_.
-                    if (!ret.second) {
+                    if (store_.insert_or_update(
+                            packet_id,
+                            control_packet_type::pubcomp,
+                            msg,
+                            life_keeper
+                        ) == store_insert_update_result::updated
+                    ) {
+                        // publish store is erased when pubrec is received.
+                        // pubrel store is erased when pubcomp is received.
+                        // If invalid client send pubrec twice with the same packet id,
+                        // then send corresponding pubrel twice is a possible client/server
+                        // implementation.
+                        // In this case, overwrite store_.
                         MQTT_LOG("mqtt_impl", warning)
                             << MQTT_ADD_VALUE(address, this)
                             << "overwrite pubrel"
                             << " packet_id:" << packet_id;
-                        store_.modify(
-                            ret.first,
-                            [&] (auto& e) {
-                                e = store(
-                                    packet_id,
-                                    control_packet_type::pubcomp,
-                                    msg,
-                                    life_keeper
-                                );
-                            }
-                        );
                     }
                 }
 
@@ -11325,99 +11181,100 @@ private:
             );
             return;
         }
-        auto& idx = store_.template get<tag_seq>();
-        for (auto it = idx.begin(), end = idx.end(); it != end;) {
-            auto msg = it->message();
-            MQTT_NS::visit(
-                make_lambda_visitor(
-                    [&](v3_1_1::basic_publish_message<PacketIdBytes>& m) {
-                        MQTT_LOG("mqtt_api", info)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "async_send_store publish v3.1.1";
-                        if (maximum_packet_size_send_ < size<PacketIdBytes>(m)) {
-                            pid_man_.release_id(m.packet_id());
-                            MQTT_LOG("mqtt_impl", warning)
+        store_.for_each(
+            [&] (
+                basic_store_message_variant<PacketIdBytes> const& message,
+                any const& /*life_keeper*/
+            ) {
+                auto erase = false;
+                MQTT_NS::visit(
+                    make_lambda_visitor(
+                        [&](v3_1_1::basic_publish_message<PacketIdBytes> const& m) {
+                            MQTT_LOG("mqtt_api", info)
                                 << MQTT_ADD_VALUE(address, this)
-                                << "over maximum packet size message removed. packet_id:" << m.packet_id();
-                            it = idx.erase(it);
-                            return;
-                        }
-                        do_async_write(
-                            m,
-                            [g]
-                            (error_code /*ec*/) {
+                                << "async_send_store publish v3.1.1";
+                            if (maximum_packet_size_send_ < size<PacketIdBytes>(m)) {
+                                pid_man_.release_id(m.packet_id());
+                                MQTT_LOG("mqtt_impl", warning)
+                                    << MQTT_ADD_VALUE(address, this)
+                                    << "over maximum packet size message removed. packet_id:" << m.packet_id();
+                                erase = true;
+                                return;
                             }
-                        );
-                        ++it;
-                    },
-                    [&](v3_1_1::basic_pubrel_message<PacketIdBytes>& m) {
-                        MQTT_LOG("mqtt_api", info)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "async_send_store pubrel v3.1.1";
-                        do_async_write(
-                            m,
-                            [g]
-                            (error_code /*ec*/) {
-                            }
-                        );
-                        ++it;
-                    },
-                    [&](v5::basic_publish_message<PacketIdBytes>& m) {
-                        MQTT_LOG("mqtt_api", info)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "async_send_store publish v5";
-                        any life_keeper;
-                        auto msg_lk = apply_topic_alias(m, force_move(life_keeper));
-                        if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
-                            pid_man_.release_id(m.packet_id());
-                            MQTT_LOG("mqtt_impl", warning)
-                                << MQTT_ADD_VALUE(address, this)
-                                << "over maximum packet size message removed. packet_id:" << m.packet_id();
-                            it = idx.erase(it);
-                            return;
-                        }
-                        if (publish_send_count_.load() == publish_send_max_) {
-                            LockGuard<Mutex> lck (publish_send_queue_mtx_);
-                            publish_send_queue_.emplace_back(
-                                force_move(std::get<0>(msg_lk)),
-                                true,
-                                force_move(std::get<1>(msg_lk))
-                            );
-                        }
-                        else {
-                            MQTT_LOG("mqtt_impl", trace)
-                                << MQTT_ADD_VALUE(address, this)
-                                << "increment publish_send_count_:" << publish_send_count_.load();
-                            ++publish_send_count_;
                             do_async_write(
-                                get_basic_message_variant<PacketIdBytes>(force_move(std::get<0>(msg_lk))),
-                                [g, life_keeper = force_move(std::get<1>(msg_lk))]
+                                m,
+                                [g]
+                                (error_code /*ec*/) {
+                                }
+                            );
+                        },
+                        [&](v3_1_1::basic_pubrel_message<PacketIdBytes> const& m) {
+                            MQTT_LOG("mqtt_api", info)
+                                << MQTT_ADD_VALUE(address, this)
+                                << "async_send_store pubrel v3.1.1";
+                            do_async_write(
+                                m,
+                                [g]
+                                (error_code /*ec*/) {
+                                }
+                            );
+                        },
+                        [&](v5::basic_publish_message<PacketIdBytes> const& m) {
+                            MQTT_LOG("mqtt_api", info)
+                                << MQTT_ADD_VALUE(address, this)
+                                << "async_send_store publish v5";
+                            any life_keeper;
+                            auto msg_lk = apply_topic_alias(m, force_move(life_keeper));
+                            if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
+                                pid_man_.release_id(m.packet_id());
+                                MQTT_LOG("mqtt_impl", warning)
+                                    << MQTT_ADD_VALUE(address, this)
+                                    << "over maximum packet size message removed. packet_id:" << m.packet_id();
+                                erase = true;
+                                return;
+                            }
+                            if (publish_send_count_.load() == publish_send_max_) {
+                                LockGuard<Mutex> lck (publish_send_queue_mtx_);
+                                publish_send_queue_.emplace_back(
+                                    force_move(std::get<0>(msg_lk)),
+                                    true,
+                                    force_move(std::get<1>(msg_lk))
+                                );
+                            }
+                            else {
+                                MQTT_LOG("mqtt_impl", trace)
+                                    << MQTT_ADD_VALUE(address, this)
+                                    << "increment publish_send_count_:" << publish_send_count_.load();
+                                ++publish_send_count_;
+                                do_async_write(
+                                    get_basic_message_variant<PacketIdBytes>(force_move(std::get<0>(msg_lk))),
+                                    [g, life_keeper = force_move(std::get<1>(msg_lk))]
+                                    (error_code /*ec*/) {
+                                    }
+                                );
+                            }
+                        },
+                        [&](v5::basic_pubrel_message<PacketIdBytes> const& m) {
+                            MQTT_LOG("mqtt_api", info)
+                                << MQTT_ADD_VALUE(address, this)
+                                << "async_send_store pubrel v5";
+                            {
+                                LockGuard<Mutex> lck_resend_pubrel (resend_pubrel_mtx_);
+                                resend_pubrel_.insert(m.packet_id());
+                            }
+                            do_async_write(
+                                m,
+                                [g]
                                 (error_code /*ec*/) {
                                 }
                             );
                         }
-                        ++it;
-                    },
-                    [&](v5::basic_pubrel_message<PacketIdBytes>& m) {
-                        MQTT_LOG("mqtt_api", info)
-                            << MQTT_ADD_VALUE(address, this)
-                            << "async_send_store pubrel v5";
-                        {
-                            LockGuard<Mutex> lck_resend_pubrel (resend_pubrel_mtx_);
-                            resend_pubrel_.insert(m.packet_id());
-                        }
-                        do_async_write(
-                            m,
-                            [g]
-                            (error_code /*ec*/) {
-                            }
-                        );
-                        ++it;
-                    }
-                ),
-                msg
-            );
-        }
+                    ),
+                    message
+                );
+                return erase;
+            }
+        );
     }
 
     // Non blocking (async) write
@@ -11744,7 +11601,7 @@ private:
     std::vector<char> payload_;
 
     Mutex store_mtx_;
-    mi_store store_;
+    store<PacketIdBytes> store_;
     std::set<packet_id_t> qos2_publish_handled_;
     std::deque<async_packet> queue_;
 
