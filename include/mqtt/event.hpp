@@ -610,6 +610,11 @@ public:
     virtual void disconnect_on_mqtt_error(v5::disconnect_reason_code) = 0;
     virtual void connack_on_mqtt_error(v5::connect_reason_code) = 0;
 
+    virtual void puback_on_recv_publish(PacketId packet_id, v5::puback_reason_code) = 0;
+    virtual void pubrec_on_recv_publish(PacketId packet_id, v5::pubrec_reason_code) = 0;
+    virtual void pubrel_on_recv_pubrec(PacketId packet_id, v5::pubrel_reason_code) = 0;
+    virtual void pubcomp_on_recv_pubrel(PacketId packet_id, v5::pubcomp_reason_code) = 0;
+
     virtual ~event() = default;
 };
 

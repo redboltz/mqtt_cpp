@@ -193,6 +193,11 @@ private:
     using event_type::disconnect_on_mqtt_error;
     using event_type::connack_on_mqtt_error;
 
+    using event_type::puback_on_recv_publish;
+    using event_type::pubrec_on_recv_publish;
+    using event_type::pubrel_on_recv_pubrec;
+    using event_type::pubcomp_on_recv_pubrel;
+
 public:
     using async_handler_t = std::function<void(error_code ec)>;
 
@@ -3703,21 +3708,10 @@ private:
                                     // publish handler is not called
                                 case qos::at_least_once:
                                     if (check_full()) {
-                                        if (ep_.async_operation_) {
-                                            ep_.async_send_puback(
-                                                *packet_id_,
-                                                v5::puback_reason_code::quota_exceeded,
-                                                v5::properties{},
-                                                [](auto){}
-                                            );
-                                        }
-                                        else {
-                                            ep_.send_puback(
-                                                *packet_id_,
-                                                v5::puback_reason_code::quota_exceeded,
-                                                v5::properties{}
-                                            );
-                                        }
+                                        ep_.puback_on_recv_publish(
+                                            *packet_id_,
+                                            v5::puback_reason_code::quota_exceeded
+                                        );
                                         ep_.on_mqtt_message_processed(
                                             force_move(
                                                 std::get<0>(
@@ -3732,21 +3726,10 @@ private:
                                     break;
                                 case qos::exactly_once:
                                     if (check_full()) {
-                                        if (ep_.async_operation_) {
-                                            ep_.async_send_pubrec(
-                                                *packet_id_,
-                                                v5::pubrec_reason_code::quota_exceeded,
-                                                v5::properties{},
-                                                [](auto){}
-                                            );
-                                        }
-                                        else {
-                                            ep_.send_pubrec(
-                                                *packet_id_,
-                                                v5::pubrec_reason_code::quota_exceeded,
-                                                v5::properties{}
-                                            );
-                                        }
+                                        ep_.pubrec_on_recv_publish(
+                                            *packet_id_,
+                                            v5::pubrec_reason_code::quota_exceeded
+                                        );
                                         ep_.on_mqtt_message_processed(
                                             force_move(
                                                 std::get<0>(
@@ -3837,27 +3820,13 @@ private:
                                     )
                                 )
                             );
-                            ep_.auto_pub_response(
-                                [this] {
-                                    if (ep_.connected_) {
-                                        ep_.send_puback(
-                                            *packet_id_,
-                                            v5::puback_reason_code::success,
-                                            v5::properties{}
-                                        );
-                                    }
-                                },
-                                [this] {
-                                    if (ep_.connected_) {
-                                        ep_.async_send_puback(
-                                            *packet_id_,
-                                            v5::puback_reason_code::success,
-                                            v5::properties{},
-                                            [](auto){}
-                                        );
-                                    }
-                                }
-                            );
+                            // TBD ep_.connect_ condition is removed. Maybe it is not required
+                            if (ep_.auto_pub_response_) {
+                                ep_.puback_on_recv_publish(
+                                    *packet_id_,
+                                    v5::puback_reason_code::success
+                                );
+                            }
                         }
                         break;
                     case qos::exactly_once:
@@ -3873,27 +3842,13 @@ private:
                                     )
                                 );
                                 ep_.qos2_publish_handled_.emplace(*packet_id_);
-                                ep_.auto_pub_response(
-                                    [this] {
-                                        if (ep_.connected_) {
-                                            ep_.send_pubrec(
-                                                *packet_id_,
-                                                v5::pubrec_reason_code::success,
-                                                v5::properties{}
-                                            );
-                                        }
-                                    },
-                                    [this] {
-                                        if (ep_.connected_) {
-                                            ep_.async_send_pubrec(
-                                                *packet_id_,
-                                                v5::pubrec_reason_code::success,
-                                                v5::properties{},
-                                                [](auto){}
-                                            );
-                                        }
-                                    }
-                                );
+                                // TBD ep_.connect_ condition is removed. Maybe it is not required
+                                if (ep_.auto_pub_response_) {
+                                    ep_.puback_on_recv_publish(
+                                        *packet_id_,
+                                        v5::pubrec_reason_code::success
+                                    );
+                                }
                             }
                         }
                         else {
@@ -3907,21 +3862,10 @@ private:
                                     )
                                 )
                             );
-                            if (ep_.async_operation_) {
-                                ep_.async_send_pubrec(
-                                    *packet_id_,
-                                    v5::pubrec_reason_code::success,
-                                    v5::properties{},
-                                    [](auto){}
-                                );
-                            }
-                            else {
-                                ep_.send_pubrec(
-                                    *packet_id_,
-                                    v5::pubrec_reason_code::success,
-                                    v5::properties{}
-                                );
-                            }
+                            ep_.pubrec_on_recv_publish(
+                                *packet_id_,
+                                v5::pubrec_reason_code::success
+                            );
                         }
                         break;
                     }
@@ -4191,50 +4135,17 @@ private:
                 {
                     auto res =
                         [&] {
-                            auto rc =
-                                [&] {
-                                    if (erased) return v5::pubrel_reason_code::success;
-                                    return v5::pubrel_reason_code::packet_identifier_not_found;
-                                } ();
-                            ep_.auto_pub_response(
-                                [&] {
-                                    if (ep_.connected_) {
-                                        ep_.send_pubrel(
-                                            packet_id_,
-                                            rc,
-                                            v5::properties{},
-                                            any{}
-                                        );
-                                    }
-                                    else {
-                                        ep_.store_pubrel(
-                                            packet_id_,
-                                            rc,
-                                            v5::properties{},
-                                            any{}
-                                        );
-                                    }
-                                },
-                                [&] {
-                                    if (ep_.connected_) {
-                                        ep_.async_send_pubrel(
-                                            packet_id_,
-                                            rc,
-                                            v5::properties{},
-                                            any{},
-                                            [](auto){}
-                                        );
-                                    }
-                                    else {
-                                        ep_.store_pubrel(
-                                            packet_id_,
-                                            rc,
-                                            v5::properties{},
-                                            any{}
-                                        );
-                                    }
-                                }
-                            );
+                            if (ep_.auto_pub_response_) {
+                                auto rc =
+                                    [&] {
+                                        if (erased) return v5::pubrel_reason_code::success;
+                                        return v5::pubrel_reason_code::packet_identifier_not_found;
+                                    } ();
+                                ep_.pubrel_on_recv_pubrec(
+                                    packet_id_,
+                                    rc
+                                );
+                            }
                         };
                     switch (ep_.version_) {
                     case protocol_version::v3_1_1:
@@ -4376,27 +4287,12 @@ private:
                 {
                     auto res =
                         [&] {
-                            ep_.auto_pub_response(
-                                [&] {
-                                    if (ep_.connected_) {
-                                        ep_.send_pubcomp(
-                                            packet_id_,
-                                            static_cast<v5::pubcomp_reason_code>(reason_code_),
-                                            v5::properties{}
-                                        );
-                                    }
-                                },
-                                [&] {
-                                    if (ep_.connected_) {
-                                        ep_.async_send_pubcomp(
-                                            packet_id_,
-                                            static_cast<v5::pubcomp_reason_code>(reason_code_),
-                                            v5::properties{},
-                                            [](auto){}
-                                        );
-                                    }
-                                }
-                            );
+                            if (ep_.auto_pub_response_) {
+                                ep_.pubcomp_on_recv_pubrel(
+                                    packet_id_,
+                                    static_cast<v5::pubcomp_reason_code>(reason_code_)
+                                );
+                            }
                         };
                     ep_.qos2_publish_handled_.erase(packet_id_);
                     switch (ep_.version_) {
@@ -5461,14 +5357,6 @@ private:
         v5::properties props_;
     };
     friend struct process_auth;
-
-    template <typename F, typename AF>
-    void auto_pub_response(F const& f, AF const& af) {
-        if (auto_pub_response_) {
-            if (async_operation_) af();
-            else f();
-        }
-    }
 
     // Non blocking (async) senders
 
