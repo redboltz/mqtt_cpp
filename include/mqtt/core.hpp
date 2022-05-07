@@ -190,6 +190,8 @@ private:
     using event_type::on_pingresp;
     using event_type::on_pre_send;
     using event_type::on_pub_res_sent;
+    using event_type::disconnect_on_mqtt_error;
+    using event_type::connack_on_mqtt_error;
 
 public:
     using async_handler_t = std::function<void(error_code ec)>;
@@ -391,245 +393,8 @@ public:
         async_read_control_packet_type(force_move(session_life_keeper));
     }
 
-    // Blocking APIs
-
-    /**
-     * @brief Disconnect
-     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
-     * The broker disconnects the core after receives the disconnect packet.<BR>
-     * When the core disconnects using disconnect(), a will won't send.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
-     * @param reason_code
-     *        DISCONNECT Reason Code<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
-     *        3.14.2.1 Disconnect Reason Code
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
-     *        3.14.2.2 DISCONNECT Properties
-     */
-    void disconnect(
-        v5::disconnect_reason_code reason = v5::disconnect_reason_code::normal_disconnection,
-        v5::properties props = {}
-    ) {
-        MQTT_LOG("mqtt_api", info)
-            << MQTT_ADD_VALUE(address, this)
-            << "disconnect"
-            << " reason:" << reason;
-
-        if (connected_ && mqtt_connected_) {
-            disconnect_requested_ = true;
-            send_disconnect(reason, force_move(props));
-        }
-    }
-
-    /**
-     * @brief Disconnect by core
-     * Force disconnect. It is not a clean disconnect sequence.<BR>
-     * When the core disconnects using force_disconnect(), a will will send.<BR>
-     */
-    void force_disconnect() {
-        MQTT_LOG("mqtt_api", info)
-            << MQTT_ADD_VALUE(address, this)
-            << "force_disconnect";
-
-        sync_shutdown(socket());
-    }
-
-    /**
-     * @brief Send connect packet.
-     * @param client_id
-     *        The client id to use for this connection<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
-     *        3.1.3.1 Client Identifier (ClientID)
-     * @param user_name
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
-     *        3.1.3.5 User Name
-     * @param password
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901072<BR>
-     *        3.1.3.6 Password
-     * @param w
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc479576982<BR>
-     *        3.1.2.5 Will Flag
-     * @param clean_session
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901039<BR>
-     *        3.1.2.4 Clean Start<BR>
-     * @param keep_alive_sec
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349238
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
-     * @param keep_alive_sec
-     *        Keep Alive<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
-     *        3.1.2.10 Keep Alive
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
-     *        3.1.2.11 CONNECT Properties
-     */
-    void connect(
-        std::string const& client_id,
-        optional<std::string> const& user_name,
-        optional<std::string> const& password,
-        optional<will> w,
-        std::uint16_t keep_alive_sec,
-        v5::properties props = {}
-    ) {
-        MQTT_LOG("mqtt_api", info)
-            << MQTT_ADD_VALUE(address, this)
-            << "connect"
-            << " client_id:" << client_id
-            << " user_name:" << (user_name ? user_name.value() : "none")
-            << " keep_alive:" << std::dec << keep_alive_sec;
-
-        connect_requested_ = true;
-        send_connect(
-            buffer(string_view(client_id)),
-            [&] {
-                if (user_name) {
-                    return buffer(string_view(user_name.value()));
-                }
-                else {
-                    return buffer();
-                }
-            } (),
-            [&] {
-                if (password) {
-                    return buffer(string_view(password.value()));
-                }
-                else {
-                    return buffer();
-                }
-            } (),
-            force_move(w),
-            keep_alive_sec,
-            force_move(props)
-        );
-    }
-
-    /**
-     * @brief Send connect packet.
-     * @param client_id
-     *        The client id to use for this connection<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
-     *        3.1.3.1 Client Identifier (ClientID)
-     * @param user_name
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
-     *        3.1.3.5 User Name
-     * @param password
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901072<BR>
-     *        3.1.3.6 Password
-     * @param w
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc479576982<BR>
-     *        3.1.2.5 Will Flag
-     * @param clean_session
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901039<BR>
-     *        3.1.2.4 Clean Start<BR>
-     * @param keep_alive_sec
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349238
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
-     * @param keep_alive_sec
-     *        Keep Alive<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
-     *        3.1.2.10 Keep Alive
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
-     *        3.1.2.11 CONNECT Properties
-     */
-    void connect(
-        buffer client_id,
-        optional<buffer> user_name,
-        optional<buffer> password,
-        optional<will> w,
-        std::uint16_t keep_alive_sec,
-        v5::properties props = {}
-    ) {
-        MQTT_LOG("mqtt_api", info)
-            << MQTT_ADD_VALUE(address, this)
-            << "connect"
-            << " client_id:" << client_id
-            << " user_name:" << (user_name ? string_view(user_name.value()) : string_view("none"))
-            << " keep_alive:" << std::dec << keep_alive_sec;
-
-        connect_requested_ = true;
-        send_connect(
-            force_move(client_id),
-            force_move(user_name),
-            force_move(password),
-            force_move(w),
-            keep_alive_sec,
-            force_move(props)
-        );
-    }
-
-    /**
-     * @brief Disconnect
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
-     * The broker disconnects the core after receives the disconnect packet.<BR>
-     * When the core disconnects using disconnect(), a will won't send.<BR>
-     */
-    void async_disconnect(
-        async_handler_t func = {}
-    ) {
-        MQTT_LOG("mqtt_api", info)
-            << MQTT_ADD_VALUE(address, this)
-            << "async_disconnect";
-
-        if (connected_ && mqtt_connected_) {
-            disconnect_requested_ = true;
-            // The reason code and property vector are only used if we're using mqttv5.
-            async_send_disconnect(v5::disconnect_reason_code::normal_disconnection,
-                                  v5::properties{},
-                                  force_move(func));
-        }
-        else {
-            socket_->post(
-                [func = force_move(func)] {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
-                }
-            );
-        }
-    }
-
-    /**
-     * @brief Disconnect
-     * @param reason
-     *        DISCONNECT Reason Code<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
-     *        3.14.2.1 Disconnect Reason Code
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
-     *        3.14.2.2 DISCONNECT Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
-     * The broker disconnects the core after receives the disconnect packet.<BR>
-     * When the core disconnects using disconnect(), a will won't send.<BR>
-     */
-    void async_disconnect(
-        v5::disconnect_reason_code reason,
-        v5::properties props = {},
-        async_handler_t func = {}
-    ) {
-        MQTT_LOG("mqtt_api", info)
-            << MQTT_ADD_VALUE(address, this)
-            << "async_disconnect"
-            << " reason:" << reason;
-
-        if (connected_ && mqtt_connected_) {
-            disconnect_requested_ = true;
-            async_send_disconnect(reason, force_move(props), force_move(func));
-        }
-        else {
-            socket_->post(
-                [func = force_move(func)] {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
-                }
-            );
-        }
+    void start_disconnect() {
+        disconnect_requested_ = true;
     }
 
     /**
@@ -651,102 +416,6 @@ public:
             }
         );
     }
-
-    /**
-     * @brief Send connect packet.
-     * @param client_id
-     *        The client id to use for this connection<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
-     *        3.1.3.1 Client Identifier (ClientID)
-     * @param user_name
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
-     *        3.1.3.5 User Name
-     * @param password
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901072<BR>
-     *        3.1.3.6 Password
-     * @param w
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc479576982<BR>
-     *        3.1.2.5 Will Flag
-     * @param keep_alive_sec
-     *        Keep Alive<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
-     *        3.1.2.10 Keep Alive
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
-     */
-    void async_connect(
-        buffer client_id,
-        optional<buffer> user_name,
-        optional<buffer> password,
-        optional<will> w,
-        std::uint16_t keep_alive_sec,
-        async_handler_t func = {}
-    ) {
-        async_connect(
-            force_move(client_id),
-            force_move(user_name),
-            force_move(password),
-            force_move(w),
-            keep_alive_sec,
-            v5::properties{},
-            force_move(func));
-    }
-
-    /**
-     * @brief Send connect packet.
-     * @param client_id
-     *        The client id to use for this connection<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901059<BR>
-     *        3.1.3.1 Client Identifier (ClientID)
-     * @param user_name
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
-     *        3.1.3.5 User Name
-     * @param password
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901072<BR>
-     *        3.1.3.6 Password
-     * @param w
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc479576982<BR>
-     *        3.1.2.5 Will Flag
-     * @param keep_alive_sec
-     *        Keep Alive<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
-     *        3.1.2.10 Keep Alive
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
-     *        3.1.2.11 CONNECT Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
-     */
-    void async_connect(
-        buffer client_id,
-        optional<buffer> user_name,
-        optional<buffer> password,
-        optional<will> w,
-        std::uint16_t keep_alive_sec,
-        v5::properties props,
-        async_handler_t func = {}
-    ) {
-        MQTT_LOG("mqtt_api", info)
-            << MQTT_ADD_VALUE(address, this)
-            << "async_connect"
-            << " client_id:" << client_id
-            << " user_name:" << (user_name ? string_view(user_name.value()) : string_view("none"))
-            << " keep_alive:" << std::dec << keep_alive_sec;
-
-        connect_requested_ = true;
-        async_send_connect(
-            force_move(client_id),
-            force_move(user_name),
-            force_move(password),
-            force_move(w),
-            keep_alive_sec,
-            force_move(props),
-            force_move(func));
-    }
-
 
     /**
      * @brief Clear stored publish message that has packet_id.
@@ -1431,7 +1100,6 @@ protected:
     bool handle_close_or_error(error_code ec) {
         auto call_handler =
             [this, ec] () mutable {
-                connect_requested_ = false;
                 clean_sub_unsub_inflight();
                 if (disconnect_requested_) {
                     on_close();
@@ -1563,10 +1231,10 @@ private:
 #define MQTT_SEND_ERROR(rc) \
         switch (type) {                                                 \
         case connection_type::client:                                   \
-            send_error_disconnect(v5::disconnect_reason_code::rc);      \
+            disconnect_on_mqtt_error(v5::disconnect_reason_code::rc);   \
             break;                                                      \
         case connection_type::server:                                   \
-            send_error_connack(v5::connect_reason_code::rc);            \
+            connack_on_mqtt_error(v5::connect_reason_code::rc);         \
             break;                                                      \
         default:                                                        \
             BOOST_ASSERT(false);                                        \
@@ -1681,40 +1349,6 @@ private:
         clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
     }
 
-    void shutdown(MQTT_NS::socket& s) {
-        if (async_operation_) {
-            async_shutdown(s, [](auto){});
-        }
-        else {
-            sync_shutdown(s);
-        }
-    }
-
-    void sync_shutdown(MQTT_NS::socket& s) {
-        MQTT_LOG("mqtt_impl", trace)
-            << MQTT_ADD_VALUE(address, this)
-            << "sync_shutdown";
-        if (shutdown_requested_) {
-            MQTT_LOG("mqtt_impl", trace)
-                << MQTT_ADD_VALUE(address, this)
-                << "already shutdowned";
-            return;
-        }
-        shutdown_requested_ = true;
-        mqtt_connected_ = false;
-
-        error_code ec;
-        MQTT_LOG("mqtt_impl", trace)
-            << MQTT_ADD_VALUE(address, this)
-            << "clean_shutdown_and_close";
-        s.clean_shutdown_and_close(ec);
-        MQTT_LOG("mqtt_impl", trace)
-            << MQTT_ADD_VALUE(address, this)
-            << "clean_shutdown_and_close ec:"
-            << ec.message();
-        connected_ = false;
-    }
-
     void async_shutdown(MQTT_NS::socket& s, async_handler_t func) {
         MQTT_LOG("mqtt_impl", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -1781,48 +1415,6 @@ private:
                 }
             }
         );
-    }
-
-    void send_error_disconnect(v5::disconnect_reason_code rc) {
-        if (async_operation_) {
-            auto sp = this->shared_from_this();
-            async_disconnect(
-                rc,
-                v5::properties{},
-                [sp = force_move(sp)] (error_code) mutable {
-                    sp->socket().post(
-                        [sp = force_move(sp)] {
-                            sp->force_disconnect();
-                        }
-                    );
-                }
-            );
-        }
-        else {
-            disconnect(rc);
-            force_disconnect();
-        }
-    }
-
-    void send_error_connack(v5::connect_reason_code rc) {
-        if (async_operation_) {
-            auto sp = this->shared_from_this();
-            async_connack(
-                false,
-                rc,
-                [sp = force_move(sp)] (error_code) mutable {
-                    sp->socket().post(
-                        [sp = force_move(sp)] {
-                            sp->force_disconnect();
-                        }
-                    );
-                }
-            );
-        }
-        else {
-            connack(false, rc);
-            force_disconnect();
-        }
     }
 
     void handle_control_packet_type(any session_life_keeper, this_type_sp self) {
@@ -2409,7 +2001,7 @@ private:
             (this_type_sp&& self, any&& session_life_keeper, parse_handler_variant var, buffer buf) mutable {
                 auto property_length = variant_get<std::size_t>(var);
                 if (property_length > remaining_length_) {
-                    send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                    disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                     call_protocol_error_handlers();
                     return;
                 }
@@ -2561,7 +2153,7 @@ private:
         static constexpr std::size_t length_bytes = 2;
 
         if (property_length_rest == 0) {
-            send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+            disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
             call_protocol_error_handlers();
             return;
         }
@@ -2570,7 +2162,7 @@ private:
         case v5::property::id::payload_format_indicator: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -2604,7 +2196,7 @@ private:
         case v5::property::id::message_expiry_interval: {
             static constexpr std::size_t len = 4;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -2752,7 +2344,7 @@ private:
         case v5::property::id::session_expiry_interval: {
             static constexpr std::size_t len = 4;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -2815,7 +2407,7 @@ private:
         case v5::property::id::server_keep_alive: {
             static constexpr std::size_t len = 2;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -2905,7 +2497,7 @@ private:
         case v5::property::id::request_problem_information: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -2939,7 +2531,7 @@ private:
         case v5::property::id::will_delay_interval: {
             static constexpr std::size_t len = 4;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -2973,7 +2565,7 @@ private:
         case v5::property::id::request_response_information: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -3091,7 +2683,7 @@ private:
         case v5::property::id::receive_maximum: {
             static constexpr std::size_t len = 2;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -3125,7 +2717,7 @@ private:
         case v5::property::id::topic_alias_maximum: {
             static constexpr std::size_t len = 2;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -3159,7 +2751,7 @@ private:
         case v5::property::id::topic_alias: {
             static constexpr std::size_t len = 2;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -3193,7 +2785,7 @@ private:
         case v5::property::id::maximum_qos: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -3227,7 +2819,7 @@ private:
         case v5::property::id::retain_available: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -3310,7 +2902,7 @@ private:
         case v5::property::id::maximum_packet_size: {
             static constexpr std::size_t len = 4;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -3344,7 +2936,7 @@ private:
         case v5::property::id::wildcard_subscription_available: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -3378,7 +2970,7 @@ private:
         case v5::property::id::subscription_identifier_available: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -3412,7 +3004,7 @@ private:
         case v5::property::id::shared_subscription_available: {
             static constexpr std::size_t len = 1;
             if (property_length_rest < len) {
-                send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                 call_protocol_error_handlers();
                 return;
             }
@@ -4172,7 +3764,7 @@ private:
                                     if (auto topic_alias = get_topic_alias_from_props(props_)) {
                                         if (topic_alias.value() == 0 ||
                                             topic_alias.value() > ep_.topic_alias_recv_.value().max()) {
-                                            ep_.send_error_disconnect(v5::disconnect_reason_code::topic_alias_invalid);
+                                            ep_.disconnect_on_mqtt_error(v5::disconnect_reason_code::topic_alias_invalid);
                                             ep_.call_protocol_error_handlers();
                                             return false;
                                         }
@@ -4188,7 +3780,7 @@ private:
                                                 << MQTT_ADD_VALUE(address, &ep_)
                                                 << "no matching topic alias: "
                                                 << topic_alias.value();
-                                            ep_.send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                                            ep_.disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                                             ep_.call_protocol_error_handlers();
                                             return false;
                                         }
@@ -5090,7 +4682,7 @@ private:
                             << "topic_filter parse error"
                             << " whole_topic_filter: "
                             << variant_get<buffer>(var);
-                        ep_.send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                        ep_.disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                         ep_.call_protocol_error_handlers();
                         return;
                     }
@@ -5421,7 +5013,7 @@ private:
                             << "topic_filter parse error"
                             << " whole_topic_filter: "
                             << variant_get<buffer>(var);
-                        ep_.send_error_disconnect(v5::disconnect_reason_code::protocol_error);
+                        ep_.disconnect_on_mqtt_error(v5::disconnect_reason_code::protocol_error);
                         ep_.call_protocol_error_handlers();
                         return;
                     }
@@ -5728,7 +5320,7 @@ private:
                     MQTT_LOG("mqtt_impl", trace)
                         << MQTT_ADD_VALUE(address, this)
                         << "receive DISCONNECT call shutdown";
-                    ep_.shutdown(*ep_.socket_);
+                    ep_.async_shutdown(*ep_.socket_, [](auto){});
                     ep_.on_mqtt_message_processed(
                         force_move(
                             std::get<0>(
@@ -5753,7 +5345,7 @@ private:
                 MQTT_LOG("mqtt_impl", trace)
                     << MQTT_ADD_VALUE(address, this)
                     << "receive DISCONNECT call shutdown";
-                ep_.shutdown(*ep_.socket_);
+                ep_.async_shutdown(*ep_.socket_, [](auto){});
                 ep_.on_mqtt_message_processed(
                     force_move(
                         session_life_keeper
@@ -5878,240 +5470,7 @@ private:
         }
     }
 
-    // Blocking senders.
-    void send_connect(
-        buffer client_id,
-        optional<buffer> user_name,
-        optional<buffer> password,
-        optional<will> w,
-        std::uint16_t keep_alive_sec,
-        v5::properties props
-    ) {
-        shutdown_requested_ = false;
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            do_sync_write(
-                v3_1_1::connect_message(
-                    keep_alive_sec,
-                    force_move(client_id),
-                    clean_session(),
-                    force_move(w),
-                    force_move(user_name),
-                    force_move(password)
-                )
-            );
-            break;
-        case protocol_version::v5:
-            update_values_and_props_on_start_connection(props);
-            do_sync_write(
-                v5::connect_message(
-                    keep_alive_sec,
-                    force_move(client_id),
-                    clean_start(),
-                    force_move(w),
-                    force_move(user_name),
-                    force_move(password),
-                    force_move(props)
-                )
-            );
-            break;
-        default:
-            BOOST_ASSERT(false);
-            break;
-        }
-    }
-
-    void send_connack(
-        bool session_present,
-        variant<connect_return_code, v5::connect_reason_code> reason_code,
-        v5::properties props
-    ) {
-        switch (version_) {
-        case protocol_version::v3_1_1: {
-            auto msg = v3_1_1::connack_message(
-                session_present,
-                variant_get<connect_return_code>(reason_code)
-            );
-            if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                throw packet_size_error();
-            }
-            do_sync_write(force_move(msg));
-        } break;
-        case protocol_version::v5: {
-            update_values_and_props_on_start_connection(props);
-            auto msg = v5::connack_message(
-                session_present,
-                variant_get<v5::connect_reason_code>(reason_code),
-                force_move(props)
-            );
-            do_sync_write(force_move(msg));
-        } break;
-        default:
-            BOOST_ASSERT(false);
-            break;
-        }
-    }
-
-    void send_store() {
-        // packet_id has already been registered
-        LockGuard<Mutex> lck (store_mtx_);
-        store_.for_each(
-            [&] (
-                basic_store_message_variant<PacketIdBytes> const& message,
-                any const& /*life_keeper*/
-            ) {
-                auto erase = false;
-                MQTT_NS::visit(
-                    make_lambda_visitor(
-                        [&](v3_1_1::basic_publish_message<PacketIdBytes> const& m) {
-                            MQTT_LOG("mqtt_api", info)
-                                << MQTT_ADD_VALUE(address, this)
-                                << "async_send_store publish v3.1.1";
-                            if (maximum_packet_size_send_ < size<PacketIdBytes>(m)) {
-                                pid_man_.release_id(m.packet_id());
-                                MQTT_LOG("mqtt_impl", warning)
-                                    << MQTT_ADD_VALUE(address, this)
-                                    << "over maximum packet size message removed. packet_id:" << m.packet_id();
-                                erase = true;
-                                return;
-                            }
-                            do_sync_write(m);
-                        },
-                        [&](v3_1_1::basic_pubrel_message<PacketIdBytes> const& m) {
-                            MQTT_LOG("mqtt_api", info)
-                                << MQTT_ADD_VALUE(address, this)
-                                << "async_send_store pubrel v3.1.1";
-                            do_sync_write(m);
-                        },
-                        [&](v5::basic_publish_message<PacketIdBytes> const& m) {
-                            MQTT_LOG("mqtt_api", info)
-                                << MQTT_ADD_VALUE(address, this)
-                                << "async_send_store publish v5";
-                            any life_keeper;
-                            auto msg_lk = apply_topic_alias(m, force_move(life_keeper));
-                            if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
-                                pid_man_.release_id(m.packet_id());
-                                MQTT_LOG("mqtt_impl", warning)
-                                    << MQTT_ADD_VALUE(address, this)
-                                    << "over maximum packet size message removed. packet_id:" << m.packet_id();
-                                erase = true;
-                                return;
-                            }
-                            if (publish_send_count_.load() == publish_send_max_) {
-                                LockGuard<Mutex> lck (publish_send_queue_mtx_);
-                                publish_send_queue_.emplace_back(
-                                    force_move(std::get<0>(msg_lk)),
-                                    false,
-                                    force_move(std::get<1>(msg_lk))
-                                );
-                            }
-                            else {
-                                MQTT_LOG("mqtt_impl", trace)
-                                    << MQTT_ADD_VALUE(address, this)
-                                    << "increment publish_send_count_:" << publish_send_count_.load();
-                                ++publish_send_count_;
-                                do_sync_write(force_move(std::get<0>(msg_lk)));
-                            }
-                        },
-                        [&](v5::basic_pubrel_message<PacketIdBytes> const& m) {
-                            MQTT_LOG("mqtt_api", info)
-                                << MQTT_ADD_VALUE(address, this)
-                                << "async_send_store pubrel v5";
-                            {
-                                LockGuard<Mutex> lck_resend_pubrel (resend_pubrel_mtx_);
-                                resend_pubrel_.insert(m.packet_id());
-                            }
-                            do_sync_write(m);
-                        }
-                    ),
-                    message
-                );
-                return erase;
-            }
-        );
-    }
-
     // Non blocking (async) senders
-    void async_send_connect(
-        buffer client_id,
-        optional<buffer> user_name,
-        optional<buffer> password,
-        optional<will> const& w,
-        std::uint16_t keep_alive_sec,
-        v5::properties props,
-        async_handler_t func
-    ) {
-        shutdown_requested_ = false;
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            do_async_write(
-                v3_1_1::connect_message(
-                    keep_alive_sec,
-                    force_move(client_id),
-                    clean_session(),
-                    w,
-                    force_move(user_name),
-                    force_move(password)
-                ),
-                force_move(func)
-            );
-            break;
-        case protocol_version::v5:
-            update_values_and_props_on_start_connection(props);
-            do_async_write(
-                v5::connect_message(
-                    keep_alive_sec,
-                    force_move(client_id),
-                    clean_start(),
-                    w,
-                    force_move(user_name),
-                    force_move(password),
-                    force_move(props)
-                ),
-                force_move(func)
-            );
-            break;
-        default:
-            BOOST_ASSERT(false);
-            break;
-        }
-    }
-
-    void async_send_disconnect(
-        v5::disconnect_reason_code reason,
-        v5::properties props,
-        async_handler_t func
-    ) {
-        switch (version_) {
-        case protocol_version::v3_1_1: {
-            auto msg = v3_1_1::disconnect_message();
-            if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                socket_->post(
-                    [func = force_move(func)] {
-                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    }
-                );
-                return;
-            }
-            do_async_write(force_move(msg), force_move(func));
-        } break;
-        case protocol_version::v5: {
-            auto msg = v5::disconnect_message(reason, force_move(props));
-            if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                socket_->post(
-                    [func = force_move(func)] {
-                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    }
-                );
-                return;
-            }
-            do_async_write(force_move(msg), force_move(func));
-        } break;
-        default:
-            BOOST_ASSERT(false);
-            break;
-        }
-    }
 
     void async_send_store(std::function<void()> func) {
         // packet_id has already been registered
@@ -6308,10 +5667,6 @@ private:
         publish_received_.erase(packet_id);
     }
 
-    bool can_send() const {
-        return connected_ && ! shutdown_requested_;
-    }
-
     static optional<topic_alias_t> get_topic_alias_from_prop(v5::property_variant const& prop) {
         optional<topic_alias_t> val;
         v5::visit_prop(
@@ -6380,7 +5735,6 @@ private:
     Mutex store_mtx_;
     store<PacketIdBytes> store_;
     std::set<packet_id_t> qos2_publish_handled_;
-    std::deque<async_packet> queue_;
 
     packet_id_manager<packet_id_t> pid_man_;
 
@@ -6390,7 +5744,6 @@ private:
     bool async_operation_{ false };
     bool async_read_on_message_processed_ { true };
     bool disconnect_requested_{false};
-    bool connect_requested_{false};
     std::size_t max_queue_send_count_{1};
     std::size_t max_queue_send_size_{0};
     protocol_version version_{protocol_version::undetermined};

@@ -607,6 +607,9 @@ public:
      */
     virtual void on_mqtt_message_processed(any session_life_keeper) = 0;
 
+    virtual void disconnect_on_mqtt_error(v5::disconnect_reason_code) = 0;
+    virtual void connack_on_mqtt_error(v5::connect_reason_code) = 0;
+
     virtual ~event() = default;
 };
 
