@@ -213,17 +213,15 @@ public:
      *          MQTT protocol requests sending connack/disconnect packet with error reason code if some error happens.<BR>
      *          This function choose sync/async connack/disconnect.<BR>
      */
-    core(as::io_context& ioc, protocol_version version = protocol_version::undetermined, bool async_operation = false)
-        :async_operation_{async_operation},
-         version_(version),
+    core(as::io_context& ioc, protocol_version version = protocol_version::undetermined)
+        :version_(version),
          tim_pingresp_(ioc),
          tim_shutdown_(ioc)
     {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "create"
-            << " version:" << version
-            << " async_operation:" << std::boolalpha << async_operation;
+            << " version:" << version;
     }
 
     /**
@@ -239,10 +237,9 @@ public:
      *          MQTT protocol requests sending connack/disconnect packet with error reason code if some error happens.<BR>
      *          This function choose sync/async connack/disconnect.<BR>
      */
-    explicit core(as::io_context& ioc, std::shared_ptr<MQTT_NS::socket> socket, protocol_version version = protocol_version::undetermined, bool async_operation = false)
+    explicit core(as::io_context& ioc, std::shared_ptr<MQTT_NS::socket> socket, protocol_version version = protocol_version::undetermined)
         :socket_(force_move(socket)),
          connected_(true),
-         async_operation_{async_operation},
          version_(version),
          tim_pingresp_(ioc),
          tim_shutdown_(ioc)
@@ -250,8 +247,7 @@ public:
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "create"
-            << " version:" << version
-            << " async_operation:" << std::boolalpha << async_operation;
+            << " version:" << version;
     }
 
 protected:
@@ -325,14 +321,6 @@ public:
     }
 
     /**
-     * @brief get_total_bytes_sent
-     * @return The total bytes sent on the socket.
-     */
-    std::size_t get_total_bytes_sent() const {
-        return total_bytes_sent_;
-    }
-
-    /**
      * @brief Set auto publish response mode.
      * @param b set value
      *
@@ -342,32 +330,26 @@ public:
         auto_pub_response_ = b;
     }
 
-    /**
-     * @brief Set async operation flag
-     * @param async if true async , otherwise sync
-     *
-     * This function overwrite async_operation_ flag that is set by constructor.
-     *
-     * This function should be called before sending any packets.
-     * For server, in the CONNECT packet receiving handler.
-     *
-     * This flag effects the following automatic operation.
-     * - puback/pubrec/pubrel/pubcomp if auto_pub_response_ is true.
-     * - send store data (publish QoS1,2 and pubrel) on connack receive.
-     * - disconnect
-     *   MQTT protocol requests sending connack/disconnect packet with error reason code if some error happens.<BR>
-     *   This function choose sync/async connack/disconnect.<BR>
-     */
-    void set_async_operation(bool async = true) {
-        async_operation_ = async;
-    }
-
     void set_packet_bulk_read_limit(std::size_t size) {
         packet_bulk_read_limit_ = size;
     }
 
     void set_props_bulk_read_limit(std::size_t size) {
         props_bulk_read_limit_ = size;
+    }
+
+    /**
+     * @brief Set pingresp timeout
+     * @param tim timeout value
+     *
+     * If tim is not zero, when the client sends PINGREQ, set a timer.
+     * The timer cancels when PINGRESP is received. If the timer is fired, then force_disconnect
+     * from the client side.<BR>
+     * https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
+     * 3.1.2.10 Keep Alive
+     */
+    void set_pingresp_timeout(std::chrono::steady_clock::duration tim) {
+        pingresp_timeout_ = force_move(tim);
     }
 
     /**
@@ -384,6 +366,8 @@ public:
             topic_alias_recv_.emplace(max);
         }
     }
+
+
 
     /**
      * @brief start session with a connected core.
@@ -424,7 +408,7 @@ public:
 
     /**
      * @brief Clear stored publish message that has packet_id.
-     * @param packet_id packet id corresponding to stored publish
+     * @param packet_id packet id corresponding to stored publish or pubrel
      */
     void clear_stored_publish(packet_id_t packet_id) {
         LockGuard<Mutex> lck (store_mtx_);
@@ -791,227 +775,6 @@ public:
         MQTT_NS::visit(restore_basic_message_variant_visitor(*this, force_move(life_keeper)), force_move(msg));
     }
 
-
-    void send_store_message(basic_store_message_variant<PacketIdBytes> msg, any life_keeper) {
-        auto publish_proc =
-            [&](auto msg, auto&& serialize, auto&& receive_maximum_proc) {
-                auto msg_lk = apply_topic_alias(msg, life_keeper);
-                if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
-                    throw packet_size_error();
-                }
-                if (preprocess_publish_message(
-                        msg,
-                        life_keeper,
-                        std::forward<decltype(serialize)>(serialize),
-                        std::forward<decltype(receive_maximum_proc)>(receive_maximum_proc),
-                        true // register packet_id
-                    )
-                ) {
-                    do_sync_write(force_move(std::get<0>(msg_lk)));
-                }
-            };
-
-        auto pubrel_proc =
-            [&](auto msg, auto const& serialize) {
-                if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                    throw packet_size_error();
-                }
-
-                auto packet_id = msg.packet_id();
-
-                LockGuard<Mutex> lck (store_mtx_);
-                pid_man_.register_id(packet_id);
-                auto ret = store_.insert(
-                    packet_id,
-                    control_packet_type::pubcomp,
-                    msg,
-                    force_move(life_keeper)
-                );
-                (void)ret;
-                BOOST_ASSERT(ret);
-
-                (this->*serialize)(msg);
-                do_sync_write(force_move(msg));
-            };
-
-        MQTT_NS::visit(
-            make_lambda_visitor(
-                [this, &publish_proc](v3_1_1::basic_publish_message<PacketIdBytes>& m) {
-                    MQTT_LOG("mqtt_api", info)
-                        << MQTT_ADD_VALUE(address, this)
-                        << "send_store_message publish v3.1.1";
-                    publish_proc(
-                        force_move(m),
-                        &core::on_serialize_publish_message,
-                        [] (auto&&) { return true; }
-                    );
-                },
-                [this, &pubrel_proc](v3_1_1::basic_pubrel_message<PacketIdBytes>& m) {
-                    MQTT_LOG("mqtt_api", info)
-                        << MQTT_ADD_VALUE(address, this)
-                        << "send_store_message pubrel v3.1.1";
-                    pubrel_proc(force_move(m), &core::on_serialize_pubrel_message);
-                },
-                [this, &publish_proc](v5::basic_publish_message<PacketIdBytes>& m) {
-                    MQTT_LOG("mqtt_api", info)
-                        << MQTT_ADD_VALUE(address, this)
-                        << "send_store_message publish v5";
-                    publish_proc(
-                        force_move(m),
-                        &core::on_serialize_v5_publish_message,
-                        [this] (v5::basic_publish_message<PacketIdBytes>&& msg) {
-                            if (publish_send_count_.load() == publish_send_max_) {
-                                LockGuard<Mutex> lck (publish_send_queue_mtx_);
-                                publish_send_queue_.emplace_back(force_move(msg), false);
-                                return false;
-                            }
-                            else {
-                                MQTT_LOG("mqtt_impl", trace)
-                                    << MQTT_ADD_VALUE(address, this)
-                                    << "increment publish_send_count_:" << publish_send_count_.load();
-                                ++publish_send_count_;
-                            }
-                            return true;
-                        }
-                    );
-                },
-                [this, &pubrel_proc](v5::basic_pubrel_message<PacketIdBytes>& m) {
-                    MQTT_LOG("mqtt_api", info)
-                        << MQTT_ADD_VALUE(address, this)
-                        << "send_store_message pubrel v5";
-                    {
-                        LockGuard<Mutex> lck (resend_pubrel_mtx_);
-                        resend_pubrel_.insert(m.packet_id());
-                    }
-                    pubrel_proc(force_move(m), &core::on_serialize_v5_pubrel_message);
-                }
-            ),
-            msg
-        );
-    }
-
-    void async_send_store_message(basic_store_message_variant<PacketIdBytes> msg, any life_keeper, async_handler_t func) {
-        auto publish_proc =
-            [&](auto msg, auto&& serialize, auto&& receive_maximum_proc) {
-                auto msg_lk = apply_topic_alias(msg, life_keeper);
-                if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
-                    socket_->post(
-                        [func = force_move(func)] {
-                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                        }
-                    );
-                    return;
-                }
-                if (preprocess_publish_message(
-                        msg,
-                        life_keeper,
-                        std::forward<decltype(serialize)>(serialize),
-                        std::forward<decltype(receive_maximum_proc)>(receive_maximum_proc),
-                        true // register packet_id
-                    )
-                ) {
-                    do_async_write(
-                        force_move(std::get<0>(msg_lk)),
-                        [func = force_move(func), life_keeper = force_move(std::get<1>(msg_lk))]
-                        (error_code ec) {
-                            if (func) func(ec);
-                        }
-                    );
-                }
-            };
-
-        auto pubrel_proc =
-            [&](auto msg, auto const& serialize) {
-                if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                    socket_->post(
-                        [func = force_move(func)] {
-                            if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                        }
-                    );
-                    return;
-                }
-
-                auto packet_id = msg.packet_id();
-
-                LockGuard<Mutex> lck (store_mtx_);
-                pid_man_.register_id(packet_id);
-                auto ret = store_.insert(
-                    packet_id,
-                    control_packet_type::pubcomp,
-                    msg,
-                    force_move(life_keeper)
-                );
-                (void)ret;
-                BOOST_ASSERT(ret);
-
-                (this->*serialize)(msg);
-                do_async_write(force_move(msg), force_move(func));
-            };
-
-        MQTT_NS::visit(
-            make_lambda_visitor(
-                [this, &publish_proc](v3_1_1::basic_publish_message<PacketIdBytes>& m) {
-                    MQTT_LOG("mqtt_api", info)
-                        << MQTT_ADD_VALUE(address, this)
-                        << "async_send_store_message publish v3.1.1";
-                    publish_proc(
-                        force_move(m),
-                        &core::on_serialize_publish_message,
-                        [] (auto&&) { return true; }
-                    );
-                },
-                [this, &pubrel_proc](v3_1_1::basic_pubrel_message<PacketIdBytes>& m) {
-                    MQTT_LOG("mqtt_api", info)
-                        << MQTT_ADD_VALUE(address, this)
-                        << "async_send_store_message pubrel v3.1.1";
-                    pubrel_proc(force_move(m), &core::on_serialize_pubrel_message);
-                },
-                [this, &publish_proc, &func](v5::basic_publish_message<PacketIdBytes>& m) {
-                    MQTT_LOG("mqtt_api", info)
-                        << MQTT_ADD_VALUE(address, this)
-                        << "async_send_store_message publish v5";
-                    publish_proc(
-                        force_move(m),
-                        &core::on_serialize_v5_publish_message,
-                        [this, func] (v5::basic_publish_message<PacketIdBytes>&& msg) mutable {
-                            if (publish_send_count_.load() == publish_send_max_) {
-                                {
-                                    LockGuard<Mutex> lck (publish_send_queue_mtx_);
-                                    publish_send_queue_.emplace_back(force_move(msg), true);
-                                }
-                                socket_->post(
-                                    [func = force_move(func)] {
-                                        // message has already been stored so func should be called with success here
-                                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
-                                    }
-                                );
-                                return false;
-                            }
-                            else {
-                                MQTT_LOG("mqtt_impl", trace)
-                                    << MQTT_ADD_VALUE(address, this)
-                                    << "increment publish_send_count_:" << publish_send_count_.load();
-                                ++publish_send_count_;
-                            }
-                            return true;
-                        }
-                    );
-                },
-                [this, &pubrel_proc](v5::basic_pubrel_message<PacketIdBytes>& m) {
-                    MQTT_LOG("mqtt_api", info)
-                        << MQTT_ADD_VALUE(address, this)
-                        << "async_send_store_message pubrel v5";
-                    {
-                        LockGuard<Mutex> lck (resend_pubrel_mtx_);
-                        resend_pubrel_.insert(m.packet_id());
-                    }
-                    pubrel_proc(force_move(m), &core::on_serialize_v5_pubrel_message);
-                }
-            ),
-            msg
-        );
-    }
-
     /**
      * @brief Check connection status
      * @return current connection status
@@ -1121,18 +884,12 @@ protected:
             MQTT_LOG("mqtt_impl", trace)
                 << MQTT_ADD_VALUE(address, this)
                 << "handle_close_or_error call shutdown";
-            if (async_operation_) {
-                async_shutdown(
-                    socket(),
-                    [call_handler](error_code) mutable {
-                        call_handler();
-                    }
-                );
-            }
-            else {
-                sync_shutdown(socket());
-                call_handler();
-            }
+            async_shutdown(
+                socket(),
+                [call_handler](error_code) mutable {
+                    call_handler();
+                }
+            );
         }
         else {
             call_handler();
@@ -3542,27 +3299,23 @@ private:
                         // Connection [MQTT-3.2.2-5].
                         // ---
                         if (session_present_) {
-                            if (ep_.async_operation_) {
-                                // Until all stored messages are written to internal send buffer,
-                                // disable further async reading of incoming packets..
-                                ep_.async_read_on_message_processed_ = false;
-                                auto async_connack_proc =
-                                    [
-                                        this,
-                                        spep = force_move(spep),
-                                        session_life_keeper = force_move(session_life_keeper),
-                                        connack_proc = force_move(connack_proc)
-                                    ]
-                                    () mutable {
-                                        // All stored messages are sent, so re-enable reading of incoming packets.
-                                        // and notify the end user code that the connack packet was received.
-                                        ep_.async_read_on_message_processed_ = true;
-                                        connack_proc(force_move(session_life_keeper));
-                                    };
-                                ep_.async_send_store(force_move(async_connack_proc));
-                                return;
-                            }
-                            ep_.send_store();
+                            // Until all stored messages are written to internal send buffer,
+                            // disable further async reading of incoming packets..
+                            ep_.async_read_on_message_processed_ = false;
+                            auto async_connack_proc =
+                                [
+                                    this,
+                                    spep = force_move(spep),
+                                    session_life_keeper = force_move(session_life_keeper),
+                                    connack_proc = force_move(connack_proc)
+                                ]
+                                () mutable {
+                                    // All stored messages are sent, so re-enable reading of incoming packets.
+                                    // and notify the end user code that the connack packet was received.
+                                    ep_.async_read_on_message_processed_ = true;
+                                    connack_proc(force_move(session_life_keeper));
+                                };
+                            ep_.async_send_store(force_move(async_connack_proc));
                         }
                         else {
                             ep_.clear_session_data();
@@ -5518,38 +5271,6 @@ private:
         );
     }
 
-    void send_publish_queue_one() {
-        MQTT_LOG("mqtt_impl", trace)
-            << MQTT_ADD_VALUE(address, this)
-            << "derement publish_send_count_:" << publish_send_count_.load();
-        BOOST_ASSERT(publish_send_count_.load() > 0);
-        --publish_send_count_;
-        auto entry =
-            [&] () -> optional<publish_send_queue_elem> {
-                LockGuard<Mutex> lck (publish_send_queue_mtx_);
-                if (publish_send_queue_.empty()) return nullopt;
-                auto entry = force_move(publish_send_queue_.front());
-                publish_send_queue_.pop_front();
-                return entry;
-        } ();
-        if (!entry) return;
-        MQTT_LOG("mqtt_impl", trace)
-            << MQTT_ADD_VALUE(address, this)
-            << "increment publish_send_count_:" << publish_send_count_.load();
-        ++publish_send_count_;
-        if (entry.value().async) {
-            do_async_write(
-                force_move(entry.value().message),
-                [life_keeper = force_move(entry.value().life_keeper)]
-                (error_code) {
-                }
-            );
-        }
-        else {
-            do_sync_write(force_move(entry.value().message));
-        }
-    }
-
     void erase_publish_received(packet_id_t packet_id) {
         LockGuard<Mutex> lck (publish_received_mtx_);
         publish_received_.erase(packet_id);
@@ -5603,10 +5324,48 @@ protected:
             << "core destroy";
     }
 
-protected:
-    bool clean_start_{false};
+    Mutex const& get_store_mtx() const {
+        return store_mtx_;
+    }
+
+    Mutex& get_store_mtx() {
+        return store_mtx_;
+    }
+
+    store<PacketIdBytes> const& get_store() const {
+        return store_;
+    }
+
+    store<PacketIdBytes>& get_store() {
+        return store_;
+    }
+
+    packet_id_manager<packet_id_t> const& get_pid_man() const {
+        return pid_man_;
+    }
+
+    packet_id_manager<packet_id_t>& get_pid_man() {
+        return pid_man_;
+    }
+
+    Mutex const& get_sub_unsub_inflight_mtx() const{
+        return sub_unsub_inflight_mtx_;
+    }
+
+    std::set<packet_id_t>const & get_sub_unsub_inflight() const {
+        return sub_unsub_inflight_;
+    }
+
+    std::set<packet_id_t>& get_sub_unsub_inflight() {
+        return sub_unsub_inflight_;
+    }
+
+    bool shutdown_requested() const {
+        return shutdown_requested_;
+    }
 
 private:
+    bool clean_start_{false};
     std::shared_ptr<MQTT_NS::socket> socket_;
     std::atomic<bool> connected_{false};
     std::atomic<bool> mqtt_connected_{false};
@@ -5629,15 +5388,11 @@ private:
     Mutex sub_unsub_inflight_mtx_;
     std::set<packet_id_t> sub_unsub_inflight_;
     bool auto_pub_response_{true};
-    bool async_operation_{ false };
     bool async_read_on_message_processed_ { true };
     bool disconnect_requested_{false};
-    std::size_t max_queue_send_count_{1};
-    std::size_t max_queue_send_size_{0};
     protocol_version version_{protocol_version::undetermined};
     std::size_t packet_bulk_read_limit_ = 256;
     std::size_t props_bulk_read_limit_ = packet_bulk_read_limit_;
-    std::size_t total_bytes_sent_ = 0;
     std::size_t total_bytes_received_ = 0;
     static constexpr std::uint8_t variable_length_continue_flag = 0b10000000;
 
@@ -5647,8 +5402,6 @@ private:
 
     as::steady_timer tim_shutdown_;
 
-    bool auto_map_topic_alias_send_ = false;
-    bool auto_replace_topic_alias_send_ = false;
     mutable Mutex topic_alias_send_mtx_;
     optional<topic_alias_send> topic_alias_send_;
 

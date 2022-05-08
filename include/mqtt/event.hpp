@@ -615,6 +615,8 @@ public:
     virtual void pubrel_on_recv_pubrec(PacketId packet_id, v5::pubrel_reason_code) = 0;
     virtual void pubcomp_on_recv_pubrel(PacketId packet_id, v5::pubcomp_reason_code) = 0;
 
+    virtual void send_publish_queue_one() = 0;
+
     virtual ~event() = default;
 };
 
