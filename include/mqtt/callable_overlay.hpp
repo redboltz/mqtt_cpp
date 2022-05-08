@@ -11,7 +11,7 @@
 
 #include <mqtt/namespace.hpp>
 #include <mqtt/attributes.hpp>
-#include <mqtt/endpoint.hpp>
+#include <mqtt/async_endpoint.hpp>
 #include <mqtt/move.hpp>
 
 namespace MQTT_NS {

@@ -616,6 +616,7 @@ public:
     virtual void pubcomp_on_recv_pubrel(PacketId packet_id, v5::pubcomp_reason_code) = 0;
 
     virtual void send_publish_queue_one() = 0;
+    virtual void async_send_store(std::function<void()> func) = 0;
 
     virtual ~event() = default;
 };
