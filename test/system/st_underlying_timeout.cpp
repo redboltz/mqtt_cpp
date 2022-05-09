@@ -62,7 +62,8 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
         [&]
         (MQTT_NS::error_code ec, auto) {
             if (ec) {
-                std::cout << ec.message() << std::endl;
+                MQTT_LOG("mqtt_test", error)
+                    << "error:" << ec.message();
             }
             BOOST_TEST(!ec);
             // intentionally don't call async_handshake (WS)
@@ -129,7 +130,8 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
         [&]
         (MQTT_NS::error_code ec, auto) {
             if (ec) {
-                std::cout << ec.message() << std::endl;
+                MQTT_LOG("mqtt_test", error)
+                    << "error:" << ec.message();
             }
             BOOST_TEST(!ec);
             // intentionally don't call async_handshake (TLS)
@@ -194,7 +196,8 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
         [&]
         (MQTT_NS::error_code ec, auto) {
             if (ec) {
-                std::cout << ec.message() << std::endl;
+                MQTT_LOG("mqtt_test", error)
+                    << "error:" << ec.message();
             }
             BOOST_TEST(!ec);
 
@@ -203,7 +206,8 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
                 [&]
                 (MQTT_NS::error_code ec) {
                     if (ec) {
-                        std::cout << ec.message() << std::endl;
+                        MQTT_LOG("mqtt_test", error)
+                            << "error:" << ec.message();
                     }
                     BOOST_TEST(!ec);
                     // intentionally don't call async_handshake (WS)
@@ -272,7 +276,8 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
         [&]
         (MQTT_NS::error_code ec, auto) {
             if (ec) {
-                std::cout << ec.message() << std::endl;
+                MQTT_LOG("mqtt_test", error)
+                    << "error:" << ec.message();
             }
             BOOST_TEST(!ec);
             // intentionally don't call async_handshake (TLS)

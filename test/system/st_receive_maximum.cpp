@@ -101,7 +101,7 @@ BOOST_AUTO_TEST_CASE( sync ) {
                         BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
                         BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_least_once);
                         BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
-                        BOOST_TEST(packet_id.has_value());
+                        BOOST_CHECK(packet_id);
                         BOOST_TEST(topic == "topic1");
                         BOOST_TEST(contents == "message1");
                     },
@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE( sync ) {
                         BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
                         BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_least_once);
                         BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
-                        BOOST_TEST(packet_id.has_value());
+                        BOOST_CHECK(packet_id);
                         BOOST_TEST(topic == "topic1");
                         BOOST_TEST(contents == "message2");
                     },
@@ -119,7 +119,7 @@ BOOST_AUTO_TEST_CASE( sync ) {
                         BOOST_TEST(pubopts.get_dup() == MQTT_NS::dup::no);
                         BOOST_TEST(pubopts.get_qos() == MQTT_NS::qos::at_least_once);
                         BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::no);
-                        BOOST_TEST(packet_id.has_value());
+                        BOOST_CHECK(packet_id);
                         BOOST_TEST(topic == "topic1");
                         BOOST_TEST(contents == "message3");
                         c->disconnect();
