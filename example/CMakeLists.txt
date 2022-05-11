@@ -11,8 +11,13 @@ LIST (APPEND exec_PROGRAMS
     long_lived_client.cpp
     redirect.cpp
     broker.cpp
-    bench.cpp
 )
+
+IF (Boost_VERSION VERSION_GREATER_EQUAL 1.70.0)
+    LIST (APPEND exec_PROGRAMS
+        bench.cpp
+    )
+ENDIF ()
 
 IF (UNIX)
     LIST (APPEND exec_PROGRAMS

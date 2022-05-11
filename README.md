@@ -9,6 +9,7 @@ Important note https://github.com/redboltz/mqtt_cpp/wiki/News.
 ## Overview
 
 mqtt_cpp is a header only library. It requires C++14 and the Boost Libraries 1.67.0 or later.
+example/bench.cpp requires the Boost Libraries 1.70.0 or later. If it is not satisfied, example/bench.cpp is excluded from cmake build target.
 
 Add mqtt_cpp/include to your include path. Then, include `mqtt_client_cpp.hpp` and/or `mqtt_server_cpp.hpp` as follows:
 
