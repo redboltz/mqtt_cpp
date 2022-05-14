@@ -136,7 +136,7 @@ ELSE ()
     MESSAGE (STATUS "Logging disabled")
     SET (MQTT_BOOST_COMPONENTS system date_time program_options)
 ENDIF ()
-FIND_PACKAGE (Boost 1.67.0 REQUIRED COMPONENTS ${MQTT_BOOST_COMPONENTS})
+FIND_PACKAGE (Boost 1.74.0 REQUIRED COMPONENTS ${MQTT_BOOST_COMPONENTS})
 
 IF (MQTT_NO_TS_EXECUTORS AND ((Boost_MAJOR_VERSION LESS 1) OR (Boost_MINOR_VERSION LESS 74)))
     MESSAGE(FATAL_ERROR "Boost version 1.74.0 or later is required for use with standard executors")

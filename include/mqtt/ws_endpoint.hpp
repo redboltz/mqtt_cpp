@@ -155,19 +155,9 @@ public:
         return strand_.running_in_this_thread();
     }
 
-#if BOOST_VERSION >= 107000
-
     MQTT_ALWAYS_INLINE as::ip::tcp::socket::lowest_layer_type& lowest_layer() override final {
         return boost::beast::get_lowest_layer(ws_);
     }
-
-#else  // BOOST_VERSION >= 107000
-
-    MQTT_ALWAYS_INLINE as::ip::tcp::socket::lowest_layer_type& lowest_layer() override final {
-        return ws_.lowest_layer();
-    }
-
-#endif // BOOST_VERSION >= 107000
 
     MQTT_ALWAYS_INLINE any native_handle() override final {
         return next_layer().native_handle();
@@ -240,15 +230,15 @@ public:
         lowest_layer().close(ec);
     }
 
-#if BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
+#if defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
     MQTT_ALWAYS_INLINE as::executor get_executor() override final {
         return lowest_layer().get_executor();
     }
-#else  // BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
+#else  // defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
     MQTT_ALWAYS_INLINE as::any_io_executor get_executor() override final {
         return lowest_layer().get_executor();
     }
-#endif // BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
+#endif // defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
 
     typename boost::beast::websocket::stream<Socket>::next_layer_type& next_layer() {
         return ws_.next_layer();

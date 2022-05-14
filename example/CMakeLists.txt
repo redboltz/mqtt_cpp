@@ -11,13 +11,8 @@ LIST (APPEND exec_PROGRAMS
     long_lived_client.cpp
     redirect.cpp
     broker.cpp
+    bench.cpp
 )
-
-IF (Boost_VERSION VERSION_GREATER_EQUAL 1.70.0)
-    LIST (APPEND exec_PROGRAMS
-        bench.cpp
-    )
-ENDIF ()
 
 IF (UNIX)
     LIST (APPEND exec_PROGRAMS
@@ -25,7 +20,7 @@ IF (UNIX)
     )
 ENDIF ()
 
-FIND_PACKAGE (Boost 1.67.0 REQUIRED COMPONENTS program_options)
+FIND_PACKAGE (Boost 1.74.0 REQUIRED COMPONENTS program_options)
 
 IF (MQTT_USE_TLS)
     LIST (APPEND exec_PROGRAMS
