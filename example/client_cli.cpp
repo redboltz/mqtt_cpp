@@ -4,6 +4,8 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
+#include <mqtt/config.hpp>
+
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -11,7 +13,9 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 
-#include <mqtt_client_cpp.hpp>
+#include <mqtt/setup_log.hpp>
+#include <mqtt/sync_client.hpp>
+#include <mqtt/unique_scope_guard.hpp>
 
 inline void print_props(std::string prefix, MQTT_NS::v5::properties const& props) {
     for (auto const& p : props) {

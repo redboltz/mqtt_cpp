@@ -20,7 +20,7 @@ IF (UNIX)
     )
 ENDIF ()
 
-FIND_PACKAGE (Boost 1.67.0 REQUIRED COMPONENTS program_options)
+FIND_PACKAGE (Boost 1.74.0 REQUIRED COMPONENTS program_options)
 
 IF (MQTT_USE_TLS)
     LIST (APPEND exec_PROGRAMS

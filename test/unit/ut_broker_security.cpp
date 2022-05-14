@@ -383,7 +383,8 @@ BOOST_AUTO_TEST_CASE(check_publish_any) {
     try {
         load_config(security, value);
     } catch(std::exception &e) {
-        std::cout << e.what() << std::endl;
+        MQTT_LOG("mqtt_test", error)
+            << "exception:" << e.what();
     }
 
     BOOST_CHECK(security.auth_pub("topic", "u1") == MQTT_NS::broker::security::authorization::type::deny);

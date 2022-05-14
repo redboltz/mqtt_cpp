@@ -115,15 +115,15 @@ public:
         tcp_.lowest_layer().close(ec);
     }
 
-#if BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
+#if defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
     MQTT_ALWAYS_INLINE as::executor get_executor() override final {
         return lowest_layer().get_executor();
     }
-#else  // BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
+#else  // defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
     MQTT_ALWAYS_INLINE as::any_io_executor get_executor() override final {
         return lowest_layer().get_executor();
     }
-#endif // BOOST_VERSION < 107400 || defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
+#endif // defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
 
     auto& socket() { return tcp_; }
     auto const& socket() const { return tcp_; }

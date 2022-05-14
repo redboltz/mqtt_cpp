@@ -1,3 +1,10 @@
+## 13.0.0
+* <<<< breaking change >>>> Minimum boost requirement is 1.74.0. (#934)
+* Modulized store. (#933)
+* Improved compile times and memory consumption. (#931)
+* Improved MQTT_STD_XXX behavior. (#929)
+* Improved build system. (#927)
+
 ## 12.1.0
 * Improved CI (#930)
 * Improved MQTT_STD_XXX support (#929)

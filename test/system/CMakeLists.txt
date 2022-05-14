@@ -72,7 +72,7 @@ IF (MQTT_TEST_7)
     )
 ENDIF ()
 
-FIND_PACKAGE (Boost 1.67.0 REQUIRED COMPONENTS unit_test_framework)
+FIND_PACKAGE (Boost 1.74.0 REQUIRED COMPONENTS unit_test_framework)
 
 # Without this setting added, azure pipelines completely fails to find the boost libraries. No idea why.
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")

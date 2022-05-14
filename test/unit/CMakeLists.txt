@@ -25,11 +25,11 @@ IF (MQTT_TEST_1)
         ut_subscription_map_broker.cpp
         ut_retained_topic_map_broker.cpp
         ut_value_allocator.cpp
-	ut_broker_security.cpp
+        ut_broker_security.cpp
     )
 ENDIF ()
 
-FIND_PACKAGE (Boost 1.67.0 REQUIRED COMPONENTS unit_test_framework)
+FIND_PACKAGE (Boost 1.74.0 REQUIRED COMPONENTS unit_test_framework)
 
 # Without this setting added, azure pipelines completely fails to find the boost libraries. No idea why.
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
