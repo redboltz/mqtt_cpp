@@ -31,9 +31,22 @@ BOOST_AUTO_TEST_CASE( connect_ws_upg ) {
             broker_notls_ws_port),
         ioc);
 
+    checker chk = {
+        // connect
+        cont("h_connection_error"),
+    };
+
     server.set_accept_handler(
         [&](std::shared_ptr<MQTT_NS::server_ws<>::endpoint_t> /*spep*/) {
             BOOST_TEST(false);
+        }
+    );
+
+    server.set_connection_error_handler(
+        [&](MQTT_NS::error_code ec, as::io_context& ioc_con) {
+            MQTT_CHK("h_connection_error");
+            BOOST_TEST(ec == boost::system::errc::stream_timeout);
+            BOOST_TEST(&ioc_con == &ioc);
         }
     );
 
@@ -96,9 +109,22 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_ashs ) {
         test_ctx_init(),
         ioc);
 
+    checker chk = {
+        // connect
+        cont("h_connection_error"),
+    };
+
     server.set_accept_handler(
         [&](std::shared_ptr<MQTT_NS::server_tls_ws<>::endpoint_t> /*spep*/) {
             BOOST_TEST(false);
+        }
+    );
+
+    server.set_connection_error_handler(
+        [&](MQTT_NS::error_code ec, as::io_context& ioc_con) {
+            MQTT_CHK("h_connection_error");
+            BOOST_TEST(ec == boost::system::errc::stream_timeout);
+            BOOST_TEST(&ioc_con == &ioc);
         }
     );
 
@@ -162,9 +188,22 @@ BOOST_AUTO_TEST_CASE( connect_tls_ws_upg ) {
         test_ctx_init(),
         ioc);
 
+    checker chk = {
+        // connect
+        cont("h_connection_error"),
+    };
+
     server.set_accept_handler(
         [&](std::shared_ptr<MQTT_NS::server_tls_ws<>::endpoint_t> /*spep*/) {
             BOOST_TEST(false);
+        }
+    );
+
+    server.set_connection_error_handler(
+        [&](MQTT_NS::error_code ec, as::io_context& ioc_con) {
+            MQTT_CHK("h_connection_error");
+            BOOST_TEST(ec == boost::system::errc::stream_timeout);
+            BOOST_TEST(&ioc_con == &ioc);
         }
     );
 
@@ -246,9 +285,22 @@ BOOST_AUTO_TEST_CASE( connect_tls_ashs ) {
         test_ctx_init(),
         ioc);
 
+    checker chk = {
+        // connect
+        cont("h_connection_error"),
+    };
+
     server.set_accept_handler(
         [&](std::shared_ptr<MQTT_NS::server_tls<>::endpoint_t> /*spep*/) {
             BOOST_TEST(false);
+        }
+    );
+
+    server.set_connection_error_handler(
+        [&](MQTT_NS::error_code ec, as::io_context& ioc_con) {
+            MQTT_CHK("h_connection_error");
+            BOOST_TEST(ec == boost::system::errc::stream_timeout);
+            BOOST_TEST(&ioc_con == &ioc);
         }
     );
 
