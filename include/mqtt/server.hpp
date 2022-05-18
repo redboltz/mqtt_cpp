@@ -50,15 +50,35 @@ public:
 
     /**
      * @brief Accept handler
+     *        After this handler called, the next accept will automatically start.
      * @param ep endpoint of the connecting client
      */
     using accept_handler = std::function<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
-     * @brief Error handler
+     * @brief Error handler during after accepted before connection established
+     *        After this handler called, the next accept will automatically start.
+     * @param ec error code
+     * @param ioc_con io_context for incoming connection
+     */
+    using connection_error_handler = std::function<void(error_code ec, as::io_context& ioc_con)>;
+
+    /**
+     * @brief Error handler for listen and accpet
+     *        After this handler called, the next accept won't  start
+     *        You need to call listen() again if you want to restart accepting.
      * @param ec error code
      */
     using error_handler = std::function<void(error_code ec)>;
+
+    /**
+     * @brief Error handler for listen and accpet
+     *        After this handler called, the next accept won't  start
+     *        You need to call listen() again if you want to restart accepting.
+     * @param ec error code
+     * @param ioc_con io_context for listen or accept
+     */
+    using error_handler_with_ioc = std::function<void(error_code ec, as::io_context& ioc_accept)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server(
@@ -121,7 +141,7 @@ public:
                 as::post(
                     ioc_accept_,
                     [this, ec = e.code()] {
-                        if (h_error_) h_error_(ec);
+                        if (h_error_) h_error_(ec, ioc_accept_);
                     }
                 );
                 return;
@@ -147,11 +167,31 @@ public:
     }
 
     /**
+     * @brief Set error handler for listen and accept
+     * @param h handler
+     */
+    void set_error_handler(error_handler h) {
+        h_error_ =
+            [h = force_move(h)]
+            (error_code ec, as::io_context&) {
+                if (h) h(ec);
+            };
+    }
+
+    /**
+     * @brief Set error handler for listen and accept
+     * @param h handler
+     */
+    void set_error_handler(error_handler_with_ioc h = error_handler_with_ioc()) {
+        h_error_ = force_move(h);
+    }
+
+    /**
      * @brief Set error handler
      * @param h handler
      */
-    void set_error_handler(error_handler h = error_handler()) {
-        h_error_ = force_move(h);
+    void set_connection_error_handler(connection_error_handler h = connection_error_handler()) {
+        h_connection_error_ = force_move(h);
     }
 
     /**
@@ -176,7 +216,7 @@ private:
             (error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
-                    if (h_error_) h_error_(ec);
+                    if (h_error_) h_error_(ec, ioc_con);
                     return;
                 }
                 auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
@@ -195,7 +235,8 @@ private:
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
-    error_handler h_error_;
+    connection_error_handler h_connection_error_;
+    error_handler_with_ioc h_error_;
     protocol_version version_ = protocol_version::undetermined;
 };
 
@@ -214,15 +255,35 @@ public:
 
     /**
      * @brief Accept handler
+     *        After this handler called, the next accept will automatically start.
      * @param ep endpoint of the connecting client
      */
     using accept_handler = std::function<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
-     * @brief Error handler
+     * @brief Error handler during after accepted before connection established
+     *        After this handler called, the next accept will automatically start.
+     * @param ec error code
+     * @param ioc_con io_context for incoming connection
+     */
+    using connection_error_handler = std::function<void(error_code ec, as::io_context& ioc_con)>;
+
+    /**
+     * @brief Error handler for listen and accpet
+     *        After this handler called, the next accept won't  start
+     *        You need to call listen() again if you want to restart accepting.
      * @param ec error code
      */
     using error_handler = std::function<void(error_code ec)>;
+
+    /**
+     * @brief Error handler for listen and accpet
+     *        After this handler called, the next accept won't  start
+     *        You need to call listen() again if you want to restart accepting.
+     * @param ec error code
+     * @param ioc_con io_context for listen or accept
+     */
+    using error_handler_with_ioc = std::function<void(error_code ec, as::io_context& ioc_accept)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls(
@@ -292,7 +353,7 @@ public:
                 as::post(
                     ioc_accept_,
                     [this, ec = e.code()] {
-                        if (h_error_) h_error_(ec);
+                        if (h_error_) h_error_(ec, ioc_accept_);
                     }
                 );
                 return;
@@ -318,11 +379,31 @@ public:
     }
 
     /**
+     * @brief Set error handler for listen and accept
+     * @param h handler
+     */
+    void set_error_handler(error_handler h) {
+        h_error_ =
+            [h = force_move(h)]
+            (error_code ec, as::io_context&) {
+                if (h) h(ec);
+            };
+    }
+
+    /**
+     * @brief Set error handler for listen and accept
+     * @param h handler
+     */
+    void set_error_handler(error_handler_with_ioc h = error_handler_with_ioc()) {
+        h_error_ = force_move(h);
+    }
+
+    /**
      * @brief Set error handler
      * @param h handler
      */
-    void set_error_handler(error_handler h = error_handler()) {
-        h_error_ = force_move(h);
+    void set_connection_error_handler(connection_error_handler h = connection_error_handler()) {
+        h_connection_error_ = force_move(h);
     }
 
     /**
@@ -383,21 +464,38 @@ private:
             (error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
-                    if (h_error_) h_error_(ec);
+                    if (h_error_) h_error_(ec, ioc_con);
                     return;
                 }
                 auto underlying_finished = std::make_shared<bool>(false);
+                auto connection_error_called = std::make_shared<bool>(false);
                 auto tim = std::make_shared<as::steady_timer>(ioc_con);
                 tim->expires_after(underlying_connect_timeout_);
                 tim->async_wait(
-                    [socket, tim, underlying_finished]
+                    [
+                        this,
+                        socket,
+                        tim,
+                        underlying_finished,
+                        connection_error_called,
+                        &ioc_con
+                    ]
                     (error_code ec) {
                         if (*underlying_finished) return;
-                        if (ec) return;
+                        if (ec) return; // timer cancelled
                         socket->post(
-                            [socket] {
+                            [this, socket, connection_error_called, &ioc_con] {
                                 boost::system::error_code close_ec;
                                 socket->lowest_layer().close(close_ec);
+                                if (h_connection_error_ && !*connection_error_called) {
+                                    h_connection_error_(
+                                        boost::system::errc::make_error_code(
+                                            boost::system::errc::stream_timeout
+                                        ),
+                                        ioc_con
+                                    );
+                                    *connection_error_called = true;
+                                }
                             }
                         );
                     }
@@ -418,11 +516,23 @@ private:
 
                 ps->async_handshake(
                     tls::stream_base::server,
-                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con, username]
+                    [
+                        this,
+                        socket = force_move(socket),
+                        tim,
+                        underlying_finished,
+                        connection_error_called,
+                        &ioc_con,
+                        username
+                    ]
                     (error_code ec) mutable {
                         *underlying_finished = true;
                         tim->cancel();
                         if (ec) {
+                            if (h_connection_error_ && !*connection_error_called) {
+                                h_connection_error_(ec, ioc_con);
+                                *connection_error_called = true;
+                            }
                             return;
                         }
                         auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
@@ -446,7 +556,8 @@ private:
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
-    error_handler h_error_;
+    connection_error_handler h_connection_error_;
+    error_handler_with_ioc h_error_;
     tls::context ctx_;
     protocol_version version_ = protocol_version::undetermined;
     std::chrono::steady_clock::duration underlying_connect_timeout_ = std::chrono::seconds(10);
@@ -474,10 +585,29 @@ public:
     using accept_handler = std::function<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
-     * @brief Error handler
+     * @brief Error handler during after accepted before connection established
+     *        After this handler called, the next accept will automatically start.
+     * @param ec error code
+     * @param ioc_con io_context for incoming connection
+     */
+    using connection_error_handler = std::function<void(error_code ec, as::io_context& ioc_con)>;
+
+    /**
+     * @brief Error handler for listen and accpet
+     *        After this handler called, the next accept won't  start
+     *        You need to call listen() again if you want to restart accepting.
      * @param ec error code
      */
     using error_handler = std::function<void(error_code ec)>;
+
+    /**
+     * @brief Error handler for listen and accpet
+     *        After this handler called, the next accept won't  start
+     *        You need to call listen() again if you want to restart accepting.
+     * @param ec error code
+     * @param ioc_con io_context for listen or accept
+     */
+    using error_handler_with_ioc = std::function<void(error_code ec, as::io_context& ioc_accept)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_ws(
@@ -539,7 +669,7 @@ public:
                 as::post(
                     ioc_accept_,
                     [this, ec = e.code()] {
-                        if (h_error_) h_error_(ec);
+                        if (h_error_) h_error_(ec, ioc_accept_);
                     }
                 );
                 return;
@@ -565,11 +695,31 @@ public:
     }
 
     /**
+     * @brief Set error handler for listen and accept
+     * @param h handler
+     */
+    void set_error_handler(error_handler h) {
+        h_error_ =
+            [h = force_move(h)]
+            (error_code ec, as::io_context&) {
+                if (h) h(ec);
+            };
+    }
+
+    /**
+     * @brief Set error handler for listen and accept
+     * @param h handler
+     */
+    void set_error_handler(error_handler_with_ioc h = error_handler_with_ioc()) {
+        h_error_ = force_move(h);
+    }
+
+    /**
      * @brief Set error handler
      * @param h handler
      */
-    void set_error_handler(error_handler h = error_handler()) {
-        h_error_ = force_move(h);
+    void set_connection_error_handler(connection_error_handler h = connection_error_handler()) {
+        h_connection_error_ = force_move(h);
     }
 
     /**
@@ -607,21 +757,38 @@ private:
             (error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
-                    if (h_error_) h_error_(ec);
+                    if (h_error_) h_error_(ec, ioc_con);
                     return;
                 }
                 auto underlying_finished = std::make_shared<bool>(false);
+                auto connection_error_called = std::make_shared<bool>(false);
                 auto tim = std::make_shared<as::steady_timer>(ioc_con);
                 tim->expires_after(underlying_connect_timeout_);
                 tim->async_wait(
-                    [socket, tim, underlying_finished]
+                    [
+                        this,
+                        socket,
+                        tim,
+                        underlying_finished,
+                        connection_error_called,
+                        &ioc_con
+                    ]
                     (error_code ec) {
                         if (*underlying_finished) return;
-                        if (ec) return;
+                        if (ec) return; // timer cancelled
                         socket->post(
-                            [socket] {
+                            [this, socket, connection_error_called, &ioc_con] {
                                 boost::system::error_code close_ec;
                                 socket->lowest_layer().close(close_ec);
+                                if (h_connection_error_ && !*connection_error_called) {
+                                    h_connection_error_(
+                                        boost::system::errc::make_error_code(
+                                            boost::system::errc::stream_timeout
+                                        ),
+                                        ioc_con
+                                    );
+                                    *connection_error_called = true;
+                                }
                             }
                         );
                     }
@@ -634,16 +801,38 @@ private:
                     ps->next_layer(),
                     *sb,
                     *request,
-                    [this, socket = force_move(socket), sb, request, tim, underlying_finished, &ioc_con]
+                    [
+                        this,
+                        socket = force_move(socket),
+                        sb,
+                        request,
+                        tim,
+                        underlying_finished,
+                        connection_error_called,
+                        &ioc_con
+                    ]
                     (error_code ec, std::size_t) mutable {
                         if (ec) {
                             *underlying_finished = true;
                             tim->cancel();
+                            if (h_connection_error_ && !*connection_error_called) {
+                                h_connection_error_(ec, ioc_con);
+                                *connection_error_called = true;
+                            }
                             return;
                         }
                         if (!boost::beast::websocket::is_upgrade(*request)) {
                             *underlying_finished = true;
                             tim->cancel();
+                            if (h_connection_error_ && !*connection_error_called) {
+                                h_connection_error_(
+                                    boost::system::errc::make_error_code(
+                                        boost::system::errc::protocol_error
+                                    ),
+                                    ioc_con
+                                );
+                                *connection_error_called = true;
+                            }
                             return;
                         }
                         auto ps = socket.get();
@@ -664,11 +853,22 @@ private:
                         }
                         ps->async_accept(
                             *request,
-                            [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
+                            [
+                                this,
+                                socket = force_move(socket),
+                                tim,
+                                underlying_finished,
+                                connection_error_called,
+                                &ioc_con
+                            ]
                             (error_code ec) mutable {
                                 *underlying_finished = true;
                                 tim->cancel();
                                 if (ec) {
+                                    if (h_connection_error_ && !*connection_error_called) {
+                                        h_connection_error_(ec, ioc_con);
+                                    }
+                                    *connection_error_called = true;
                                     return;
                                 }
                                 auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
@@ -680,7 +880,7 @@ private:
 
                         ps->async_accept_ex(
                             *request,
-                            [request]
+                            [request, connection_error_called]
                             (boost::beast::websocket::response_type& m) {
                                 auto it = request->find("Sec-WebSocket-Protocol");
                                 if (it != request->end()) {
@@ -692,6 +892,10 @@ private:
                                 *underlying_finished = true;
                                 tim->cancel();
                                 if (ec) {
+                                    if (h_connection_error_ && !*connection_error_called) {
+                                        h_connection_error_(ec, ioc_con);
+                                        *connection_error_called = true;
+                                    }
                                     return;
                                 }
                                 auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
@@ -718,7 +922,8 @@ private:
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
-    error_handler h_error_;
+    connection_error_handler h_connection_error_;
+    error_handler_with_ioc h_error_;
     protocol_version version_ = protocol_version::undetermined;
     std::chrono::steady_clock::duration underlying_connect_timeout_ = std::chrono::seconds(10);
 };
@@ -744,10 +949,29 @@ public:
     using accept_handler = std::function<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
-     * @brief Error handler
+     * @brief Error handler during after accepted before connection established
+     *        After this handler called, the next accept will automatically start.
+     * @param ec error code
+     * @param ioc_con io_context for incoming connection
+     */
+    using connection_error_handler = std::function<void(error_code ec, as::io_context& ioc_con)>;
+
+    /**
+     * @brief Error handler for listen and accpet
+     *        After this handler called, the next accept won't  start
+     *        You need to call listen() again if you want to restart accepting.
      * @param ec error code
      */
     using error_handler = std::function<void(error_code ec)>;
+
+    /**
+     * @brief Error handler for listen and accpet
+     *        After this handler called, the next accept won't  start
+     *        You need to call listen() again if you want to restart accepting.
+     * @param ec error code
+     * @param ioc_con io_context for listen or accept
+     */
+    using error_handler_with_ioc = std::function<void(error_code ec, as::io_context& ioc_accept)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls_ws(
@@ -817,7 +1041,7 @@ public:
                 as::post(
                     ioc_accept_,
                     [this, ec = e.code()] {
-                        if (h_error_) h_error_(ec);
+                        if (h_error_) h_error_(ec, ioc_accept_);
                     }
                 );
                 return;
@@ -843,11 +1067,31 @@ public:
     }
 
     /**
+     * @brief Set error handler for listen and accept
+     * @param h handler
+     */
+    void set_error_handler(error_handler h) {
+        h_error_ =
+            [h = force_move(h)]
+            (error_code ec, as::io_context&) {
+                if (h) h(ec);
+            };
+    }
+
+    /**
+     * @brief Set error handler for listen and accept
+     * @param h handler
+     */
+    void set_error_handler(error_handler_with_ioc h = error_handler_with_ioc()) {
+        h_error_ = force_move(h);
+    }
+
+    /**
      * @brief Set error handler
      * @param h handler
      */
-    void set_error_handler(error_handler h = error_handler()) {
-        h_error_ = force_move(h);
+    void set_connection_error_handler(connection_error_handler h = connection_error_handler()) {
+        h_connection_error_ = force_move(h);
     }
 
     /**
@@ -907,21 +1151,38 @@ private:
             (error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
-                    if (h_error_) h_error_(ec);
+                    if (h_error_) h_error_(ec, ioc_con);
                     return;
                 }
                 auto underlying_finished = std::make_shared<bool>(false);
+                auto connection_error_called = std::make_shared<bool>(false);
                 auto tim = std::make_shared<as::steady_timer>(ioc_con);
                 tim->expires_after(underlying_connect_timeout_);
                 tim->async_wait(
-                    [socket, tim, underlying_finished]
+                    [
+                        this,
+                        socket,
+                        tim,
+                        underlying_finished,
+                        connection_error_called,
+                        &ioc_con
+                    ]
                     (error_code ec) {
                         if (*underlying_finished) return;
-                        if (ec) return;
+                        if (ec) return; // timer cancelled
                         socket->post(
-                            [socket] {
+                            [this, socket, connection_error_called, &ioc_con] {
                                 boost::system::error_code close_ec;
                                 socket->lowest_layer().close(close_ec);
+                                if (h_connection_error_ && !*connection_error_called) {
+                                    h_connection_error_(
+                                        boost::system::errc::make_error_code(
+                                            boost::system::errc::stream_timeout
+                                        ),
+                                        ioc_con
+                                    );
+                                    *connection_error_called = true;
+                                }
                             }
                         );
                     }
@@ -943,7 +1204,15 @@ private:
 
                 ps->next_layer().async_handshake(
                     tls::stream_base::server,
-                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con, username]
+                    [
+                        this,
+                        socket = force_move(socket),
+                        tim,
+                        underlying_finished,
+                        connection_error_called,
+                        &ioc_con,
+                        username
+                    ]
                     (error_code ec) mutable {
                         if (ec) {
                             *underlying_finished = true;
@@ -957,16 +1226,39 @@ private:
                             ps->next_layer(),
                             *sb,
                             *request,
-                            [this, socket = force_move(socket), sb, request, tim, underlying_finished, &ioc_con, username]
+                            [
+                                this,
+                                socket = force_move(socket),
+                                sb,
+                                request,
+                                tim,
+                                underlying_finished,
+                                connection_error_called,
+                                &ioc_con,
+                                username
+                            ]
                             (error_code ec, std::size_t) mutable {
                                 if (ec) {
                                     *underlying_finished = true;
                                     tim->cancel();
+                                    if (h_connection_error_ && !*connection_error_called) {
+                                        h_connection_error_(ec, ioc_con);
+                                        *connection_error_called = true;
+                                    }
                                     return;
                                 }
                                 if (!boost::beast::websocket::is_upgrade(*request)) {
                                     *underlying_finished = true;
                                     tim->cancel();
+                                    if (h_connection_error_ && !*connection_error_called) {
+                                        h_connection_error_(
+                                            boost::system::errc::make_error_code(
+                                                boost::system::errc::protocol_error
+                                            ),
+                                            ioc_con
+                                        );
+                                        *connection_error_called = true;
+                                    }
                                     return;
                                 }
                                 auto ps = socket.get();
@@ -987,11 +1279,23 @@ private:
                                 }
                                 ps->async_accept(
                                     *request,
-                                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con, username]
+                                    [
+                                        this,
+                                        socket = force_move(socket),
+                                        tim,
+                                        underlying_finished,
+                                        connection_error_called,
+                                        &ioc_con,
+                                        username
+                                    ]
                                     (error_code ec) mutable {
                                         *underlying_finished = true;
                                         tim->cancel();
                                         if (ec) {
+                                            if (h_connection_error_ && !*connection_error_called) {
+                                                h_connection_error_(ec, ioc_con);
+                                                *connection_error_called = true;
+                                            }
                                             return;
                                         }
                                         auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
@@ -1011,11 +1315,23 @@ private:
                                             m.insert(it->name(), it->value());
                                         }
                                     },
-                                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con, username]
+                                    [
+                                        this,
+                                        socket = force_move(socket),
+                                        tim,
+                                        underlying_finished,
+                                        connection_error_called,
+                                        &ioc_con,
+                                        username
+                                    ]
                                     (error_code ec) mutable {
                                         *underlying_finished = true;
                                         tim->cancel();
                                         if (ec) {
+                                            if (h_connection_error_ && *connection_error_called) {
+                                                h_connection_error_(ec, ioc_con);
+                                                *connection_error_called = true;
+                                            }
                                             return;
                                         }
                                         // TODO: The use of force_move on this line of code causes
@@ -1050,7 +1366,8 @@ private:
     std::function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
-    error_handler h_error_;
+    connection_error_handler h_connection_error_;
+    error_handler_with_ioc h_error_;
     tls::context ctx_;
     protocol_version version_ = protocol_version::undetermined;
     std::chrono::steady_clock::duration underlying_connect_timeout_ = std::chrono::seconds(10);
