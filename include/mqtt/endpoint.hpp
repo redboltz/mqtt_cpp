@@ -5334,6 +5334,7 @@ private:
         }
         shutdown_requested_ = true;
         mqtt_connected_ = false;
+        async_shutdown_handler_called_ = false;
 
         MQTT_LOG("mqtt_impl", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -5346,7 +5347,10 @@ private:
                     << ec.message();
                 tim_shutdown_.cancel();
                 connected_ = false;
-                if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+                if (!async_shutdown_handler_called_) {
+                    async_shutdown_handler_called_ = true;
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+                }
             }
         );
         // timeout timer set
@@ -5371,7 +5375,7 @@ private:
                             << "post force_shutdown_and_close";
                         sp->socket().post(
                             [this, func = force_move(func), sp] {
-                                if (connected_) {
+                                if (!async_shutdown_handler_called_) {
                                     error_code ec;
                                     socket().force_shutdown_and_close(ec);
                                     MQTT_LOG("mqtt_impl", trace)
@@ -5379,6 +5383,7 @@ private:
                                         << "force_shutdown_and_close ec:"
                                         << ec.message();
                                     connected_ = false;
+                                    async_shutdown_handler_called_ = true;
                                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                                 }
                             }
@@ -11591,6 +11596,7 @@ private:
     std::atomic<bool> connected_{false};
     std::atomic<bool> mqtt_connected_{false};
     std::atomic<bool> shutdown_requested_{false};
+    std::atomic<bool> async_shutdown_handler_called_{false};
 
     std::string client_id_;
 
