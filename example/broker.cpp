@@ -651,7 +651,7 @@ void run_broker(boost::program_options::variables_map const& vm) {
         th_timer.join();
         MQTT_LOG("mqtt_broker", trace) << "th_timer joined";
 
-        signals.clear();
+        signals.cancel();
         th_signal.join();
         MQTT_LOG("mqtt_broker", trace) << "th_signal joined";
 

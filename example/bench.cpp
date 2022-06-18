@@ -989,7 +989,7 @@ int main(int argc, char **argv) {
                 th_timer.join();
                 tim_progress->cancel();
                 th_progress_timer.join();
-                signals.clear();
+                signals.cancel();
                 th_signal.join();
             };
 
