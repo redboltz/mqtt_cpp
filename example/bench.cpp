@@ -964,10 +964,33 @@ int main(int argc, char **argv) {
                         );
                     }
                 }
+
+                as::io_context ioc_signal;
+                as::signal_set signals{ioc_signal, SIGINT, SIGTERM};
+                signals.async_wait(
+                    [] (
+                        boost::system::error_code const& ec,
+                        int num
+                    ) {
+                        if (!ec) {
+                            std::cerr << "Signal " << num << " received. exit program" << std::endl;
+                            exit(-1);
+                        }
+                    }
+                );
+                std::thread th_signal {
+                    [&] {
+                        ioc_signal.run();
+                    }
+                };
+
+
                 for (auto& th : ths) th.join();
                 th_timer.join();
                 tim_progress->cancel();
                 th_progress_timer.join();
+                signals.clear();
+                th_signal.join();
             };
 
         std::cout << "Prepare clients" << std::endl;

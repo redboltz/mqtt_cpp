@@ -620,6 +620,26 @@ void run_broker(boost::program_options::variables_map const& vm) {
             }
         }
 
+        as::io_context ioc_signal;
+        as::signal_set signals{ioc_signal, SIGINT, SIGTERM};
+        signals.async_wait(
+            [] (
+                boost::system::error_code const& ec,
+                int num
+            ) {
+                if (!ec) {
+                    MQTT_LOG("mqtt_broker", trace)
+                        << "Signal " << num << " received. exit program";
+                    exit(-1);
+                }
+            }
+        );
+        std::thread th_signal {
+            [&] {
+                ioc_signal.run();
+            }
+        };
+
         th_accept.join();
         MQTT_LOG("mqtt_broker", trace) << "th_accept joined";
 
@@ -630,6 +650,10 @@ void run_broker(boost::program_options::variables_map const& vm) {
         guard_timer_ioc.reset();
         th_timer.join();
         MQTT_LOG("mqtt_broker", trace) << "th_timer joined";
+
+        signals.clear();
+        th_signal.join();
+        MQTT_LOG("mqtt_broker", trace) << "th_signal joined";
 
     } catch(std::exception &e) {
         MQTT_LOG("mqtt_broker", error) << e.what();
