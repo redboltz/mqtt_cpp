@@ -513,7 +513,8 @@ int main(int argc, char* argv[]) {
                 int num
             ) {
                 if (!ec) {
-                    std::cerr << "Signal " << num << " received. exit program" << std::endl;
+                    MQTT_LOG("mqtt_broker", trace)
+                        << "Signal " << num << " received. exit program";
                     exit(-1);
                 }
             }
@@ -813,13 +814,13 @@ int main(int argc, char* argv[]) {
 
             client.set_close_handler(
                 [&]() {
+                    signals.cancel();
                     std::cout << "< closed." << std::endl;
-                    signals.clear();
                 });
             client.set_error_handler(
                 [&](boost::system::error_code const& ec) {
+                    signals.cancel();
                     std::cout << "< error:" << ec.message() << std::endl;
-                    signals.clear();
                 });
             MQTT_NS::v5::properties props;
             if (sei != 0) {
