@@ -506,6 +506,19 @@ int main(int argc, char* argv[]) {
         /* 0 means stdin */
         boost::asio::posix::stream_descriptor console_input(ioc, 0);
 
+        as::signal_set signals{ioc, SIGINT, SIGTERM};
+        signals.async_wait(
+            [] (
+                boost::system::error_code const& ec,
+                int num
+            ) {
+                if (!ec) {
+                    std::cerr << "Signal " << num << " received. exit program" << std::endl;
+                    exit(-1);
+                }
+            }
+        );
+
         auto setup = [&](auto& client) {
             using packet_id_t = typename std::remove_reference_t<decltype(client)>::packet_id_t;
 
@@ -799,12 +812,14 @@ int main(int argc, char* argv[]) {
             );
 
             client.set_close_handler(
-                []() {
+                [&]() {
                     std::cout << "< closed." << std::endl;
+                    signals.clear();
                 });
             client.set_error_handler(
-                [](boost::system::error_code const& ec) {
+                [&](boost::system::error_code const& ec) {
                     std::cout << "< error:" << ec.message() << std::endl;
+                    signals.clear();
                 });
             MQTT_NS::v5::properties props;
             if (sei != 0) {
