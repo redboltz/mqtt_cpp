@@ -136,8 +136,17 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(address, "MqttAddress", void const*)
 
 #else  // defined(MQTT_USE_LOG)
 
+#if !defined(MQTT_LOG)
+
 #define MQTT_LOG(chan, sev) MQTT_NS::detail::null_log(chan, MQTT_NS::severity_level::sev)
+
+#endif // !defined(MQTT_LOG)
+
+#if !defined(MQTT_ADD_VALUE)
+
 #define MQTT_ADD_VALUE(name, val) val
+
+#endif // !defined(MQTT_ADD_VALUE)
 
 #endif // defined(MQTT_USE_LOG)
 
