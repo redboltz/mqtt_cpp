@@ -922,6 +922,17 @@ public:
     }
 
     /**
+     * @brief Clear username.
+     *
+     * This function should be called before calling connect().<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901071<BR>
+     * 3.1.3.5 User Name
+     */
+    void set_user_name() {
+        user_name_ = nullopt;
+    }
+
+    /**
      * @brief Set password.
      * @param password password
      *
@@ -931,6 +942,17 @@ public:
      */
     void set_password(std::string password) {
         password_ = force_move(password);
+    }
+
+    /**
+     * @brief Clear password.
+     *
+     * This function should be called before calling connect().<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901072<BR>
+     * 3.1.3.6 Password
+     */
+    void set_password() {
+        password_ = nullopt;
     }
 
     /**
