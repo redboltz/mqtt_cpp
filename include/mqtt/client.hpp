@@ -1835,6 +1835,11 @@ private:
                 }
                 async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
             });
+        socket.post(
+            [this] {
+                force_disconnect();
+            }
+        );
     }
 
 #if defined(MQTT_USE_WS)

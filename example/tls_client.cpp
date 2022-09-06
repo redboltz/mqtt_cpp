@@ -29,28 +29,13 @@ int main(int argc, char** argv) {
 
     int count = 0;
     // Create TLS client
-    auto c = MQTT_NS::make_tls_sync_client(ioc, host, port);
+    auto c = MQTT_NS::make_tls_async_client(ioc, host, port);
     using packet_id_t = typename std::remove_reference_t<decltype(*c)>::packet_id_t;
-
-    auto disconnect = [&] {
-        if (++count == 5) c->disconnect();
-    };
 
     // Setup client
     c->set_client_id("cid1");
     c->set_clean_session(true);
     c->get_ssl_context().load_verify_file(cacert);
-
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L
-
-    SSL_CTX_set_keylog_callback(
-        c->get_ssl_context().native_handle(),
-        [](SSL const*, char const* line) {
-            std::cout << line << std::endl;
-        }
-    );
-
-#endif // OPENSSL_VERSION_NUMBER >= 0x10101000L
 
     // Setup handlers
     c->set_connack_handler(
@@ -60,16 +45,6 @@ int main(int argc, char** argv) {
             std::cout << "Session Present: " << std::boolalpha << sp << std::endl;
             std::cout << "Connack Return Code: "
                       << MQTT_NS::connect_return_code_to_str(connack_return_code) << std::endl;
-            if (connack_return_code == MQTT_NS::connect_return_code::accepted) {
-                pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", MQTT_NS::qos::at_most_once);
-                pid_sub2 = c->subscribe(
-                    std::vector<std::tuple<MQTT_NS::string_view, MQTT_NS::subscribe_options>>
-                    {
-                        { "mqtt_client_cpp/topic2_1", MQTT_NS::subscribe_options(MQTT_NS::qos::at_least_once) },
-                        { "mqtt_client_cpp/topic2_2", MQTT_NS::subscribe_options(MQTT_NS::qos::exactly_once) }
-                    }
-                );
-            }
             return true;
         });
     c->set_close_handler(
@@ -82,62 +57,15 @@ int main(int argc, char** argv) {
         (MQTT_NS::error_code ec){
             std::cout << "error: " << ec.message() << std::endl;
         });
-    c->set_puback_handler(
-        [&]
-        (packet_id_t packet_id){
-            std::cout << "puback received. packet_id: " << packet_id << std::endl;
-            disconnect();
-            return true;
-        });
-    c->set_pubrec_handler(
-        [&]
-        (packet_id_t packet_id){
-            std::cout << "pubrec received. packet_id: " << packet_id << std::endl;
-            return true;
-        });
-    c->set_pubcomp_handler(
-        [&]
-        (packet_id_t packet_id){
-            std::cout << "pubcomp received. packet_id: " << packet_id << std::endl;
-            disconnect();
-            return true;
-        });
-    c->set_suback_handler(
-        [&]
-        (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results){
-            std::cout << "suback received. packet_id: " << packet_id << std::endl;
-            for (auto const& e : results) {
-                std::cout << "[client] subscribe result: " << e << std::endl;
-            }
-            if (packet_id == pid_sub1) {
-                c->publish("mqtt_client_cpp/topic1", "test1", MQTT_NS::qos::at_most_once);
-            }
-            else if (packet_id == pid_sub2) {
-                c->publish("mqtt_client_cpp/topic2_1", "test2_1", MQTT_NS::qos::at_least_once);
-                c->publish("mqtt_client_cpp/topic2_2", "test2_2", MQTT_NS::qos::exactly_once);
-            }
-            return true;
-        });
-    c->set_publish_handler(
-        [&]
-        (MQTT_NS::optional<packet_id_t> packet_id,
-         MQTT_NS::publish_options pubopts,
-         MQTT_NS::buffer topic_name,
-         MQTT_NS::buffer contents){
-            std::cout << "publish received."
-                      << " dup: "    << pubopts.get_dup()
-                      << " qos: "    << pubopts.get_qos()
-                      << " retain: " << pubopts.get_retain() << std::endl;
-            if (packet_id)
-                std::cout << "packet_id: " << *packet_id << std::endl;
-            std::cout << "topic_name: " << topic_name << std::endl;
-            std::cout << "contents: " << contents << std::endl;
-            disconnect();
-            return true;
-        });
 
     // Connect
-    c->connect();
+    c->async_connect(
+        // [optional] checking underlying layer completion code
+        []
+        (MQTT_NS::error_code ec){
+            std::cout << "async_connect callback: " << ec.message() << std::endl;
+        }
+    );
 
     ioc.run();
 }
