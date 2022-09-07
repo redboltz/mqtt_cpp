@@ -1,3 +1,10 @@
+## 13.1.0
+* Added clear username and password functionality. (#944)
+* Refined utility tools. (#941, #942)
+* Refined log disabling. (#940)
+* Fixed async_shutdown callback twice called problem. (#938)
+* Refined error handlling. (#937)
+
 ## 13.0.0
 * <<<< breaking change >>>> Minimum boost requirement is 1.74.0. (#934)
 * Modulized store. (#933)
