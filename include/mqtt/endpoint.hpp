@@ -2206,6 +2206,38 @@ public:
         }
     }
 
+    struct async_disconnect_impl {
+        this_type& ep;
+        enum {
+            first,
+            second
+        } state = first;
+
+        template <typename Self>
+        void operator()(
+            Self& self
+        ) {
+            if (ep.connected_ && ep.mqtt_connected_) {
+                ep.disconnect_requested_ = true;
+                // The reason code and property vector are only used if we're using mqttv5.
+                ep.async_send_disconnect(
+                    v5::disconnect_reason_code::normal_disconnection,
+                    v5::properties{},
+                    [self = force_move(self)] (error_code ec) mutable {
+                        self.complete(ec);
+                    }
+                );
+            }
+            else {
+                ep.socket_->post(
+                    [self = force_move(self)] () mutable {
+                        self.complete(boost::system::errc::make_error_code(boost::system::errc::success));
+                    }
+                );
+            }
+        }
+    };
+
     /**
      * @brief Disconnect
      * @param func
@@ -2214,27 +2246,27 @@ public:
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      */
-    void async_disconnect(
-        async_handler_t func = {}
-    ) {
+    template <typename CompletionToken>
+    auto async_disconnect(
+        CompletionToken&& token = async_handler_t{}
+    )
+        ->
+        typename as::async_result<
+            typename std::decay<CompletionToken>::type,
+            void(error_code)
+        >::return_type {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_disconnect";
-
-        if (connected_ && mqtt_connected_) {
-            disconnect_requested_ = true;
-            // The reason code and property vector are only used if we're using mqttv5.
-            async_send_disconnect(v5::disconnect_reason_code::normal_disconnection,
-                                  v5::properties{},
-                                  force_move(func));
-        }
-        else {
-            socket_->post(
-                [func = force_move(func)] () mutable {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
-                }
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_disconnect_impl{*this},
+                token,
+                get_executor()
             );
-        }
     }
 
     /**

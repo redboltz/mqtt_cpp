@@ -1521,11 +1521,19 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
      * @param func A callback function that is called when async operation will finish.
      */
-    void async_disconnect(
-        async_handler_t func = async_handler_t()) {
+    template <typename CompletionToken>
+    auto async_disconnect(
+        CompletionToken&& token = async_handler_t{}
+    )
+        ->
+        typename as::async_result<
+            typename std::decay<CompletionToken>::type,
+            void(error_code)
+        >::return_type
+    {
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
         if (base::connected()) {
-            base::async_disconnect(force_move(func));
+            base::async_disconnect(std::forward<CompletionToken>(token));
         }
     }
 
