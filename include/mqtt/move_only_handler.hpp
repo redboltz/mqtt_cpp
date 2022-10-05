@@ -15,6 +15,7 @@
 #include <mqtt/move_only_function.hpp>
 #include <mqtt/move.hpp>
 #include <mqtt/apply.hpp>
+#include <mqtt/is_invocable.hpp>
 
 namespace MQTT_NS {
 
@@ -29,7 +30,8 @@ struct move_only_handler {
     template <
         typename Func,
         typename std::enable_if_t<
-            std::is_convertible<Func, move_only_function<Sig>>::value
+            std::is_convertible<Func, move_only_function<Sig>>::value &&
+            std::is_constructible<executor_type, decltype(as::get_associated_executor<Func>(std::declval<Func>()))>::value
         >* = nullptr
     >
     move_only_handler(Func&& f)
@@ -38,10 +40,23 @@ struct move_only_handler {
     {
     }
 
+    template <
+        typename Func,
+        typename std::enable_if_t<
+            std::is_convertible<Func, move_only_function<Sig>>::value &&
+            !std::is_constructible<executor_type, decltype(as::get_associated_executor<Func>(std::declval<Func>()))>::value
+        >* = nullptr
+    >
+    move_only_handler(Func&& f)
+        : func_{std::forward<Func>(f)}
+    {
+    }
+
     executor_type get_executor() const { return exe_; }
 
     template <typename... Params>
     void operator()(Params&&... params) {
+        if (!func_) return;
         if (exe_ == as::system_executor()) {
             func_(std::forward<Params>(params)...);
             return;
@@ -57,7 +72,7 @@ struct move_only_handler {
     operator bool() const { return static_cast<bool>(func_); }
 
 private:
-    executor_type exe_;
+    executor_type exe_ =  as::system_executor();
     move_only_function<Sig> func_;
 };
 

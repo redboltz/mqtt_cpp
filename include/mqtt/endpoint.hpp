@@ -72,6 +72,7 @@
 #include <mqtt/packet_id_manager.hpp>
 #include <mqtt/store.hpp>
 #include <mqtt/async_handler.hpp>
+#include <mqtt/is_invocable.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -787,7 +788,7 @@ protected:
     /**
      * @brief next read handler
      *        This handler is called when the current mqtt message has been processed.
-     * @param func A callback function that is called when async operation will finish.
+     * @param life_keeper (optional) keeping the lifetime of the object during the connection continues.
      */
     MQTT_ALWAYS_INLINE virtual void on_mqtt_message_processed(any session_life_keeper) {
         if (async_read_on_message_processed_) {
@@ -940,7 +941,7 @@ public:
 
     /**
      * @brief start session with a connected endpoint.
-     * @param func finish handler that is called when the session is finished
+     * @param life_keeper (optional) keeping the lifetime of the object during the connection continues.
      *
      */
     void start_session(any session_life_keeper = any()) {
@@ -1060,10 +1061,8 @@ public:
             << "disconnect"
             << " reason:" << reason;
 
-        if (connected_ && mqtt_connected_) {
-            disconnect_requested_ = true;
-            send_disconnect(reason, force_move(props));
-        }
+        disconnect_requested_ = true;
+        send_disconnect(reason, force_move(props));
     }
 
     /**
@@ -2169,47 +2168,51 @@ public:
      *       internally until the broker has confirmed delivery, which may involve resends, and as such the
      *       life_keeper parameter is important.
      */
-    template <typename T, typename... Params>
-    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value >
-    async_publish(T&& t, Params&&... params) {
+    template <
+        typename T,
+        typename... Params,
+        typename std::enable_if_t<
+            !std::is_convertible<std::decay_t<T>, packet_id_t>::value
+        >* = nullptr
+    >
+    auto async_publish(T&& t, Params&&... params) {
         if(detail::should_generate_packet_id(params...)) {
             packet_id_t packet_id = acquire_unique_packet_id();
-            async_publish(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
+            return async_publish(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
         }
         else {
-            async_publish(0, std::forward<T>(t), std::forward<Params>(params)...);
+            return async_publish(0, std::forward<T>(t), std::forward<Params>(params)...);
         }
     }
 
     /**
      * @brief Disconnect
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      */
-    void async_disconnect(
-        async_handler_t func = {}
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_disconnect(
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_disconnect";
-
-        if (connected_ && mqtt_connected_) {
-            disconnect_requested_ = true;
-            // The reason code and property vector are only used if we're using mqttv5.
-            async_send_disconnect(v5::disconnect_reason_code::normal_disconnection,
-                                  v5::properties{},
-                                  force_move(func));
-        }
-        else {
-            socket_->post(
-                [func = force_move(func)] () mutable {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
-                }
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_disconnect_impl{*this},
+                token
             );
-        }
     }
 
     /**
@@ -2222,53 +2225,66 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
      *        3.14.2.2 DISCONNECT Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      */
-    void async_disconnect(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_disconnect(
         v5::disconnect_reason_code reason,
         v5::properties props = {},
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_disconnect"
             << " reason:" << reason;
 
-        if (connected_ && mqtt_connected_) {
-            disconnect_requested_ = true;
-            async_send_disconnect(reason, force_move(props), force_move(func));
-        }
-        else {
-            socket_->post(
-                [func = force_move(func)] () mutable {
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
-                }
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_disconnect_impl{*this, reason, force_move(props)},
+                token
             );
-        }
     }
 
     /**
      * @brief Disconnect by endpoint
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * Force disconnect. It is not a clean disconnect sequence.<BR>
      * When the endpoint disconnects using force_disconnect(), a will will send.<BR>
      */
-    void async_force_disconnect(
-        async_handler_t func = {}
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_force_disconnect(
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_force_disconnect";
-        socket_->post(
-            [this, self = this->shared_from_this(), func = force_move(func)] () mutable {
-                async_shutdown(socket(), force_move(func));
-            }
-        );
+
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_force_disconnect_impl{*this},
+                token
+            );
     }
 
     // packet_id manual setting version
@@ -2281,34 +2297,44 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    template <typename T, typename... Params>
-    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value >
-    async_subscribe(T&& t, Params&&... params) {
+    template <
+        typename T,
+        typename... Params,
+        typename std::enable_if_t<
+            !std::is_convertible<std::decay_t<T>, packet_id_t>::value
+        >* = nullptr
+    >
+    auto async_subscribe(T&& t, Params&&... params) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        async_subscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
+        return async_subscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
     }
 
     /**
      * @brief Unsubscribe
      * @param topic_name
      *        A topic name to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * packet_id is automatically generated.<BR>
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    template <typename T, typename... Params>
-    std::enable_if_t< ! std::is_convertible<std::decay_t<T>, packet_id_t>::value >
-    async_unsubscribe(T&& t, Params&&... params) {
+    template <
+        typename T,
+        typename... Params,
+        typename std::enable_if_t<
+            !std::is_convertible<std::decay_t<T>, packet_id_t>::value
+        >* = nullptr
+    >
+    auto async_unsubscribe(T&& t, Params&&... params) {
         packet_id_t packet_id = acquire_unique_packet_id();
-        async_unsubscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
+        return async_unsubscribe(packet_id, std::forward<T>(t), std::forward<Params>(params)...);
     }
 
     /**
@@ -2323,15 +2349,21 @@ public:
      *        The contents to publish
      * @param pubopts
      *        qos, retain flag, and dup flag.
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      */
-    void async_publish(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_publish(
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
         publish_options pubopts = {},
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -2349,15 +2381,22 @@ public:
         auto topic_name_buf = as::buffer(*sp_topic_name);
         auto contents_buf   = as::buffer(*sp_contents);
 
-        async_send_publish(
-            packet_id,
-            topic_name_buf,
-            contents_buf,
-            pubopts,
-            v5::properties{},
-            std::make_pair(force_move(sp_topic_name), force_move(sp_contents)),
-            force_move(func)
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                make_async_publish_impl(
+                    *this,
+                    packet_id,
+                    topic_name_buf,
+                    contents_buf,
+                    pubopts,
+                    v5::properties{},
+                    std::make_pair(force_move(sp_topic_name), force_move(sp_contents))
+                ),
+                token
+            );
     }
 
     /**
@@ -2380,21 +2419,27 @@ public:
      *        An object that stays alive as long as the library holds a reference to any other parameters.
      *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      *
      * @note If your QOS level is exactly_once or at_least_once, then the library will store this publish
      *       internally until the broker has confirmed delivery, which may involve resends, and as such the
      *       life_keeper parameter is important.
      */
-    void async_publish(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_publish(
         packet_id_t packet_id,
         std::string topic_name,
         std::string contents,
         publish_options pubopts,
         v5::properties props,
         any life_keeper = {},
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -2412,19 +2457,26 @@ public:
         auto topic_name_buf = as::buffer(*sp_topic_name);
         auto contents_buf   = as::buffer(*sp_contents);
 
-        async_send_publish(
-            packet_id,
-            topic_name_buf,
-            contents_buf,
-            pubopts,
-            force_move(props),
-            std::make_tuple(
-                force_move(life_keeper),
-                force_move(sp_topic_name),
-                force_move(sp_contents)
-            ),
-            force_move(func)
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                make_async_publish_impl(
+                    *this,
+                    packet_id,
+                    topic_name_buf,
+                    contents_buf,
+                    pubopts,
+                    force_move(props),
+                    std::make_tuple(
+                        force_move(life_keeper),
+                        force_move(sp_topic_name),
+                        force_move(sp_contents)
+                    )
+                ),
+                token
+            );
     }
 
     /**
@@ -2443,24 +2495,28 @@ public:
      *        An object that stays alive as long as the library holds a reference to any other parameters.
      *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      *
      * @note If your QOS level is exactly_once or at_least_once, then the library will store this publish
      *       internally until the broker has confirmed delivery, which may involve resends, and as such the
      *       life_keeper parameter is important.
      */
-    template <typename ConstBufferSequence>
-    typename std::enable_if<
-        as::is_const_buffer_sequence<ConstBufferSequence>::value
-    >::type
-    async_publish(
+    template <
+        typename ConstBufferSequence,
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            as::is_const_buffer_sequence<ConstBufferSequence>::value &&
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_publish(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         ConstBufferSequence contents,
         publish_options pubopts = {},
         any life_keeper = {},
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -2473,15 +2529,22 @@ public:
 
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
-        async_send_publish(
-            packet_id,
-            topic_name,
-            force_move(contents),
-            pubopts,
-            v5::properties{},
-            force_move(life_keeper),
-            force_move(func)
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                make_async_publish_impl(
+                    *this,
+                    packet_id,
+                    topic_name,
+                    force_move(contents),
+                    pubopts,
+                    v5::properties{},
+                    force_move(life_keeper)
+                ),
+                token
+            );
     }
 
     /**
@@ -2504,21 +2567,25 @@ public:
      *        An object that stays alive as long as the library holds a reference to any other parameters.
      *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      */
-    template <typename ConstBufferSequence>
-    typename std::enable_if<
-        as::is_const_buffer_sequence<ConstBufferSequence>::value
-    >::type
-    async_publish(
+    template <
+        typename ConstBufferSequence,
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            as::is_const_buffer_sequence<ConstBufferSequence>::value &&
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_publish(
         packet_id_t packet_id,
         as::const_buffer topic_name,
         ConstBufferSequence contents,
         publish_options pubopts,
         v5::properties props,
         any life_keeper = {},
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -2531,15 +2598,22 @@ public:
 
         BOOST_ASSERT((pubopts.get_qos() == qos::at_most_once && packet_id == 0) || (pubopts.get_qos() != qos::at_most_once && packet_id != 0));
 
-        async_send_publish(
-            packet_id,
-            topic_name,
-            force_move(contents),
-            pubopts,
-            force_move(props),
-            force_move(life_keeper),
-            force_move(func)
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                make_async_publish_impl(
+                    *this,
+                    packet_id,
+                    topic_name,
+                    force_move(contents),
+                    pubopts,
+                    force_move(props),
+                    force_move(life_keeper)
+                ),
+                token
+            );
     }
 
     /**
@@ -2558,20 +2632,24 @@ public:
      *        An object that stays alive as long as the library holds a reference to any other parameters.
      *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      */
-    template <typename BufferSequence>
-    typename std::enable_if<
-        is_buffer_sequence<BufferSequence>::value
-    >::type
-    async_publish(
+    template <
+        typename BufferSequence,
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_buffer_sequence<BufferSequence>::value &&
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_publish(
         packet_id_t packet_id,
         buffer topic_name,
         BufferSequence contents,
         publish_options pubopts = {},
         any life_keeper = {},
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -2596,19 +2674,26 @@ public:
             }
         }
 
-        async_send_publish(
-            packet_id,
-            topic_name_buf,
-            force_move(cbs),
-            pubopts,
-            v5::properties{},
-            std::make_tuple(
-                force_move(life_keeper),
-                force_move(topic_name),
-                force_move(contents)
-            ),
-            force_move(func)
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                make_async_publish_impl(
+                    *this,
+                    packet_id,
+                    topic_name_buf,
+                    force_move(cbs),
+                    pubopts,
+                    v5::properties{},
+                    std::make_tuple(
+                        force_move(life_keeper),
+                        force_move(topic_name),
+                        force_move(contents)
+                    )
+                ),
+                token
+            );
     }
 
     /**
@@ -2631,25 +2716,29 @@ public:
      *        An object that stays alive as long as the library holds a reference to any other parameters.
      *        If topic_name, contents, or props do not have built-in lifetime management, (e.g. buffer)
      *        use this parameter to manage their lifetime.
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      *
      * @note If your QOS level is exactly_once or at_least_once, then the library will store this publish
      *       internally until the broker has confirmed delivery, which may involve resends, and as such the
      *       life_keeper parameter is important.
      */
-    template <typename BufferSequence>
-    typename std::enable_if<
-        is_buffer_sequence<BufferSequence>::value
-    >::type
-    async_publish(
+    template <
+        typename BufferSequence,
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_buffer_sequence<BufferSequence>::value &&
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_publish(
         packet_id_t packet_id,
         buffer topic_name,
         BufferSequence contents,
         publish_options pubopts,
         v5::properties props,
         any life_keeper = {},
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -2674,20 +2763,28 @@ public:
             }
         }
 
-        async_send_publish(
-            packet_id,
-            topic_name_buf,
-            force_move(cbs),
-            pubopts,
-            force_move(props),
-            std::make_tuple(
-                force_move(life_keeper),
-                force_move(topic_name),
-                force_move(contents)
-            ),
-            force_move(func)
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                make_async_publish_impl(
+                    *this,
+                    packet_id,
+                    topic_name_buf,
+                    force_move(cbs),
+                    pubopts,
+                    force_move(props),
+                    std::make_tuple(
+                        force_move(life_keeper),
+                        force_move(topic_name),
+                        force_move(contents)
+                    )
+                ),
+                token
+            );
     }
+
     /**
      * @brief Subscribe
      * @param packet_id
@@ -2703,16 +2800,22 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_subscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_subscribe(
         packet_id_t packet_id,
         std::string topic_filter,
         subscribe_options option,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -2727,15 +2830,20 @@ public:
         auto sp_topic_filter  = std::make_shared<std::string>(force_move(topic_filter));
         auto topic_filter_buf = as::buffer(*sp_topic_filter);
 
-        async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter_buf, option } },
-            packet_id,
-            v5::properties{},
-            [life_keeper = force_move(sp_topic_filter), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_subscribe_impl{
+                    *this,
+                    std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter_buf, option } },
+                    packet_id,
+                    v5::properties{},
+                    force_move(sp_topic_filter)
+                },
+                token
+            );
     }
 
     /**
@@ -2753,17 +2861,23 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_subscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_subscribe(
         packet_id_t packet_id,
         std::string topic_filter,
         subscribe_options option,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -2778,15 +2892,20 @@ public:
         auto sp_topic_filter  = std::make_shared<std::string>(force_move(topic_filter));
         auto topic_filter_buf = as::buffer(*sp_topic_filter);
 
-        async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter_buf, option } },
-            packet_id,
-            force_move(props),
-            [life_keeper = force_move(sp_topic_filter), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_subscribe_impl{
+                    *this,
+                    std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter_buf, option } },
+                    packet_id,
+                    force_move(props),
+                    force_move(sp_topic_filter)
+                },
+                token
+            );
     }
 
     /**
@@ -2800,17 +2919,23 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      *        This object should hold the lifetime of the buffers for topic_filter.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_subscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_filter,
         subscribe_options option,
-        async_handler_t func
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -2822,12 +2947,19 @@ public:
             << " nl:" << option.get_nl()
             << " rap:" << option.get_rap();
 
-        async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter, option } },
-            packet_id,
-            v5::properties{},
-            force_move(func)
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_subscribe_impl{
+                    *this,
+                    std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter, option } },
+                    packet_id,
+                    v5::properties{}
+                },
+                token
+            );
     }
 
     /**
@@ -2845,18 +2977,24 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      *        This object should hold the lifetime of the buffers for topic_filter, and properties.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_subscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_subscribe(
         packet_id_t packet_id,
         as::const_buffer topic_filter,
         subscribe_options option,
         v5::properties props,
-        async_handler_t func
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -2868,12 +3006,19 @@ public:
             << " nl:" << option.get_nl()
             << " rap:" << option.get_rap();
 
-        async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter, option } },
-            packet_id,
-            force_move(props),
-            force_move(func)
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_subscribe_impl{
+                    *this,
+                    std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter, option } },
+                    packet_id,
+                    force_move(props)
+                },
+                token
+            );
     }
 
     /**
@@ -2887,16 +3032,22 @@ public:
      *        subscription options<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_subscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_subscribe(
         packet_id_t packet_id,
         buffer topic_filter,
         subscribe_options option,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -2909,15 +3060,20 @@ public:
             << " rap:" << option.get_rap();
 
         auto topic_filter_buf = as::buffer(topic_filter);
-        async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter_buf, option } },
-            packet_id,
-            v5::properties{},
-            [life_keeper = force_move(topic_filter), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_subscribe_impl{
+                    *this,
+                    std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter_buf, option } },
+                    packet_id,
+                    v5::properties{},
+                    force_move(topic_filter)
+                },
+                token
+            );
     }
 
     /**
@@ -2935,17 +3091,23 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_subscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_subscribe(
         packet_id_t packet_id,
         buffer topic_filter,
         subscribe_options option,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -2958,15 +3120,20 @@ public:
             << " rap:" << option.get_rap();
 
         auto topic_filter_buf = as::buffer(topic_filter);
-        async_send_subscribe(
-            std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter_buf, option } },
-            packet_id,
-            force_move(props),
-            [life_keeper = force_move(topic_filter), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_subscribe_impl{
+                    *this,
+                    std::vector<std::tuple<as::const_buffer, subscribe_options>>{ { topic_filter_buf, option } },
+                    packet_id,
+                    force_move(props),
+                    force_move(topic_filter)
+                },
+                token
+            );
     }
 
     /**
@@ -2978,15 +3145,21 @@ public:
      *        A collection of the pair of topic_filter and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_subscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<std::string, subscribe_options>> params,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3005,15 +3178,20 @@ public:
             life_keepers.emplace_back(force_move(sp_topic_filter));
         }
 
-        async_send_subscribe(
-            force_move(cb_params),
-            packet_id,
-            v5::properties{},
-            [life_keeper = force_move(life_keepers), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_subscribe_impl{
+                    *this,
+                    force_move(cb_params),
+                    packet_id,
+                    v5::properties{},
+                    force_move(life_keepers)
+                },
+                token
+            );
     }
 
     /**
@@ -3029,16 +3207,22 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_subscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<std::string, subscribe_options>> params,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3056,15 +3240,20 @@ public:
             cb_params.emplace_back(as::buffer(*sp_topic_filter), std::get<1>(e));
             life_keepers.emplace_back(force_move(sp_topic_filter));
         }
-        async_send_subscribe(
-            force_move(cb_params),
-            packet_id,
-            force_move(props),
-            [life_keeper = force_move(life_keepers), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_subscribe_impl{
+                    *this,
+                    force_move(cb_params),
+                    packet_id,
+                    force_move(props),
+                    force_move(life_keepers)
+                },
+                token
+            );
     }
 
     /**
@@ -3073,28 +3262,41 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params A collection of the pair of topic_filter and qos to subscribe.
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      *        This object should hold the lifetime of the buffers for params.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_subscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
-        async_handler_t func
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id;
 
-        async_send_subscribe(
-            force_move(params),
-            packet_id,
-            v5::properties{},
-            force_move(func)
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_subscribe_impl{
+                    *this,
+                    force_move(params),
+                    packet_id,
+                    v5::properties{}
+                },
+                token
+            );
     }
 
     /**
@@ -3106,29 +3308,42 @@ public:
      *        A collection of the pair of topic_filter and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      *        This object should hold the lifetime of the buffers for params.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_subscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
         v5::properties props,
-        async_handler_t func
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_subscribe"
             << " pid:" << packet_id;
 
-        async_send_subscribe(
-            force_move(params),
-            packet_id,
-            force_move(props),
-            force_move(func)
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_subscribe_impl{
+                    *this,
+                    force_move(params),
+                    packet_id,
+                    force_move(props)
+                },
+                token
+            );
     }
 
     /**
@@ -3137,15 +3352,21 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param params A collection of the pair of topic_filter and qos to subscribe.
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_subscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<buffer, subscribe_options>> params,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3162,15 +3383,20 @@ public:
             );
         }
 
-        async_send_subscribe(
-            force_move(cb_params),
-            packet_id,
-            v5::properties{},
-            [life_keeper = force_move(params), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_subscribe_impl{
+                    *this,
+                    force_move(cb_params),
+                    packet_id,
+                    v5::properties{},
+                    force_move(params)
+                },
+                token
+            );
     }
 
     /**
@@ -3182,16 +3408,22 @@ public:
      *        A collection of the pair of topic_filter and option to subscribe.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169<BR>
      *        3.8.3.1 Subscription Options
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_subscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_subscribe(
         packet_id_t packet_id,
         std::vector<std::tuple<buffer, subscribe_options>> params,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3208,15 +3440,20 @@ public:
             );
         }
 
-        async_send_subscribe(
-            force_move(cb_params),
-            packet_id,
-            force_move(props),
-            [life_keeper = force_move(params), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_subscribe_impl{
+                    *this,
+                    force_move(cb_params),
+                    packet_id,
+                    force_move(props),
+                    force_move(params)
+                },
+                token
+            );
     }
 
     /**
@@ -3225,15 +3462,21 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param topic_filter topic_filter
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_unsubscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsubscribe(
         packet_id_t packet_id,
         std::string topic_filter,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3243,15 +3486,21 @@ public:
 
         auto sp_topic_filter = std::make_shared<std::string>(force_move(topic_filter));
         auto topic_filter_buf = as::buffer(*sp_topic_filter);
-        async_send_unsubscribe(
-            std::vector<as::const_buffer>{ topic_filter_buf },
-            packet_id,
-            v5::properties{},
-            [life_keeper = force_move(sp_topic_filter), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
+
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsubscribe_impl{
+                    *this,
+                    std::vector<as::const_buffer>{ topic_filter_buf },
+                    packet_id,
+                    v5::properties{},
+                    force_move(sp_topic_filter)
+                },
+                token
+            );
     }
 
     /**
@@ -3260,16 +3509,22 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param topic_filter topic_filter
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      *        This object should hold the lifetime of the buffer for topic_filter.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_unsubscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsubscribe(
         packet_id_t packet_id,
         as::const_buffer topic_filter,
-        async_handler_t func
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3277,7 +3532,19 @@ public:
             << " pid:" << packet_id
             << " topic:" << string_view(get_pointer(topic_filter), get_size(topic_filter));
 
-        async_send_unsubscribe(std::vector<as::const_buffer>{ topic_filter }, packet_id, v5::properties{}, force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsubscribe_impl{
+                    *this,
+                    std::vector<as::const_buffer>{ topic_filter },
+                    packet_id,
+                    v5::properties{}
+                },
+                token
+            );
     }
 
     /**
@@ -3286,15 +3553,21 @@ public:
      *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
      *        The ownership of  the packet_id moves to the library.
      * @param topic_filter topic_filter
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_unsubscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsubscribe(
         packet_id_t packet_id,
         buffer topic_filter,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3303,13 +3576,21 @@ public:
             << " topic:" << topic_filter;
 
         auto topic_filter_buf = as::buffer(topic_filter);
-        async_send_unsubscribe(std::vector<as::const_buffer>{ topic_filter_buf },
-                               packet_id,
-                               v5::properties{},
-                               [life_keeper = force_move(topic_filter), func = force_move(func)]
-                               (error_code ec) mutable {
-                                   if(func) func(ec);
-                               });
+
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsubscribe_impl{
+                    *this,
+                    std::vector<as::const_buffer>{ topic_filter_buf },
+                    packet_id,
+                    v5::properties{},
+                    force_move(topic_filter)
+                },
+                token
+            );
     }
 
     /**
@@ -3322,16 +3603,22 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901161
      */
-    void async_unsubscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsubscribe(
         packet_id_t packet_id,
         buffer topic_filter,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3340,13 +3627,21 @@ public:
             << " topic:" << topic_filter;
 
         auto topic_filter_buf = as::buffer(topic_filter);
-        async_send_unsubscribe(std::vector<as::const_buffer>{ topic_filter_buf },
-                               packet_id,
-                               force_move(props),
-                               [life_keeper = force_move(topic_filter), func = force_move(func)]
-                               (error_code ec) mutable {
-                                   if(func) func(ec);
-                               });
+
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsubscribe_impl{
+                    *this,
+                    std::vector<as::const_buffer>{ topic_filter_buf },
+                    packet_id,
+                    force_move(props),
+                    force_move(topic_filter)
+                },
+                token
+            );
     }
 
     /**
@@ -3356,15 +3651,21 @@ public:
      *        The ownership of the packet_id moves to the library.
      * @param params
      *        A collection of the topic filter to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void async_unsubscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsubscribe(
         packet_id_t packet_id,
         std::vector<std::string> params,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3382,15 +3683,20 @@ public:
             cb_params.emplace_back(as::buffer(*life_keepers.back()));
         }
 
-        async_send_unsubscribe(
-            force_move(cb_params),
-            packet_id,
-            v5::properties{},
-            [life_keeper = force_move(life_keepers), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsubscribe_impl{
+                    *this,
+                    force_move(cb_params),
+                    packet_id,
+                    v5::properties{},
+                    force_move(life_keepers)
+                },
+                token
+            );
     }
 
     /**
@@ -3404,16 +3710,22 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void async_unsubscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsubscribe(
         packet_id_t packet_id,
         std::vector<std::string> params,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3436,15 +3748,20 @@ public:
             cb_params.emplace_back(as::buffer(*life_keepers.back()));
         }
 
-        async_send_unsubscribe(
-            force_move(cb_params),
-            packet_id,
-            force_move(props),
-            [life_keeper = force_move(life_keepers), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsubscribe_impl{
+                    *this,
+                    force_move(cb_params),
+                    packet_id,
+                    force_move(props),
+                    force_move(life_keepers)
+                },
+                token
+            );
     }
 
     /**
@@ -3454,28 +3771,136 @@ public:
      *        The ownership of  the packet_id moves to the library.
      * @param params
      *        A collection of the topic filter to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      *        This object may hold the lifetime of the buffers for topic_filter and contents.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void async_unsubscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsubscribe(
         packet_id_t packet_id,
         std::vector<as::const_buffer> params,
-        async_handler_t func
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_unsubscribe"
             << " pid:" << packet_id;
 
-        async_send_unsubscribe(
-            force_move(params),
-            packet_id,
-            v5::properties{},
-            force_move(func)
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsubscribe_impl{
+                    *this,
+                    force_move(params),
+                    packet_id,
+                   v5::properties{}
+                },
+                token
+            );
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param params
+     *        A collection of the topic filter to unsubscribe
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
+     *        This object may hold the lifetime of the buffers for topic_filter and contents.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsubscribe(
+        packet_id_t packet_id,
+        std::vector<as::const_buffer> params,
+        v5::properties props,
+        CompletionToken&& token = async_handler_t{}
+    ) {
+        MQTT_LOG("mqtt_api", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "async_unsubscribe"
+            << " pid:" << packet_id;
+
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsubscribe_impl{
+                    *this,
+                    force_move(params),
+                    packet_id,
+                    force_move(props)
+                },
+                token
+            );
+    }
+
+    /**
+     * @brief Unsubscribe
+     * @param packet_id
+     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
+     *        The ownership of  the packet_id moves to the library.
+     * @param params
+     *        A collection of the topic filter to unsubscribe
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
+     * You can subscribe multiple topics all at once.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
+     */
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsubscribe(
+        packet_id_t packet_id,
+        std::vector<buffer> params,
+        CompletionToken&& token = async_handler_t{}
+    ) {
+        MQTT_LOG("mqtt_api", info)
+            << MQTT_ADD_VALUE(address, this)
+            << "async_unsubscribe"
+            << " pid:" << packet_id;
+
+        std::vector<as::const_buffer> cb_params;
+        cb_params.reserve(params.size());
+        for (auto const& buf : params) {
+            cb_params.emplace_back(as::buffer(buf));
+        }
+
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsubscribe_impl{
+                    *this,
+                    force_move(cb_params),
+                    packet_id,
+                    v5::properties{},
+                    force_move(params)
+                },
+                token
+            );
     }
 
     /**
@@ -3489,47 +3914,22 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     *        This object should hold the lifetime of the buffers for params.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * You can subscribe multiple topics all at once.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
      */
-    void async_unsubscribe(
-        packet_id_t packet_id,
-        std::vector<as::const_buffer> params,
-        v5::properties props,
-        async_handler_t func
-    ) {
-        MQTT_LOG("mqtt_api", info)
-            << MQTT_ADD_VALUE(address, this)
-            << "async_unsubscribe"
-            << " pid:" << packet_id;
-
-        async_send_unsubscribe(
-            force_move(params),
-            packet_id,
-            force_move(props),
-            force_move(func)
-        );
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
-     * @param params
-     *        A collection of the topic filter to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    void async_unsubscribe(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsubscribe(
         packet_id_t packet_id,
         std::vector<buffer> params,
-        async_handler_t func = {}
+        v5::properties props,
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3542,87 +3942,82 @@ public:
             cb_params.emplace_back(as::buffer(buf));
         }
 
-        async_send_unsubscribe(
-            force_move(cb_params),
-            packet_id,
-            v5::properties{},
-            [life_keeper = force_move(params), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
-    }
-
-    /**
-     * @brief Unsubscribe
-     * @param packet_id
-     *        packet identifier. It should be acquired by acquire_unique_packet_id, or register_packet_id.
-     *        The ownership of  the packet_id moves to the library.
-     * @param params
-     *        A collection of the topic filter to unsubscribe
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
-     *        3.10.2.1 UNSUBSCRIBE Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
-     * You can subscribe multiple topics all at once.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901179
-     */
-    void async_unsubscribe(
-        packet_id_t packet_id,
-        std::vector<buffer> params,
-        v5::properties props,
-        async_handler_t func = {}
-    ) {
-        MQTT_LOG("mqtt_api", info)
-            << MQTT_ADD_VALUE(address, this)
-            << "async_unsubscribe"
-            << " pid:" << packet_id;
-
-        std::vector<as::const_buffer> cb_params;
-        cb_params.reserve(params.size());
-        for (auto const& buf : params) {
-            cb_params.emplace_back(as::buffer(buf));
-        }
-
-        async_send_unsubscribe(
-            force_move(cb_params),
-            packet_id,
-            force_move(props),
-            [life_keeper = force_move(params), func = force_move(func)]
-            (error_code ec) mutable {
-                if(func) func(ec);
-            }
-        );
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsubscribe_impl{
+                    *this,
+                    force_move(cb_params),
+                    packet_id,
+                    force_move(props),
+                    force_move(params)
+                },
+                token
+            );
     }
 
     /**
      * @brief Send pingreq packet.
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901195
      */
-    void async_pingreq(async_handler_t func = {}) {
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_pingreq(
+        CompletionToken&& token = async_handler_t{}
+    ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_pingreq";
 
-        if (connected_ && mqtt_connected_) async_send_pingreq(force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_pingreq_impl{
+                    *this
+                },
+                token
+            );
     }
 
     /**
      * @brief Send pingresp packet. This function is for broker.
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901200
      */
-    void async_pingresp(async_handler_t func = {}) {
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_pingresp(
+        CompletionToken&& token = async_handler_t{}
+    ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_pingrsp";
 
-        async_send_pingresp(force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_pingresp_impl{
+                    *this
+                },
+                token
+            );
     }
 
     /**
@@ -3635,21 +4030,38 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901221<BR>
      *        3.15.2.2 AUTH Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718086
      */
-    void async_auth(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_auth(
         v5::auth_reason_code reason_code = v5::auth_reason_code::success,
         v5::properties props = {},
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_auth"
             << " reason:" << reason_code;
 
-        async_send_auth(reason_code, force_move(props), force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_auth_impl{
+                    *this,
+                    reason_code,
+                    force_move(props)
+                },
+                token
+            );
     }
 
     /**
@@ -3671,26 +4083,32 @@ public:
      *        Keep Alive<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901045<BR>
      *        3.1.2.10 Keep Alive
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
      */
-    void async_connect(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_connect(
         buffer client_id,
         optional<buffer> user_name,
         optional<buffer> password,
         optional<will> w,
         std::uint16_t keep_alive_sec,
-        async_handler_t func = {}
+        CompletionToken&& token = [](error_code){}
     ) {
-        async_connect(
+        return async_connect(
             force_move(client_id),
             force_move(user_name),
             force_move(password),
             force_move(w),
             keep_alive_sec,
             v5::properties{},
-            force_move(func));
+            token);
     }
 
     /**
@@ -3716,18 +4134,24 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718028
      */
-    void async_connect(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_connect(
         buffer client_id,
         optional<buffer> user_name,
         optional<buffer> password,
         optional<will> w,
         std::uint16_t keep_alive_sec,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3735,30 +4159,42 @@ public:
             << " client_id:" << client_id
             << " user_name:" << (user_name ? string_view(user_name.value()) : string_view("none"))
             << " keep_alive:" << std::dec << keep_alive_sec;
-
-        connect_requested_ = true;
-        async_send_connect(
-            force_move(client_id),
-            force_move(user_name),
-            force_move(password),
-            force_move(w),
-            keep_alive_sec,
-            force_move(props),
-            force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_connect_impl{
+                    *this,
+                    force_move(client_id),
+                    force_move(user_name),
+                    force_move(password),
+                    force_move(w),
+                    keep_alive_sec,
+                    force_move(props)
+                },
+                token
+            );
     }
 
     /**
      * @brief Send connack packet. This function is for broker.
      * @param session_present See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349255
      * @param return_code See connect_return_code.hpp and https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349256
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718033
      */
-    void async_connack(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_connack(
         bool session_present,
         variant<connect_return_code, v5::connect_reason_code> reason_code,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3766,7 +4202,19 @@ public:
             << " session_present:" << std::boolalpha << session_present
             << " reason:" << reason_code;
 
-        async_send_connack(session_present, force_move(reason_code), v5::properties{}, force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_connack_impl{
+                    *this,
+                    session_present,
+                    reason_code,
+                    v5::properties{}
+                },
+                token
+            );
     }
 
     /**
@@ -3777,15 +4225,21 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901080<BR>
      *        3.2.2.3 CONNACK Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718033
      */
-    void async_connack(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_connack(
         bool session_present,
         variant<connect_return_code, v5::connect_reason_code> reason_code,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -3793,26 +4247,54 @@ public:
             << " session_present:" << std::boolalpha << session_present
             << " reason:" << reason_code;
 
-        async_send_connack(session_present, force_move(reason_code), force_move(props), force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_connack_impl{
+                    *this,
+                    session_present,
+                    reason_code,
+                    force_move(props)
+                },
+                token
+            );
     }
 
     /**
      * @brief Send puback packet.
      * @param packet_id packet id corresponding to publish
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
-    void async_puback(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_puback(
         packet_id_t packet_id,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_puback"
             << " pid:" << packet_id;
 
-        async_send_puback(packet_id, v5::puback_reason_code::success, v5::properties{}, force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_puback_impl{
+                    *this,
+                    packet_id
+                },
+                token
+            );
     }
 
     /**
@@ -3826,15 +4308,21 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901125<BR>
      *        3.4.2.2 PUBACK Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
-    void async_puback(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_puback(
         packet_id_t packet_id,
         v5::puback_reason_code reason_code,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -3842,26 +4330,54 @@ public:
             << " pid:" << packet_id
             << " reason:" << reason_code;
 
-        async_send_puback(packet_id, reason_code, force_move(props), force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_puback_impl{
+                    *this,
+                    packet_id,
+                    reason_code,
+                    force_move(props)
+                },
+                token
+            );
     }
 
     /**
      * @brief Send pubrec packet.
      * @param packet_id packet id corresponding to publish
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
-    void async_pubrec(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_pubrec(
         packet_id_t packet_id,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_pubrec"
             << " pid:" << packet_id;
 
-        async_send_pubrec(packet_id, v5::pubrec_reason_code::success, v5::properties{}, force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_pubrec_impl{
+                    *this,
+                    packet_id
+                },
+                token
+            );
     }
 
     /**
@@ -3875,15 +4391,21 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901135<BR>
      *        3.5.2.2 PUBREC Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
-    void async_pubrec(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_pubrec(
         packet_id_t packet_id,
         v5::pubrec_reason_code reason_code,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -3891,26 +4413,54 @@ public:
             << " pid:" << packet_id
             << " reason:" << reason_code;
 
-        async_send_pubrec(packet_id, reason_code, force_move(props), force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_pubrec_impl{
+                    *this,
+                    packet_id,
+                    reason_code,
+                    force_move(props)
+                },
+                token
+            );
     }
 
     /**
      * @brief Send pubrel packet.
      * @param packet_id packet id corresponding to publish
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
-    void async_pubrel(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_pubrel(
         packet_id_t packet_id,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_pubrel"
             << " pid:" << packet_id;
 
-        async_send_pubrel(packet_id, v5::pubrel_reason_code::success, v5::properties{}, any(), force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_pubrel_impl{
+                    *this,
+                    packet_id
+                },
+                token
+            );
     }
 
     /**
@@ -3924,22 +4474,24 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901145<BR>
      *        3.6.2.2 PUBREL Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      *
      * @note The library may store this message while it communicates with the server for several round trips.
      *       As such, the life_keeper paramter is important.
      */
-    template <typename Func>
-    std::enable_if_t<
-        std::is_convertible<Func, async_handler_t>::value
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
     >
-    async_pubrel(
+    auto async_pubrel(
         packet_id_t packet_id,
         v5::pubrel_reason_code reason_code,
         v5::properties props = {},
-        Func&& func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -3947,7 +4499,19 @@ public:
             << " pid:" << packet_id
             << " reason:" << reason_code;
 
-        async_send_pubrel(packet_id, reason_code, force_move(props), any(), std::forward<Func>(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_pubrel_impl{
+                    *this,
+                    packet_id,
+                    reason_code,
+                    force_move(props)
+                },
+                token
+            );
     }
 
     /**
@@ -3961,8 +4525,8 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901145<BR>
      *        3.6.2.2 PUBREL Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      *
      * @param life_keeper
@@ -3973,12 +4537,18 @@ public:
      * @note The library may store this message while it communicates with the server for several round trips.
      *       As such, the life_keeper paramter is important.
      */
-    void async_pubrel(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_pubrel(
         packet_id_t packet_id,
         v5::pubrel_reason_code reason_code,
-        v5::properties props = {},
-        any life_keeper = {},
-        async_handler_t func = {}
+        v5::properties props,
+        any life_keeper,
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -3986,26 +4556,55 @@ public:
             << " pid:" << packet_id
             << " reason:" << reason_code;
 
-        async_send_pubrel(packet_id, reason_code, force_move(props), force_move(life_keeper), force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_pubrel_impl{
+                    *this,
+                    packet_id,
+                    reason_code,
+                    force_move(props),
+                    force_move(life_keeper)
+                },
+                token
+            );
     }
 
     /**
      * @brief Send pubcomp packet.
      * @param packet_id packet id corresponding to publish
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
-    void async_pubcomp(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_pubcomp(
         packet_id_t packet_id,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
             << "async_pubcomp"
             << " pid:" << packet_id;
 
-        async_send_pubcomp(packet_id, v5::pubcomp_reason_code::success, v5::properties{}, force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_pubcomp_impl{
+                    *this,
+                    packet_id
+                },
+                token
+            );
     }
 
     /**
@@ -4019,15 +4618,21 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901155<BR>
      *        3.7.2.2 PUBCOMP Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718043
      */
-    void async_pubcomp(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_pubcomp(
         packet_id_t packet_id,
         v5::pubcomp_reason_code reason_code,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", trace)
             << MQTT_ADD_VALUE(address, this)
@@ -4035,7 +4640,19 @@ public:
             << " pid:" << packet_id
             << " reason:" << reason_code;
 
-        async_send_pubcomp(packet_id, reason_code, force_move(props), force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_pubcomp_impl{
+                    *this,
+                    packet_id,
+                    reason_code,
+                    force_move(props)
+                },
+                token
+            );
     }
 
     /**
@@ -4045,14 +4662,20 @@ public:
      *        reason_code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
      *        3.9.3 SUBACK Payload
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
-    void async_suback(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_suback(
         packet_id_t packet_id,
         variant<suback_return_code, v5::suback_reason_code> reason,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -4061,10 +4684,34 @@ public:
             << " reason:" < reason;
 
         if (variant_idx(reason) == 0) {
-            async_send_suback(std::vector<suback_return_code>{ variant_get<suback_return_code>(reason) }, packet_id, v5::properties{}, force_move(func));
+            return
+                as::async_compose<
+                    CompletionToken,
+                    void(error_code)
+                >(
+                    async_suback_impl{
+                        *this,
+                        packet_id,
+                        std::vector<suback_return_code>{ variant_get<suback_return_code>(reason) },
+                        v5::properties{}
+                    },
+                    token
+                );
         }
         else {
-            async_send_suback(std::vector<v5::suback_reason_code>{ variant_get<v5::suback_reason_code>(reason) }, packet_id, v5::properties{}, force_move(func));
+            return
+                as::async_compose<
+                    CompletionToken,
+                    void(error_code)
+                >(
+                    async_suback_impl{
+                        *this,
+                        packet_id,
+                        std::vector<v5::suback_reason_code>{ variant_get<v5::suback_reason_code>(reason) },
+                        v5::properties{}
+                    },
+                    token
+                );
         }
     }
 
@@ -4079,15 +4726,21 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
      *        3.9.2.1 SUBACK Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
-    void async_suback(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_suback(
         packet_id_t packet_id,
         variant<suback_return_code, v5::suback_reason_code> reason,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -4096,10 +4749,34 @@ public:
             << " reason:" < reason;
 
         if (variant_idx(reason) == 0) {
-            async_send_suback(std::vector<suback_return_code>{ variant_get<suback_return_code>(reason) }, packet_id, force_move(props), force_move(func));
+            return
+                as::async_compose<
+                    CompletionToken,
+                    void(error_code)
+                >(
+                    async_suback_impl{
+                        *this,
+                        packet_id,
+                        std::vector<suback_return_code>{ variant_get<suback_return_code>(reason) },
+                        force_move(props)
+                    },
+                    token
+                );
         }
         else {
-            async_send_suback(std::vector<v5::suback_reason_code>{ variant_get<v5::suback_reason_code>(reason) }, packet_id, force_move(props), force_move(func));
+            return
+                as::async_compose<
+                    CompletionToken,
+                    void(error_code)
+                >(
+                    async_suback_impl{
+                        *this,
+                        packet_id,
+                        std::vector<v5::suback_reason_code>{ variant_get<v5::suback_reason_code>(reason) },
+                        force_move(props)
+                    },
+                    token
+                );
         }
     }
 
@@ -4110,21 +4787,39 @@ public:
      *        a collection of reason_code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178<BR>
      *        3.9.3 SUBACK Payload
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
-    void async_suback(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_suback(
         packet_id_t packet_id,
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> reasons,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_suback"
             << " pid:" << packet_id;
 
-        async_send_suback(force_move(reasons), packet_id, v5::properties{}, force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_suback_impl{
+                    *this,
+                    packet_id,
+                    force_move(reasons),
+                    v5::properties{}
+                },
+                token
+            );
     }
 
     /**
@@ -4138,22 +4833,40 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
      *        3.9.2.1 SUBACK Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
-    void async_suback(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_suback(
         packet_id_t packet_id,
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> reasons,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_suback"
             << " pid:" << packet_id;
 
-        async_send_suback(force_move(reasons), packet_id, force_move(props), force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_suback_impl{
+                    *this,
+                    packet_id,
+                    force_move(reasons),
+                    force_move(props)
+                },
+                token
+            );
     }
 
     /**
@@ -4163,14 +4876,20 @@ public:
      *        reason_code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
      *        3.11.3 UNSUBACK Payload
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
-    void async_unsuback(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsuback(
         packet_id_t packet_id,
         v5::unsuback_reason_code reason,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -4178,7 +4897,18 @@ public:
             << " pid:" << packet_id
             << " reason:" < reason;
 
-        async_send_unsuback(std::vector<v5::unsuback_reason_code>{ reason }, packet_id, force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsuback_impl{
+                    *this,
+                    packet_id,
+                    std::vector<v5::unsuback_reason_code>{ reason }
+                },
+                token
+            );
     }
 
     /**
@@ -4192,15 +4922,21 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
      *        3.11.2.1 UNSUBACK Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
-    void async_unsuback(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsuback(
         packet_id_t packet_id,
         v5::unsuback_reason_code reason,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
@@ -4208,7 +4944,19 @@ public:
             << " pid:" << packet_id
             << " reason:" < reason;
 
-        async_send_unsuback(std::vector<v5::unsuback_reason_code>{ reason }, packet_id, force_move(props), force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsuback_impl{
+                    *this,
+                    packet_id,
+                    std::vector<v5::unsuback_reason_code>{ reason },
+                    force_move(props)
+                },
+                token
+            );
     }
 
     /**
@@ -4218,21 +4966,38 @@ public:
      *        a collection of reason_code<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194<BR>
      *        3.11.3 UNSUBACK Payload
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
-    void async_unsuback(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsuback(
         packet_id_t packet_id,
         std::vector<v5::unsuback_reason_code> reasons,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_unsuback"
             << " pid:" << packet_id;
 
-        async_send_unsuback(force_move(reasons), packet_id, v5::properties{}, force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsuback_impl{
+                    *this,
+                    packet_id,
+                    force_move(reasons)
+                },
+                token
+            );
     }
 
     /**
@@ -4246,42 +5011,74 @@ public:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
      *        3.11.2.1 UNSUBACK Properties
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718068
      */
-    void async_unsuback(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsuback(
         packet_id_t packet_id,
         std::vector<v5::unsuback_reason_code> reasons,
         v5::properties props,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_unsuback"
             << " pid:" << packet_id;
 
-        async_send_unsuback(force_move(reasons), packet_id, force_move(props), force_move(func));
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsuback_impl{
+                    *this,
+                    packet_id,
+                    force_move(reasons),
+                    force_move(props)
+                },
+                token
+            );
     }
 
     /**
      * @brief Send ununsuback packet. This function is for broker.
      * @param packet_id
      *        packet id corresponding to unsubscribe
-     * @param func
-     *        functor object who's operator() will be called when the async operation completes.
+     * @param token
+     *        CompletionToken will be called when the async operation completes.
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718077
      */
-    void async_unsuback(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_unsuback(
         packet_id_t packet_id,
-        async_handler_t func = {}
+        CompletionToken&& token = async_handler_t{}
     ) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "async_unsuback"
             << " pid:" << packet_id;
 
-        async_send_unsuback(packet_id, force_move(func));
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_unsuback_impl{
+                    *this,
+                    packet_id
+                },
+                token
+            );
     }
 
     /**
@@ -10385,6 +11182,50 @@ private:
     }
 
     // Non blocking (async) senders
+
+    struct async_connect_impl {
+        this_type& ep;
+        buffer client_id;
+        optional<buffer> user_name;
+        optional<buffer> password;
+        optional<will> w;
+        std::uint16_t keep_alive_sec;
+        v5::properties props;
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                ep.connect_requested_ = true;
+                auto a_client_id{force_move(client_id)};
+                auto a_user_name{force_move(user_name)};
+                auto a_password{force_move(password)};
+                auto a_w{force_move(w)};
+                auto a_keep_alive_sec{keep_alive_sec};
+                auto a_props{force_move(props)};
+                ep.async_send_connect(
+                    force_move(a_client_id),
+                    force_move(a_user_name),
+                    force_move(a_password),
+                    force_move(a_w),
+                    a_keep_alive_sec,
+                    force_move(a_props),
+                    force_move(self)
+                );
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
+
+
     void async_send_connect(
         buffer client_id,
         optional<buffer> user_name,
@@ -10429,6 +11270,38 @@ private:
             break;
         }
     }
+
+    struct async_connack_impl {
+        this_type& ep;
+        bool session_present;
+        variant<connect_return_code, v5::connect_reason_code> reason;
+        v5::properties props = {};
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                auto a_session_present{session_present};
+                auto a_reason{reason};
+                auto a_props{force_move(props)};
+                ep.async_send_connack(
+                    a_session_present,
+                    a_reason,
+                    force_move(a_props),
+                    force_move(self)
+                );
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
 
     void async_send_connack(
         bool session_present,
@@ -10479,6 +11352,74 @@ private:
             BOOST_ASSERT(false);
             break;
         }
+    }
+
+    template <typename ConstBufferSequence>
+    struct async_publish_impl {
+        this_type& ep;
+        packet_id_t packet_id;
+        as::const_buffer topic_name;
+        ConstBufferSequence payloads;
+        publish_options pubopts;
+        v5::properties props;
+        any life_keeper;
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                auto a_packet_id{packet_id};
+                auto a_topic_name{topic_name};
+                auto a_payloads{force_move(payloads)};
+                auto a_pubopts{pubopts};
+                auto a_props{force_move(props)};
+                auto a_life_keeper{force_move(life_keeper)};
+                ep.async_send_publish(
+                    a_packet_id,
+                    a_topic_name,
+                    force_move(a_payloads),
+                    a_pubopts,
+                    force_move(a_props),
+                    force_move(a_life_keeper),
+                    force_move(self)
+                );
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
+
+    template <typename ConstBufferSequence>
+    typename std::enable_if<
+        as::is_const_buffer_sequence<ConstBufferSequence>::value,
+        async_publish_impl<ConstBufferSequence>
+    >::type
+    make_async_publish_impl(
+        this_type& ep,
+        packet_id_t packet_id,
+        as::const_buffer topic_name,
+        ConstBufferSequence payloads,
+        publish_options pubopts,
+        v5::properties props,
+        any life_keeper
+    ) {
+        return
+            async_publish_impl<ConstBufferSequence>{
+                ep,
+                packet_id,
+                topic_name,
+                force_move(payloads),
+                pubopts,
+                force_move(props),
+                force_move(life_keeper),
+            };
     }
 
     template <typename ConstBufferSequence>
@@ -10583,6 +11524,38 @@ private:
         }
     }
 
+    struct async_puback_impl {
+        this_type& ep;
+        packet_id_t packet_id;
+        v5::puback_reason_code reason = v5::puback_reason_code::success;
+        v5::properties props = {};
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                auto a_packet_id{packet_id};
+                auto a_reason{reason};
+                auto a_props{force_move(props)};
+                ep.async_send_puback(
+                    a_packet_id,
+                    a_reason,
+                    force_move(a_props),
+                    force_move(self)
+                );
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
+
     void async_send_puback(
         packet_id_t packet_id,
         v5::puback_reason_code reason,
@@ -10635,6 +11608,38 @@ private:
         }
     }
 
+    struct async_pubrec_impl {
+        this_type& ep;
+        packet_id_t packet_id;
+        v5::pubrec_reason_code reason = v5::pubrec_reason_code::success;
+        v5::properties props = {};
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                auto a_packet_id{packet_id};
+                auto a_reason{reason};
+                auto a_props{force_move(props)};
+                ep.async_send_pubrec(
+                    a_packet_id,
+                    a_reason,
+                    force_move(a_props),
+                    force_move(self)
+                );
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
+
     void async_send_pubrec(
         packet_id_t packet_id,
         v5::pubrec_reason_code reason,
@@ -10681,6 +11686,41 @@ private:
             break;
         }
     }
+
+    struct async_pubrel_impl {
+        this_type& ep;
+        packet_id_t packet_id;
+        v5::pubrel_reason_code reason = v5::pubrel_reason_code::success;
+        v5::properties props = {};
+        any life_keeper = any{};
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                auto a_packet_id{packet_id};
+                auto a_reason{reason};
+                auto a_props{force_move(props)};
+                auto a_life_keeper{force_move(life_keeper)};
+                ep.async_send_pubrel(
+                    a_packet_id,
+                    a_reason,
+                    force_move(a_props),
+                    force_move(a_life_keeper),
+                    force_move(self)
+                );
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
 
     void async_send_pubrel(
         packet_id_t packet_id,
@@ -10762,6 +11802,38 @@ private:
         }
     }
 
+    struct async_pubcomp_impl {
+        this_type& ep;
+        packet_id_t packet_id;
+        v5::pubcomp_reason_code reason = v5::pubcomp_reason_code::success;
+        v5::properties props = {};
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                auto a_packet_id{packet_id};
+                auto a_reason{reason};
+                auto a_props{force_move(props)};
+                ep.async_send_pubcomp(
+                    a_packet_id,
+                    a_reason,
+                    force_move(a_props),
+                    force_move(self)
+                );
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
+
     void async_send_pubcomp(
         packet_id_t packet_id,
         v5::pubcomp_reason_code reason,
@@ -10812,6 +11884,40 @@ private:
             break;
         }
     }
+
+    struct async_subscribe_impl {
+        this_type& ep;
+        std::vector<std::tuple<as::const_buffer, subscribe_options>> params;
+        packet_id_t packet_id;
+        v5::properties props;
+        any life_keeper = any{};
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                // these are moved before self is moved
+                auto a_params{force_move(params)};
+                auto a_packet_id{packet_id};
+                auto a_props{force_move(props)};
+                ep.async_send_subscribe(
+                    force_move(a_params),
+                    a_packet_id,
+                    force_move(a_props),
+                    force_move(self)
+                );
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
 
     void async_send_subscribe(
         std::vector<std::tuple<as::const_buffer, subscribe_options>> params,
@@ -10872,6 +11978,38 @@ private:
         }
     }
 
+    struct async_suback_impl {
+        this_type& ep;
+        packet_id_t packet_id;
+        variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> params;
+        v5::properties props = {};
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                auto a_packet_id{packet_id};
+                auto a_params{force_move(params)};
+                auto a_props{force_move(props)};
+                ep.async_send_suback(
+                    force_move(a_params),
+                    a_packet_id,
+                    force_move(a_props),
+                    force_move(self)
+                );
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
+
     void async_send_suback(
         variant<std::vector<suback_return_code>, std::vector<v5::suback_reason_code>> params,
         packet_id_t packet_id,
@@ -10921,6 +12059,39 @@ private:
             break;
         }
     }
+
+    struct async_unsubscribe_impl {
+        this_type& ep;
+        std::vector<as::const_buffer> params;
+        packet_id_t packet_id;
+        v5::properties props = v5::properties{};
+        any life_keeper = any{};
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                auto a_params{force_move(params)};
+                auto a_packet_id{packet_id};
+                auto a_props{force_move(props)};
+                ep.async_send_unsubscribe(
+                    force_move(a_params),
+                    a_packet_id,
+                    force_move(a_props),
+                    force_move(self)
+                );
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
 
     void async_send_unsubscribe(
         std::vector<as::const_buffer> params,
@@ -10981,33 +12152,70 @@ private:
         }
     }
 
+    struct async_unsuback_impl {
+        this_type& ep;
+        packet_id_t packet_id;
+        std::vector<v5::unsuback_reason_code> params = {};
+        v5::properties props = {};
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                switch (ep.version_) {
+                case protocol_version::v3_1_1: {
+                    auto a_packet_id{packet_id};
+                    ep.async_send_unsuback(
+                        a_packet_id,
+                        force_move(self)
+                    );
+                } break;
+                case protocol_version::v5: {
+                    auto a_packet_id{packet_id};
+                    auto a_params{force_move(params)};
+                    auto a_props{force_move(props)};
+                    ep.async_send_unsuback(
+                        force_move(a_params),
+                        a_packet_id,
+                        force_move(a_props),
+                        force_move(self)
+                    );
+                } break;
+                default:
+                    BOOST_ASSERT(false);
+                    break;
+                }
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
+
     void async_send_unsuback(
         packet_id_t packet_id,
         async_handler_t func
     ) {
-        switch (version_) {
-        case protocol_version::v3_1_1: {
-            auto msg = v3_1_1::basic_unsuback_message<PacketIdBytes>(packet_id);
-            if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                socket_->post(
-                    [func = force_move(func)] () mutable {
-                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    }
-                );
-                return;
-            }
-            do_async_write(
-                force_move(msg),
-                force_move(func)
+        BOOST_ASSERT(version_ == protocol_version::v3_1_1);
+        auto msg = v3_1_1::basic_unsuback_message<PacketIdBytes>(packet_id);
+        if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
+            socket_->post(
+                [func = force_move(func)] () mutable {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                }
             );
-        } break;
-        case protocol_version::v5:
-            BOOST_ASSERT(false);
-            break;
-        default:
-            BOOST_ASSERT(false);
-            break;
+            return;
         }
+        do_async_write(
+            force_move(msg),
+            force_move(func)
+        );
     }
 
     void async_send_unsuback(
@@ -11016,30 +12224,47 @@ private:
         v5::properties props,
         async_handler_t func
     ) {
-        switch (version_) {
-        case protocol_version::v3_1_1:
-            BOOST_ASSERT(false);
-            break;
-        case protocol_version::v5: {
-            auto msg = v5::basic_unsuback_message<PacketIdBytes>(force_move(params), packet_id, force_move(props));
-            if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
-                socket_->post(
-                    [func = force_move(func)] () mutable {
-                        if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
-                    }
-                );
-                return;
-            }
-            do_async_write(
-                force_move(msg),
-                force_move(func)
+        BOOST_ASSERT(version_ == protocol_version::v5);
+        auto msg = v5::basic_unsuback_message<PacketIdBytes>(force_move(params), packet_id, force_move(props));
+        if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
+            socket_->post(
+                [func = force_move(func)] () mutable {
+                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                }
             );
-        } break;
-        default:
-            BOOST_ASSERT(false);
-            break;
+            return;
         }
+        do_async_write(
+            force_move(msg),
+            force_move(func)
+        );
     }
+
+    struct async_pingreq_impl {
+        this_type& ep;
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate:
+                state = complete;
+                if (ep.connected_ && ep.mqtt_connected_) {
+                    ep.async_send_pingreq(force_move(self));
+                }
+                else {
+                    ep.socket_->post(force_move(self));
+                }
+                break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
 
     void async_send_pingreq(async_handler_t func) {
         switch (version_) {
@@ -11075,6 +12300,27 @@ private:
         }
     }
 
+    struct async_pingresp_impl {
+        this_type& ep;
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate:
+                state = complete;
+                ep.async_send_pingresp(force_move(self));
+                break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
+
     void async_send_pingresp(async_handler_t func) {
         switch (version_) {
         case protocol_version::v3_1_1: {
@@ -11107,6 +12353,31 @@ private:
         }
     }
 
+    struct async_auth_impl {
+        this_type& ep;
+        v5::auth_reason_code reason;
+        v5::properties props;
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                auto a_reason{reason};
+                auto a_props{force_move(props)};
+                ep.async_send_auth(a_reason, force_move(a_props), force_move(self));
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
+
     void async_send_auth(
         v5::auth_reason_code reason,
         v5::properties props,
@@ -11133,6 +12404,37 @@ private:
             break;
         }
     }
+
+    struct async_disconnect_impl {
+        this_type& ep;
+        v5::disconnect_reason_code reason = v5::disconnect_reason_code::normal_disconnection;
+        v5::properties props = {};
+        enum { initiate, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate: {
+                state = complete;
+                ep.disconnect_requested_ = true;
+                auto a_reason{reason};
+                auto a_props{force_move(props)};
+                // The reason code and property vector are only used if we're using mqttv5.
+                ep.async_send_disconnect(
+                    a_reason,
+                    force_move(a_props),
+                    force_move(self)
+                );
+            } break;
+            case complete:
+                self.complete(ec);
+                break;
+            }
+        }
+    };
 
     void async_send_disconnect(
         v5::disconnect_reason_code reason,
@@ -11169,6 +12471,33 @@ private:
             break;
         }
     }
+
+    struct async_force_disconnect_impl {
+        this_type& ep;
+        this_type_sp sp = ep.shared_from_this();
+        enum { initiate, shutdown, complete } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec = error_code{}
+        ) {
+            switch (state) {
+            case initiate:
+                state = shutdown;
+                ep.socket_->post(force_move(self));
+                break;
+            case shutdown:
+                state = complete;
+                ep.async_shutdown(ep.socket(), force_move(self));
+                break;
+            case complete:
+                self.complete(ec);
+                sp.reset();
+                break;
+            }
+        }
+    };
 
     template <typename Func>
     void async_send_store(Func&& func) {

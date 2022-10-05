@@ -10,7 +10,7 @@ IF (POLICY CMP0074)
   CMAKE_POLICY(SET CMP0074 NEW)
 ENDIF ()
 
-IF (MQTT_TEST_1)
+IF (MQTT_TEST_8)
     LIST (APPEND check_PROGRAMS
         ut_buffer.cpp
         ut_code.cpp
