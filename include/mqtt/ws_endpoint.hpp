@@ -30,11 +30,7 @@ public:
     template <typename... Args>
     explicit ws_endpoint(as::io_context& ioc, Args&&... args)
         :ws_(ioc, std::forward<Args>(args)...),
-#if defined(MQTT_NO_TS_EXECUTORS)
          strand_(ioc.get_executor())
-#else
-         strand_(ioc)
-#endif
     {
         ws_.binary(true);
         ws_.set_option(
@@ -230,15 +226,9 @@ public:
         lowest_layer().close(ec);
     }
 
-#if defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
-    MQTT_ALWAYS_INLINE as::executor get_executor() override final {
-        return lowest_layer().get_executor();
-    }
-#else  // defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
     MQTT_ALWAYS_INLINE as::any_io_executor get_executor() override final {
-        return lowest_layer().get_executor();
+        return strand_;
     }
-#endif // defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
 
     typename boost::beast::websocket::stream<Socket>::next_layer_type& next_layer() {
         return ws_.next_layer();

@@ -22,7 +22,6 @@ OPTION(MQTT_STD_STRING_VIEW "Use std::string_view from C++17 instead of boost::s
 OPTION(MQTT_STD_ANY "Use std::any from C++17 instead of boost::any" OFF)
 OPTION(MQTT_STD_SHARED_PTR_ARRAY "Use std::shared_ptr<char[]> from C++17 instead of boost::shared_ptr<char[]>" OFF)
 OPTION(MQTT_DISABLE_LIBSTDCXX_TUPLE_ANY_WORKAROUND "std::tuple<std::any> workaround for libstdc++" OFF)
-OPTION(MQTT_NO_TS_EXECUTORS "Use standard executors instead of Networking TS-style executors" OFF)
 
 IF (POLICY CMP0074)
   CMAKE_POLICY(SET CMP0074 NEW)
@@ -87,13 +86,6 @@ IF (MQTT_DISABLE_LIBSTDCXX_TUPLE_ANY_WORKAROUND)
 ELSE ()
     MESSAGE (STATUS "std::tuple<std::any> workaround for libstdc++ enabled")
 ENDIF ()
-
-IF (MQTT_NO_TS_EXECUTORS)
-    MESSAGE (STATUS "Using standard executors instead of Networking TS-style executors")
-ELSE ()
-    MESSAGE (STATUS "Using Networking TS-style executors instead of standard executors")
-ENDIF ()
-
 
 IF (   MQTT_STD_VARIANT
     OR MQTT_STD_OPTIONAL

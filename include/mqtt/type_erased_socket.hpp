@@ -34,11 +34,7 @@ public:
     virtual void clean_shutdown_and_close(boost::system::error_code&) = 0;
     virtual void async_clean_shutdown_and_close(std::function<void(error_code)>) = 0;
     virtual void force_shutdown_and_close(boost::system::error_code&) = 0;
-#if defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
-    virtual as::executor get_executor() = 0;
-#else  // defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
     virtual as::any_io_executor get_executor() = 0;
-#endif // defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
 };
 
 } // namespace MQTT_NS
