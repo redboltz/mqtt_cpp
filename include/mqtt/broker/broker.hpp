@@ -721,43 +721,43 @@ public:
         pubcomp_props_ = force_move(props);
     }
 
-    void set_connect_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_connect_props_handler(move_only_function<void(v5::properties const&)> h) {
         h_connect_props_ = force_move(h);
     }
 
-    void set_disconnect_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_disconnect_props_handler(move_only_function<void(v5::properties const&)> h) {
         h_disconnect_props_ = force_move(h);
     }
 
-    void set_publish_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_publish_props_handler(move_only_function<void(v5::properties const&)> h) {
         h_publish_props_ = force_move(h);
     }
 
-    void set_puback_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_puback_props_handler(move_only_function<void(v5::properties const&)> h) {
         h_puback_props_ = force_move(h);
     }
 
-    void set_pubrec_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_pubrec_props_handler(move_only_function<void(v5::properties const&)> h) {
         h_pubrec_props_ = force_move(h);
     }
 
-    void set_pubrel_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_pubrel_props_handler(move_only_function<void(v5::properties const&)> h) {
         h_pubrel_props_ = force_move(h);
     }
 
-    void set_pubcomp_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_pubcomp_props_handler(move_only_function<void(v5::properties const&)> h) {
         h_pubcomp_props_ = force_move(h);
     }
 
-    void set_subscribe_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_subscribe_props_handler(move_only_function<void(v5::properties const&)> h) {
         h_subscribe_props_ = force_move(h);
     }
 
-    void set_unsubscribe_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_unsubscribe_props_handler(move_only_function<void(v5::properties const&)> h) {
         h_unsubscribe_props_ = force_move(h);
     }
 
-    void set_auth_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_auth_props_handler(move_only_function<void(v5::properties const&)> h) {
         h_auth_props_ = force_move(h);
     }
 
@@ -1174,7 +1174,7 @@ private:
         bool session_present,
         bool authenticated,
         v5::properties props,
-        std::function<void(error_code)> finish = [](error_code){}
+        move_only_function<void(error_code)> finish = [](error_code){}
     ) {
         // Reply to the connect message.
         switch (ep.get_protocol_version()) {
@@ -1184,7 +1184,7 @@ private:
                 authenticated ? connect_return_code::accepted
                               : connect_return_code::not_authorized,
                 [finish = force_move(finish)]
-                (error_code ec) {
+                (error_code ec) mutable {
                     finish(ec);
                 }
             );
@@ -1201,7 +1201,7 @@ private:
                                   : v5::connect_reason_code::not_authorized,
                     force_move(props),
                     [finish = force_move(finish)]
-                    (error_code ec) {
+                    (error_code ec) mutable {
                         finish(ec);
                     }
                 );
@@ -1214,7 +1214,7 @@ private:
                                   : v5::connect_reason_code::not_authorized,
                     connack_props_,
                     [finish = force_move(finish)]
-                    (error_code ec) {
+                    (error_code ec) mutable {
                         finish(ec);
                     }
                 );
@@ -1792,7 +1792,7 @@ private:
                 );
             };
 
-        std::vector<std::function<void()>> retain_deliver;
+        std::vector<move_only_function<void()>> retain_deliver;
         retain_deliver.reserve(entries.size());
 
         // subscription identifier
@@ -1906,7 +1906,7 @@ private:
             break;
         }
 
-        for (auto const& f : retain_deliver) {
+        for (auto& f : retain_deliver) {
             f();
         }
         return true;
@@ -2175,16 +2175,16 @@ private:
     v5::properties pubrec_props_;
     v5::properties pubrel_props_;
     v5::properties pubcomp_props_;
-    std::function<void(v5::properties const&)> h_connect_props_;
-    std::function<void(v5::properties const&)> h_disconnect_props_;
-    std::function<void(v5::properties const&)> h_publish_props_;
-    std::function<void(v5::properties const&)> h_puback_props_;
-    std::function<void(v5::properties const&)> h_pubrec_props_;
-    std::function<void(v5::properties const&)> h_pubrel_props_;
-    std::function<void(v5::properties const&)> h_pubcomp_props_;
-    std::function<void(v5::properties const&)> h_subscribe_props_;
-    std::function<void(v5::properties const&)> h_unsubscribe_props_;
-    std::function<void(v5::properties const&)> h_auth_props_;
+    move_only_function<void(v5::properties const&)> h_connect_props_;
+    move_only_function<void(v5::properties const&)> h_disconnect_props_;
+    move_only_function<void(v5::properties const&)> h_publish_props_;
+    move_only_function<void(v5::properties const&)> h_puback_props_;
+    move_only_function<void(v5::properties const&)> h_pubrec_props_;
+    move_only_function<void(v5::properties const&)> h_pubrel_props_;
+    move_only_function<void(v5::properties const&)> h_pubcomp_props_;
+    move_only_function<void(v5::properties const&)> h_subscribe_props_;
+    move_only_function<void(v5::properties const&)> h_unsubscribe_props_;
+    move_only_function<void(v5::properties const&)> h_auth_props_;
     bool pingresp_ = true;
     bool connack_ = true;
 };
