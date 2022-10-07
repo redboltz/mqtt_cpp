@@ -71,7 +71,7 @@
 #include <mqtt/shared_subscriptions.hpp>
 #include <mqtt/packet_id_manager.hpp>
 #include <mqtt/store.hpp>
-#include <mqtt/move_only_function.hpp>
+#include <mqtt/async_handler.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -174,7 +174,6 @@ class endpoint : public std::enable_shared_from_this<endpoint<Mutex, LockGuard, 
     using this_type_sp = std::shared_ptr<this_type>;
 
 public:
-    using async_handler_t = move_only_function<void(error_code ec)>;
     using packet_id_t = typename packet_id_type<PacketIdBytes>::type;
 
     /**
@@ -239,15 +238,14 @@ private:
      *        3.13 PINGREQ – PING request
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_pingreq() noexcept = 0;
+    virtual void on_pingreq() noexcept = 0;
 
     /**
      * @brief Pingresp handler
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901200<BR>
      *        3.13 PINGRESP – PING response
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_pingresp() noexcept = 0;
+    virtual void on_pingresp() noexcept = 0;
 
 
     // MQTT v3_1_1 handlers
@@ -286,10 +284,9 @@ private:
      *        Keep Alive<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349237<BR>
      *        3.1.2.10 Keep Alive
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      *
      */
-    virtual bool on_connect(buffer client_id,
+    virtual void on_connect(buffer client_id,
                             optional<buffer> user_name,
                             optional<buffer> password,
                             optional<will> will,
@@ -306,9 +303,8 @@ private:
      *        connect_return_code<BR>
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718036<BR>
      *        3.2.2.3 Connect Return code
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_connack(bool session_present, connect_return_code return_code) noexcept = 0;
+    virtual void on_connack(bool session_present, connect_return_code return_code) noexcept = 0;
 
     /**
      * @brief Publish handler
@@ -325,9 +321,8 @@ private:
      *        Topic name
      * @param contents
      *        Published contents
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_publish(optional<packet_id_t> packet_id,
+    virtual void on_publish(optional<packet_id_t> packet_id,
                             publish_options pubopts,
                             buffer topic_name,
                             buffer contents) noexcept = 0;
@@ -338,9 +333,8 @@ private:
      *        packet identifier<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718045<BR>
      *        3.4.2 Variable header
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_puback(packet_id_t packet_id) noexcept = 0;
+    virtual void on_puback(packet_id_t packet_id) noexcept = 0;
 
     /**
      * @brief Pubrec handler
@@ -348,9 +342,8 @@ private:
      *        packet identifier<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718050<BR>
      *        3.5.2 Variable header
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_pubrec(packet_id_t packet_id) noexcept = 0;
+    virtual void on_pubrec(packet_id_t packet_id) noexcept = 0;
 
     /**
      * @brief Pubrel handler
@@ -358,9 +351,8 @@ private:
      *        packet identifier<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349791<BR>
      *        3.6.2 Variable header
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_pubrel(packet_id_t packet_id) noexcept = 0;
+    virtual void on_pubrel(packet_id_t packet_id) noexcept = 0;
 
     /**
      * @brief Pubcomp handler
@@ -368,9 +360,8 @@ private:
      *        packet identifier<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718060<BR>
      *        3.7.2 Variable header
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_pubcomp(packet_id_t packet_id) noexcept = 0;
+    virtual void on_pubcomp(packet_id_t packet_id) noexcept = 0;
 
     /**
      * @brief Subscribe handler
@@ -380,9 +371,8 @@ private:
      * @param entries
      *        Collection of Share Name, Topic Filter, and QoS.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349802<BR>
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_subscribe(packet_id_t packet_id,
+    virtual void on_subscribe(packet_id_t packet_id,
                               std::vector<subscribe_entry> entries) noexcept = 0;
 
     /**
@@ -394,9 +384,8 @@ private:
      *        Collection of QoS that is corresponding to subscribed topic order.<BR>
      *        If subscription is failure, the value is nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718071<BR>
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_suback(packet_id_t packet_id, std::vector<suback_return_code> returns) noexcept = 0;
+    virtual void on_suback(packet_id_t packet_id, std::vector<suback_return_code> returns) noexcept = 0;
 
     /**
      * @brief Unsubscribe handler
@@ -406,18 +395,16 @@ private:
      * @param entries
      *        Collection of Share Name and Topic Filter<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800448<BR>
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_unsubscribe(packet_id_t packet_id, std::vector<unsubscribe_entry> entries) noexcept = 0;
+    virtual void on_unsubscribe(packet_id_t packet_id, std::vector<unsubscribe_entry> entries) noexcept = 0;
 
     /**
      * @brief Unsuback handler
      * @param packet_id packet identifier<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718045<BR>
      *        3.11.2 Variable header
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_unsuback(packet_id_t) noexcept = 0;
+    virtual void on_unsuback(packet_id_t) noexcept = 0;
 
     /**
      * @brief Disconnect handler
@@ -468,10 +455,9 @@ private:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      *
      */
-    virtual bool on_v5_connect(buffer client_id,
+    virtual void on_v5_connect(buffer client_id,
                                optional<buffer> user_name,
                                optional<buffer> password,
                                optional<will> will,
@@ -493,9 +479,8 @@ private:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901080<BR>
      *        3.2.2.3 CONNACK Properties
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_connack(bool session_present,
+    virtual void on_v5_connack(bool session_present,
                                v5::connect_reason_code reason_code,
                                v5::properties props) noexcept = 0;
 
@@ -522,9 +507,8 @@ private:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_publish(optional<packet_id_t> packet_id,
+    virtual void on_v5_publish(optional<packet_id_t> packet_id,
                                publish_options pubopts,
                                buffer topic_name,
                                buffer contents,
@@ -544,9 +528,8 @@ private:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901125<BR>
      *        3.4.2.2 PUBACK Properties
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_puback(packet_id_t packet_id,
+    virtual void on_v5_puback(packet_id_t packet_id,
                               v5::puback_reason_code reason_code,
                               v5::properties props) noexcept = 0;
 
@@ -564,9 +547,8 @@ private:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901135<BR>
      *        3.5.2.2 PUBREC Properties
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_pubrec(packet_id_t packet_id,
+    virtual void on_v5_pubrec(packet_id_t packet_id,
                               v5::pubrec_reason_code reason_code,
                               v5::properties props) noexcept = 0;
 
@@ -584,9 +566,8 @@ private:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901145<BR>
      *        3.6.2.2 PUBREL Properties
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_pubrel(packet_id_t packet_id,
+    virtual void on_v5_pubrel(packet_id_t packet_id,
                               v5::pubrel_reason_code reason_code,
                               v5::properties props) noexcept = 0;
 
@@ -604,9 +585,8 @@ private:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901155<BR>
      *        3.7.2.2 PUBCOMP Properties
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_pubcomp(packet_id_t packet_id,
+    virtual void on_v5_pubcomp(packet_id_t packet_id,
                                v5::pubcomp_reason_code reason_code,
                                v5::properties props) noexcept = 0;
 
@@ -622,9 +602,8 @@ private:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_subscribe(packet_id_t packet_id,
+    virtual void on_v5_subscribe(packet_id_t packet_id,
                                  std::vector<subscribe_entry> entries,
                                  v5::properties props) noexcept = 0;
 
@@ -641,9 +620,8 @@ private:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
      *        3.9.2.1 SUBACK Properties
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_suback(packet_id_t packet_id,
+    virtual void on_v5_suback(packet_id_t packet_id,
                               std::vector<v5::suback_reason_code> reasons,
                               v5::properties props) noexcept = 0;
 
@@ -660,9 +638,8 @@ private:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_unsubscribe(packet_id_t packet_id,
+    virtual void on_v5_unsubscribe(packet_id_t packet_id,
                                    std::vector<unsubscribe_entry> entries,
                                    v5::properties props) noexcept = 0;
 
@@ -679,9 +656,8 @@ private:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
      *        3.11.2.1 UNSUBACK Properties
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_unsuback(packet_id_t,
+    virtual void on_v5_unsuback(packet_id_t,
                                 std::vector<v5::unsuback_reason_code> reasons,
                                 v5::properties props) noexcept = 0;
 
@@ -713,9 +689,8 @@ private:
      *        Properties<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901221<BR>
      *        3.15.2.2 AUTH Properties
-     * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    virtual bool on_v5_auth(v5::auth_reason_code reason_code,
+    virtual void on_v5_auth(v5::auth_reason_code reason_code,
                             v5::properties props) noexcept = 0;
 
     // Original handlers
@@ -4323,7 +4298,7 @@ public:
      * @brief Apply f to stored messages.
      * @param f applying function. f should be void(char const*, std::size_t)
      */
-    void for_each_store(move_only_function<void(char const*, std::size_t)> f) {
+    void for_each_store(move_only_handler<void(char const*, std::size_t)> f) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "for_each_store(ptr, size)";
@@ -4345,7 +4320,7 @@ public:
      * @brief Apply f to stored messages.
      * @param f applying function. f should be void(store_message_variant)
      */
-    void for_each_store(move_only_function<void(basic_store_message_variant<PacketIdBytes>)> f) {
+    void for_each_store(move_only_handler<void(basic_store_message_variant<PacketIdBytes>)> f) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "for_each_store(store_message_variant)";
@@ -4366,7 +4341,7 @@ public:
      * @brief Apply f to stored messages.
      * @param f applying function. f should be void(store_message_variant, any)
      */
-    void for_each_store_with_life_keeper(move_only_function<void(basic_store_message_variant<PacketIdBytes>, any)> f) {
+    void for_each_store_with_life_keeper(move_only_handler<void(basic_store_message_variant<PacketIdBytes>, any)> f) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
 
@@ -5749,7 +5724,7 @@ private:
         v5::properties
     >;
     using parse_handler =
-        move_only_function<
+        move_only_handler<
             void(
                 this_type_sp&& spep,
                 any&& session_life_keeper,
@@ -7370,58 +7345,56 @@ private:
                 if (!ep_.set_values_from_props_on_connection(connection_type::server, props_)) return;
                 switch (ep_.version_) {
                 case protocol_version::v3_1_1:
-                    if (ep_.on_connect(
-                            force_move(client_id_),
-                            force_move(user_name_),
-                            force_move(password_),
-                            connect_flags::has_will_flag(connect_flag_)
-                            ? optional<will>(in_place_init,
-                                             force_move(will_topic_),
-                                             force_move(will_payload_),
-                                             connect_flags::has_will_retain(connect_flag_) | connect_flags::will_qos(connect_flag_))
+                    ep_.on_connect(
+                        force_move(client_id_),
+                        force_move(user_name_),
+                        force_move(password_),
+                        connect_flags::has_will_flag(connect_flag_)
+                            ? optional<will>(
+                              in_place_init,
+                              force_move(will_topic_),
+                              force_move(will_payload_),
+                              connect_flags::has_will_retain(connect_flag_) | connect_flags::will_qos(connect_flag_))
                             : optional<will>(nullopt),
-                            ep_.clean_session(),
-                            keep_alive_
-                        )
-                    ) {
-                        ep_.on_mqtt_message_processed(
-                            force_move(
-                                std::get<0>(
-                                    any_cast<
-                                        std::tuple<any, process_type_sp>
-                                    >(session_life_keeper)
-                                )
+                        ep_.clean_session(),
+                        keep_alive_
+                    );
+                    ep_.on_mqtt_message_processed(
+                        force_move(
+                            std::get<0>(
+                                any_cast<
+                                    std::tuple<any, process_type_sp>
+                                >(session_life_keeper)
                             )
-                        );
-                    }
+                        )
+                    );
                     break;
                 case protocol_version::v5:
-                    if (ep_.on_v5_connect(
-                            force_move(client_id_),
-                            force_move(user_name_),
-                            force_move(password_),
-                            connect_flags::has_will_flag(connect_flag_)
-                            ? optional<will>(in_place_init,
-                                             force_move(will_topic_),
-                                             force_move(will_payload_),
-                                             connect_flags::has_will_retain(connect_flag_) | connect_flags::will_qos(connect_flag_),
-                                             force_move(will_props_))
+                    ep_.on_v5_connect(
+                        force_move(client_id_),
+                        force_move(user_name_),
+                        force_move(password_),
+                        connect_flags::has_will_flag(connect_flag_)
+                            ? optional<will>(
+                                in_place_init,
+                                force_move(will_topic_),
+                                force_move(will_payload_),
+                                connect_flags::has_will_retain(connect_flag_) | connect_flags::will_qos(connect_flag_),
+                                force_move(will_props_))
                             : optional<will>(nullopt),
-                            ep_.clean_start(),
-                            keep_alive_,
-                            force_move(props_)
-                        )
-                    ) {
-                        ep_.on_mqtt_message_processed(
-                            force_move(
-                                std::get<0>(
-                                    any_cast<
-                                        std::tuple<any, process_type_sp>
-                                    >(session_life_keeper)
-                                )
+                        ep_.clean_start(),
+                        keep_alive_,
+                        force_move(props_)
+                    );
+                    ep_.on_mqtt_message_processed(
+                        force_move(
+                            std::get<0>(
+                                any_cast<
+                                    std::tuple<any, process_type_sp>
+                                >(session_life_keeper)
                             )
-                        );
-                    }
+                        )
+                    );
                     break;
                 default:
                     BOOST_ASSERT(false);
@@ -7543,39 +7516,35 @@ private:
                         (any&& session_life_keeper) mutable {
                             switch (ep_.version_) {
                             case protocol_version::v3_1_1:
-                                if (ep_.on_connack(
-                                        session_present_,
-                                        variant_get<connect_return_code>(reason_code_)
-                                    )
-                                ) {
-                                    ep_.on_mqtt_message_processed(
-                                        force_move(
-                                            std::get<0>(
-                                                any_cast<
-                                                    std::tuple<any, process_type_sp>
-                                                >(session_life_keeper)
-                                            )
+                                ep_.on_connack(
+                                    session_present_,
+                                    variant_get<connect_return_code>(reason_code_)
+                                );
+                                ep_.on_mqtt_message_processed(
+                                    force_move(
+                                        std::get<0>(
+                                            any_cast<
+                                                std::tuple<any, process_type_sp>
+                                            >(session_life_keeper)
                                         )
-                                    );
-                                }
+                                    )
+                                );
                                 break;
                             case protocol_version::v5:
-                                if (ep_.on_v5_connack(
-                                        session_present_,
-                                        variant_get<v5::connect_reason_code>(reason_code_),
-                                        force_move(props_)
-                                    )
-                                ) {
-                                    ep_.on_mqtt_message_processed(
-                                        force_move(
-                                            std::get<0>(
-                                                any_cast<
-                                                    std::tuple<any, process_type_sp>
-                                                >(session_life_keeper)
-                                            )
+                                ep_.on_v5_connack(
+                                    session_present_,
+                                    variant_get<v5::connect_reason_code>(reason_code_),
+                                    force_move(props_)
+                                );
+                                ep_.on_mqtt_message_processed(
+                                    force_move(
+                                        std::get<0>(
+                                            any_cast<
+                                                std::tuple<any, process_type_sp>
+                                            >(session_life_keeper)
                                         )
-                                    );
-                                }
+                                    )
+                                );
                                 break;
                             default:
                                 BOOST_ASSERT(false);
@@ -7775,12 +7744,13 @@ private:
                                 };
                             switch (ep_.version_) {
                             case protocol_version::v3_1_1:
-                                return ep_.on_publish(
+                                ep_.on_publish(
                                     packet_id_,
                                     publish_options(ep_.fixed_header_),
                                     force_move(topic_name_),
                                     force_move(variant_get<buffer>(var))
                                 );
+                                break;
                             case protocol_version::v5:
                                 switch (qos_value_) {
                                 case qos::at_most_once:
@@ -7809,7 +7779,7 @@ private:
                                             force_move(
                                                 std::get<0>(
                                                     any_cast<
-                                                    std::tuple<any, process_type_sp>
+                                                        std::tuple<any, process_type_sp>
                                                     >(session_life_keeper)
                                                 )
                                             )
@@ -7838,7 +7808,7 @@ private:
                                             force_move(
                                                 std::get<0>(
                                                     any_cast<
-                                                    std::tuple<any, process_type_sp>
+                                                        std::tuple<any, process_type_sp>
                                                     >(session_life_keeper)
                                                 )
                                             )
@@ -7884,16 +7854,14 @@ private:
                                         }
                                     }
                                 }
-                                {
-                                    auto ret =  ep_.on_v5_publish(
-                                        packet_id_,
-                                        publish_options(ep_.fixed_header_),
-                                        force_move(topic_name_),
-                                        force_move(variant_get<buffer>(var)),
-                                        force_move(props_)
-                                    );
-                                    return ret;
-                                }
+                                ep_.on_v5_publish(
+                                    packet_id_,
+                                    publish_options(ep_.fixed_header_),
+                                    force_move(topic_name_),
+                                    force_move(variant_get<buffer>(var)),
+                                    force_move(props_)
+                                );
+                                break;
                             default:
                                 BOOST_ASSERT(false);
                             }
@@ -7906,7 +7874,7 @@ private:
                                 force_move(
                                     std::get<0>(
                                         any_cast<
-                                        std::tuple<any, process_type_sp>
+                                            std::tuple<any, process_type_sp>
                                         >(session_life_keeper)
                                     )
                                 )
@@ -7919,7 +7887,7 @@ private:
                                 force_move(
                                     std::get<0>(
                                         any_cast<
-                                        std::tuple<any, process_type_sp>
+                                            std::tuple<any, process_type_sp>
                                         >(session_life_keeper)
                                     )
                                 )
@@ -7954,7 +7922,7 @@ private:
                                     force_move(
                                         std::get<0>(
                                             any_cast<
-                                            std::tuple<any, process_type_sp>
+                                                std::tuple<any, process_type_sp>
                                             >(session_life_keeper)
                                         )
                                     )
@@ -7989,7 +7957,7 @@ private:
                                 force_move(
                                     std::get<0>(
                                         any_cast<
-                                        std::tuple<any, process_type_sp>
+                                            std::tuple<any, process_type_sp>
                                         >(session_life_keeper)
                                     )
                                 )
@@ -8130,31 +8098,29 @@ private:
                 if (erased) ep_.on_serialize_remove(packet_id_);
                 switch (ep_.version_) {
                 case protocol_version::v3_1_1:
-                    if (ep_.on_puback(packet_id_)) {
-                        ep_.on_mqtt_message_processed(
-                            force_move(
-                                std::get<0>(
-                                    any_cast<
-                                        std::tuple<any, process_type_sp>
-                                    >(session_life_keeper)
-                                )
+                    ep_.on_puback(packet_id_);
+                    ep_.on_mqtt_message_processed(
+                        force_move(
+                            std::get<0>(
+                                any_cast<
+                                    std::tuple<any, process_type_sp>
+                                >(session_life_keeper)
                             )
-                        );
-                    }
+                        )
+                    );
                     break;
                 case protocol_version::v5:
                     if (erased) ep_.send_publish_queue_one();
-                    if (ep_.on_v5_puback(packet_id_, reason_code_, force_move(props_))) {
-                        ep_.on_mqtt_message_processed(
-                            force_move(
-                                std::get<0>(
-                                    any_cast<
-                                        std::tuple<any, process_type_sp>
-                                    >(session_life_keeper)
-                                )
+                    ep_.on_v5_puback(packet_id_, reason_code_, force_move(props_));
+                    ep_.on_mqtt_message_processed(
+                        force_move(
+                            std::get<0>(
+                                any_cast<
+                                    std::tuple<any, process_type_sp>
+                                >(session_life_keeper)
                             )
-                        );
-                    }
+                        )
+                    );
                     break;
                 default:
                     BOOST_ASSERT(false);
@@ -8325,36 +8291,34 @@ private:
                         };
                     switch (ep_.version_) {
                     case protocol_version::v3_1_1:
-                        if (ep_.on_pubrec(packet_id_)) {
-                            res();
-                            ep_.on_mqtt_message_processed(
-                                force_move(
-                                    std::get<0>(
-                                        any_cast<
-                                            std::tuple<any, process_type_sp>
-                                        >(session_life_keeper)
-                                    )
+                        ep_.on_pubrec(packet_id_);
+                        res();
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
                                 )
-                            );
-                        }
+                            )
+                        );
                         break;
                     case protocol_version::v5:
                         if (erased && is_error(reason_code_)) {
                             ep_.on_serialize_remove(packet_id_);
                             ep_.send_publish_queue_one();
                         }
-                        if (ep_.on_v5_pubrec(packet_id_, reason_code_, force_move(props_))) {
-                            if (!is_error(reason_code_)) res();
-                            ep_.on_mqtt_message_processed(
-                                force_move(
-                                    std::get<0>(
-                                        any_cast<
-                                            std::tuple<any, process_type_sp>
-                                        >(session_life_keeper)
-                                    )
+                        ep_.on_v5_pubrec(packet_id_, reason_code_, force_move(props_));
+                        if (!is_error(reason_code_)) res();
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
                                 )
-                            );
-                        }
+                            )
+                        );
                         break;
                     default:
                         BOOST_ASSERT(false);
@@ -8488,32 +8452,30 @@ private:
                     ep_.qos2_publish_handled_.erase(packet_id_);
                     switch (ep_.version_) {
                     case protocol_version::v3_1_1:
-                        if (ep_.on_pubrel(packet_id_)) {
-                            res();
-                            ep_.on_mqtt_message_processed(
-                                force_move(
-                                    std::get<0>(
-                                        any_cast<
-                                            std::tuple<any, process_type_sp>
-                                        >(session_life_keeper)
-                                    )
+                        ep_.on_pubrel(packet_id_);
+                        res();
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
                                 )
-                            );
-                        }
+                            )
+                        );
                         break;
                     case protocol_version::v5:
-                        if (ep_.on_v5_pubrel(packet_id_, reason_code_, force_move(props_))) {
-                            res();
-                            ep_.on_mqtt_message_processed(
-                                force_move(
-                                    std::get<0>(
-                                        any_cast<
-                                            std::tuple<any, process_type_sp>
-                                        >(session_life_keeper)
-                                    )
+                        ep_.on_v5_pubrel(packet_id_, reason_code_, force_move(props_));
+                        res();
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
                                 )
-                            );
-                        }
+                            )
+                        );
                         break;
                     default:
                         BOOST_ASSERT(false);
@@ -8634,17 +8596,16 @@ private:
                 if (erased) ep_.on_serialize_remove(packet_id_);
                 switch (ep_.version_) {
                 case protocol_version::v3_1_1:
-                    if (ep_.on_pubcomp(packet_id_)) {
-                        ep_.on_mqtt_message_processed(
-                            force_move(
-                                std::get<0>(
-                                    any_cast<
-                                        std::tuple<any, process_type_sp>
-                                    >(session_life_keeper)
-                                )
+                    ep_.on_pubcomp(packet_id_);
+                    ep_.on_mqtt_message_processed(
+                        force_move(
+                            std::get<0>(
+                                any_cast<
+                                    std::tuple<any, process_type_sp>
+                                >(session_life_keeper)
                             )
-                        );
-                    }
+                        )
+                    );
                     break;
                 case protocol_version::v5:
                     if (
@@ -8656,17 +8617,16 @@ private:
                     ) {
                         ep_.send_publish_queue_one();
                     }
-                    if (ep_.on_v5_pubcomp(packet_id_, reason_code_, force_move(props_))) {
-                        ep_.on_mqtt_message_processed(
-                            force_move(
-                                std::get<0>(
-                                    any_cast<
-                                        std::tuple<any, process_type_sp>
-                                    >(session_life_keeper)
-                                )
+                    ep_.on_v5_pubcomp(packet_id_, reason_code_, force_move(props_));
+                    ep_.on_mqtt_message_processed(
+                        force_move(
+                            std::get<0>(
+                                any_cast<
+                                    std::tuple<any, process_type_sp>
+                                >(session_life_keeper)
                             )
-                        );
-                    }
+                        )
+                    );
                     break;
                 default:
                     BOOST_ASSERT(false);
@@ -8802,30 +8762,28 @@ private:
                     if (ep_.remaining_length_ == 0) {
                         switch (ep_.version_) {
                         case protocol_version::v3_1_1:
-                            if (ep_.on_subscribe(packet_id_, force_move(entries_))) {
-                                ep_.on_mqtt_message_processed(
-                                    force_move(
-                                        std::get<0>(
-                                            any_cast<
-                                                std::tuple<any, process_type_sp>
-                                            >(session_life_keeper)
-                                        )
+                            ep_.on_subscribe(packet_id_, force_move(entries_));
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                            std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
                                     )
-                                );
-                            }
+                                )
+                            );
                             break;
                         case protocol_version::v5:
-                            if (ep_.on_v5_subscribe(packet_id_, force_move(entries_), force_move(props_))) {
-                                ep_.on_mqtt_message_processed(
-                                    force_move(
-                                        std::get<0>(
-                                            any_cast<
-                                                std::tuple<any, process_type_sp>
-                                            >(session_life_keeper)
-                                        )
+                            ep_.on_v5_subscribe(packet_id_, force_move(entries_), force_move(props_));
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                            std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
                                     )
-                                );
-                            }
+                                )
+                            );
                             break;
                         default:
                             BOOST_ASSERT(false);
@@ -8953,17 +8911,16 @@ private:
                                 return static_cast<suback_return_code>(e);
                             }
                         );
-                        if (ep_.on_suback(packet_id_, force_move(results))) {
-                            ep_.on_mqtt_message_processed(
-                                force_move(
-                                    std::get<0>(
-                                        any_cast<
-                                            std::tuple<any, process_type_sp>
-                                        >(session_life_keeper)
-                                    )
+                        ep_.on_suback(packet_id_, force_move(results));
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
                                 )
-                            );
-                        }
+                            )
+                        );
                         break;
                     }
                 case protocol_version::v5:
@@ -8989,17 +8946,16 @@ private:
                                 return static_cast<v5::suback_reason_code>(e);
                             }
                         );
-                        if (ep_.on_v5_suback(packet_id_, force_move(reasons), force_move(props_))) {
-                            ep_.on_mqtt_message_processed(
-                                force_move(
-                                    std::get<0>(
-                                        any_cast<
-                                            std::tuple<any, process_type_sp>
-                                        >(session_life_keeper)
-                                    )
+                        ep_.on_v5_suback(packet_id_, force_move(reasons), force_move(props_));
+                        ep_.on_mqtt_message_processed(
+                            force_move(
+                                std::get<0>(
+                                    any_cast<
+                                        std::tuple<any, process_type_sp>
+                                    >(session_life_keeper)
                                 )
-                            );
-                        }
+                            )
+                        );
                         break;
                     }
                 default:
@@ -9113,30 +9069,28 @@ private:
                     if (ep_.remaining_length_ == 0) {
                         switch (ep_.version_) {
                         case protocol_version::v3_1_1:
-                            if (ep_.on_unsubscribe(packet_id_, force_move(entries_))) {
-                                ep_.on_mqtt_message_processed(
-                                    force_move(
-                                        std::get<0>(
-                                            any_cast<
-                                                std::tuple<any, process_type_sp>
-                                            >(session_life_keeper)
-                                        )
+                            ep_.on_unsubscribe(packet_id_, force_move(entries_));
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                            std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
                                     )
-                                );
-                            }
+                                )
+                            );
                             break;
                         case protocol_version::v5:
-                            if (ep_.on_v5_unsubscribe(packet_id_, force_move(entries_), force_move(props_))) {
-                                ep_.on_mqtt_message_processed(
-                                    force_move(
-                                        std::get<0>(
-                                            any_cast<
-                                                std::tuple<any, process_type_sp>
-                                            >(session_life_keeper)
-                                        )
+                            ep_.on_v5_unsubscribe(packet_id_, force_move(entries_), force_move(props_));
+                            ep_.on_mqtt_message_processed(
+                                force_move(
+                                    std::get<0>(
+                                        any_cast<
+                                            std::tuple<any, process_type_sp>
+                                        >(session_life_keeper)
                                     )
-                                );
-                            }
+                                )
+                            );
                             break;
                         default:
                             BOOST_ASSERT(false);
@@ -9252,30 +9206,28 @@ private:
                 }
                 switch (ep_.version_) {
                 case protocol_version::v3_1_1:
-                    if (ep_.on_unsuback(packet_id_)) {
-                        ep_.on_mqtt_message_processed(
-                            force_move(
-                                std::get<0>(
-                                    any_cast<
-                                        std::tuple<any, process_type_sp>
-                                    >(session_life_keeper)
-                                )
+                    ep_.on_unsuback(packet_id_);
+                    ep_.on_mqtt_message_processed(
+                        force_move(
+                            std::get<0>(
+                                any_cast<
+                                    std::tuple<any, process_type_sp>
+                                >(session_life_keeper)
                             )
-                        );
-                    }
+                        )
+                    );
                     break;
                 case protocol_version::v5:
-                    if (ep_.on_v5_unsuback(packet_id_, force_move(reasons_), force_move(props_))) {
-                        ep_.on_mqtt_message_processed(
-                            force_move(
-                                std::get<0>(
-                                    any_cast<
-                                        std::tuple<any, process_type_sp>
-                                    >(session_life_keeper)
-                                )
+                    ep_.on_v5_unsuback(packet_id_, force_move(reasons_), force_move(props_));
+                    ep_.on_mqtt_message_processed(
+                        force_move(
+                            std::get<0>(
+                                any_cast<
+                                    std::tuple<any, process_type_sp>
+                                >(session_life_keeper)
                             )
-                        );
-                    }
+                        )
+                    );
                     break;
                 default:
                     BOOST_ASSERT(false);
@@ -9306,9 +9258,8 @@ private:
             call_protocol_error_handlers();
             return;
         }
-        if (on_pingreq()) {
-            on_mqtt_message_processed(force_move(session_life_keeper));
-        }
+        on_pingreq();
+        on_mqtt_message_processed(force_move(session_life_keeper));
     }
 
     // process pingresp
@@ -9322,9 +9273,8 @@ private:
             call_protocol_error_handlers();
             return;
         }
-        if (on_pingresp()) {
-            on_mqtt_message_processed(force_move(session_life_keeper));
-        }
+        on_pingresp();
+        on_mqtt_message_processed(force_move(session_life_keeper));
         if (pingresp_timeout_ != std::chrono::steady_clock::duration::zero()) tim_pingresp_.cancel();
     }
 
@@ -9514,27 +9464,25 @@ private:
                     );
                     props_ = force_move(variant_get<v5::properties>(var));
                     BOOST_ASSERT(ep_.version_ == protocol_version::v5);
-                    if (ep_.on_v5_auth(reason_code_, force_move(props_))) {
-                        ep_.on_mqtt_message_processed(
-                            force_move(
-                                std::get<0>(
-                                    any_cast<
-                                        std::tuple<any, process_type_sp>
-                                    >(session_life_keeper)
-                                )
+                    ep_.on_v5_auth(reason_code_, force_move(props_));
+                    ep_.on_mqtt_message_processed(
+                        force_move(
+                            std::get<0>(
+                                any_cast<
+                                    std::tuple<any, process_type_sp>
+                                >(session_life_keeper)
                             )
-                        );
-                    }
+                        )
+                    );
                     return;
                 }
                 BOOST_ASSERT(ep_.version_ == protocol_version::v5);
-                if (ep_.on_v5_auth(reason_code_, force_move(props_))) {
-                    ep_.on_mqtt_message_processed(
-                        force_move(
-                            session_life_keeper
-                        )
-                    );
-                }
+                ep_.on_v5_auth(reason_code_, force_move(props_));
+                ep_.on_mqtt_message_processed(
+                    force_move(
+                        session_life_keeper
+                    )
+                );
             }
         }
 

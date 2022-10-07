@@ -18,7 +18,7 @@
 #include <mqtt/any.hpp>
 #include <mqtt/message_variant.hpp>
 #include <mqtt/packet_id_type.hpp>
-#include <mqtt/move_only_function.hpp>
+#include <mqtt/move_only_handler.hpp>
 
 namespace MQTT_NS {
 

@@ -501,8 +501,6 @@ class client : public endpoint<std::mutex, std::lock_guard, PacketIdBytes> {
 protected:
     struct constructor_access{};
 public:
-    using async_handler_t = typename base::async_handler_t;
-
     /**
      * Constructor used by factory functions at the end of this file.
      */
