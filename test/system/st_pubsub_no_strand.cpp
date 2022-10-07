@@ -78,13 +78,11 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
         () {
             MQTT_CHK("h_close");
             finish();
-            return true;
         });
     c->set_error_handler(
         []
         (MQTT_NS::error_code) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_puback_handler(
         []

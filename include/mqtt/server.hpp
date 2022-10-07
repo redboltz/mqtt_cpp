@@ -20,6 +20,7 @@
 #include <mqtt/callable_overlay.hpp>
 #include <mqtt/strand.hpp>
 #include <mqtt/null_strand.hpp>
+#include <mqtt/move_only_function.hpp>
 
 namespace MQTT_NS {
 
@@ -53,7 +54,7 @@ public:
      *        After this handler called, the next accept will automatically start.
      * @param ep endpoint of the connecting client
      */
-    using accept_handler = std::function<void(std::shared_ptr<endpoint_t> ep)>;
+    using accept_handler = move_only_function<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
      * @brief Error handler during after accepted before connection established
@@ -61,7 +62,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for incoming connection
      */
-    using connection_error_handler = std::function<void(error_code ec, as::io_context& ioc_con)>;
+    using connection_error_handler = move_only_function<void(error_code ec, as::io_context& ioc_con)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -69,7 +70,7 @@ public:
      *        You need to call listen() again if you want to restart accepting.
      * @param ec error code
      */
-    using error_handler = std::function<void(error_code ec)>;
+    using error_handler = move_only_function<void(error_code ec)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -78,7 +79,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for listen or accept
      */
-    using error_handler_with_ioc = std::function<void(error_code ec, as::io_context& ioc_accept)>;
+    using error_handler_with_ioc = move_only_function<void(error_code ec, as::io_context& ioc_accept)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server(
@@ -119,7 +120,7 @@ public:
     server(
         AsioEndpoint&& ep,
         as::io_context& ioc_accept,
-        std::function<as::io_context&()> ioc_con_getter,
+        move_only_function<as::io_context&()> ioc_con_getter,
         AcceptorConfig&& config = [](as::ip::tcp::acceptor&) {})
         : ep_(std::forward<AsioEndpoint>(ep)),
           ioc_accept_(ioc_accept),
@@ -173,7 +174,7 @@ public:
     void set_error_handler(error_handler h) {
         h_error_ =
             [h = force_move(h)]
-            (error_code ec, as::io_context&) {
+            (error_code ec, as::io_context&) mutable {
                 if (h) h(ec);
             };
     }
@@ -230,9 +231,9 @@ private:
     as::ip::tcp::endpoint ep_;
     as::io_context& ioc_accept_;
     as::io_context* ioc_con_ = nullptr;
-    std::function<as::io_context&()> ioc_con_getter_;
+    move_only_function<as::io_context&()> ioc_con_getter_;
     optional<as::ip::tcp::acceptor> acceptor_;
-    std::function<void(as::ip::tcp::acceptor&)> config_;
+    move_only_function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
     connection_error_handler h_connection_error_;
@@ -258,7 +259,7 @@ public:
      *        After this handler called, the next accept will automatically start.
      * @param ep endpoint of the connecting client
      */
-    using accept_handler = std::function<void(std::shared_ptr<endpoint_t> ep)>;
+    using accept_handler = move_only_function<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
      * @brief Error handler during after accepted before connection established
@@ -266,7 +267,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for incoming connection
      */
-    using connection_error_handler = std::function<void(error_code ec, as::io_context& ioc_con)>;
+    using connection_error_handler = move_only_function<void(error_code ec, as::io_context& ioc_con)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -274,7 +275,7 @@ public:
      *        You need to call listen() again if you want to restart accepting.
      * @param ec error code
      */
-    using error_handler = std::function<void(error_code ec)>;
+    using error_handler = move_only_function<void(error_code ec)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -283,7 +284,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for listen or accept
      */
-    using error_handler_with_ioc = std::function<void(error_code ec, as::io_context& ioc_accept)>;
+    using error_handler_with_ioc = move_only_function<void(error_code ec, as::io_context& ioc_accept)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls(
@@ -330,7 +331,7 @@ public:
         AsioEndpoint&& ep,
         tls::context&& ctx,
         as::io_context& ioc_accept,
-        std::function<as::io_context&()> ioc_con_getter,
+        move_only_function<as::io_context&()> ioc_con_getter,
         AcceptorConfig&& config = [](as::ip::tcp::acceptor&) {})
         : ep_(std::forward<AsioEndpoint>(ep)),
           ioc_accept_(ioc_accept),
@@ -385,7 +386,7 @@ public:
     void set_error_handler(error_handler h) {
         h_error_ =
             [h = force_move(h)]
-            (error_code ec, as::io_context&) {
+            (error_code ec, as::io_context&) mutable {
                 if (h) h(ec);
             };
     }
@@ -445,10 +446,10 @@ public:
         return ctx_;
     }
 
-    using verify_cb_t = std::function<bool (bool, boost::asio::ssl::verify_context&, std::shared_ptr<optional<std::string>> const&) >;
+    using verify_cb_t = move_only_function<bool (bool, boost::asio::ssl::verify_context&, std::shared_ptr<optional<std::string>> const&) >;
 
     void set_verify_callback(verify_cb_t verify_cb) {
-        verify_cb_with_username_ = verify_cb;
+        verify_cb_with_username_ = force_move(verify_cb);
     }
 
 private:
@@ -551,9 +552,9 @@ private:
     as::ip::tcp::endpoint ep_;
     as::io_context& ioc_accept_;
     as::io_context* ioc_con_ = nullptr;
-    std::function<as::io_context&()> ioc_con_getter_;
+    move_only_function<as::io_context&()> ioc_con_getter_;
     optional<as::ip::tcp::acceptor> acceptor_;
-    std::function<void(as::ip::tcp::acceptor&)> config_;
+    move_only_function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
     connection_error_handler h_connection_error_;
@@ -582,7 +583,7 @@ public:
      * @brief Accept handler
      * @param ep endpoint of the connecting client
      */
-    using accept_handler = std::function<void(std::shared_ptr<endpoint_t> ep)>;
+    using accept_handler = move_only_function<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
      * @brief Error handler during after accepted before connection established
@@ -590,7 +591,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for incoming connection
      */
-    using connection_error_handler = std::function<void(error_code ec, as::io_context& ioc_con)>;
+    using connection_error_handler = move_only_function<void(error_code ec, as::io_context& ioc_con)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -598,7 +599,7 @@ public:
      *        You need to call listen() again if you want to restart accepting.
      * @param ec error code
      */
-    using error_handler = std::function<void(error_code ec)>;
+    using error_handler = move_only_function<void(error_code ec)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -607,7 +608,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for listen or accept
      */
-    using error_handler_with_ioc = std::function<void(error_code ec, as::io_context& ioc_accept)>;
+    using error_handler_with_ioc = move_only_function<void(error_code ec, as::io_context& ioc_accept)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_ws(
@@ -648,7 +649,7 @@ public:
     server_ws(
         AsioEndpoint&& ep,
         as::io_context& ioc_accept,
-        std::function<as::io_context&()> ioc_con_getter,
+        move_only_function<as::io_context&()> ioc_con_getter,
         AcceptorConfig&& config = [](as::ip::tcp::acceptor&) {})
         : ep_(std::forward<AsioEndpoint>(ep)),
           ioc_accept_(ioc_accept),
@@ -701,7 +702,7 @@ public:
     void set_error_handler(error_handler h) {
         h_error_ =
             [h = force_move(h)]
-            (error_code ec, as::io_context&) {
+            (error_code ec, as::io_context&) mutable {
                 if (h) h(ec);
             };
     }
@@ -917,9 +918,9 @@ private:
     as::ip::tcp::endpoint ep_;
     as::io_context& ioc_accept_;
     as::io_context* ioc_con_ = nullptr;
-    std::function<as::io_context&()> ioc_con_getter_;
+    move_only_function<as::io_context&()> ioc_con_getter_;
     optional<as::ip::tcp::acceptor> acceptor_;
-    std::function<void(as::ip::tcp::acceptor&)> config_;
+    move_only_function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
     connection_error_handler h_connection_error_;
@@ -946,7 +947,7 @@ public:
      * @brief Accept handler
      * @param ep endpoint of the connecting client
      */
-    using accept_handler = std::function<void(std::shared_ptr<endpoint_t> ep)>;
+    using accept_handler = move_only_function<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
      * @brief Error handler during after accepted before connection established
@@ -954,7 +955,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for incoming connection
      */
-    using connection_error_handler = std::function<void(error_code ec, as::io_context& ioc_con)>;
+    using connection_error_handler = move_only_function<void(error_code ec, as::io_context& ioc_con)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -962,7 +963,7 @@ public:
      *        You need to call listen() again if you want to restart accepting.
      * @param ec error code
      */
-    using error_handler = std::function<void(error_code ec)>;
+    using error_handler = move_only_function<void(error_code ec)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -971,7 +972,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for listen or accept
      */
-    using error_handler_with_ioc = std::function<void(error_code ec, as::io_context& ioc_accept)>;
+    using error_handler_with_ioc = move_only_function<void(error_code ec, as::io_context& ioc_accept)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls_ws(
@@ -1018,7 +1019,7 @@ public:
         AsioEndpoint&& ep,
         tls::context&& ctx,
         as::io_context& ioc_accept,
-        std::function<as::io_context&()> ioc_con_getter,
+        move_only_function<as::io_context&()> ioc_con_getter,
         AcceptorConfig&& config = [](as::ip::tcp::acceptor&) {})
         : ep_(std::forward<AsioEndpoint>(ep)),
           ioc_accept_(ioc_accept),
@@ -1073,7 +1074,7 @@ public:
     void set_error_handler(error_handler h) {
         h_error_ =
             [h = force_move(h)]
-            (error_code ec, as::io_context&) {
+            (error_code ec, as::io_context&) mutable {
                 if (h) h(ec);
             };
     }
@@ -1133,10 +1134,10 @@ public:
         return ctx_;
     }
 
-    using verify_cb_t = std::function<bool (bool, boost::asio::ssl::verify_context&, std::shared_ptr<optional<std::string>> const&) >;
+    using verify_cb_t = move_only_function<bool (bool, boost::asio::ssl::verify_context&, std::shared_ptr<optional<std::string>> const&) >;
 
     void set_verify_callback(verify_cb_t verify_cb) {
-        verify_cb_with_username_ = verify_cb;
+        verify_cb_with_username_ = force_move(verify_cb);
     }
 
 private:
@@ -1361,9 +1362,9 @@ private:
     as::ip::tcp::endpoint ep_;
     as::io_context& ioc_accept_;
     as::io_context* ioc_con_ = nullptr;
-    std::function<as::io_context&()> ioc_con_getter_;
+    move_only_function<as::io_context&()> ioc_con_getter_;
     optional<as::ip::tcp::acceptor> acceptor_;
-    std::function<void(as::ip::tcp::acceptor&)> config_;
+    move_only_function<void(as::ip::tcp::acceptor&)> config_;
     bool close_request_{false};
     accept_handler h_accept_;
     connection_error_handler h_connection_error_;

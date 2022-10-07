@@ -71,6 +71,7 @@
 #include <mqtt/shared_subscriptions.hpp>
 #include <mqtt/packet_id_manager.hpp>
 #include <mqtt/store.hpp>
+#include <mqtt/move_only_function.hpp>
 
 #if defined(MQTT_USE_WS)
 #include <mqtt/ws_endpoint.hpp>
@@ -173,7 +174,7 @@ class endpoint : public std::enable_shared_from_this<endpoint<Mutex, LockGuard, 
     using this_type_sp = std::shared_ptr<this_type>;
 
 public:
-    using async_handler_t = std::function<void(error_code ec)>;
+    using async_handler_t = move_only_function<void(error_code ec)>;
     using packet_id_t = typename packet_id_type<PacketIdBytes>::type;
 
     /**
@@ -2229,7 +2230,7 @@ public:
         }
         else {
             socket_->post(
-                [func = force_move(func)] {
+                [func = force_move(func)] () mutable {
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                 }
             );
@@ -2268,7 +2269,7 @@ public:
         }
         else {
             socket_->post(
-                [func = force_move(func)] {
+                [func = force_move(func)] () mutable {
                     if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                 }
             );
@@ -2756,7 +2757,7 @@ public:
             packet_id,
             v5::properties{},
             [life_keeper = force_move(sp_topic_filter), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -2807,7 +2808,7 @@ public:
             packet_id,
             force_move(props),
             [life_keeper = force_move(sp_topic_filter), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -2938,7 +2939,7 @@ public:
             packet_id,
             v5::properties{},
             [life_keeper = force_move(topic_filter), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -2987,7 +2988,7 @@ public:
             packet_id,
             force_move(props),
             [life_keeper = force_move(topic_filter), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -3034,7 +3035,7 @@ public:
             packet_id,
             v5::properties{},
             [life_keeper = force_move(life_keepers), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -3085,7 +3086,7 @@ public:
             packet_id,
             force_move(props),
             [life_keeper = force_move(life_keepers), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -3191,7 +3192,7 @@ public:
             packet_id,
             v5::properties{},
             [life_keeper = force_move(params), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -3237,7 +3238,7 @@ public:
             packet_id,
             force_move(props),
             [life_keeper = force_move(params), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -3272,7 +3273,7 @@ public:
             packet_id,
             v5::properties{},
             [life_keeper = force_move(sp_topic_filter), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -3331,7 +3332,7 @@ public:
                                packet_id,
                                v5::properties{},
                                [life_keeper = force_move(topic_filter), func = force_move(func)]
-                               (error_code ec) {
+                               (error_code ec) mutable {
                                    if(func) func(ec);
                                });
     }
@@ -3368,7 +3369,7 @@ public:
                                packet_id,
                                force_move(props),
                                [life_keeper = force_move(topic_filter), func = force_move(func)]
-                               (error_code ec) {
+                               (error_code ec) mutable {
                                    if(func) func(ec);
                                });
     }
@@ -3411,7 +3412,7 @@ public:
             packet_id,
             v5::properties{},
             [life_keeper = force_move(life_keepers), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -3465,7 +3466,7 @@ public:
             packet_id,
             force_move(props),
             [life_keeper = force_move(life_keepers), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -3571,7 +3572,7 @@ public:
             packet_id,
             v5::properties{},
             [life_keeper = force_move(params), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -3615,7 +3616,7 @@ public:
             packet_id,
             force_move(props),
             [life_keeper = force_move(params), func = force_move(func)]
-            (error_code ec) {
+            (error_code ec) mutable {
                 if(func) func(ec);
             }
         );
@@ -4322,16 +4323,17 @@ public:
      * @brief Apply f to stored messages.
      * @param f applying function. f should be void(char const*, std::size_t)
      */
-    void for_each_store(std::function<void(char const*, std::size_t)> const& f) {
+    void for_each_store(move_only_function<void(char const*, std::size_t)> f) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "for_each_store(ptr, size)";
         LockGuard<Mutex> lck (store_mtx_);
         store_.for_each(
-            [f](
+            [f = force_move(f)]
+            (
                 basic_store_message_variant<PacketIdBytes> const& message,
                 any const& /*life_keeper*/
-            ) {
+            ) mutable {
                 auto cb = continuous_buffer(message);
                 f(cb.data(), cb.size());
                 return false; // no erase
@@ -4343,16 +4345,17 @@ public:
      * @brief Apply f to stored messages.
      * @param f applying function. f should be void(store_message_variant)
      */
-    void for_each_store(std::function<void(basic_store_message_variant<PacketIdBytes>)> const& f) {
+    void for_each_store(move_only_function<void(basic_store_message_variant<PacketIdBytes>)> f) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
             << "for_each_store(store_message_variant)";
         LockGuard<Mutex> lck (store_mtx_);
         store_.for_each(
-            [f](
+            [f = force_move(f)]
+            (
                 basic_store_message_variant<PacketIdBytes> const& message,
                 any const& /*life_keeper*/
-            ) {
+            ) mutable {
                 f(message);
                 return false; // no erase
             }
@@ -4363,17 +4366,18 @@ public:
      * @brief Apply f to stored messages.
      * @param f applying function. f should be void(store_message_variant, any)
      */
-    void for_each_store_with_life_keeper(std::function<void(basic_store_message_variant<PacketIdBytes>, any)> const& f) {
+    void for_each_store_with_life_keeper(move_only_function<void(basic_store_message_variant<PacketIdBytes>, any)> f) {
         MQTT_LOG("mqtt_api", info)
             << MQTT_ADD_VALUE(address, this)
 
             << "for_each_store(store_message_variant, life_keeper)";
         LockGuard<Mutex> lck (store_mtx_);
         store_.for_each(
-            [f](
+            [f = force_move(f)]
+            (
                 basic_store_message_variant<PacketIdBytes> const& message,
                 any const& life_keeper
-            ) {
+            ) mutable {
                 f(message, life_keeper);
                 return false; // no erase
             }
@@ -4782,7 +4786,7 @@ public:
                 auto msg_lk = apply_topic_alias(msg, life_keeper);
                 if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
                     socket_->post(
-                        [func = force_move(func)] {
+                        [func = force_move(func)] () mutable {
                             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         }
                     );
@@ -4799,7 +4803,7 @@ public:
                     do_async_write(
                         force_move(std::get<0>(msg_lk)),
                         [func = force_move(func), life_keeper = force_move(std::get<1>(msg_lk))]
-                        (error_code ec) {
+                        (error_code ec) mutable {
                             if (func) func(ec);
                         }
                     );
@@ -4810,7 +4814,7 @@ public:
             [&](auto msg, auto const& serialize) {
                 if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                     socket_->post(
-                        [func = force_move(func)] {
+                        [func = force_move(func)] () mutable {
                             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         }
                     );
@@ -4859,14 +4863,14 @@ public:
                     publish_proc(
                         force_move(m),
                         &endpoint::on_serialize_v5_publish_message,
-                        [this, func] (v5::basic_publish_message<PacketIdBytes>&& msg) mutable {
+                        [this, func = force_move(func)] (v5::basic_publish_message<PacketIdBytes>&& msg) mutable {
                             if (publish_send_count_.load() == publish_send_max_) {
                                 {
                                     LockGuard<Mutex> lck (publish_send_queue_mtx_);
                                     publish_send_queue_.emplace_back(force_move(msg), true);
                                 }
                                 socket_->post(
-                                    [func = force_move(func)] {
+                                    [func = force_move(func)] () mutable {
                                         // message has already been stored so func should be called with success here
                                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                                     }
@@ -5365,7 +5369,7 @@ private:
                     std::back_inserter(handlers)
                 );
                 async_shutdown_handler_queue_.clear();
-                for (auto const& h : handlers) {
+                for (auto& h : handlers) {
                     if (h) h(boost::system::errc::make_error_code(boost::system::errc::success));
                 }
                 async_shutdown_handler_called_ = true;
@@ -5745,7 +5749,7 @@ private:
         v5::properties
     >;
     using parse_handler =
-        std::function<
+        move_only_function<
             void(
                 this_type_sp&& spep,
                 any&& session_life_keeper,
@@ -10492,7 +10496,7 @@ private:
             );
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -10512,7 +10516,7 @@ private:
             );
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -10543,7 +10547,8 @@ private:
         async_handler_t func
     ) {
         auto do_async_send_publish =
-            [&](auto msg, auto&& serialize_publish, auto&& receive_maximum_proc) {
+            [&, func = force_move(func)]
+            (auto msg, auto&& serialize_publish, auto&& receive_maximum_proc) mutable {
                 auto msg_lk = apply_topic_alias(msg, life_keeper);
                 if (maximum_packet_size_send_ < size<PacketIdBytes>(std::get<0>(msg_lk))) {
                     if (packet_id != 0) {
@@ -10551,7 +10556,7 @@ private:
                         pid_man_.release_id(packet_id);
                     }
                     socket_->post(
-                        [func = force_move(func)] {
+                        [func = force_move(func)] () mutable {
                             if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                         }
                     );
@@ -10561,12 +10566,18 @@ private:
                         msg,
                         life_keeper,
                         std::forward<decltype(serialize_publish)>(serialize_publish),
-                        std::forward<decltype(receive_maximum_proc)>(receive_maximum_proc)
+                        [
+                            &func,
+                            receive_maximum_proc = std::forward<decltype(receive_maximum_proc)>(receive_maximum_proc)
+                        ]
+                        (auto&& msg) mutable {
+                            return receive_maximum_proc(force_move(msg), func);
+                        }
                     )
                 ) {
                     do_async_write(
                         force_move(std::get<0>(msg_lk)),
-                        [life_keeper = force_move(std::get<1>(msg_lk)), func](error_code ec) {
+                        [life_keeper = force_move(std::get<1>(msg_lk)), func = force_move(func)](error_code ec) mutable {
                             if (func) func(ec);
                         }
                     );
@@ -10583,7 +10594,7 @@ private:
                     pubopts
                 ),
                 &endpoint::on_serialize_publish_message,
-                [] (auto&&) { return true; }
+                [] (auto&&, async_handler_t&) { return true; }
             );
             break;
         case protocol_version::v5:
@@ -10596,14 +10607,14 @@ private:
                     force_move(props)
                 ),
                 &endpoint::on_serialize_v5_publish_message,
-                [this, func] (v5::basic_publish_message<PacketIdBytes>&& msg) mutable {
+                [this] (v5::basic_publish_message<PacketIdBytes>&& msg, async_handler_t& func) mutable {
                     if (publish_send_count_.load() == publish_send_max_) {
                         {
                             LockGuard<Mutex> lck (publish_send_queue_mtx_);
                             publish_send_queue_.emplace_back(force_move(msg), true);
                         }
                         socket_->post(
-                            [func = force_move(func)] {
+                            [func = force_move(func)] () mutable {
                                 // message has already been stored so func should be called with success here
                                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
                             }
@@ -10635,7 +10646,7 @@ private:
             auto msg = v3_1_1::basic_puback_message<PacketIdBytes>(packet_id);
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -10644,7 +10655,7 @@ private:
             do_async_write(
                 force_move(msg),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (error_code ec) {
+                (error_code ec) mutable {
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
                 }
@@ -10654,7 +10665,7 @@ private:
             auto msg = v5::basic_puback_message<PacketIdBytes>(packet_id, reason, force_move(props));
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -10663,7 +10674,7 @@ private:
             do_async_write(
                 force_move(msg),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (error_code ec) {
+                (error_code ec) mutable {
                     erase_publish_received(packet_id);
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
@@ -10687,7 +10698,7 @@ private:
             auto msg = v3_1_1::basic_pubrec_message<PacketIdBytes>(packet_id);
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -10702,7 +10713,7 @@ private:
             auto msg = v5::basic_pubrec_message<PacketIdBytes>(packet_id, reason, force_move(props));
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -10711,7 +10722,7 @@ private:
             do_async_write(
                 force_move(msg),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (error_code ec) {
+                (error_code ec) mutable {
                     erase_publish_received(packet_id);
                     if (func) func(ec);
                 }
@@ -10738,7 +10749,7 @@ private:
                 {
                     if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                         socket_->post(
-                            [func = force_move(func)] {
+                            [func = force_move(func)] () mutable {
                                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                             }
                         );
@@ -10777,7 +10788,8 @@ private:
 
                 do_async_write(
                     force_move(msg),
-                    [life_keeper = force_move(life_keeper), func = force_move(func)](error_code ec) {
+                    [life_keeper = force_move(life_keeper), func = force_move(func)]
+                    (error_code ec) mutable {
                         if(func) func(ec);
                     }
                 );
@@ -10813,7 +10825,7 @@ private:
             auto msg = v3_1_1::basic_pubcomp_message<PacketIdBytes>(packet_id);
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -10822,7 +10834,7 @@ private:
             do_async_write(
                 force_move(msg),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (error_code ec) {
+                (error_code ec) mutable {
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
                 }
@@ -10832,7 +10844,7 @@ private:
             auto msg = v5::basic_pubcomp_message<PacketIdBytes>(packet_id, reason, force_move(props));
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -10841,7 +10853,7 @@ private:
             do_async_write(
                 force_move(msg),
                 [this, self = this->shared_from_this(), packet_id, func = force_move(func)]
-                (error_code ec) {
+                (error_code ec) mutable {
                     if (func) func(ec);
                     on_pub_res_sent(packet_id);
                 }
@@ -10868,7 +10880,7 @@ private:
                     pid_man_.release_id(packet_id);
                 }
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -10891,7 +10903,7 @@ private:
                     pid_man_.release_id(packet_id);
                 }
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -10926,7 +10938,7 @@ private:
             );
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -10945,7 +10957,7 @@ private:
             );
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -10977,7 +10989,7 @@ private:
                     pid_man_.release_id(packet_id);
                 }
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -11000,7 +11012,7 @@ private:
                     pid_man_.release_id(packet_id);
                 }
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -11030,7 +11042,7 @@ private:
             auto msg = v3_1_1::basic_unsuback_message<PacketIdBytes>(packet_id);
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -11064,7 +11076,7 @@ private:
             auto msg = v5::basic_unsuback_message<PacketIdBytes>(force_move(params), packet_id, force_move(props));
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -11087,7 +11099,7 @@ private:
             auto msg = v3_1_1::pingreq_message();
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -11100,7 +11112,7 @@ private:
             auto msg = v5::pingreq_message();
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -11121,7 +11133,7 @@ private:
             auto msg = v3_1_1::pingresp_message();
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -11133,7 +11145,7 @@ private:
             auto msg = v5::pingresp_message();
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -11160,7 +11172,7 @@ private:
             auto msg = v5::auth_message(reason, force_move(props));
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -11184,7 +11196,7 @@ private:
             auto msg = v3_1_1::disconnect_message();
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -11196,7 +11208,7 @@ private:
             auto msg = v5::disconnect_message(reason, force_move(props));
             if (maximum_packet_size_send_ < size<PacketIdBytes>(msg)) {
                 socket_->post(
-                    [func = force_move(func)] {
+                    [func = force_move(func)] () mutable {
                         if (func) func(boost::system::errc::make_error_code(boost::system::errc::message_size));
                     }
                 );
@@ -11210,13 +11222,14 @@ private:
         }
     }
 
-    void async_send_store(std::function<void()> func) {
+    template <typename Func>
+    void async_send_store(Func&& func) {
         // packet_id has already been registered
-        auto g = shared_scope_guard(
-            [func = force_move(func)] {
+        auto g{shared_scope_guard(
+            [func = std::forward<Func>(func)] () mutable {
                 func();
             }
-        );
+        )};
         LockGuard<Mutex> lck (store_mtx_);
         if (store_.empty()) {
             socket().post(
@@ -11359,7 +11372,7 @@ private:
             // it's a bug if the handler is invalid when constructed.
             BOOST_ASSERT(func_);
         }
-        void operator()(error_code ec) const {
+        void operator()(error_code ec) {
             func_(ec);
             for (std::size_t i = 0; i != num_of_messages_; ++i) {
                 self_->queue_.pop_front();
@@ -11379,7 +11392,7 @@ private:
         }
         void operator()(
             error_code ec,
-            std::size_t bytes_transferred) const {
+            std::size_t bytes_transferred) {
             func_(ec);
             self_->total_bytes_sent_ += bytes_transferred;
             for (std::size_t i = 0; i != num_of_messages_; ++i) {
@@ -11418,7 +11431,7 @@ private:
         std::size_t iterator_count = (max_queue_send_count_ == 0)
                                 ? queue_.size()
                                 : std::min(max_queue_send_count_, queue_.size());
-        auto const& start = queue_.cbegin();
+        auto start = queue_.begin();
         auto end = std::next(start, boost::numeric_cast<difference_t>(iterator_count));
 
         // And further, only up to the specified maximum bytes
@@ -11446,11 +11459,11 @@ private:
         handlers.reserve(iterator_count);
 
         for (auto it = start; it != end; ++it) {
-            auto const& elem = *it;
+            auto& elem = *it;
             auto const& mv = elem.message();
             auto const& cbs = const_buffer_sequence(mv);
             std::copy(cbs.begin(), cbs.end(), std::back_inserter(buf));
-            handlers.emplace_back(elem.handler());
+            handlers.emplace_back(force_move(elem.handler()));
         }
 
         on_pre_send();
@@ -11460,8 +11473,8 @@ private:
             write_completion_handler(
                 this->shared_from_this(),
                 [handlers = force_move(handlers)]
-                (error_code ec) {
-                    for (auto const& h : handlers) {
+                (error_code ec) mutable {
+                    for (auto& h : handlers) {
                         if (h) h(ec);
                     }
                 },
