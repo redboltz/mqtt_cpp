@@ -97,7 +97,6 @@ void client_proc(Client& c) {
 
 
             c->disconnect();
-            return true;
         });
     c->set_close_handler( // this handler doesn't depend on MQTT protocol version
         []
@@ -265,7 +264,6 @@ void server_proc(Server& s, std::set<con_sp_t>& connections) {
                         MQTT_NS::v5::property::authentication_data("test authentication data"_mb)
                     };
                     sp->connack(false, MQTT_NS::v5::connect_reason_code::success, std::move(connack_ps));
-                    return true;
                 }
             );
             ep.set_v5_disconnect_handler( // use v5 handler

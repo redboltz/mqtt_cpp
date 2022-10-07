@@ -591,7 +591,6 @@ int main(int argc, char* argv[]) {
                     std::cout << "<   props:" << std::endl;
                     print_props("<     ", props);
                     print_menu();
-                    return true;
                 };
 
             client.set_connack_handler(
@@ -615,7 +614,6 @@ int main(int argc, char* argv[]) {
                             }
                         );
                     }
-                    return true;
                 }
             );
             client.set_v5_connack_handler(
@@ -641,7 +639,6 @@ int main(int argc, char* argv[]) {
                             }
                         );
                     }
-                    return true;
                 }
             );
             client.set_publish_handler(
@@ -651,14 +648,13 @@ int main(int argc, char* argv[]) {
                  MQTT_NS::buffer topic_name,
                  MQTT_NS::buffer contents) {
                     std::cout << "< publish (v3.1.1)"  << std::endl;
-                    return
-                        publish_handler(
-                            packet_id,
-                            pubopts,
-                            topic_name,
-                            contents,
-                            MQTT_NS::v5::properties{}
-                        );
+                    publish_handler(
+                        packet_id,
+                        pubopts,
+                        topic_name,
+                        contents,
+                        MQTT_NS::v5::properties{}
+                    );
                 }
             );
             client.set_v5_publish_handler(
@@ -669,14 +665,13 @@ int main(int argc, char* argv[]) {
                  MQTT_NS::buffer contents,
                  MQTT_NS::v5::properties props) {
                     std::cout << "< publish (v5)"  << std::endl;
-                    return
-                        publish_handler(
-                            packet_id,
-                            pubopts,
-                            topic_name,
-                            contents,
-                            MQTT_NS::force_move(props)
-                        );
+                    publish_handler(
+                        packet_id,
+                        pubopts,
+                        topic_name,
+                        contents,
+                        MQTT_NS::force_move(props)
+                    );
                 }
             );
             client.set_puback_handler(
@@ -684,7 +679,6 @@ int main(int argc, char* argv[]) {
                 (packet_id_t packet_id){
                     std::cout << "< puback (v3.1.1)" << std::endl;
                     std::cout << "<   packet_id:" << packet_id << std::endl;
-                    return true;
                 }
             );
             client.set_v5_puback_handler( // use v5 handler
@@ -695,7 +689,6 @@ int main(int argc, char* argv[]) {
                     std::cout << "<   reason_code:" << reason_code << std::endl;
                     std::cout << "<   props:" << std::endl;
                     print_props("<     ", props);
-                    return true;
                 }
             );
             client.set_pubrec_handler(
@@ -703,7 +696,6 @@ int main(int argc, char* argv[]) {
                 (packet_id_t packet_id){
                     std::cout << "< pubrec (v3.1.1)" << std::endl;
                     std::cout << "<   packet_id:" << packet_id << std::endl;
-                    return true;
                 }
             );
             client.set_v5_pubrec_handler( // use v5 handler
@@ -714,7 +706,6 @@ int main(int argc, char* argv[]) {
                     std::cout << "<   reason_code:" << reason_code << std::endl;
                     std::cout << "<   props:" << std::endl;
                     print_props("<     ", props);
-                    return true;
                 }
             );
             client.set_pubrel_handler(
@@ -722,7 +713,6 @@ int main(int argc, char* argv[]) {
                 (packet_id_t packet_id){
                     std::cout << "< pubrel (v3.1.1)" << std::endl;
                     std::cout << "<   packet_id:" << packet_id << std::endl;
-                    return true;
                 }
             );
             client.set_v5_pubrel_handler( // use v5 handler
@@ -733,7 +723,6 @@ int main(int argc, char* argv[]) {
                     std::cout << "<   reason_code:" << reason_code << std::endl;
                     std::cout << "<   props:" << std::endl;
                     print_props("<     ", props);
-                    return true;
                 }
             );
             client.set_pubcomp_handler(
@@ -741,7 +730,6 @@ int main(int argc, char* argv[]) {
                 (packet_id_t packet_id){
                     std::cout << "< pubcomp (v3.1.1)" << std::endl;
                     std::cout << "<   packet_id:" << packet_id << std::endl;
-                    return true;
                 }
             );
             client.set_v5_pubcomp_handler( // use v5 handler
@@ -752,7 +740,6 @@ int main(int argc, char* argv[]) {
                     std::cout << "<   reason_code:" << reason_code << std::endl;
                     std::cout << "<   props:" << std::endl;
                     print_props("<     ", props);
-                    return true;
                 }
             );
             client.set_suback_handler(
@@ -765,7 +752,6 @@ int main(int argc, char* argv[]) {
                         std::cout << "<   " << e << std::endl;
                     }
                     print_menu();
-                    return true;
                 }
             );
             client.set_v5_suback_handler(
@@ -782,7 +768,6 @@ int main(int argc, char* argv[]) {
                     std::cout << "<   props:" << std::endl;
                     print_props("<     ", props);
                     print_menu();
-                    return true;
                 }
             );
             client.set_unsuback_handler(
@@ -791,7 +776,6 @@ int main(int argc, char* argv[]) {
                     std::cout << "< unsuback (v3.1.1)" << std::endl;
                     std::cout << "<   packet_id: " << packet_id << std::endl;
                     print_menu();
-                    return true;
                 }
             );
             client.set_v5_unsuback_handler(
@@ -808,7 +792,6 @@ int main(int argc, char* argv[]) {
                     std::cout << "<   props:" << std::endl;
                     print_props("<     ", props);
                     print_menu();
-                    return true;
                 }
             );
 

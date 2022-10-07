@@ -20,7 +20,7 @@
 #include <mqtt/callable_overlay.hpp>
 #include <mqtt/strand.hpp>
 #include <mqtt/null_strand.hpp>
-#include <mqtt/move_only_function.hpp>
+#include <mqtt/move_only_handler.hpp>
 
 namespace MQTT_NS {
 
@@ -54,7 +54,7 @@ public:
      *        After this handler called, the next accept will automatically start.
      * @param ep endpoint of the connecting client
      */
-    using accept_handler = move_only_function<void(std::shared_ptr<endpoint_t> ep)>;
+    using accept_handler = move_only_handler<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
      * @brief Error handler during after accepted before connection established
@@ -62,7 +62,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for incoming connection
      */
-    using connection_error_handler = move_only_function<void(error_code ec, as::io_context& ioc_con)>;
+    using connection_error_handler = move_only_handler<void(error_code ec, as::io_context& ioc_con)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -70,7 +70,7 @@ public:
      *        You need to call listen() again if you want to restart accepting.
      * @param ec error code
      */
-    using error_handler = move_only_function<void(error_code ec)>;
+    using error_handler = move_only_handler<void(error_code ec)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -79,7 +79,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for listen or accept
      */
-    using error_handler_with_ioc = move_only_function<void(error_code ec, as::io_context& ioc_accept)>;
+    using error_handler_with_ioc = move_only_handler<void(error_code ec, as::io_context& ioc_accept)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server(
@@ -259,7 +259,7 @@ public:
      *        After this handler called, the next accept will automatically start.
      * @param ep endpoint of the connecting client
      */
-    using accept_handler = move_only_function<void(std::shared_ptr<endpoint_t> ep)>;
+    using accept_handler = move_only_handler<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
      * @brief Error handler during after accepted before connection established
@@ -267,7 +267,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for incoming connection
      */
-    using connection_error_handler = move_only_function<void(error_code ec, as::io_context& ioc_con)>;
+    using connection_error_handler = move_only_handler<void(error_code ec, as::io_context& ioc_con)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -275,7 +275,7 @@ public:
      *        You need to call listen() again if you want to restart accepting.
      * @param ec error code
      */
-    using error_handler = move_only_function<void(error_code ec)>;
+    using error_handler = move_only_handler<void(error_code ec)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -284,7 +284,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for listen or accept
      */
-    using error_handler_with_ioc = move_only_function<void(error_code ec, as::io_context& ioc_accept)>;
+    using error_handler_with_ioc = move_only_handler<void(error_code ec, as::io_context& ioc_accept)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls(
@@ -583,7 +583,7 @@ public:
      * @brief Accept handler
      * @param ep endpoint of the connecting client
      */
-    using accept_handler = move_only_function<void(std::shared_ptr<endpoint_t> ep)>;
+    using accept_handler = move_only_handler<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
      * @brief Error handler during after accepted before connection established
@@ -591,7 +591,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for incoming connection
      */
-    using connection_error_handler = move_only_function<void(error_code ec, as::io_context& ioc_con)>;
+    using connection_error_handler = move_only_handler<void(error_code ec, as::io_context& ioc_con)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -599,7 +599,7 @@ public:
      *        You need to call listen() again if you want to restart accepting.
      * @param ec error code
      */
-    using error_handler = move_only_function<void(error_code ec)>;
+    using error_handler = move_only_handler<void(error_code ec)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -608,7 +608,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for listen or accept
      */
-    using error_handler_with_ioc = move_only_function<void(error_code ec, as::io_context& ioc_accept)>;
+    using error_handler_with_ioc = move_only_handler<void(error_code ec, as::io_context& ioc_accept)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_ws(
@@ -947,7 +947,7 @@ public:
      * @brief Accept handler
      * @param ep endpoint of the connecting client
      */
-    using accept_handler = move_only_function<void(std::shared_ptr<endpoint_t> ep)>;
+    using accept_handler = move_only_handler<void(std::shared_ptr<endpoint_t> ep)>;
 
     /**
      * @brief Error handler during after accepted before connection established
@@ -955,7 +955,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for incoming connection
      */
-    using connection_error_handler = move_only_function<void(error_code ec, as::io_context& ioc_con)>;
+    using connection_error_handler = move_only_handler<void(error_code ec, as::io_context& ioc_con)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -963,7 +963,7 @@ public:
      *        You need to call listen() again if you want to restart accepting.
      * @param ec error code
      */
-    using error_handler = move_only_function<void(error_code ec)>;
+    using error_handler = move_only_handler<void(error_code ec)>;
 
     /**
      * @brief Error handler for listen and accpet
@@ -972,7 +972,7 @@ public:
      * @param ec error code
      * @param ioc_con io_context for listen or accept
      */
-    using error_handler_with_ioc = move_only_function<void(error_code ec, as::io_context& ioc_accept)>;
+    using error_handler_with_ioc = move_only_handler<void(error_code ec, as::io_context& ioc_accept)>;
 
     template <typename AsioEndpoint, typename AcceptorConfig>
     server_tls_ws(

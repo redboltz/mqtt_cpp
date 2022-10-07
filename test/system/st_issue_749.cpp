@@ -63,7 +63,6 @@ BOOST_AUTO_TEST_CASE( broker_assertion_fail ) {
                         c1->publish("topic1", "topic1_contents1", MQTT_NS::qos::at_most_once);
                     }
                     c1->disconnect();
-                    return true;
                 }
             );
 

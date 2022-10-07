@@ -45,7 +45,6 @@ void client_proc(
                     }
                 );
             }
-            return true;
         });
     c->set_close_handler( // this handler doesn't depend on MQTT protocol version
         []
@@ -64,7 +63,6 @@ void client_proc(
                 "[client] puback received. packet_id: " << packet_id <<
                 " reason_code: " << reason_code << std::endl;
             disconnect();
-            return true;
         });
     c->set_v5_pubrec_handler( // use v5 handler
         [&]
@@ -72,7 +70,6 @@ void client_proc(
             locked_cout() <<
                 "[client] pubrec received. packet_id: " << packet_id <<
                 " reason_code: " << reason_code << std::endl;
-            return true;
         });
     c->set_v5_pubcomp_handler( // use v5 handler
         [&]
@@ -81,7 +78,6 @@ void client_proc(
                 "[client] pubcomp received. packet_id: " << packet_id <<
                 " reason_code: " << reason_code << std::endl;
             disconnect();
-            return true;
         });
     c->set_v5_suback_handler( // use v5 handler
         [&]
@@ -112,7 +108,6 @@ void client_proc(
                 c->publish("mqtt_client_cpp/topic2_1", "test2_1", MQTT_NS::qos::at_least_once);
                 c->publish("mqtt_client_cpp/topic2_2", "test2_2", MQTT_NS::qos::exactly_once);
             }
-            return true;
         });
     c->set_v5_publish_handler( // use v5 handler
         [&]
@@ -130,7 +125,6 @@ void client_proc(
             locked_cout() << "[client] topic_name: " << topic_name << std::endl;
             locked_cout() << "[client] contents: " << contents << std::endl;
             disconnect();
-            return true;
         });
 
     // Connect
@@ -256,7 +250,6 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     BOOST_ASSERT(sp);
                     connections.insert(sp);
                     sp->connack(false, MQTT_NS::v5::connect_reason_code::success);
-                    return true;
                 }
             );
             ep.set_v5_disconnect_handler( // use v5 handler
@@ -275,7 +268,6 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     locked_cout() <<
                         "[server] puback received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
-                    return true;
                 });
             ep.set_v5_pubrec_handler( // use v5 handler
                 []
@@ -283,7 +275,6 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     locked_cout() <<
                         "[server] pubrec received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
-                    return true;
                 });
             ep.set_v5_pubrel_handler( // use v5 handler
                 []
@@ -291,7 +282,6 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     locked_cout() <<
                         "[server] pubrel received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
-                    return true;
                 });
             ep.set_v5_pubcomp_handler( // use v5 handler
                 []
@@ -299,7 +289,6 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     locked_cout() <<
                         "[server] pubcomp received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
-                    return true;
                 });
             ep.set_v5_publish_handler( // use v5 handler
                 [&subs]
@@ -333,7 +322,6 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                             std::move(props)
                         );
                     }
-                    return true;
                 });
             ep.set_v5_subscribe_handler( // use v5 handler
                 [&subs, wp]
@@ -354,7 +342,6 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                         subs.emplace(std::move(e.topic_filter), sp, e.subopts.get_qos(), e.subopts.get_rap());
                     }
                     sp->suback(packet_id, res);
-                    return true;
                 }
             );
             ep.set_v5_unsubscribe_handler( // use v5 handler
@@ -372,7 +359,6 @@ void server_proc(Server& s, std::set<con_sp_t>& connections, mi_sub_con& subs) {
                     }
                     BOOST_ASSERT(sp);
                     sp->unsuback(packet_id);
-                    return true;
                 }
             );
         }

@@ -209,19 +209,16 @@ BOOST_AUTO_TEST_CASE( publish_overlength_topic ) {
             (bool, MQTT_NS::connect_return_code) {
                 try {
                     c->publish(tp, "topic1_contents", MQTT_NS::qos::at_most_once);
-                    return true;
                 }
                 catch (MQTT_NS::utf8string_length_error const&) {
                     BOOST_CHECK(true);
                     finish();
                     c->force_disconnect();
-                    return false;
                 }
                 catch (boost::bad_numeric_cast const&) {
                     BOOST_CHECK(true);
                     finish();
                     c->force_disconnect();
-                    return false;
                 }
             }
         );
@@ -247,13 +244,11 @@ BOOST_AUTO_TEST_CASE( publish_invalid_topic ) {
             (bool, MQTT_NS::connect_return_code) {
                 try {
                     c->publish(tp, "topic1_contents", MQTT_NS::qos::at_most_once);
-                    return true;
                 }
                 catch (MQTT_NS::utf8string_contents_error const&) {
                     BOOST_CHECK(true);
                     finish();
                     c->force_disconnect();
-                    return false;
                 }
             }
         );
@@ -279,13 +274,11 @@ BOOST_AUTO_TEST_CASE( subscribe_overlength_topic ) {
             (bool, MQTT_NS::connect_return_code) {
                 try {
                     c->subscribe(tp, MQTT_NS::qos::at_most_once);
-                    return true;
                 }
                 catch (MQTT_NS::utf8string_length_error const&) {
                     BOOST_CHECK(true);
                     finish();
                     c->force_disconnect();
-                    return false;
                 }
             }
         );
@@ -311,13 +304,11 @@ BOOST_AUTO_TEST_CASE( subscribe_invalid_topic ) {
             (bool, MQTT_NS::connect_return_code) {
                 try {
                     c->subscribe(tp, MQTT_NS::qos::at_most_once);
-                    return true;
                 }
                 catch (MQTT_NS::utf8string_contents_error const&) {
                     BOOST_CHECK(true);
                     finish();
                     c->force_disconnect();
-                    return false;
                 }
             }
         );
@@ -343,13 +334,11 @@ BOOST_AUTO_TEST_CASE( unsubscribe_overlength_topic ) {
             (bool, MQTT_NS::connect_return_code) {
                 try {
                     c->unsubscribe(tp);
-                    return true;
                 }
                 catch (MQTT_NS::utf8string_length_error const&) {
                     BOOST_CHECK(true);
                     finish();
                     c->force_disconnect();
-                    return false;
                 }
             }
         );
@@ -375,13 +364,11 @@ BOOST_AUTO_TEST_CASE( unsubscribe_invalid_topic ) {
             (bool, MQTT_NS::connect_return_code) {
                 try {
                     c->unsubscribe(tp);
-                    return true;
                 }
                 catch (MQTT_NS::utf8string_contents_error const&) {
                     BOOST_CHECK(true);
                     finish();
                     c->force_disconnect();
-                    return false;
                 }
             }
         );

@@ -15,7 +15,7 @@
 #include <mqtt/move.hpp>
 #include <mqtt/attributes.hpp>
 #include <mqtt/tls.hpp>
-#include <mqtt/move_only_function.hpp>
+#include <mqtt/move_only_handler.hpp>
 #include <mqtt/log.hpp>
 
 namespace MQTT_NS {
@@ -33,7 +33,7 @@ public:
 
     MQTT_ALWAYS_INLINE void async_read(
         as::mutable_buffer buffers,
-        move_only_function<void(error_code, std::size_t)> handler
+        move_only_handler<void(error_code, std::size_t)> handler
     ) override final {
         as::async_read(
             tcp_,
@@ -47,7 +47,7 @@ public:
 
     MQTT_ALWAYS_INLINE void async_write(
         std::vector<as::const_buffer> buffers,
-        move_only_function<void(error_code, std::size_t)> handler
+        move_only_handler<void(error_code, std::size_t)> handler
     ) override final {
         as::async_write(
             tcp_,
@@ -66,21 +66,21 @@ public:
         return as::write(tcp_,force_move(buffers), ec);
     }
 
-    MQTT_ALWAYS_INLINE void post(move_only_function<void()> handler) override final {
+    MQTT_ALWAYS_INLINE void post(move_only_handler<void()> handler) override final {
         as::post(
             strand_,
             force_move(handler)
         );
     }
 
-    MQTT_ALWAYS_INLINE void dispatch(move_only_function<void()> handler) override final {
+    MQTT_ALWAYS_INLINE void dispatch(move_only_handler<void()> handler) override final {
         as::dispatch(
             strand_,
             force_move(handler)
         );
     }
 
-    MQTT_ALWAYS_INLINE void defer(move_only_function<void()> handler) override final {
+    MQTT_ALWAYS_INLINE void defer(move_only_handler<void()> handler) override final {
         as::defer(
             strand_,
             force_move(handler)
@@ -103,7 +103,7 @@ public:
         shutdown_and_close_impl(tcp_, ec);
     }
 
-    MQTT_ALWAYS_INLINE void async_clean_shutdown_and_close(move_only_function<void(error_code)> handler) override final {
+    MQTT_ALWAYS_INLINE void async_clean_shutdown_and_close(move_only_handler<void(error_code)> handler) override final {
         async_shutdown_and_close_impl(tcp_, force_move(handler));
     }
 
@@ -157,7 +157,7 @@ private:
             << ec.message();
     }
 
-    void async_shutdown_and_close_impl(as::basic_socket<boost::asio::ip::tcp>& s, move_only_function<void(error_code)> handler) {
+    void async_shutdown_and_close_impl(as::basic_socket<boost::asio::ip::tcp>& s, move_only_handler<void(error_code)> handler) {
         post(
             [this, &s, handler = force_move(handler)] () mutable {
                 error_code ec;
@@ -176,7 +176,7 @@ private:
             << ec.message();
         shutdown_and_close_impl(lowest_layer(), ec);
     }
-    void async_shutdown_and_close_impl(tls::stream<as::ip::tcp::socket>& s, move_only_function<void(error_code)> handler) {
+    void async_shutdown_and_close_impl(tls::stream<as::ip::tcp::socket>& s, move_only_handler<void(error_code)> handler) {
         s.async_shutdown(
             as::bind_executor(
                 strand_,

@@ -141,7 +141,6 @@ int main(int argc, char** argv) {
                     BOOST_ASSERT(sp);
                     connections.insert(sp);
                     sp->connack(false, MQTT_NS::connect_return_code::accepted);
-                    return true;
                 }
             );
             ep.set_disconnect_handler(
@@ -156,25 +155,21 @@ int main(int argc, char** argv) {
                 []
                 (packet_id_t packet_id){
                     std::cout << "[server] puback received. packet_id: " << packet_id << std::endl;
-                    return true;
                 });
             ep.set_pubrec_handler(
                 []
                 (packet_id_t packet_id){
                     std::cout << "[server] pubrec received. packet_id: " << packet_id << std::endl;
-                    return true;
                 });
             ep.set_pubrel_handler(
                 []
                 (packet_id_t packet_id){
                     std::cout << "[server] pubrel received. packet_id: " << packet_id << std::endl;
-                    return true;
                 });
             ep.set_pubcomp_handler(
                 []
                 (packet_id_t packet_id){
                     std::cout << "[server] pubcomp received. packet_id: " << packet_id << std::endl;
-                    return true;
                 });
             ep.set_publish_handler(
                 [&subs]
@@ -199,7 +194,6 @@ int main(int argc, char** argv) {
                             std::min(r.first->qos_value, pubopts.get_qos())
                         );
                     }
-                    return true;
                 });
             ep.set_subscribe_handler(
                 [&subs, wp]
@@ -216,7 +210,6 @@ int main(int argc, char** argv) {
                         subs.emplace(std::move(e.topic_filter), sp, e.subopts.get_qos());
                     }
                     sp->suback(packet_id, res);
-                    return true;
                 }
             );
             ep.set_unsubscribe_handler(
@@ -233,7 +226,6 @@ int main(int argc, char** argv) {
                     }
                     BOOST_ASSERT(sp);
                     sp->unsuback(packet_id);
-                    return true;
                 }
             );
         }

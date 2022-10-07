@@ -87,7 +87,6 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             c1_force_disconnect();
-            return true;
         });
     c1->set_close_handler(
         []
@@ -115,7 +114,6 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub2 = c2->subscribe("topic1", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -136,7 +134,6 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
             c1_force_disconnect();
-            return true;
         });
     c2->set_unsuback_handler(
         [&chk, &c2, &pid_unsub2]
@@ -144,7 +141,6 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             MQTT_CHK("h_unsuback_2");
             BOOST_TEST(packet_id == pid_unsub2);
             c2->disconnect();
-            return true;
         });
     c2->set_publish_handler(
         [&chk, &c2, &pid_unsub2]
@@ -160,7 +156,6 @@ BOOST_AUTO_TEST_CASE( will_qos0 ) {
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
             pid_unsub2 = c2->unsubscribe("topic1");
-            return true;
         });
 
     c1->connect();
@@ -247,7 +242,6 @@ BOOST_AUTO_TEST_CASE( will_qo0_timeout ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             c1_force_disconnect();
-            return true;
         });
     c1->set_close_handler(
         []
@@ -270,7 +264,6 @@ BOOST_AUTO_TEST_CASE( will_qo0_timeout ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             pid_sub2 = c2->subscribe("topic1", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -309,7 +302,6 @@ BOOST_AUTO_TEST_CASE( will_qo0_timeout ) {
                 }
             );
 
-            return true;
         });
     c2->set_v5_unsuback_handler(
         [&chk, &c2, &pid_unsub2]
@@ -317,7 +309,6 @@ BOOST_AUTO_TEST_CASE( will_qo0_timeout ) {
             MQTT_CHK("h_unsuback_2");
             BOOST_TEST(packet_id == pid_unsub2);
             c2->disconnect();
-            return true;
         });
     c2->set_v5_publish_handler(
         []
@@ -329,7 +320,6 @@ BOOST_AUTO_TEST_CASE( will_qo0_timeout ) {
 
             // Will should not be received
             BOOST_TEST(false);
-            return true;
         });
 
     c1->connect();
@@ -416,7 +406,6 @@ BOOST_AUTO_TEST_CASE( will_qos0_wd0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             c1_force_disconnect();
-            return true;
         });
     c1->set_close_handler(
         []
@@ -436,7 +425,6 @@ BOOST_AUTO_TEST_CASE( will_qos0_wd0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             c2->subscribe("topic1", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -456,14 +444,12 @@ BOOST_AUTO_TEST_CASE( will_qos0_wd0 ) {
             BOOST_TEST(reasons.size() == 1U);
             BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
             c1_force_disconnect();
-            return true;
         });
     c2->set_v5_unsuback_handler(
         [&chk, &c2]
         (packet_id_t, std::vector<MQTT_NS::v5::unsuback_reason_code>, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_unsuback_2");
             c2->disconnect();
-            return true;
         });
     c2->set_v5_publish_handler(
         [&chk, &c2]
@@ -480,7 +466,6 @@ BOOST_AUTO_TEST_CASE( will_qos0_wd0 ) {
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
             c2->unsubscribe("topic1");
-            return true;
         });
 
     c1->connect();
@@ -578,7 +563,6 @@ BOOST_AUTO_TEST_CASE( will_qos0_cancel ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     c1->set_close_handler(
         [&chk, &c2]
@@ -600,7 +584,6 @@ BOOST_AUTO_TEST_CASE( will_qos0_cancel ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             c2->subscribe("topic1", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -620,7 +603,6 @@ BOOST_AUTO_TEST_CASE( will_qos0_cancel ) {
             BOOST_TEST(reasons.size() == 1U);
             BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
             c1_force_disconnect();
-            return true;
         });
     c2->set_v5_publish_handler(
         []
@@ -631,7 +613,6 @@ BOOST_AUTO_TEST_CASE( will_qos0_cancel ) {
          MQTT_NS::v5::properties /*props*/) {
             // Will should not be received
             BOOST_TEST(false);
-            return true;
         });
 
     c1->connect(
@@ -713,7 +694,6 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             c1_force_disconnect();
-            return true;
         });
     c1->set_close_handler(
         []
@@ -737,7 +717,6 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub2 = c2->subscribe("topic1", MQTT_NS::qos::at_least_once);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -758,7 +737,6 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_1);
             c1_force_disconnect();
-            return true;
         });
     c2->set_unsuback_handler(
         [&chk, &c2, &pid_unsub2]
@@ -766,7 +744,6 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             MQTT_CHK("h_unsuback_2");
             BOOST_TEST(packet_id == pid_unsub2);
             c2->disconnect();
-            return true;
         });
     c2->set_publish_handler(
         [&chk, &c2, &pid_unsub2]
@@ -782,7 +759,6 @@ BOOST_AUTO_TEST_CASE( will_qos1 ) {
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
             pid_unsub2 = c2->unsubscribe("topic1");
-            return true;
         });
 
     c1->connect();
@@ -861,7 +837,6 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             c1_force_disconnect();
-            return true;
         });
     c1->set_close_handler(
         []
@@ -885,7 +860,6 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub2 = c2->subscribe("topic1", MQTT_NS::qos::exactly_once);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -906,7 +880,6 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
             c1_force_disconnect();
-            return true;
         });
     c2->set_unsuback_handler(
         [&chk, &c2, &pid_unsub2]
@@ -914,7 +887,6 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             MQTT_CHK("h_unsuback_2");
             BOOST_TEST(packet_id == pid_unsub2);
             c2->disconnect();
-            return true;
         });
     c2->set_publish_handler(
         [&chk]
@@ -929,7 +901,6 @@ BOOST_AUTO_TEST_CASE( will_qos2 ) {
             BOOST_CHECK(*packet_id != 0);
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "will_contents");
-            return true;
         });
     c2->set_pub_res_sent_handler(
         [&chk, &c2, &pid_unsub2]
@@ -1018,7 +989,6 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             c1_force_disconnect();
-            return true;
         });
     c1->set_close_handler(
         []
@@ -1042,7 +1012,6 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub2 = c2->subscribe("topic1", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -1071,7 +1040,6 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     c2->set_unsuback_handler(
         [&chk, &c2, &pid_unsub2, &pid_sub2]
@@ -1088,7 +1056,6 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     c2->set_publish_handler(
         [&chk, &c2, &pid_unsub2]
@@ -1113,7 +1080,6 @@ BOOST_AUTO_TEST_CASE( will_retain ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
 
     c1->connect();
@@ -1261,7 +1227,6 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             c1_force_disconnect();
-            return true;
         });
     c1->set_close_handler(
         []
@@ -1289,7 +1254,6 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             pid_sub2 = c2->subscribe("topic1", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -1310,7 +1274,6 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
             BOOST_TEST(reasons.size() == 1U);
             BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
             c1_force_disconnect();
-            return true;
         });
     c2->set_v5_unsuback_handler(
         [&chk, &c2, &pid_unsub2]
@@ -1320,7 +1283,6 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
             BOOST_TEST(reasons.size() == 1U);
             BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
             c2->disconnect();
-            return true;
         });
     c2->set_v5_publish_handler(
         [&chk, &c2, &pid_unsub2, prop_size, &user_prop_count]
@@ -1387,7 +1349,6 @@ BOOST_AUTO_TEST_CASE( will_prop ) {
             }
 
             pid_unsub2 = c2->unsubscribe("topic1");
-            return true;
         });
 
     c1->connect();

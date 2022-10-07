@@ -14,7 +14,7 @@
 #include <mqtt/namespace.hpp>
 #include <mqtt/error_code.hpp>
 #include <mqtt/any.hpp>
-#include <mqtt/move_only_function.hpp>
+#include <mqtt/move_only_handler.hpp>
 
 namespace MQTT_NS {
 
@@ -23,17 +23,17 @@ namespace as = boost::asio;
 class socket {
 public:
     virtual ~socket() = default;
-    virtual void async_read(as::mutable_buffer, move_only_function<void(error_code, std::size_t)>) = 0;
-    virtual void async_write(std::vector<as::const_buffer>, move_only_function<void(error_code, std::size_t)>) = 0;
+    virtual void async_read(as::mutable_buffer, move_only_handler<void(error_code, std::size_t)>) = 0;
+    virtual void async_write(std::vector<as::const_buffer>, move_only_handler<void(error_code, std::size_t)>) = 0;
     virtual std::size_t write(std::vector<as::const_buffer>, boost::system::error_code&) = 0;
-    virtual void post(move_only_function<void()>) = 0;
-    virtual void dispatch(move_only_function<void()>) = 0;
-    virtual void defer(move_only_function<void()>) = 0;
+    virtual void post(move_only_handler<void()>) = 0;
+    virtual void dispatch(move_only_handler<void()>) = 0;
+    virtual void defer(move_only_handler<void()>) = 0;
     virtual bool running_in_this_thread() const = 0;
     virtual as::ip::tcp::socket::lowest_layer_type& lowest_layer() = 0;
     virtual any native_handle() = 0;
     virtual void clean_shutdown_and_close(boost::system::error_code&) = 0;
-    virtual void async_clean_shutdown_and_close(move_only_function<void(error_code)>) = 0;
+    virtual void async_clean_shutdown_and_close(move_only_handler<void(error_code)>) = 0;
     virtual void force_shutdown_and_close(boost::system::error_code&) = 0;
     virtual as::any_io_executor get_executor() = 0;
 };

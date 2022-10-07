@@ -142,7 +142,6 @@ int main(int argc, char** argv) {
                     BOOST_ASSERT(sp);
                     connections.insert(sp);
                     sp->connack(false, MQTT_NS::v5::connect_reason_code::success);
-                    return true;
                 }
             );
             ep.set_v5_disconnect_handler( // use v5 handler
@@ -161,7 +160,6 @@ int main(int argc, char** argv) {
                     std::cout <<
                         "[server] puback received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
-                    return true;
                 });
             ep.set_v5_pubrec_handler( // use v5 handler
                 []
@@ -169,7 +167,6 @@ int main(int argc, char** argv) {
                     std::cout <<
                         "[server] pubrec received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
-                    return true;
                 });
             ep.set_v5_pubrel_handler( // use v5 handler
                 []
@@ -177,7 +174,6 @@ int main(int argc, char** argv) {
                     std::cout <<
                         "[server] pubrel received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
-                    return true;
                 });
             ep.set_v5_pubcomp_handler( // use v5 handler
                 []
@@ -185,7 +181,6 @@ int main(int argc, char** argv) {
                     std::cout <<
                         "[server] pubcomp received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
-                    return true;
                 });
             ep.set_v5_publish_handler( // use v5 handler
                 [&subs]
@@ -219,7 +214,6 @@ int main(int argc, char** argv) {
                             std::move(props)
                         );
                     }
-                    return true;
                 });
             ep.set_v5_subscribe_handler( // use v5 handler
                 [&subs, wp]
@@ -240,7 +234,6 @@ int main(int argc, char** argv) {
                         subs.emplace(std::move(e.topic_filter), sp, e.subopts.get_qos(), e.subopts.get_rap());
                     }
                     sp->suback(packet_id, res);
-                    return true;
                 }
             );
             ep.set_v5_unsubscribe_handler( // use v5 handler
@@ -258,7 +251,6 @@ int main(int argc, char** argv) {
                     }
                     BOOST_ASSERT(sp);
                     sp->unsuback(packet_id);
-                    return true;
                 }
             );
         }

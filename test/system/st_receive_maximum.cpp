@@ -60,7 +60,6 @@ BOOST_AUTO_TEST_CASE( sync ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                 c->subscribe("topic1", MQTT_NS::qos::exactly_once);
-                return true;
             });
         c->set_v5_suback_handler(
             [&chk, &c]
@@ -86,7 +85,6 @@ BOOST_AUTO_TEST_CASE( sync ) {
                     "message3",
                     MQTT_NS::qos::at_least_once
                 );
-                return true;
             });
         c->set_v5_publish_handler(
             [&chk, &c]
@@ -126,12 +124,10 @@ BOOST_AUTO_TEST_CASE( sync ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
         c->set_v5_puback_handler(
             []
             (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
-                return true;
             });
 
         c->set_close_handler(
@@ -189,7 +185,6 @@ BOOST_AUTO_TEST_CASE( sync_manual_pubrel ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                 c->pubrel(1);
-                return true;
             });
         c->set_v5_pubcomp_handler(
             [&]
@@ -197,7 +192,6 @@ BOOST_AUTO_TEST_CASE( sync_manual_pubrel ) {
                 MQTT_CHK("h_pubcomp");
                 BOOST_TEST(packet_id == 1);
                 c->disconnect();
-                return true;
             }
         );
         c->set_close_handler(
@@ -255,7 +249,6 @@ BOOST_AUTO_TEST_CASE( async_manual_pubrel ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                 c->async_pubrel(1);
-                return true;
             });
         c->set_v5_pubcomp_handler(
             [&]
@@ -263,7 +256,6 @@ BOOST_AUTO_TEST_CASE( async_manual_pubrel ) {
                 MQTT_CHK("h_pubcomp");
                 BOOST_TEST(packet_id == 1);
                 c->async_disconnect();
-                return true;
             }
         );
         c->set_close_handler(
