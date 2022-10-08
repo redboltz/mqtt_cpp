@@ -7,8 +7,8 @@
 #if !defined(MQTT_MOVE_ONLY_FUNCTION_HPP)
 #define MQTT_MOVE_ONLY_FUNCTION_HPP
 
-#pragma GCC diagnostic push
 #if defined(__GNUC__)
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Waddress"
 #endif // defined(__GNUC__)
 

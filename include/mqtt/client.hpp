@@ -26,6 +26,7 @@
 #include <mqtt/callable_overlay.hpp>
 #include <mqtt/strand.hpp>
 #include <mqtt/null_strand.hpp>
+#include <mqtt/is_invocable.hpp>
 
 namespace MQTT_NS {
 
@@ -1444,30 +1445,87 @@ public:
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
      * @param timeout after timeout elapsed, force_disconnect() is automatically called.
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
      * @param func A callback function that is called when async operation will finish.
      */
-    void async_disconnect(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_disconnect(
         std::chrono::steady_clock::duration timeout,
-        async_handler_t func = async_handler_t()) {
+        v5::disconnect_reason_code reason_code,
+        v5::properties props,
+        CompletionToken&& token = [](error_code){}
+    ) {
+
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
-        if (base::connected()) {
-            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-            tim_close_.expires_after(force_move(timeout));
-            tim_close_.async_wait(
-                [wp = force_move(wp)](error_code ec) {
-                    if (auto sp = wp.lock()) {
-                        if (!ec) {
-                            sp->socket()->post(
-                                [sp] {
-                                    sp->force_disconnect();
-                                }
-                            );
-                        }
+        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+        tim_close_.expires_after(force_move(timeout));
+        tim_close_.async_wait(
+            [wp = force_move(wp)](error_code ec) {
+                if (auto sp = wp.lock()) {
+                    if (!ec) {
+                        sp->socket()->post(
+                            [sp] {
+                                sp->force_disconnect();
+                            }
+                        );
                     }
                 }
+            }
+        );
+        return
+            base::async_disconnect(
+                reason_code,
+                force_move(props),
+                std::forward<CompletionToken>(token)
             );
-            base::async_disconnect(force_move(func));
-        }
+    }
+
+    /**
+     * @brief Disconnect
+     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
+     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
+     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
+     * @param func A callback function that is called when async operation will finish.
+     */
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_disconnect(
+        v5::disconnect_reason_code reason_code,
+        v5::properties props,
+        CompletionToken&& token = [](error_code){}
+    ) {
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        return
+            base::async_disconnect(
+                reason_code,
+                force_move(props),
+                std::forward<CompletionToken>(token)
+            );
     }
 
     /**
@@ -1477,40 +1535,38 @@ public:
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
      * @param timeout after timeout elapsed, force_disconnect() is automatically called.
-     * @param reason_code
-     *        DISCONNECT Reason Code<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
-     *        3.14.2.1 Disconnect Reason Code
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
-     *        3.14.2.2 DISCONNECT Properties
      * @param func A callback function that is called when async operation will finish.
      */
-    void async_disconnect(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_disconnect(
         std::chrono::steady_clock::duration timeout,
-        v5::disconnect_reason_code reason_code,
-        v5::properties props,
-        async_handler_t func = async_handler_t()) {
+        CompletionToken&& token = [](error_code){}
+    ) {
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
-        if (base::connected()) {
-            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-            tim_close_.expires_after(force_move(timeout));
-            tim_close_.async_wait(
-                [wp = force_move(wp)](error_code ec) {
-                    if (auto sp = wp.lock()) {
-                        if (!ec) {
-                            sp->socket()->post(
-                                [sp] {
-                                    sp->force_disconnect();
-                                }
-                            );
-                        }
+        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+        tim_close_.expires_after(force_move(timeout));
+        tim_close_.async_wait(
+            [wp = force_move(wp)](error_code ec) {
+                if (auto sp = wp.lock()) {
+                    if (!ec) {
+                        sp->socket()->post(
+                            [sp] {
+                                sp->force_disconnect();
+                            }
+                        );
                     }
                 }
+            }
+        );
+        return
+            base::async_disconnect(
+                std::forward<CompletionToken>(token)
             );
-            base::async_disconnect(reason_code, force_move(props), force_move(func));
-        }
     }
 
     /**
@@ -1521,46 +1577,17 @@ public:
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
      * @param func A callback function that is called when async operation will finish.
      */
-    template <typename CompletionToken>
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
     auto async_disconnect(
-        CompletionToken&& token = async_handler_t{}
-    )
-        ->
-        typename as::async_result<
-            typename std::decay<CompletionToken>::type,
-            void(error_code)
-        >::return_type
-    {
+        CompletionToken&& token = [](error_code){}
+    ) {
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
-        if (base::connected()) {
-            base::async_disconnect(std::forward<CompletionToken>(token));
-        }
-    }
-
-    /**
-     * @brief Disconnect
-     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
-     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
-     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
-     * @param reason_code
-     *        DISCONNECT Reason Code<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
-     *        3.14.2.1 Disconnect Reason Code
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
-     *        3.14.2.2 DISCONNECT Properties
-     * @param func A callback function that is called when async operation will finish.
-     */
-    void async_disconnect(
-        v5::disconnect_reason_code reason_code,
-        v5::properties props,
-        async_handler_t func = async_handler_t()) {
-        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
-        if (base::connected()) {
-            base::async_disconnect(reason_code, force_move(props), force_move(func));
-        }
+        return base::async_disconnect(std::forward<CompletionToken>(token));
     }
 
     /**
