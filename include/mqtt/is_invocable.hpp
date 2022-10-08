@@ -14,7 +14,7 @@
 
 namespace MQTT_NS {
 
-#if __cplusplus >= 201703L
+#if __cplusplus >= 201703L || defined(_MSC_VER)
 
 template <typename Func, typename... Params>
 using is_invocable = typename std::is_invocable<Func, Params...>;
