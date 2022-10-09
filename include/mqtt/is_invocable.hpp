@@ -8,24 +8,32 @@
 #define MQTT_IS_INVOCABLE_HPP
 
 #include <type_traits>
-#include <boost/callable_traits.hpp>
-
 #include <mqtt/namespace.hpp>
 
-namespace MQTT_NS {
+#if __cplusplus >= 201703L
 
-#if __cplusplus >= 201703L || defined(_MSC_VER)
+namespace MQTT_NS {
 
 template <typename Func, typename... Params>
 using is_invocable = typename std::is_invocable<Func, Params...>;
 
+} // namespace MQTT_NS
+
 #else  // __cplusplus >= 201703L
 
-template <typename Func, typename... Params>
-using is_invocable = typename boost::callable_traits::is_invocable<Func, Params...>;
+#include <mqtt/move_only_function.hpp>
 
-#endif // __cplusplus >= 201703L
+namespace MQTT_NS {
+
+template <typename Func, typename... Params>
+struct is_invocable : std::is_constructible<
+    move_only_function<void(Params...)>,
+    std::reference_wrapper<typename std::remove_reference<Func>::type>
+>
+{};
 
 } // namespace MQTT_NS
+
+#endif // __cplusplus >= 201703L
 
 #endif // MQTT_IS_INVOCABLE_HPP
