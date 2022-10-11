@@ -65,13 +65,13 @@ public:
                 [this, req_size, buffers, handler = force_move(handler)]
                 (error_code ec, std::shared_ptr<void> const& v) mutable {
                     if (ec) {
-                        force_move(handler)(ec, 0);
+                        force_move(handler)(ec, std::size_t(0));
                         return;
                     }
                     if (!ws_.got_binary()) {
                         buffer_.consume(buffer_.size());
                         force_move(handler)
-                            (boost::system::errc::make_error_code(boost::system::errc::bad_message), 0);
+                            (boost::system::errc::make_error_code(boost::system::errc::bad_message), std::size_t(0));
                         return;
                     }
                     if (req_size > buffer_.size()) {
