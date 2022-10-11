@@ -7750,7 +7750,7 @@ private:
                                     force_move(topic_name_),
                                     force_move(variant_get<buffer>(var))
                                 );
-                                break;
+                                return true;
                             case protocol_version::v5:
                                 switch (qos_value_) {
                                 case qos::at_most_once:
@@ -7861,7 +7861,7 @@ private:
                                     force_move(variant_get<buffer>(var)),
                                     force_move(props_)
                                 );
-                                break;
+                                return true;
                             default:
                                 BOOST_ASSERT(false);
                             }
