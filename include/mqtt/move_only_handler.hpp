@@ -46,7 +46,7 @@ struct move_only_handler {
             [this, pt = std::tuple<Params...>(std::forward<Params>(params)...)] () mutable {
                 auto avoid_func_copy =
                     [&](auto&&... params) mutable {
-                        func_(std::forward<decltype(params)>(params)...);
+                        func_(std::forward<std::remove_reference_t<decltype(params)>>(params)...);
                     };
                 MQTT_NS::apply(avoid_func_copy, std::move(pt));
                 //std::apply(avoid_func_copy, std::move(pt));
@@ -61,7 +61,7 @@ struct move_only_handler {
             [this, pt = std::tuple<Params...>(std::forward<Params>(params)...)] () mutable {
                 auto avoid_func_copy =
                     [&](auto&&... params) mutable {
-                        func_(std::forward<decltype(params)>(params)...);
+                        func_(std::forward<std::remove_reference_t<decltype(params)>>(params)...);
                     };
                 MQTT_NS::apply(avoid_func_copy, std::move(pt));
                 //std::apply(avoid_func_copy, std::move(pt));
