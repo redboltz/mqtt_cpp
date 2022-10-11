@@ -10,7 +10,6 @@
 #include <type_traits>
 
 #include <boost/asio.hpp>
-//#include <boost/hof/apply.hpp>
 #include <mqtt/namespace.hpp>
 #include <mqtt/move_only_function.hpp>
 #include <mqtt/move.hpp>
@@ -28,7 +27,7 @@ struct move_only_handler {
 
     template <
         typename Func,
-        std::enable_if_t<
+        typename std::enable_if_t<
             std::is_convertible<Func, move_only_function<Sig>>::value
         >* = nullptr
     >

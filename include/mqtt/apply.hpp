@@ -8,6 +8,8 @@
 #define MQTT_APPLY_HPP
 
 #include <tuple>
+#include <utility>
+#include <type_traits>
 
 #include <mqtt/namespace.hpp>
 
