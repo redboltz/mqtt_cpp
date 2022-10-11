@@ -71,7 +71,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c->set_close_handler(
         [&chk, &finish]
@@ -88,19 +87,16 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_suback_handler(
         [&chk, &c, &pid_sub]
@@ -110,7 +106,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
             c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c->set_unsuback_handler(
         [&chk, &c, &pid_unsub]
@@ -118,7 +113,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             MQTT_CHK("h_unsuback");
             BOOST_TEST(packet_id == pid_unsub);
             c->disconnect();
-            return true;
         });
     c->set_publish_handler(
         [&chk, &c, &pid_unsub]
@@ -134,7 +128,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "topic1_contents");
             pid_unsub = c->unsubscribe("topic1");
-            return true;
         });
     c->connect();
     ioc.run();
@@ -197,7 +190,6 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c->set_close_handler(
         [&chk, &finish]
@@ -216,19 +208,16 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             MQTT_CHK("h_puback");
             BOOST_TEST(packet_id == pid_pub);
             pid_unsub = c->unsubscribe("topic1");
-            return true;
         });
     c->set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_suback_handler(
         [&chk, &c, &pid_pub, &pid_sub]
@@ -238,7 +227,6 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
             pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
-            return true;
         });
     c->set_unsuback_handler(
         [&chk, &c, &pid_unsub]
@@ -246,7 +234,6 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             MQTT_CHK("h_unsuback");
             BOOST_TEST(packet_id == pid_unsub);
             c->disconnect();
-            return true;
         });
     c->set_publish_handler(
         [&chk]
@@ -261,7 +248,6 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos0 ) {
             BOOST_TEST(!packet_id);
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "topic1_contents");
-            return true;
         });
     c->connect();
     ioc.run();
@@ -324,7 +310,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c->set_close_handler(
         [&chk, &finish]
@@ -341,14 +326,12 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubrec_handler(
         [&chk, &pid_pub]
         (packet_id_t packet_id) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
-            return true;
         });
     c->set_pubcomp_handler(
         [&chk, &c, &pid_unsub, &pid_pub]
@@ -356,7 +339,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == pid_pub);
             pid_unsub = c->unsubscribe("topic1");
-            return true;
         });
     c->set_suback_handler(
         [&chk, &c, &pid_pub]
@@ -366,7 +348,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
             pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
-            return true;
         });
     c->set_unsuback_handler(
         [&chk, &c, &pid_unsub]
@@ -374,7 +355,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             MQTT_CHK("h_unsuback");
             BOOST_TEST(packet_id == pid_unsub);
             c->disconnect();
-            return true;
         });
     c->set_publish_handler(
         [&chk]
@@ -389,7 +369,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos0 ) {
             BOOST_CHECK(!packet_id);
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "topic1_contents");
-            return true;
         });
     c->connect();
     ioc.run();
@@ -449,7 +428,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_least_once);
-            return true;
         });
     c->set_close_handler(
         [&chk, &finish]
@@ -466,19 +444,16 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_suback_handler(
         [&chk, &c, &pid_sub]
@@ -488,7 +463,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_1);
             c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c->set_unsuback_handler(
         [&chk, &c, &pid_unsub]
@@ -496,7 +470,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             MQTT_CHK("h_unsuback");
             BOOST_TEST(packet_id == pid_unsub);
             c->disconnect();
-            return true;
         });
     c->set_publish_handler(
         [&chk, &c, &pid_unsub]
@@ -512,7 +485,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos1 ) {
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "topic1_contents");
             pid_unsub = c->unsubscribe("topic1");
-            return true;
         });
     c->connect();
     ioc.run();
@@ -575,7 +547,6 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_least_once);
-            return true;
         });
     c->set_close_handler(
         [&chk, &finish]
@@ -594,19 +565,16 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             MQTT_CHK("h_puback");
             BOOST_TEST(packet_id == pid_pub);
             pid_unsub = c->unsubscribe("topic1");
-            return true;
         });
     c->set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     MQTT_NS::optional<packet_id_t> recv_packet_id;
     c->set_pub_res_sent_handler(
@@ -623,7 +591,6 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_1);
             pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
-            return true;
         });
     c->set_unsuback_handler(
         [&chk, &c, &pid_unsub]
@@ -631,7 +598,6 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             MQTT_CHK("h_unsuback");
             BOOST_TEST(packet_id == pid_unsub);
             c->disconnect();
-            return true;
         });
     c->set_publish_handler(
         [&chk, &recv_packet_id]
@@ -647,7 +613,6 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos1 ) {
             recv_packet_id = packet_id;
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "topic1_contents");
-            return true;
         });
     c->connect();
     ioc.run();
@@ -711,7 +676,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_least_once);
-            return true;
         });
     c->set_close_handler(
         [&chk, &finish]
@@ -728,14 +692,12 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubrec_handler(
         [&chk, &pid_pub]
         (packet_id_t packet_id) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
-            return true;
         });
     c->set_pubcomp_handler(
         [&chk, &c, &pid_pub, &pid_unsub]
@@ -743,7 +705,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == pid_pub);
             pid_unsub = c->unsubscribe("topic1");
-            return true;
         });
     MQTT_NS::optional<packet_id_t> recv_packet_id;
     c->set_pub_res_sent_handler(
@@ -760,7 +721,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_1);
             pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
-            return true;
         });
     c->set_unsuback_handler(
         [&chk, &c, &pid_unsub]
@@ -768,7 +728,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             MQTT_CHK("h_unsuback");
             BOOST_TEST(packet_id == pid_unsub);
             c->disconnect();
-            return true;
         });
     c->set_publish_handler(
         [&chk, &recv_packet_id]
@@ -784,7 +743,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos1 ) {
             recv_packet_id = packet_id;
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "topic1_contents");
-            return true;
         });
     c->connect();
     ioc.run();
@@ -845,7 +803,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub = c->subscribe("topic1", MQTT_NS::qos::exactly_once);
-            return true;
         });
     c->set_close_handler(
         [&chk, &finish]
@@ -862,19 +819,16 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_suback_handler(
         [&chk, &c, &pid_sub]
@@ -884,7 +838,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
             c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c->set_unsuback_handler(
         [&chk, &c, &pid_unsub]
@@ -892,7 +845,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             MQTT_CHK("h_unsuback");
             BOOST_TEST(packet_id == pid_unsub);
             c->disconnect();
-            return true;
         });
     c->set_publish_handler(
         [&chk, &c, &pid_unsub]
@@ -908,7 +860,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos2 ) {
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "topic1_contents");
             pid_unsub = c->unsubscribe("topic1");
-            return true;
         });
     c->connect();
     ioc.run();
@@ -972,7 +923,6 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub = c->subscribe("topic1", MQTT_NS::qos::exactly_once);
-            return true;
         });
     c->set_close_handler(
         [&chk, &finish]
@@ -991,19 +941,16 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             MQTT_CHK("h_puback");
             BOOST_TEST(packet_id == pid_pub);
             pid_unsub = c->unsubscribe("topic1");
-            return true;
         });
     c->set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     MQTT_NS::optional<packet_id_t> recv_packet_id;
     c->set_pub_res_sent_handler(
@@ -1020,7 +967,6 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
             pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
-            return true;
         });
     c->set_unsuback_handler(
         [&chk, &c, &pid_unsub]
@@ -1028,7 +974,6 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             MQTT_CHK("h_unsuback");
             BOOST_TEST(packet_id == pid_unsub);
             c->disconnect();
-            return true;
         });
     c->set_publish_handler(
         [&chk, &recv_packet_id]
@@ -1044,7 +989,6 @@ BOOST_AUTO_TEST_CASE( pub_qos1_sub_qos2 ) {
             recv_packet_id = packet_id;
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "topic1_contents");
-            return true;
         });
     c->connect();
     ioc.run();
@@ -1109,7 +1053,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub = c->subscribe("topic1", MQTT_NS::qos::exactly_once);
-            return true;
         });
     c->set_close_handler(
         [&chk, &finish]
@@ -1126,14 +1069,12 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubrec_handler(
         [&chk, &pid_pub]
         (packet_id_t packet_id) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
-            return true;
         });
     c->set_pubcomp_handler(
         [&chk, &c, &pid_pub, &pid_unsub]
@@ -1141,7 +1082,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == pid_pub);
             pid_unsub = c->unsubscribe("topic1");
-            return true;
         });
     MQTT_NS::optional<packet_id_t> recv_packet_id;
     c->set_pub_res_sent_handler(
@@ -1158,7 +1098,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
             pid_pub = c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
-            return true;
         });
     c->set_unsuback_handler(
         [&chk, &c, &pid_unsub]
@@ -1166,7 +1105,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             MQTT_CHK("h_unsuback");
             BOOST_TEST(packet_id == pid_unsub);
             c->disconnect();
-            return true;
         });
     c->set_publish_handler(
         [&chk, &recv_packet_id]
@@ -1182,7 +1120,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2 ) {
             recv_packet_id = packet_id;
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "topic1_contents");
-            return true;
         });
     c->connect();
     ioc.run();
@@ -1243,7 +1180,6 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c->set_close_handler(
         [&chk, &finish]
@@ -1260,19 +1196,16 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubrec_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_pubcomp_handler(
         []
         (std::uint16_t) {
             BOOST_CHECK(false);
-            return true;
         });
     c->set_suback_handler(
         [&chk, &c, &pid_sub]
@@ -1282,7 +1215,6 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
             c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_most_once);
-            return true;
         });
     c->set_unsuback_handler(
         [&chk, &c, &pid_unsub]
@@ -1290,7 +1222,6 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
             MQTT_CHK("h_unsuback");
             BOOST_TEST(packet_id == pid_unsub);
             c->disconnect();
-            return true;
         });
     c->set_publish_handler(
         [&chk, &c, &pid_unsub]
@@ -1306,7 +1237,6 @@ BOOST_AUTO_TEST_CASE( publish_function ) {
             BOOST_TEST(topic == "topic1");
             BOOST_TEST(contents == "topic1_contents");
             pid_unsub = c->unsubscribe("topic1");
-            return true;
         });
     c->connect();
     ioc.run();

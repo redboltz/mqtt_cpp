@@ -135,7 +135,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_puback_handler(
                 [&chk, &c, &pid_pub]
@@ -143,7 +142,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -171,7 +169,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_puback_handler(
                 [&chk, &c, &pid_pub]
@@ -179,7 +176,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
-                    return true;
                 });
             break;
         default:
@@ -284,14 +280,12 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_pubrec_handler(
                 [&chk, &pid_pub]
                 (packet_id_t packet_id) {
                     MQTT_CHK("h_pubrec");
                     BOOST_TEST(packet_id == pid_pub);
-                    return true;
                 });
             c->set_pubcomp_handler(
                 [&chk, &c, &pid_pub]
@@ -299,7 +293,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -327,14 +320,12 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_pubrec_handler(
                 [&chk, &pid_pub]
                 (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_pubrec");
                     BOOST_TEST(packet_id == pid_pub);
-                    return true;
                 });
             c->set_v5_pubcomp_handler(
                 [&chk, &c, &pid_pub]
@@ -342,7 +333,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
-                    return true;
                 });
             break;
         default:
@@ -495,7 +485,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_pubrec_handler(
                 [&chk, &c, &pid_pub]
@@ -503,7 +492,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                     MQTT_CHK("h_pubrec");
                     BOOST_TEST(packet_id == pid_pub);
                     c->force_disconnect();
-                    return true;
                 });
             c->set_pubcomp_handler(
                 [&chk, &c]
@@ -511,7 +499,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == 1);
                     c->disconnect();
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -539,7 +526,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_pubrec_handler(
                 [&chk, &c, &pid_pub, ps = std::move(ps)]
@@ -548,7 +534,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                     BOOST_TEST(packet_id == pid_pub);
                     c->pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, std::move(ps));
                     c->force_disconnect();
-                    return true;
                 });
             c->set_v5_pubcomp_handler(
                 [&chk, &c]
@@ -556,7 +541,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == 1);
                     c->disconnect();
-                    return true;
                 });
             break;
         default:
@@ -669,7 +653,6 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_pubrec_handler(
                 [&chk, &c, &pid_pub]
@@ -677,7 +660,6 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                     MQTT_CHK("h_pubrec");
                     BOOST_TEST(packet_id == pid_pub);
                     c->force_disconnect();
-                    return true;
                 });
             c->set_pubcomp_handler(
                 [&chk, &c, &pid_pub]
@@ -685,7 +667,6 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -717,7 +698,6 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_pubrec_handler(
                 [&chk, &c, &pid_pub]
@@ -725,7 +705,6 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                     MQTT_CHK("h_pubrec");
                     BOOST_TEST(packet_id == pid_pub);
                     c->force_disconnect();
-                    return true;
                 });
             c->set_v5_pubcomp_handler(
                 [&chk, &c, &pid_pub]
@@ -733,7 +712,6 @@ BOOST_AUTO_TEST_CASE( publish_pubrel_qos2 ) {
                     MQTT_CHK("h_pubcomp");
                     BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
-                    return true;
                 });
             break;
         default:
@@ -863,7 +841,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_from_broker ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_suback_handler(
                 [&chk, &c]
@@ -872,7 +849,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_from_broker ) {
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
                     c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
-                    return true;
                 }
             );
             c->set_publish_handler(
@@ -909,7 +885,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_from_broker ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 }
             );
             c->set_puback_handler(
@@ -919,7 +894,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_from_broker ) {
                     if (chk.passed("h_publish1")) {
                         c->force_disconnect();
                     }
-                    return true;
                 }
             );
             break;
@@ -947,7 +921,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_from_broker ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_suback_handler(
                 [&chk, &c]
@@ -957,7 +930,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_from_broker ) {
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_2);
                     c->publish("topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
-                    return true;
                 }
             );
             c->set_v5_publish_handler(
@@ -995,7 +967,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_from_broker ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 }
             );
             c->set_v5_puback_handler(
@@ -1005,7 +976,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_from_broker ) {
                     if (chk.passed("h_publish1")) {
                         c->force_disconnect();
                     }
-                    return true;
                 }
             );
             break;
@@ -1114,7 +1084,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 }
             );
             c->set_suback_handler(
@@ -1124,7 +1093,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
                     c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
-                    return true;
                 }
             );
             c->set_publish_handler(
@@ -1144,7 +1112,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                     if (chk.passed("h_pubcomp")) {
                         c->force_disconnect();
                     }
-                    return true;
                 }
             );
             c->set_pubrec_handler(
@@ -1152,7 +1119,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                 (packet_id_t packet_id) {
                     MQTT_CHK("h_pubrec");
                     c->pubrel(packet_id);
-                    return true;
                 }
             );
             c->set_pubcomp_handler(
@@ -1162,7 +1128,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                     if (chk.passed("h_publish1")) {
                         c->force_disconnect();
                     }
-                    return true;
                 }
             );
             break;
@@ -1191,7 +1156,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_suback_handler(
                 [&chk, &c]
@@ -1201,7 +1165,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_2);
                     c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
-                    return true;
                 }
             );
             c->set_v5_publish_handler(
@@ -1222,7 +1185,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                     if (chk.passed("h_pubcomp")) {
                         c->force_disconnect();
                     }
-                    return true;
                 }
             );
             c->set_v5_pubrec_handler(
@@ -1230,7 +1192,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                 (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_pubrec");
                     c->pubrel(packet_id);
-                    return true;
                 });
             c->set_v5_pubcomp_handler(
                 [&chk, &c]
@@ -1239,7 +1200,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_from_broker ) {
                     if (chk.passed("h_publish1")) {
                         c->force_disconnect();
                     }
-                    return true;
                 });
             break;
         default:
@@ -1348,7 +1308,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_suback_handler(
                 [&chk, &c]
@@ -1357,7 +1316,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
                     c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
-                    return true;
                 }
             );
             c->set_publish_handler(
@@ -1375,7 +1333,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     c->pubrec(packet_id.value());
-                    return true;
                 }
             );
             c->set_pubrec_handler(
@@ -1383,7 +1340,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
                 (packet_id_t packet_id) {
                     MQTT_CHK("h_pubrec");
                     c->pubrel(packet_id);
-                    return true;
                 }
             );
             c->set_pubrel_handler(
@@ -1405,7 +1361,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 }
             );
             c->set_pubcomp_handler(
@@ -1415,7 +1370,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
                     if (chk.passed("h_publish")) {
                         c->force_disconnect();
                     }
-                    return true;
                 }
             );
             break;
@@ -1444,7 +1398,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 }
             );
             c->set_v5_suback_handler(
@@ -1454,7 +1407,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_2);
                     c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
-                    return true;
                 }
             );
             c->set_v5_publish_handler(
@@ -1473,7 +1425,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     c->pubrec(packet_id.value());
-                    return true;
                 }
             );
             c->set_v5_pubrec_handler(
@@ -1481,7 +1432,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
                 (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                     MQTT_CHK("h_pubrec");
                     c->pubrel(packet_id);
-                    return true;
                 }
             );
             c->set_v5_pubrel_handler(
@@ -1503,7 +1453,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 }
             );
             c->set_v5_pubcomp_handler(
@@ -1513,7 +1462,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_from_broker ) {
                     if (chk.passed("h_publish")) {
                         c->force_disconnect();
                     }
-                    return true;
                 }
             );
             break;
@@ -1626,7 +1574,6 @@ BOOST_AUTO_TEST_CASE( publish_message_expired_from_broker ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
         c->set_v5_suback_handler(
             [&chk, &c]
@@ -1641,7 +1588,6 @@ BOOST_AUTO_TEST_CASE( publish_message_expired_from_broker ) {
                     MQTT_NS::qos::at_least_once,
                     MQTT_NS::v5::properties { MQTT_NS::v5::property::message_expiry_interval(1) }
                 );
-                return true;
             }
         );
         c->set_v5_publish_handler(
@@ -1662,7 +1608,6 @@ BOOST_AUTO_TEST_CASE( publish_message_expired_from_broker ) {
                 if (chk.passed("h_puback")) {
                     c->force_disconnect();
                 }
-                return true;
             }
         );
         c->set_v5_puback_handler(
@@ -1672,7 +1617,6 @@ BOOST_AUTO_TEST_CASE( publish_message_expired_from_broker ) {
                 if (chk.passed("h_publish")) {
                     c->force_disconnect();
                 }
-                return true;
             }
         );
 
@@ -1773,7 +1717,6 @@ BOOST_AUTO_TEST_CASE( publish_message_expiry_update_from_broker ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             }
         );
         c->set_v5_suback_handler(
@@ -1789,7 +1732,6 @@ BOOST_AUTO_TEST_CASE( publish_message_expiry_update_from_broker ) {
                     MQTT_NS::qos::at_least_once,
                     MQTT_NS::v5::properties { MQTT_NS::v5::property::message_expiry_interval(5) }
                 );
-                return true;
             }
         );
         c->set_v5_publish_handler(
@@ -1841,7 +1783,6 @@ BOOST_AUTO_TEST_CASE( publish_message_expiry_update_from_broker ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             }
         );
         c->set_v5_puback_handler(
@@ -1851,7 +1792,6 @@ BOOST_AUTO_TEST_CASE( publish_message_expiry_update_from_broker ) {
                 if (chk.passed("h_publish1")) {
                     c->force_disconnect();
                 }
-                return true;
             }
         );
 
@@ -1948,7 +1888,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_puback_handler(
                 [&chk, &c, &pid_pub1, &pid_pub2]
@@ -1965,7 +1904,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -1994,7 +1932,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_puback_handler(
                 [&chk, &c, &pid_pub1, &pid_pub2]
@@ -2011,7 +1948,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             break;
         default:
@@ -2122,7 +2058,6 @@ BOOST_AUTO_TEST_CASE( publish_session_before_expire ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_puback_handler(
                 [&chk, &c, &pid_pub]
@@ -2130,7 +2065,6 @@ BOOST_AUTO_TEST_CASE( publish_session_before_expire ) {
                     MQTT_CHK("h_puback");
                     BOOST_TEST(packet_id == pid_pub);
                     c->disconnect();
-                    return true;
                 });
             break;
         default:
@@ -2253,13 +2187,11 @@ BOOST_AUTO_TEST_CASE( publish_session_after_expire ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_puback_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_TEST(false);
-                    return true;
                 });
             break;
         default:

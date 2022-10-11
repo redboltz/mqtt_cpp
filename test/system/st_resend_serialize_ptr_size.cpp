@@ -120,7 +120,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     c1->set_close_handler(
         [&chk, &c1]
@@ -157,7 +156,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -171,7 +169,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1 ) {
             MQTT_CHK("h_puback");
             BOOST_TEST(packet_id == pid_pub);
             c2->disconnect();
-            return true;
         });
 
     MQTT_CHK("start");
@@ -263,7 +260,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     c1->set_close_handler(
         [&chk, &c1]
@@ -300,7 +296,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -313,7 +308,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
         (packet_id_t packet_id) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
-            return true;
         });
     c2->set_pubcomp_handler(
         [&chk, &c2, &pid_pub]
@@ -321,7 +315,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2 ) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == pid_pub);
             c2->disconnect();
-            return true;
         });
     MQTT_CHK("start");
     c1->connect();
@@ -411,7 +404,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     c1->set_close_handler(
         [&chk, &c1]
@@ -447,7 +439,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
             c1->force_disconnect();
-            return true;
         });
 
     c2->set_connack_handler(
@@ -456,7 +447,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -470,7 +460,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2 ) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == 1);
             c2->disconnect();
-            return true;
         });
     MQTT_CHK("start");
     c1->connect();
@@ -564,7 +553,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     c1->set_close_handler(
         [&chk, &c1]
@@ -600,7 +588,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -623,7 +610,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     MQTT_CHK("start");
     c1->connect();
@@ -806,7 +792,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     c1->set_close_handler(
         [&chk, &c1]
@@ -843,7 +828,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -857,7 +841,6 @@ BOOST_AUTO_TEST_CASE( publish_qos1_v5 ) {
             MQTT_CHK("h_puback");
             BOOST_TEST(packet_id == pid_pub);
             c2->disconnect();
-            return true;
         });
 
     MQTT_CHK("start");
@@ -951,7 +934,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     c1->set_close_handler(
         [&chk, &c1]
@@ -988,7 +970,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -1001,7 +982,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
         (packet_id_t packet_id, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("h_pubrec");
             BOOST_TEST(packet_id == pid_pub);
-            return true;
         });
     c2->set_v5_pubcomp_handler(
         [&chk, &c2, &pid_pub]
@@ -1009,7 +989,6 @@ BOOST_AUTO_TEST_CASE( publish_qos2_v5 ) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == pid_pub);
             c2->disconnect();
-            return true;
         });
     MQTT_CHK("start");
     c1->connect();
@@ -1151,7 +1130,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     c1->set_close_handler(
         [&chk, &c1]
@@ -1188,7 +1166,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
             BOOST_TEST(packet_id == pid_pub);
             c1->pubrel(packet_id, MQTT_NS::v5::pubrel_reason_code::success, std::move(ps));
             c1->force_disconnect();
-            return true;
         });
 
     c2->set_v5_connack_handler(
@@ -1197,7 +1174,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -1211,7 +1187,6 @@ BOOST_AUTO_TEST_CASE( pubrel_qos2_v5 ) {
             MQTT_CHK("h_pubcomp");
             BOOST_TEST(packet_id == 1);
             c2->disconnect();
-            return true;
         });
     MQTT_CHK("start");
     c1->connect();
@@ -1307,7 +1282,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     c1->set_close_handler(
         [&chk, &c1]
@@ -1343,7 +1317,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             MQTT_CHK("h_connack3");
             BOOST_TEST(sp == true);
-            return true;
         });
     c2->set_close_handler(
         [&chk, &finish]
@@ -1366,7 +1339,6 @@ BOOST_AUTO_TEST_CASE( multi_publish_qos1_v5 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         });
     MQTT_CHK("start");
     c1->connect();

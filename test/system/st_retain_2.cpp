@@ -55,25 +55,21 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-                    return true;
                 });
             c->set_puback_handler(
                 []
                 (std::uint16_t) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_pubrec_handler(
                 []
                 (std::uint16_t) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_pubcomp_handler(
                 []
                 (std::uint16_t) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_suback_handler(
                 [&chk, &c, &pid_sub]
@@ -91,7 +87,6 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_unsuback_handler(
                 [&chk, &c, &pid_sub, &pid_unsub]
@@ -108,7 +103,6 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_publish_handler(
                 [&chk, &c, &pid_unsub]
@@ -133,7 +127,6 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -144,25 +137,21 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-                    return true;
                 });
             c->set_v5_puback_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_pubrec_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_pubcomp_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_suback_handler(
                 [&chk, &c, &pid_sub]
@@ -180,7 +169,6 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_sub, &pid_unsub]
@@ -199,7 +187,6 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_publish_handler(
                 [&chk, &c, &pid_unsub]
@@ -225,7 +212,6 @@ BOOST_AUTO_TEST_CASE( retain_and_publish ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             break;
         default:
@@ -299,25 +285,21 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                     pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-                    return true;
                 });
             c->set_v5_puback_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_pubrec_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_pubcomp_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_suback_handler(
                 [&chk, &c, &pid_sub, &pid_unsub, &timeout, message_timeout]
@@ -349,7 +331,6 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_sub, &pid_unsub, &timeout, message_timeout]
@@ -376,7 +357,6 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             c->set_v5_publish_handler(
                 [&chk, &c, &pid_unsub]
@@ -402,7 +382,6 @@ BOOST_AUTO_TEST_CASE( retain_and_publish_timeout ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             break;
         default:
@@ -470,25 +449,21 @@ BOOST_AUTO_TEST_CASE( retain_rap ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                 pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once | MQTT_NS::rap::retain);
-                return true;
             });
         c->set_v5_puback_handler(
             []
             (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_pubrec_handler(
             []
             (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_pubcomp_handler(
             []
             (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_suback_handler(
             [&chk, &c, &pid_sub]
@@ -506,7 +481,6 @@ BOOST_AUTO_TEST_CASE( retain_rap ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
         c->set_v5_unsuback_handler(
             [&chk, &c, &pid_sub, &pid_unsub]
@@ -525,7 +499,6 @@ BOOST_AUTO_TEST_CASE( retain_rap ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
         c->set_v5_publish_handler(
             [&chk, &c, &pid_unsub]
@@ -551,7 +524,6 @@ BOOST_AUTO_TEST_CASE( retain_rap ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
 
         c->set_close_handler(
@@ -612,25 +584,21 @@ BOOST_AUTO_TEST_CASE( retain_rh_send ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                 c->subscribe("topic1", MQTT_NS::qos::at_most_once | MQTT_NS::rap::retain);
-                return true;
             });
         c->set_v5_puback_handler(
             []
             (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_pubrec_handler(
             []
             (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_pubcomp_handler(
             []
             (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_suback_handler(
             [&chk, &c]
@@ -650,7 +618,6 @@ BOOST_AUTO_TEST_CASE( retain_rh_send ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
         c->set_v5_unsuback_handler(
             [&chk, &c]
@@ -675,7 +642,6 @@ BOOST_AUTO_TEST_CASE( retain_rh_send ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
         c->set_v5_publish_handler(
             [&chk, &c]
@@ -706,7 +672,6 @@ BOOST_AUTO_TEST_CASE( retain_rh_send ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
 
         c->set_close_handler(
@@ -766,25 +731,21 @@ BOOST_AUTO_TEST_CASE( retain_rh_only_newsub ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                 c->subscribe("topic1", MQTT_NS::qos::at_most_once | MQTT_NS::rap::retain);
-                return true;
             });
         c->set_v5_puback_handler(
             []
             (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_pubrec_handler(
             []
             (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_pubcomp_handler(
             []
             (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_suback_handler(
             [&chk, &c]
@@ -804,7 +765,6 @@ BOOST_AUTO_TEST_CASE( retain_rh_only_newsub ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
         c->set_v5_unsuback_handler(
             [&chk, &c]
@@ -829,7 +789,6 @@ BOOST_AUTO_TEST_CASE( retain_rh_only_newsub ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
         c->set_v5_publish_handler(
             [&chk, &c]
@@ -855,7 +814,6 @@ BOOST_AUTO_TEST_CASE( retain_rh_only_newsub ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
 
         c->set_close_handler(
@@ -914,25 +872,21 @@ BOOST_AUTO_TEST_CASE( retain_rh_not_send ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                 c->subscribe("topic1", MQTT_NS::qos::at_most_once | MQTT_NS::rap::retain);
-                return true;
             });
         c->set_v5_puback_handler(
             []
             (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_pubrec_handler(
             []
             (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_pubcomp_handler(
             []
             (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_suback_handler(
             [&chk, &c]
@@ -953,7 +907,6 @@ BOOST_AUTO_TEST_CASE( retain_rh_not_send ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
         c->set_v5_unsuback_handler(
             [&chk, &c]
@@ -978,7 +931,6 @@ BOOST_AUTO_TEST_CASE( retain_rh_not_send ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
         c->set_v5_publish_handler(
             [&chk, &c]
@@ -995,7 +947,6 @@ BOOST_AUTO_TEST_CASE( retain_rh_not_send ) {
                 c->unsubscribe("topic1");
                 MQTT_CHK("h_publish1");
                 BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);
-                return true;
             });
 
         c->set_close_handler(
@@ -1068,25 +1019,21 @@ BOOST_AUTO_TEST_CASE( prop ) {
                 c->publish("topic1", "retained_contents", MQTT_NS::qos::at_most_once | MQTT_NS::retain::yes, MQTT_NS::force_move(ps));
 
                 pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-                return true;
             });
         c->set_v5_puback_handler(
             []
             (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_pubrec_handler(
             []
             (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_pubcomp_handler(
             []
             (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_suback_handler(
             [&chk, &pid_sub]
@@ -1095,7 +1042,6 @@ BOOST_AUTO_TEST_CASE( prop ) {
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(reasons.size() == 1U);
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
-                return true;
             });
         c->set_v5_unsuback_handler(
             [&chk, &c, &pid_unsub]
@@ -1105,7 +1051,6 @@ BOOST_AUTO_TEST_CASE( prop ) {
                 BOOST_TEST(reasons.size() == 1U);
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                 c->disconnect();
-                return true;
             });
         c->set_v5_publish_handler(
             [&chk, &c, &pid_unsub, prop_size, &user_prop_count]
@@ -1171,7 +1116,6 @@ BOOST_AUTO_TEST_CASE( prop ) {
                 }
 
                 pid_unsub = c->unsubscribe("topic1");
-                return true;
             });
         c->set_close_handler(
             [&chk, &finish]
@@ -1233,25 +1177,21 @@ BOOST_AUTO_TEST_CASE( sid ) {
                     "topic1", MQTT_NS::qos::at_most_once,
                     MQTT_NS::v5::properties{ MQTT_NS::v5::property::subscription_identifier(123) }
                 );
-                return true;
             });
         c->set_v5_puback_handler(
             []
             (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_pubrec_handler(
             []
             (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_pubcomp_handler(
             []
             (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
                 BOOST_CHECK(false);
-                return true;
             });
         c->set_v5_suback_handler(
             [&chk, &pid_sub]
@@ -1260,7 +1200,6 @@ BOOST_AUTO_TEST_CASE( sid ) {
                 BOOST_TEST(packet_id == pid_sub);
                 BOOST_TEST(reasons.size() == 1U);
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
-                return true;
             });
         c->set_v5_unsuback_handler(
             [&chk, &c, &pid_unsub]
@@ -1270,7 +1209,6 @@ BOOST_AUTO_TEST_CASE( sid ) {
                 BOOST_TEST(reasons.size() == 1U);
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                 c->disconnect();
-                return true;
             });
         c->set_v5_publish_handler(
             [&]
@@ -1302,7 +1240,6 @@ BOOST_AUTO_TEST_CASE( sid ) {
                 }
 
                 pid_unsub = c->unsubscribe("topic1");
-                return true;
             });
         c->set_close_handler(
             [&chk, &finish]
