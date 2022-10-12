@@ -13,7 +13,7 @@
 #include <mqtt/attributes.hpp>
 #include <mqtt/endpoint.hpp>
 #include <mqtt/move.hpp>
-#include <mqtt/move_only_handler.hpp>
+#include <mqtt/copyable_handler.hpp>
 
 namespace MQTT_NS {
 template<typename Impl>
@@ -727,14 +727,14 @@ struct callable_overlay final : public Impl
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718086<BR>
      *        3.13 PINGREQ – PING request
      */
-    using pingreq_handler = move_only_handler<void()>;
+    using pingreq_handler = copyable_handler<void()>;
 
     /**
      * @brief Pingresp handler
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901200<BR>
      *        3.13 PINGRESP – PING response
      */
-    using pingresp_handler = move_only_handler<void()>;
+    using pingresp_handler = copyable_handler<void()>;
 
 
     // MQTT v3_1_1 handlers
@@ -775,7 +775,7 @@ struct callable_overlay final : public Impl
      *        3.1.2.10 Keep Alive
      *
      */
-    using connect_handler = move_only_handler<
+    using connect_handler = copyable_handler<
         void(buffer client_id,
              optional<buffer> user_name,
              optional<buffer> password,
@@ -794,7 +794,7 @@ struct callable_overlay final : public Impl
      *        See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718036<BR>
      *        3.2.2.3 Connect Return code
      */
-    using connack_handler = move_only_handler<void(bool session_present, connect_return_code return_code)>;
+    using connack_handler = copyable_handler<void(bool session_present, connect_return_code return_code)>;
 
     /**
      * @brief Publish handler
@@ -812,7 +812,7 @@ struct callable_overlay final : public Impl
      * @param contents
      *        Published contents
      */
-    using publish_handler = move_only_handler<void(optional<packet_id_t> packet_id,
+    using publish_handler = copyable_handler<void(optional<packet_id_t> packet_id,
                                                publish_options pubopts,
                                                buffer topic_name,
                                                buffer contents)>;
@@ -824,7 +824,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718045<BR>
      *        3.4.2 Variable header
      */
-    using puback_handler = move_only_handler<void(packet_id_t packet_id)>;
+    using puback_handler = copyable_handler<void(packet_id_t packet_id)>;
 
     /**
      * @brief Pubrec handler
@@ -833,7 +833,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718050<BR>
      *        3.5.2 Variable header
      */
-    using pubrec_handler = move_only_handler<void(packet_id_t packet_id)>;
+    using pubrec_handler = copyable_handler<void(packet_id_t packet_id)>;
 
     /**
      * @brief Pubrel handler
@@ -842,7 +842,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349791<BR>
      *        3.6.2 Variable header
      */
-    using pubrel_handler = move_only_handler<void(packet_id_t packet_id)>;
+    using pubrel_handler = copyable_handler<void(packet_id_t packet_id)>;
 
     /**
      * @brief Pubcomp handler
@@ -851,7 +851,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718060<BR>
      *        3.7.2 Variable header
      */
-    using pubcomp_handler = move_only_handler<void(packet_id_t packet_id)>;
+    using pubcomp_handler = copyable_handler<void(packet_id_t packet_id)>;
 
     /**
      * @brief Subscribe handler
@@ -862,7 +862,7 @@ struct callable_overlay final : public Impl
      *        Collection of Share Name, Topic Filter, and QoS.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349802<BR>
      */
-    using subscribe_handler = move_only_handler<void(packet_id_t packet_id,
+    using subscribe_handler = copyable_handler<void(packet_id_t packet_id,
                                                  std::vector<subscribe_entry> entries)>;
 
     /**
@@ -875,7 +875,7 @@ struct callable_overlay final : public Impl
      *        If subscription is failure, the value is nullopt.<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718071<BR>
      */
-    using suback_handler = move_only_handler<void(packet_id_t packet_id,
+    using suback_handler = copyable_handler<void(packet_id_t packet_id,
                                               std::vector<suback_return_code> qoss)>;
 
     /**
@@ -887,7 +887,7 @@ struct callable_overlay final : public Impl
      *        Collection of Share Name and Topic Filter<BR>
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800448<BR>
      */
-    using unsubscribe_handler = move_only_handler<void(packet_id_t packet_id,
+    using unsubscribe_handler = copyable_handler<void(packet_id_t packet_id,
                                                    std::vector<unsubscribe_entry> entries)>;
 
     /**
@@ -896,14 +896,14 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718045<BR>
      *        3.11.2 Variable header
      */
-    using unsuback_handler = move_only_handler<void(packet_id_t)>;
+    using unsuback_handler = copyable_handler<void(packet_id_t)>;
 
     /**
      * @brief Disconnect handler
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800463<BR>
      *        3.14 DISCONNECT – Disconnect notification
      */
-    using disconnect_handler = move_only_handler<void()>;
+    using disconnect_handler = copyable_handler<void()>;
 
     // MQTT v5 handlers
 
@@ -949,7 +949,7 @@ struct callable_overlay final : public Impl
      *        3.1.2.11 CONNECT Properties
      *
      */
-    using v5_connect_handler = move_only_handler<
+    using v5_connect_handler = copyable_handler<
         void(buffer client_id,
              optional<buffer> user_name,
              optional<buffer> password,
@@ -974,7 +974,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901080<BR>
      *        3.2.2.3 CONNACK Properties
      */
-    using v5_connack_handler = move_only_handler<
+    using v5_connack_handler = copyable_handler<
         void(bool session_present,
              v5::connect_reason_code reason_code,
              v5::properties props)
@@ -1004,7 +1004,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109<BR>
      *        3.3.2.3 PUBLISH Properties
      */
-    using v5_publish_handler = move_only_handler<
+    using v5_publish_handler = copyable_handler<
         void(optional<packet_id_t> packet_id,
              publish_options pubopts,
              buffer topic_name,
@@ -1027,7 +1027,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901125<BR>
      *        3.4.2.2 PUBACK Properties
      */
-    using v5_puback_handler = move_only_handler<
+    using v5_puback_handler = copyable_handler<
         void(packet_id_t packet_id,
              v5::puback_reason_code reason_code,
              v5::properties props)
@@ -1048,7 +1048,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901135<BR>
      *        3.5.2.2 PUBREC Properties
      */
-    using v5_pubrec_handler = move_only_handler<
+    using v5_pubrec_handler = copyable_handler<
         void(packet_id_t packet_id,
              v5::pubrec_reason_code reason_code,
              v5::properties props)
@@ -1069,7 +1069,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901145<BR>
      *        3.6.2.2 PUBREL Properties
      */
-    using v5_pubrel_handler = move_only_handler<
+    using v5_pubrel_handler = copyable_handler<
         void(packet_id_t packet_id,
              v5::pubrel_reason_code reason_code,
              v5::properties props)
@@ -1090,7 +1090,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901155<BR>
      *        3.7.2.2 PUBCOMP Properties
      */
-    using v5_pubcomp_handler = move_only_handler<
+    using v5_pubcomp_handler = copyable_handler<
         void(packet_id_t packet_id,
              v5::pubcomp_reason_code reason_code,
              v5::properties props)
@@ -1109,7 +1109,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901164<BR>
      *        3.8.2.1 SUBSCRIBE Properties
      */
-    using v5_subscribe_handler = move_only_handler<
+    using v5_subscribe_handler = copyable_handler<
         void(packet_id_t packet_id,
              std::vector<subscribe_entry> entries,
              v5::properties props)
@@ -1129,7 +1129,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901174<BR>
      *        3.9.2.1 SUBACK Properties
      */
-    using v5_suback_handler = move_only_handler<
+    using v5_suback_handler = copyable_handler<
         void(packet_id_t packet_id,
              std::vector<v5::suback_reason_code> reasons,
              v5::properties props)
@@ -1149,7 +1149,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901182<BR>
      *        3.10.2.1 UNSUBSCRIBE Properties
      */
-    using v5_unsubscribe_handler = move_only_handler<
+    using v5_unsubscribe_handler = copyable_handler<
         void(packet_id_t packet_id,
              std::vector<unsubscribe_entry> entries,
              v5::properties props)
@@ -1169,7 +1169,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901190<BR>
      *        3.11.2.1 UNSUBACK Properties
      */
-    using v5_unsuback_handler = move_only_handler<
+    using v5_unsuback_handler = copyable_handler<
         void(packet_id_t,
              std::vector<v5::unsuback_reason_code> reasons,
              v5::properties props)
@@ -1188,7 +1188,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
      *        3.14.2.2 DISCONNECT Properties
      */
-    using v5_disconnect_handler = move_only_handler<
+    using v5_disconnect_handler = copyable_handler<
         void(v5::disconnect_reason_code reason_code,
              v5::properties props)
     >;
@@ -1206,7 +1206,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901221<BR>
      *        3.15.2.2 AUTH Properties
      */
-    using v5_auth_handler = move_only_handler<
+    using v5_auth_handler = copyable_handler<
         void(v5::auth_reason_code reason_code,
              v5::properties props)
     >;
@@ -1220,7 +1220,7 @@ struct callable_overlay final : public Impl
      * This handler is called if the client called `disconnect()` and the server closed the socket cleanly.
      * If the socket is closed by other reasons, error_handler is called.
      */
-    using close_handler = move_only_handler<void()>;
+    using close_handler = copyable_handler<void()>;
 
     /**
      * @brief Error handler
@@ -1229,7 +1229,7 @@ struct callable_overlay final : public Impl
      *
      * @param ec error code
      */
-    using error_handler = move_only_handler<void(error_code ec)>;
+    using error_handler = copyable_handler<void(error_code ec)>;
 
     /**
      * @brief Publish response sent handler
@@ -1239,7 +1239,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901026<BR>
      *        2.2.1 Packet Identifier
      */
-    using pub_res_sent_handler = move_only_handler<void(packet_id_t packet_id)>;
+    using pub_res_sent_handler = copyable_handler<void(packet_id_t packet_id)>;
 
     /**
      * @brief Serialize publish handler
@@ -1247,7 +1247,7 @@ struct callable_overlay final : public Impl
      *        To restore the message, use restore_serialized_message().
      * @param msg publish message
      */
-    using serialize_publish_message_handler = move_only_handler<void(basic_publish_message<sizeof(packet_id_t)> msg)>;
+    using serialize_publish_message_handler = copyable_handler<void(basic_publish_message<sizeof(packet_id_t)> msg)>;
 
     /**
      * @brief Serialize publish handler
@@ -1255,7 +1255,7 @@ struct callable_overlay final : public Impl
      *        To restore the message, use restore_serialized_message().
      * @param msg v5::publish message
      */
-    using serialize_v5_publish_message_handler = move_only_handler<void(v5::basic_publish_message<sizeof(packet_id_t)> msg)>;
+    using serialize_v5_publish_message_handler = copyable_handler<void(v5::basic_publish_message<sizeof(packet_id_t)> msg)>;
 
     /**
      * @brief Serialize publish handler
@@ -1265,7 +1265,7 @@ struct callable_overlay final : public Impl
      * @param data      pointer to the serializing message
      * @param size      size of the serializing message
      */
-    using serialize_publish_handler = move_only_handler<void(packet_id_t packet_id, char const* data, std::size_t size)>;
+    using serialize_publish_handler = copyable_handler<void(packet_id_t packet_id, char const* data, std::size_t size)>;
 
     /**
      * @brief Serialize pubrel handler
@@ -1275,7 +1275,7 @@ struct callable_overlay final : public Impl
      *        To restore the message, use restore_serialized_message().
      * @param msg pubrel message
      */
-    using serialize_pubrel_message_handler = move_only_handler<void(basic_pubrel_message<sizeof(packet_id_t)> msg)>;
+    using serialize_pubrel_message_handler = copyable_handler<void(basic_pubrel_message<sizeof(packet_id_t)> msg)>;
 
     /**
      * @brief Serialize pubrel handler
@@ -1285,7 +1285,7 @@ struct callable_overlay final : public Impl
      *        To restore the message, use restore_serialized_message().
      * @param msg pubrel message
      */
-    using serialize_v5_pubrel_message_handler = move_only_handler<void(v5::basic_pubrel_message<sizeof(packet_id_t)> msg)>;
+    using serialize_v5_pubrel_message_handler = copyable_handler<void(v5::basic_pubrel_message<sizeof(packet_id_t)> msg)>;
 
     /**
      * @brief Serialize pubrel handler
@@ -1297,19 +1297,19 @@ struct callable_overlay final : public Impl
      * @param data      pointer to the serializing message
      * @param size      size of the serializing message
      */
-    using serialize_pubrel_handler = move_only_handler<void(packet_id_t packet_id, char const* data, std::size_t size)>;
+    using serialize_pubrel_handler = copyable_handler<void(packet_id_t packet_id, char const* data, std::size_t size)>;
 
     /**
      * @brief Remove serialized message
      * @param packet_id packet identifier of the removing message
      */
-    using serialize_remove_handler = move_only_handler<void(packet_id_t packet_id)>;
+    using serialize_remove_handler = copyable_handler<void(packet_id_t packet_id)>;
 
     /**
      * @brief Pre-send handler
      *        This handler is called when any mqtt control packet is decided to send.
      */
-    using pre_send_handler = move_only_handler<void()>;
+    using pre_send_handler = copyable_handler<void()>;
 
     /**
      * @brief is valid length handler
@@ -1319,7 +1319,7 @@ struct callable_overlay final : public Impl
      * @return true if check is success, otherwise false
      */
     using is_valid_length_handler =
-        move_only_function<bool(control_packet_type packet_type, std::size_t remaining_length)>;
+        copyable_function<bool(control_packet_type packet_type, std::size_t remaining_length)>;
 
     /**
      * @brief next read handler
@@ -1327,7 +1327,7 @@ struct callable_overlay final : public Impl
      * @param func A callback function that is called when async operation will finish.
      */
     using mqtt_message_processed_handler =
-        move_only_handler<void(any session_life_keeper)>;
+        copyable_handler<void(any session_life_keeper)>;
 
 
 
@@ -2019,7 +2019,7 @@ struct callable_overlay final : public Impl
      * @brief Get error handler
      * @return handler
      */
-    error_handler const& get_error_handler() const {
+    error_handler get_error_handler() const {
         return h_error_;
     }
 
