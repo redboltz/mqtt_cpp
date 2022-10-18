@@ -1950,16 +1950,16 @@ private:
                             if (func) func(ec);
                             return;
                         }
+
 #if defined(MQTT_USE_TLS)
-                        if constexpr (has_tls<std::decay_t<decltype(*this)>>::value)
-                        {
-                            if (!SSL_set_tlsext_host_name(any_cast<SSL*>(socket_->native_handle()), host_.c_str()))
-                            {
+                        if (has_tls<std::decay_t<decltype(*this)>>::value) {
+                            if (!SSL_set_tlsext_host_name(any_cast<SSL*>(socket_->native_handle()), host_.c_str())) {
                                 if (func) func(boost::system::errc::make_error_code(boost::system::errc::connection_aborted));
                                 return;
                             }
                         }
 #endif // defined(MQTT_USE_TLS)
+
                         base::set_connect();
                         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
                             set_timer();
