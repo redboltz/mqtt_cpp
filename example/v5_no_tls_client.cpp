@@ -54,7 +54,6 @@ int main(int argc, char** argv) {
                     }
                 );
             }
-            return true;
         });
     c->set_close_handler( // this handler doesn't depend on MQTT protocol version
         []
@@ -73,7 +72,6 @@ int main(int argc, char** argv) {
                 "[client] puback received. packet_id: " << packet_id <<
                 " reason_code: " << reason_code << std::endl;
             disconnect();
-            return true;
         });
     c->set_v5_pubrec_handler( // use v5 handler
         [&]
@@ -81,7 +79,6 @@ int main(int argc, char** argv) {
             std::cout <<
                 "[client] pubrec received. packet_id: " << packet_id <<
                 " reason_code: " << reason_code << std::endl;
-            return true;
         });
     c->set_v5_pubcomp_handler( // use v5 handler
         [&]
@@ -90,7 +87,6 @@ int main(int argc, char** argv) {
                 "[client] pubcomp received. packet_id: " << packet_id <<
                 " reason_code: " << reason_code << std::endl;
             disconnect();
-            return true;
         });
     c->set_v5_suback_handler( // use v5 handler
         [&]
@@ -121,7 +117,6 @@ int main(int argc, char** argv) {
                 c->publish("mqtt_client_cpp/topic2_1", "test2_1", MQTT_NS::qos::at_least_once);
                 c->publish("mqtt_client_cpp/topic2_2", "test2_2", MQTT_NS::qos::exactly_once);
             }
-            return true;
         });
     c->set_v5_publish_handler( // use v5 handler
         [&]
@@ -139,7 +134,6 @@ int main(int argc, char** argv) {
             std::cout << "[client] topic_name: " << topic_name << std::endl;
             std::cout << "[client] contents: " << contents << std::endl;
             disconnect();
-            return true;
         });
 
     // Connect

@@ -12,7 +12,8 @@ ENDIF ()
 
 IF (MQTT_TEST_2)
     LIST (APPEND check_PROGRAMS
-        st_connect.cpp
+        st_connect1.cpp
+        st_connect2.cpp
         st_underlying_timeout.cpp
         st_as_buffer_sub.cpp
         st_topic_alias.cpp
@@ -32,6 +33,7 @@ IF (MQTT_TEST_3)
         st_as_buffer_async_pubsub_1.cpp
         st_multi_sub.cpp
         st_as_buffer_async_pubsub_2.cpp
+        st_comp_token.cpp
     )
 ENDIF ()
 
@@ -44,7 +46,8 @@ ENDIF ()
 IF (MQTT_TEST_5)
     LIST (APPEND check_PROGRAMS
         st_reqres.cpp
-        st_resend.cpp
+        st_resend_1.cpp
+        st_resend_2.cpp
         st_retain_1.cpp
         st_resend_new_client.cpp
         st_retain_2.cpp

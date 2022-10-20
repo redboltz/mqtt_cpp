@@ -13,6 +13,7 @@ OPTION(MQTT_TEST_4 "Build test part4" ON)
 OPTION(MQTT_TEST_5 "Build test part5" ON)
 OPTION(MQTT_TEST_6 "Build test part6" ON)
 OPTION(MQTT_TEST_7 "Build test part7" ON)
+OPTION(MQTT_TEST_8 "Build test part8" ON)
 
 ADD_SUBDIRECTORY (system)
 ADD_SUBDIRECTORY (unit)

@@ -60,7 +60,6 @@ int main(int argc, char** argv) {
                     }
                 );
             }
-            return true;
         });
     c->set_close_handler(
         []
@@ -77,20 +76,17 @@ int main(int argc, char** argv) {
         (packet_id_t packet_id){
             std::cout << "puback received. packet_id: " << packet_id << std::endl;
             disconnect();
-            return true;
         });
     c->set_pubrec_handler(
         [&]
         (packet_id_t packet_id){
             std::cout << "pubrec received. packet_id: " << packet_id << std::endl;
-            return true;
         });
     c->set_pubcomp_handler(
         [&]
         (packet_id_t packet_id){
             std::cout << "pubcomp received. packet_id: " << packet_id << std::endl;
             disconnect();
-            return true;
         });
     c->set_suback_handler(
         [&]
@@ -106,7 +102,6 @@ int main(int argc, char** argv) {
                 c->publish("mqtt_client_cpp/topic2_1", "test2_1", MQTT_NS::qos::at_least_once);
                 c->publish("mqtt_client_cpp/topic2_2", "test2_2", MQTT_NS::qos::exactly_once);
             }
-            return true;
         });
     c->set_publish_handler(
         [&]
@@ -123,7 +118,6 @@ int main(int argc, char** argv) {
             std::cout << "topic_name: " << topic_name << std::endl;
             std::cout << "contents: " << contents << std::endl;
             disconnect();
-            return true;
         });
 
     // Connect

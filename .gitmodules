@@ -1,0 +1,3 @@
+[submodule "external/function2"]
+	path = external/function2
+	url = https://github.com/Naios/function2

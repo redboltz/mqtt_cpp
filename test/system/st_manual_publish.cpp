@@ -48,7 +48,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(c->register_packet_id(1) == true);
                     BOOST_TEST(c->register_packet_id(1) == false);
                     c->subscribe(1, "topic1", MQTT_NS::qos::at_most_once);
-                    return true;
                 });
             c->set_puback_handler(
                 [&chk, &c]
@@ -59,19 +58,16 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(c->register_packet_id(1) == true);
                     BOOST_TEST(c->register_packet_id(1) == false);
                     c->unsubscribe(1, "topic1");
-                    return true;
                 });
             c->set_pubrec_handler(
                 []
                 (std::uint16_t) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_pubcomp_handler(
                 []
                 (std::uint16_t) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_suback_handler(
                 [&chk, &c]
@@ -84,7 +80,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(c->register_packet_id(1) == true);
                     BOOST_TEST(c->register_packet_id(1) == false);
                     c->publish(1, "topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
-                    return true;
                 });
             c->set_unsuback_handler(
                 [&chk, &c]
@@ -92,7 +87,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == 1);
                     c->disconnect();
-                    return true;
                 });
             c->set_publish_handler(
                 [&chk]
@@ -107,7 +101,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     MQTT_CHK("h_publish");
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -121,7 +114,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(c->register_packet_id(1) == true);
                     BOOST_TEST(c->register_packet_id(1) == false);
                     c->subscribe(1, "topic1", MQTT_NS::qos::at_most_once);
-                    return true;
                 });
             c->set_v5_puback_handler(
                 [&chk, &c]
@@ -132,19 +124,16 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(c->register_packet_id(1) == true);
                     BOOST_TEST(c->register_packet_id(1) == false);
                     c->unsubscribe(1, "topic1");
-                    return true;
                 });
             c->set_v5_pubrec_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_pubcomp_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_suback_handler(
                 [&chk, &c]
@@ -157,7 +146,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(c->register_packet_id(1) == true);
                     BOOST_TEST(c->register_packet_id(1) == false);
                     c->publish(1, "topic1", "topic1_contents", MQTT_NS::qos::at_least_once);
-                    return true;
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c]
@@ -167,7 +155,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
-                    return true;
                 });
             c->set_v5_publish_handler(
                 [&chk]
@@ -183,7 +170,6 @@ BOOST_AUTO_TEST_CASE( pub_qos0_sub_qos0 ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "topic1_contents");
                     MQTT_CHK("h_publish");
-                    return true;
                 });
             break;
         default:

@@ -66,7 +66,6 @@ BOOST_AUTO_TEST_CASE( sync ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
                 c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-                return true;
             });
         c->set_v5_suback_handler(
             [&chk, &c, header_size]
@@ -108,7 +107,6 @@ BOOST_AUTO_TEST_CASE( sync ) {
                 catch (MQTT_NS::packet_size_error const&) {
                     MQTT_CHK("publish101_exception");
                 }
-                return true;
             });
         c->set_v5_publish_handler(
             [&chk, &c, header_size]
@@ -130,7 +128,6 @@ BOOST_AUTO_TEST_CASE( sync ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
 
         c->set_close_handler(

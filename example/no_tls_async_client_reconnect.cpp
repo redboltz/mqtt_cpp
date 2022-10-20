@@ -85,7 +85,6 @@ int main(int argc, char** argv) {
             else {
                 reconnect();
             }
-            return true;
         });
     c->set_close_handler(
         [&]

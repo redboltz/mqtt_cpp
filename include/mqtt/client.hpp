@@ -26,6 +26,7 @@
 #include <mqtt/callable_overlay.hpp>
 #include <mqtt/strand.hpp>
 #include <mqtt/null_strand.hpp>
+#include <mqtt/is_invocable.hpp>
 
 namespace MQTT_NS {
 
@@ -501,8 +502,6 @@ class client : public endpoint<std::mutex, std::lock_guard, PacketIdBytes> {
 protected:
     struct constructor_access{};
 public:
-    using async_handler_t = typename base::async_handler_t;
-
     /**
      * Constructor used by factory functions at the end of this file.
      */
@@ -1187,32 +1186,50 @@ public:
      * Before calling connect(), call set_xxx member functions to configure the connection.
      * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
-    template <typename T>
-    // to avoid ambiguousness between any and async_handler_t
-    std::enable_if_t<
-        !std::is_convertible<T, async_handler_t>::value
+    template <
+        typename T,
+        typename std::enable_if_t<
+            !is_invocable<T, error_code>::value
+        >* = nullptr
     >
-    async_connect(T session_life_keeper) {
+    void async_connect(T session_life_keeper) {
         async_connect(force_move(session_life_keeper), async_handler_t());
     }
 
     /**
      * @brief Connect to a broker
      * Before calling connect(), call set_xxx member functions to configure the connection.
-     * @param func finish handler that is called when the underlying connection process is finished
+     * @param token CompletionToken that is called when the underlying connection process is finished
      */
-    void async_connect(async_handler_t func) {
-        async_connect(any(), force_move(func));
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_connect(CompletionToken&& token) {
+        return async_connect(any(), std::forward<CompletionToken>(token));
     }
 
     /**
      * @brief Connect to a broker
      * Before calling connect(), call set_xxx member functions to configure the connection.
      * @param session_life_keeper the passed object lifetime will be kept during the session.
-     * @param func finish handler that is called when the underlying connection process is finished
+     * @param token CompletionToken that is called when the underlying connection process is finished
      */
-    void async_connect(any session_life_keeper, async_handler_t func) {
-        async_connect(v5::properties{}, force_move(session_life_keeper), force_move(func));
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_connect(any session_life_keeper, CompletionToken&& token) {
+        return
+            async_connect(
+                v5::properties{},
+                force_move(session_life_keeper),
+                std::forward<CompletionToken>(token)
+            );
     }
 
     /**
@@ -1223,12 +1240,13 @@ public:
      *        3.1.2.11 CONNECT Properties
      * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
-    template <typename T>
-    // to avoid ambiguousness between any and async_handler_t
-    std::enable_if_t<
-        !std::is_convertible<T, async_handler_t>::value
+    template <
+        typename T,
+        typename std::enable_if_t<
+            !is_invocable<T, error_code>::value
+        >* = nullptr
     >
-    async_connect(v5::properties props, T session_life_keeper) {
+    void async_connect(v5::properties props, T session_life_keeper) {
         async_connect(force_move(props), force_move(session_life_keeper), async_handler_t());
     }
 
@@ -1238,10 +1256,16 @@ public:
      * @param props properties
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
-     * @param func finish handler that is called when the underlying connection process is finished
+     * @param token CompletionToken that is called when the underlying connection process is finished
      */
-    void async_connect(v5::properties props, async_handler_t func) {
-        async_connect(force_move(props), any(), force_move(func));
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_connect(v5::properties props, CompletionToken&& token) {
+        return async_connect(force_move(props), any(), std::forward<CompletionToken>(token));
     }
 
     /**
@@ -1251,11 +1275,28 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
      * @param session_life_keeper the passed object lifetime will be kept during the session.
-     * @param func finish handler that is called when the underlying connection process is finished
+     * @param token CompletionToken that is called when the underlying connection process is finished
      */
-    void async_connect(v5::properties props, any session_life_keeper, async_handler_t func) {
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_connect(v5::properties props, any session_life_keeper, CompletionToken&& token) {
         setup_socket(socket_);
-        async_connect_impl(force_move(props), force_move(session_life_keeper), force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_connect_impl{
+                    *this,
+                    force_move(props),
+                    force_move(session_life_keeper)
+                },
+                token
+            );
     }
 
     /**
@@ -1275,12 +1316,13 @@ public:
      *               You can configure the socket prior to connect.
      * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
-    template <typename T>
-    // to avoid ambiguousness between any and async_handler_t
-    std::enable_if_t<
-        !std::is_convertible<T, async_handler_t>::value
+    template <
+        typename T,
+        typename std::enable_if_t<
+            !is_invocable<T, error_code>::value
+        >* = nullptr
     >
-    async_connect(std::shared_ptr<Socket>&& socket, T session_life_keeper) {
+    void async_connect(std::shared_ptr<Socket>&& socket, T session_life_keeper) {
         async_connect(force_move(socket), v5::properties{}, force_move(session_life_keeper), async_handler_t());
     }
 
@@ -1289,10 +1331,21 @@ public:
      * Before calling connect(), call set_xxx member functions to configure the connection.
      * @param socket The library uses the socket instead of internal generation.
      *               You can configure the socket prior to connect.
-     * @param func finish handler that is called when the underlying connection process is finished
+     * @param token CompletionToken that is called when the underlying connection process is finished
      */
-    void async_connect(std::shared_ptr<Socket>&& socket, async_handler_t func) {
-        async_connect(force_move(socket), v5::properties{}, any(), force_move(func));
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_connect(std::shared_ptr<Socket>&& socket, CompletionToken&& token) {
+        return
+            async_connect(
+                force_move(socket),
+                v5::properties{}, any(),
+                std::forward<CompletionToken>(token)
+            );
     }
 
     /**
@@ -1301,10 +1354,22 @@ public:
      * @param socket The library uses the socket instead of internal generation.
      *               You can configure the socket prior to connect.
      * @param session_life_keeper the passed object lifetime will be kept during the session.
-     * @param func finish handler that is called when the underlying connection process is finished
+     * @param token CompletionToken that is called when the underlying connection process is finished
      */
-    void async_connect(std::shared_ptr<Socket>&& socket, any session_life_keeper, async_handler_t func) {
-        async_connect(force_move(socket), v5::properties{}, force_move(session_life_keeper), force_move(func));
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_connect(std::shared_ptr<Socket>&& socket, any session_life_keeper, CompletionToken&& token) {
+        return
+            async_connect(
+                force_move(socket),
+                v5::properties{},
+                force_move(session_life_keeper),
+                std::forward<CompletionToken>(token)
+            );
     }
 
     /**
@@ -1330,12 +1395,13 @@ public:
      *        3.1.2.11 CONNECT Properties
      * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
-    template <typename T>
-    // to avoid ambiguousness between any and async_handler_t
-    std::enable_if_t<
-        !std::is_convertible<T, async_handler_t>::value
+    template <
+        typename T,
+        typename std::enable_if_t<
+            !is_invocable<T, error_code>::value
+        >* = nullptr
     >
-    async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, T session_life_keeper) {
+    void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, T session_life_keeper) {
         async_connect(force_move(socket), force_move(props), force_move(session_life_keeper), async_handler_t());
     }
 
@@ -1347,10 +1413,22 @@ public:
      * @param props properties
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
-     * @param func finish handler that is called when the underlying connection process is finished
+     * @param token CompletionToken that is called when the underlying connection process is finished
      */
-    void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, async_handler_t func) {
-        async_connect(force_move(socket), force_move(props), any(), force_move(func));
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, CompletionToken&& token) {
+        return
+            async_connect(
+                force_move(socket),
+                force_move(props),
+                any(),
+                std::forward<CompletionToken>(token)
+            );
     }
 
     /**
@@ -1362,12 +1440,33 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
      * @param session_life_keeper the passed object lifetime will be kept during the session.
-     * @param func finish handler that is called when the underlying connection process is finished
+     * @param token CompletionTokeny that is called when the underlying connection process is finished
      */
-    void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, any session_life_keeper, async_handler_t func) {
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_connect(
+        std::shared_ptr<Socket>&& socket,
+        v5::properties props,
+        any session_life_keeper,
+        CompletionToken&& token) {
         socket_ = force_move(socket);
         base::socket_sp_ref() = socket_;
-        async_connect_impl(force_move(props), force_move(session_life_keeper), force_move(func));
+        return
+            as::async_compose<
+                CompletionToken,
+                void(error_code)
+            >(
+                async_connect_impl{
+                    *this,
+                    force_move(props),
+                    force_move(session_life_keeper)
+                },
+                token
+            );
     }
 
     /**
@@ -1444,30 +1543,87 @@ public:
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
      * @param timeout after timeout elapsed, force_disconnect() is automatically called.
-     * @param func A callback function that is called when async operation will finish.
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
+     * @param token CompletionToken that is called when async operation will finish.
      */
-    void async_disconnect(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_disconnect(
         std::chrono::steady_clock::duration timeout,
-        async_handler_t func = async_handler_t()) {
+        v5::disconnect_reason_code reason_code,
+        v5::properties props,
+        CompletionToken&& token = async_handler_t{}
+    ) {
+
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
-        if (base::connected()) {
-            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-            tim_close_.expires_after(force_move(timeout));
-            tim_close_.async_wait(
-                [wp = force_move(wp)](error_code ec) {
-                    if (auto sp = wp.lock()) {
-                        if (!ec) {
-                            sp->socket()->post(
-                                [sp] {
-                                    sp->force_disconnect();
-                                }
-                            );
-                        }
+        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+        tim_close_.expires_after(force_move(timeout));
+        tim_close_.async_wait(
+            [wp = force_move(wp)](error_code ec) {
+                if (auto sp = wp.lock()) {
+                    if (!ec) {
+                        sp->socket()->post(
+                            [sp] {
+                                sp->force_disconnect();
+                            }
+                        );
                     }
                 }
+            }
+        );
+        return
+            base::async_disconnect(
+                reason_code,
+                force_move(props),
+                std::forward<CompletionToken>(token)
             );
-            base::async_disconnect(force_move(func));
-        }
+    }
+
+    /**
+     * @brief Disconnect
+     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
+     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
+     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
+     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
+     * @param reason_code
+     *        DISCONNECT Reason Code<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
+     *        3.14.2.1 Disconnect Reason Code
+     * @param props
+     *        Properties<BR>
+     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
+     *        3.14.2.2 DISCONNECT Properties
+     * @param token CompletionToken that is called when async operation will finish.
+     */
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_disconnect(
+        v5::disconnect_reason_code reason_code,
+        v5::properties props,
+        CompletionToken&& token = async_handler_t{}
+    ) {
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        return
+            base::async_disconnect(
+                reason_code,
+                force_move(props),
+                std::forward<CompletionToken>(token)
+            );
     }
 
     /**
@@ -1477,40 +1633,38 @@ public:
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
      * @param timeout after timeout elapsed, force_disconnect() is automatically called.
-     * @param reason_code
-     *        DISCONNECT Reason Code<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
-     *        3.14.2.1 Disconnect Reason Code
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
-     *        3.14.2.2 DISCONNECT Properties
-     * @param func A callback function that is called when async operation will finish.
+     * @param token CompletionToken that is called when async operation will finish.
      */
-    void async_disconnect(
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_disconnect(
         std::chrono::steady_clock::duration timeout,
-        v5::disconnect_reason_code reason_code,
-        v5::properties props,
-        async_handler_t func = async_handler_t()) {
+        CompletionToken&& token = async_handler_t{}
+    ) {
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
-        if (base::connected()) {
-            std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-            tim_close_.expires_after(force_move(timeout));
-            tim_close_.async_wait(
-                [wp = force_move(wp)](error_code ec) {
-                    if (auto sp = wp.lock()) {
-                        if (!ec) {
-                            sp->socket()->post(
-                                [sp] {
-                                    sp->force_disconnect();
-                                }
-                            );
-                        }
+        std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
+        tim_close_.expires_after(force_move(timeout));
+        tim_close_.async_wait(
+            [wp = force_move(wp)](error_code ec) {
+                if (auto sp = wp.lock()) {
+                    if (!ec) {
+                        sp->socket()->post(
+                            [sp] {
+                                sp->force_disconnect();
+                            }
+                        );
                     }
                 }
+            }
+        );
+        return
+            base::async_disconnect(
+                std::forward<CompletionToken>(token)
             );
-            base::async_disconnect(reason_code, force_move(props), force_move(func));
-        }
     }
 
     /**
@@ -1519,40 +1673,19 @@ public:
      * The broker disconnects the endpoint after receives the disconnect packet.<BR>
      * When the endpoint disconnects using disconnect(), a will won't send.<BR>
      * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
-     * @param func A callback function that is called when async operation will finish.
+     * @param token CompletionToken that is called when async operation will finish.
      */
-    void async_disconnect(
-        async_handler_t func = async_handler_t()) {
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_disconnect(
+        CompletionToken&& token = async_handler_t{}
+    ) {
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
-        if (base::connected()) {
-            base::async_disconnect(force_move(func));
-        }
-    }
-
-    /**
-     * @brief Disconnect
-     * Send a disconnect packet to the connected broker. It is a clean disconnecting sequence.
-     * The broker disconnects the endpoint after receives the disconnect packet.<BR>
-     * When the endpoint disconnects using disconnect(), a will won't send.<BR>
-     * See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205<BR>
-     * @param reason_code
-     *        DISCONNECT Reason Code<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208<BR>
-     *        3.14.2.1 Disconnect Reason Code
-     * @param props
-     *        Properties<BR>
-     *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
-     *        3.14.2.2 DISCONNECT Properties
-     * @param func A callback function that is called when async operation will finish.
-     */
-    void async_disconnect(
-        v5::disconnect_reason_code reason_code,
-        v5::properties props,
-        async_handler_t func = async_handler_t()) {
-        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
-        if (base::connected()) {
-            base::async_disconnect(reason_code, force_move(props), force_move(func));
-        }
+        return base::async_disconnect(token);
     }
 
     /**
@@ -1568,15 +1701,22 @@ public:
 
     /**
      * @brief Disconnect by endpoint
-     * @param func A callback function that is called when async operation will finish.
+     * @param token CompletionToken that is called when async operation will finish.
      * Force disconnect. It is not a clean disconnect sequence.<BR>
      * When the endpoint disconnects using force_disconnect(), a will will send.<BR>
      */
-    void async_force_disconnect(
-        async_handler_t func = async_handler_t()) {
+    template <
+        typename CompletionToken = async_handler_t,
+        typename std::enable_if_t<
+            is_invocable<CompletionToken, error_code>::value
+        >* = nullptr
+    >
+    auto async_force_disconnect(
+        CompletionToken&& token = async_handler_t{}
+    ) {
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
         tim_close_.cancel();
-        base::async_force_disconnect(force_move(func));
+        return base::async_force_disconnect(token);
     }
 
     std::shared_ptr<Socket> const& socket() const {
@@ -1662,23 +1802,6 @@ private:
             will_,
             keep_alive_sec_,
             force_move(props)
-        );
-    }
-
-    void async_start_session(v5::properties props, any session_life_keeper, async_handler_t func) {
-        base::async_read_control_packet_type(force_move(session_life_keeper));
-        // sync base::connect() refer to parameters only in the function.
-        // So they can be passed as view.
-        base::async_connect(
-            buffer(string_view(base::get_client_id())),
-            ( user_name_ ? buffer(string_view(user_name_.value()))
-                         : optional<buffer>() ),
-            ( password_  ? buffer(string_view(password_.value()))
-                         : optional<buffer>() ),
-            will_,
-            keep_alive_sec_,
-            force_move(props),
-            force_move(func)
         );
     }
 
@@ -1775,113 +1898,6 @@ private:
 
 #endif // defined(MQTT_USE_TLS)
 
-    template <typename Strand>
-    void async_handshake_socket(
-        tcp_endpoint<as::ip::tcp::socket, Strand>&,
-        v5::properties props,
-        any session_life_keeper,
-        async_handler_t func) {
-        async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
-    }
-
-#if defined(MQTT_USE_WS)
-    template <typename Strand>
-    void async_handshake_socket(
-        ws_endpoint<as::ip::tcp::socket, Strand>& socket,
-        v5::properties props,
-        any session_life_keeper,
-        async_handler_t func) {
-        socket.async_handshake(
-            host_,
-            path_,
-            [
-                this,
-                self = this->shared_from_this(),
-                session_life_keeper = force_move(session_life_keeper),
-                props = force_move(props),
-                func = force_move(func)
-            ]
-            (error_code ec) mutable {
-                if (ec) {
-                  if (func) func(ec);
-                  return;
-                }
-                async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
-            });
-    }
-#endif // defined(MQTT_USE_WS)
-
-#if defined(MQTT_USE_TLS)
-
-    template <typename Strand>
-    void async_handshake_socket(
-        tcp_endpoint<tls::stream<as::ip::tcp::socket>, Strand>& socket,
-        v5::properties props,
-        any session_life_keeper,
-        async_handler_t func) {
-        socket.async_handshake(
-            tls::stream_base::client,
-            [
-                this,
-                self = this->shared_from_this(),
-                session_life_keeper = force_move(session_life_keeper),
-                props = force_move(props),
-                func = force_move(func)
-            ]
-            (error_code ec) mutable {
-                if (ec) {
-                  if (func) func(ec);
-                  return;
-                }
-                async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
-            });
-    }
-
-#if defined(MQTT_USE_WS)
-    template <typename Strand>
-    void async_handshake_socket(
-        ws_endpoint<tls::stream<as::ip::tcp::socket>, Strand>& socket,
-        v5::properties props,
-        any session_life_keeper,
-        async_handler_t func) {
-        socket.next_layer().async_handshake(
-            tls::stream_base::client,
-            [
-                this,
-                self = this->shared_from_this(),
-                session_life_keeper = force_move(session_life_keeper),
-                &socket,
-                props = force_move(props),
-                func = force_move(func)
-            ]
-            (error_code ec) mutable {
-                if (ec) {
-                    if (func) func(ec);
-                    return;
-                }
-                socket.async_handshake(
-                    host_,
-                    path_,
-                    [
-                        this,
-                        self,
-                        session_life_keeper = force_move(session_life_keeper),
-                        props = force_move(props),
-                        func = force_move(func)
-                    ]
-                    (error_code ec) mutable {
-                        if (ec) {
-                            if (func) func(ec);
-                            return;
-                        }
-                        async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
-                    });
-            });
-    }
-#endif // defined(MQTT_USE_WS)
-
-#endif // defined(MQTT_USE_TLS)
-
     void connect_impl(
         v5::properties props,
         any session_life_keeper) {
@@ -1911,55 +1927,231 @@ private:
         handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), ec);
     }
 
-    void async_connect_impl(
-        v5::properties props,
-        any session_life_keeper,
-        async_handler_t func) {
-        auto r = std::make_shared<as::ip::tcp::resolver>(ioc_);
-        auto p = r.get();
-        p->async_resolve(
-            host_,
-            port_,
-            [
-                this,
-                self = this->shared_from_this(),
-                props = force_move(props),
-                session_life_keeper = force_move(session_life_keeper),
-                func = force_move(func),
-                r = force_move(r)
-            ]
-            (
-                error_code ec,
-                as::ip::tcp::resolver::results_type eps
-            ) mutable {
-                if (ec) {
-                    if (func) func(ec);
-                    return;
-                }
+    template <typename... Params>
+    auto base_async_connect(Params&&... params) {
+        return base::async_connect(std::forward<Params>(params)...);
+    }
+
+    struct async_connect_impl {
+        this_type& cl;
+        v5::properties props = {};
+        any session_life_keeper;
+        as::ip::tcp::resolver resolver{cl.ioc_};
+        enum {
+            initiate,
+            resolve,
+            connect,
+#if defined(MQTT_USE_TLS)
+            tls_handshake,
+#if defined(MQTT_USE_WS)
+            tls_ws_handshake_tls,
+            tls_ws_handshake_ws,
+#endif // defined(MQTT_USE_WS)
+#endif // defined(MQTT_USE_TLS)
+
+#if defined(MQTT_USE_WS)
+            ws_handshake,
+#endif // defined(MQTT_USE_WS)
+            start_session,
+            complete
+        } state = initiate;
+
+        template <typename Self>
+        void operator()(
+            Self& self
+        ) {
+            BOOST_ASSERT(state == initiate);
+            state = resolve;
+            auto& a_cl{cl};
+            auto& a_resolver{resolver};
+            a_resolver.async_resolve(
+                a_cl.host_,
+                a_cl.port_,
+                force_move(self)
+            );
+        }
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec
+        ) {
+            if (ec) {
+                self.complete(ec);
+                return;
+            }
+            switch (state) {
+#if defined(MQTT_USE_WS)
+            case ws_handshake:
+                async_start_session(force_move(self));
+                break;
+#endif // defined(MQTT_USE_WS)
+#if defined(MQTT_USE_TLS)
+            case tls_handshake:
+                async_start_session(force_move(self));
+                break;
+#if defined(MQTT_USE_WS)
+            case tls_ws_handshake_tls: {
+                state = tls_ws_handshake_ws;
+                auto& socket = *cl.socket_;
+                async_ws_handshake_socket(
+                    socket,
+                    force_move(self)
+                );
+            } break;
+            case tls_ws_handshake_ws:
+                async_start_session(force_move(self));
+                break;
+#endif // defined(MQTT_USE_WS)
+#endif // defined(MQTT_USE_TLS)
+            case start_session:
+                async_start_session(force_move(self));
+                break;
+            case complete:
+                self.complete(ec);
+                break;
+            default:
+                BOOST_ASSERT(false);
+                break;
+            }
+        }
+
+        template <typename Self>
+        void operator()(
+            Self& self,
+            error_code ec,
+            as::ip::tcp::resolver::results_type eps
+        ) {
+            BOOST_ASSERT(state == resolve);
+            if (ec) {
+                self.complete(ec);
+            }
+            else {
+                state = connect;
+                auto& a_cl{cl};
                 as::async_connect(
-                    socket_->lowest_layer(), eps.begin(), eps.end(),
-                    [
-                        this,
-                        self = force_move(self),
-                        props = force_move(props),
-                        session_life_keeper = force_move(session_life_keeper),
-                        func = force_move(func)
-                    ]
-                    (error_code ec, auto /* unused */) mutable {
-                        if (ec) {
-                            if (func) func(ec);
-                            return;
-                        }
-                        base::set_connect();
-                        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
-                            set_timer();
-                        }
-                        async_handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), force_move(func));
-                    }
+                    a_cl.socket_->lowest_layer(), eps.begin(), eps.end(), force_move(self)
                 );
             }
-        );
-    }
+        }
+
+        template <typename Self, typename Iterator>
+        void operator()(
+            Self& self,
+            error_code ec,
+            Iterator
+        ) {
+            BOOST_ASSERT(state == connect);
+            if (ec) {
+                self.complete(ec);
+            }
+            else {
+                cl.set_connect();
+                if (cl.ping_duration_ != std::chrono::steady_clock::duration::zero()) {
+                    cl.set_timer();
+                }
+                auto& socket = *cl.socket_;
+                async_handshake_socket(
+                    socket,
+                    force_move(self)
+                );
+            }
+        }
+
+        template <typename Self, typename Strand>
+        void async_handshake_socket(
+            tcp_endpoint<as::ip::tcp::socket, Strand>&,
+            Self&& self) {
+            async_start_session(force_move(self));
+        }
+
+#if defined(MQTT_USE_WS)
+
+        template <typename Self, typename Strand>
+        void async_handshake_socket(
+            ws_endpoint<as::ip::tcp::socket, Strand>& socket,
+            Self&& self) {
+            state = ws_handshake;
+            auto& a_cl{cl};
+            socket.async_handshake(
+                a_cl.host_,
+                a_cl.path_,
+                force_move(self)
+            );
+        }
+
+#endif // defined(MQTT_USE_WS)
+
+#if defined(MQTT_USE_TLS)
+
+        template <typename Self, typename Strand>
+        void async_handshake_socket(
+            tcp_endpoint<tls::stream<as::ip::tcp::socket>, Strand>& socket,
+            Self&& self) {
+            state = tls_handshake;
+            socket.async_handshake(
+                tls::stream_base::client,
+                force_move(self)
+            );
+        }
+
+#if defined(MQTT_USE_WS)
+
+        template <typename Self, typename Strand>
+        void async_handshake_socket(
+            ws_endpoint<tls::stream<as::ip::tcp::socket>, Strand>& socket,
+            Self&& self) {
+            state = tls_ws_handshake_tls;
+            socket.next_layer().async_handshake(
+                tls::stream_base::client,
+                force_move(self)
+            );
+        }
+
+        template <typename Self, typename Strand>
+        void async_ws_handshake_socket(
+            ws_endpoint<tls::stream<as::ip::tcp::socket>, Strand>& socket,
+            Self&& self) {
+            state = tls_ws_handshake_ws;
+            auto& a_cl{cl};
+            socket.async_handshake(
+                a_cl.host_,
+                a_cl.path_,
+                force_move(self)
+            );
+        }
+
+        template <typename Self, typename Ignore>
+        void async_ws_handshake_socket(Ignore&, Self&&) {
+            BOOST_ASSERT(false);
+        }
+
+
+#endif // defined(MQTT_USE_WS)
+
+#endif // defined(MQTT_USE_TLS)
+
+        template <typename Self>
+        void async_start_session(Self&& self) {
+            state = complete;
+            auto& a_cl{cl};
+            auto a_props = force_move(props);
+            a_cl.async_read_control_packet_type(force_move(session_life_keeper));
+            // sync base::connect() refer to parameters only in the function.
+            // So they can be passed as view.
+            a_cl.base_async_connect(
+                buffer(string_view(static_cast<base const&>(a_cl).get_client_id())),
+                (a_cl.user_name_ ? buffer(string_view(a_cl.user_name_.value()))
+                                 : optional<buffer>() ),
+                (a_cl.password_  ? buffer(string_view(a_cl.password_.value()))
+                                 : optional<buffer>() ),
+                a_cl.will_,
+                a_cl.keep_alive_sec_,
+                force_move(a_props),
+                force_move(self)
+            );
+        }
+    };
 
 protected:
     void on_pre_send() noexcept override {
