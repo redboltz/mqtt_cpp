@@ -25,6 +25,7 @@ FIND_PACKAGE (Boost 1.74.0 REQUIRED COMPONENTS program_options)
 IF (MQTT_USE_TLS)
     LIST (APPEND exec_PROGRAMS
         tls_client.cpp
+        tls_client_with_sni.cpp
         tls_server.cpp
         tls_both.cpp
         tls_both_client_cert.cpp
