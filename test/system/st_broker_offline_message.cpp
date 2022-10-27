@@ -95,7 +95,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v3_1_1 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
             c2->connect();
-            return true;
         }
     );
     c2->set_connack_handler(
@@ -115,7 +114,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v3_1_1 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         }
     );
     c2->set_suback_handler(
@@ -125,7 +123,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v3_1_1 ) {
             BOOST_TEST(results.size() == 1U);
             BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
             c2->disconnect();
-            return true;
         }
     );
     c2->set_close_handler(
@@ -151,14 +148,12 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v3_1_1 ) {
         [&chk]
         (std::uint16_t) {
             MQTT_CHK("c1_h_puback");
-            return true;
         }
     );
     c1->set_pubrec_handler(
         [&chk]
         (std::uint16_t) {
             MQTT_CHK("c1_h_pubrec");
-            return true;
         }
     );
     c1->set_pubcomp_handler(
@@ -166,7 +161,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v3_1_1 ) {
         (std::uint16_t) {
             MQTT_CHK("c1_h_pubcomp");
             c2->connect();
-            return true;
         }
     );
     c2->set_publish_handler(
@@ -207,7 +201,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v3_1_1 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         }
     );
     c1->set_close_handler(
@@ -341,7 +334,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
                     )
                 }
             );
-            return true;
         }
     );
     c2->set_v5_connack_handler(
@@ -361,7 +353,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         }
     );
     c2->set_v5_suback_handler(
@@ -371,7 +362,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
             BOOST_TEST(reasons.size() == 1U);
             BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_2);
             c2->disconnect();
-            return true;
         }
     );
     c2->set_close_handler(
@@ -397,14 +387,12 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
         [&chk]
         (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("c1_h_puback");
-            return true;
         }
     );
     c1->set_v5_pubrec_handler(
         [&chk]
         (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("c1_h_pubrec");
-            return true;
         }
     );
     c1->set_v5_pubcomp_handler(
@@ -421,7 +409,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
                }
            );
 
-            return true;
         }
     );
     c2->set_v5_publish_handler(
@@ -511,7 +498,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         }
     );
     c1->set_close_handler(
@@ -645,7 +631,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5_timeout ) {
                     )
                 }
             );
-            return true;
         }
     );
     c2->set_v5_connack_handler(
@@ -676,7 +661,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5_timeout ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         }
     );
     c2->set_v5_suback_handler(
@@ -686,7 +670,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5_timeout ) {
             BOOST_TEST(reasons.size() == 1U);
             BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_2);
             c2->disconnect();
-            return true;
         }
     );
     c2->set_close_handler(
@@ -712,14 +695,12 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5_timeout ) {
         [&chk]
         (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("c1_h_puback");
-            return true;
         }
     );
     c1->set_v5_pubrec_handler(
         [&chk]
         (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
             MQTT_CHK("c1_h_pubrec");
-            return true;
         }
     );
     c1->set_v5_pubcomp_handler(
@@ -743,7 +724,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5_timeout ) {
                 }
             );
 
-            return true;
         }
     );
     c2->set_v5_publish_handler(
@@ -755,7 +735,6 @@ BOOST_AUTO_TEST_CASE( offline_pubsub_v5_timeout ) {
          MQTT_NS::v5::properties) {
             // We should not received any published message when offline messages timeout
             BOOST_TEST(false);
-            return true;
         }
     );
     c1->set_close_handler(

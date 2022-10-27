@@ -1,3 +1,9 @@
+## 14.0.0
+* <<<< breaking change >>>> Replaced std::function with move_only_function. (#953)
+* Removed old NetworkTS code. (#952)
+* Fixed invalid timing async_shutdown handler call. (#950)
+* Improved build system. (#948)
+
 ## 13.1.0
 * Added clear username and password functionality. (#944)
 * Refined utility tools. (#941, #942)

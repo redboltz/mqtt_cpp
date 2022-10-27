@@ -59,7 +59,6 @@ BOOST_AUTO_TEST_CASE( pubsub ) {
                 BOOST_TEST(times == 1);
 
                 c->subscribe(response_topic, MQTT_NS::qos::at_most_once);
-                return true;
             });
         c->set_v5_suback_handler(
             [&]
@@ -71,7 +70,6 @@ BOOST_AUTO_TEST_CASE( pubsub ) {
                 BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
 
                 c->publish(response_topic, "response_contents", MQTT_NS::qos::at_most_once);
-                return true;
             });
         c->set_v5_publish_handler(
             [&]
@@ -84,7 +82,6 @@ BOOST_AUTO_TEST_CASE( pubsub ) {
                 BOOST_TEST(topic == response_topic);
                 BOOST_TEST(contents == "response_contents");
                 c->disconnect();
-                return true;
             });
         c->set_close_handler(
             [&]
@@ -197,7 +194,6 @@ BOOST_AUTO_TEST_CASE( session ) {
                 );
                 BOOST_TEST(ret);
                 c->disconnect();
-                return true;
             });
         c->set_close_handler(
             [&]
@@ -353,7 +349,6 @@ BOOST_AUTO_TEST_CASE( retain ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
         c->set_v5_suback_handler(
             [&]
@@ -375,7 +370,6 @@ BOOST_AUTO_TEST_CASE( retain ) {
                     }
                 );
                 BOOST_TEST(ret);
-                return true;
             });
         c->set_v5_publish_handler(
             [&]
@@ -389,7 +383,6 @@ BOOST_AUTO_TEST_CASE( retain ) {
                 BOOST_TEST(pubopts.get_retain() == MQTT_NS::retain::yes);
                 BOOST_TEST(contents == "response_contents");
                 c->disconnect();
-                return true;
             });
         c->set_close_handler(
             [&]

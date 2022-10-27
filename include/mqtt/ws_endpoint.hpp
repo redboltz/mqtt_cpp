@@ -18,6 +18,7 @@
 #include <mqtt/string_view.hpp>
 #include <mqtt/error_code.hpp>
 #include <mqtt/tls.hpp>
+#include <mqtt/move_only_handler.hpp>
 #include <mqtt/log.hpp>
 
 namespace MQTT_NS {
@@ -44,12 +45,12 @@ public:
 
     MQTT_ALWAYS_INLINE void async_read(
         as::mutable_buffer buffers,
-        std::function<void(error_code, std::size_t)> handler
+        move_only_handler<void(error_code, std::size_t)> handler
     ) override final {
         auto req_size = as::buffer_size(buffers);
 
         using beast_read_handler_t =
-            std::function<void(error_code ec, std::shared_ptr<void>)>;
+            move_only_handler<void(error_code ec, std::shared_ptr<void>)>;
 
         std::shared_ptr<beast_read_handler_t> beast_read_handler;
         if (req_size <= buffer_.size()) {
@@ -64,13 +65,13 @@ public:
                 [this, req_size, buffers, handler = force_move(handler)]
                 (error_code ec, std::shared_ptr<void> const& v) mutable {
                     if (ec) {
-                        force_move(handler)(ec, 0);
+                        force_move(handler)(ec, std::size_t(0));
                         return;
                     }
                     if (!ws_.got_binary()) {
                         buffer_.consume(buffer_.size());
                         force_move(handler)
-                            (boost::system::errc::make_error_code(boost::system::errc::bad_message), 0);
+                            (boost::system::errc::make_error_code(boost::system::errc::bad_message), std::size_t(0));
                         return;
                     }
                     if (req_size > buffer_.size()) {
@@ -107,7 +108,7 @@ public:
 
     MQTT_ALWAYS_INLINE void async_write(
         std::vector<as::const_buffer> buffers,
-        std::function<void(error_code, std::size_t)> handler
+        move_only_handler<void(error_code, std::size_t)> handler
     ) override final {
         ws_.async_write(
             buffers,
@@ -126,21 +127,21 @@ public:
         return as::buffer_size(buffers);
     }
 
-    MQTT_ALWAYS_INLINE void post(std::function<void()> handler) override final {
+    MQTT_ALWAYS_INLINE void post(move_only_handler<void()> handler) override final {
         as::post(
             strand_,
             force_move(handler)
         );
     }
 
-    MQTT_ALWAYS_INLINE void dispatch(std::function<void()> handler) override final {
+    MQTT_ALWAYS_INLINE void dispatch(move_only_handler<void()> handler) override final {
         as::dispatch(
             strand_,
             force_move(handler)
         );
     }
 
-    MQTT_ALWAYS_INLINE void defer(std::function<void()> handler) override final {
+    MQTT_ALWAYS_INLINE void defer(move_only_handler<void()> handler) override final {
         as::defer(
             strand_,
             force_move(handler)
@@ -187,7 +188,7 @@ public:
         shutdown_and_close_impl(next_layer(), ec);
     }
 
-    MQTT_ALWAYS_INLINE void async_clean_shutdown_and_close(std::function<void(error_code)> handler) override final {
+    MQTT_ALWAYS_INLINE void async_clean_shutdown_and_close(move_only_handler<void(error_code)> handler) override final {
         if (ws_.is_open()) {
             // WebSocket closing process
             MQTT_LOG("mqtt_impl", trace)
@@ -272,7 +273,7 @@ public:
     }
 
 private:
-    void async_read_until_closed(std::function<void(error_code)> handler) {
+    void async_read_until_closed(move_only_handler<void(error_code)> handler) {
         auto buffer = std::make_shared<boost::beast::flat_buffer>();
         ws_.async_read(
             *buffer,
@@ -311,7 +312,7 @@ private:
             << ec.message();
     }
 
-    void async_shutdown_and_close_impl(as::basic_socket<boost::asio::ip::tcp>& s, std::function<void(error_code)> handler) {
+    void async_shutdown_and_close_impl(as::basic_socket<boost::asio::ip::tcp>& s, move_only_handler<void(error_code)> handler) {
         post(
             [this, &s, handler = force_move(handler)] () mutable {
                 error_code ec;
@@ -330,7 +331,7 @@ private:
             << ec.message();
         shutdown_and_close_impl(lowest_layer(), ec);
     }
-    void async_shutdown_and_close_impl(tls::stream<as::ip::tcp::socket>& s, std::function<void(error_code)> handler) {
+    void async_shutdown_and_close_impl(tls::stream<as::ip::tcp::socket>& s, move_only_handler<void(error_code)> handler) {
         s.async_shutdown(
             as::bind_executor(
                 strand_,

@@ -66,12 +66,12 @@ void set_client_handlers(
                 }
                 if (server_reference.empty()) {
                     locked_cout() << "[client] redirect requested but no server_reference" << std::endl;
-                    return false;
+                    return;
                 }
                 auto pos = server_reference.find(':');
                 if (pos == std::string::npos) {
                     locked_cout() << "[client] no port specified in server_reference" << std::endl;
-                    return false;
+                    return;
                 }
                 auto host = server_reference.substr(0, pos);
                 auto port = server_reference.substr(pos + 1);
@@ -98,7 +98,6 @@ void set_client_handlers(
             default:
                 locked_cout() << "[client] handler not implemented" << std::endl;
             }
-            return true;
         });
     c.set_close_handler( // this handler doesn't depend on MQTT protocol version
         []
@@ -117,7 +116,6 @@ void set_client_handlers(
                 "[client] puback received. packet_id: " << packet_id <<
                 " reason_code: " << reason_code << std::endl;
             disconnect(c);
-            return true;
         });
     c.set_v5_pubrec_handler( // use v5 handler
         [&]
@@ -125,7 +123,6 @@ void set_client_handlers(
             locked_cout() <<
                 "[client] pubrec received. packet_id: " << packet_id <<
                 " reason_code: " << reason_code << std::endl;
-            return true;
         });
     c.set_v5_pubcomp_handler( // use v5 handler
         [&]
@@ -134,7 +131,6 @@ void set_client_handlers(
                 "[client] pubcomp received. packet_id: " << packet_id <<
                 " reason_code: " << reason_code << std::endl;
             disconnect(c);
-            return true;
         });
     c.set_v5_suback_handler( // use v5 handler
         [&]
@@ -165,7 +161,6 @@ void set_client_handlers(
                 c.publish("mqtt_client_cpp/topic2_1", "test2_1", MQTT_NS::qos::at_least_once);
                 c.publish("mqtt_client_cpp/topic2_2", "test2_2", MQTT_NS::qos::exactly_once);
             }
-            return true;
         });
     c.set_v5_publish_handler( // use v5 handler
         [&]
@@ -183,7 +178,6 @@ void set_client_handlers(
             locked_cout() << "[client] topic_name: " << topic_name << std::endl;
             locked_cout() << "[client] contents: " << contents << std::endl;
             disconnect(c);
-            return true;
         });
 }
 
@@ -305,7 +299,6 @@ void server_proc(Server1& s1, Server2& s2, std::set<con_sp_t>& connections, mi_s
                         { MQTT_NS::v5::property::server_reference(MQTT_NS::allocate_buffer("localhost:" + std::to_string(s2.port()))) }
                     );
                     sp->force_disconnect();
-                    return false;
                 }
             );
         }
@@ -376,7 +369,6 @@ void server_proc(Server1& s1, Server2& s2, std::set<con_sp_t>& connections, mi_s
                         false,
                         MQTT_NS::v5::connect_reason_code::success
                     );
-                    return true;
                 }
             );
             ep.set_v5_disconnect_handler( // use v5 handler
@@ -395,7 +387,6 @@ void server_proc(Server1& s1, Server2& s2, std::set<con_sp_t>& connections, mi_s
                     locked_cout() <<
                         "[server] puback received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
-                    return true;
                 });
             ep.set_v5_pubrec_handler( // use v5 handler
                 []
@@ -403,7 +394,6 @@ void server_proc(Server1& s1, Server2& s2, std::set<con_sp_t>& connections, mi_s
                     locked_cout() <<
                         "[server] pubrec received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
-                    return true;
                 });
             ep.set_v5_pubrel_handler( // use v5 handler
                 []
@@ -411,7 +401,6 @@ void server_proc(Server1& s1, Server2& s2, std::set<con_sp_t>& connections, mi_s
                     locked_cout() <<
                         "[server] pubrel received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
-                    return true;
                 });
             ep.set_v5_pubcomp_handler( // use v5 handler
                 []
@@ -419,7 +408,6 @@ void server_proc(Server1& s1, Server2& s2, std::set<con_sp_t>& connections, mi_s
                     locked_cout() <<
                         "[server] pubcomp received. packet_id: " << packet_id <<
                         " reason_code: " << reason_code << std::endl;
-                    return true;
                 });
             ep.set_v5_publish_handler( // use v5 handler
                 [&subs]
@@ -453,7 +441,6 @@ void server_proc(Server1& s1, Server2& s2, std::set<con_sp_t>& connections, mi_s
                             std::move(props)
                         );
                     }
-                    return true;
                 });
             ep.set_v5_subscribe_handler( // use v5 handler
                 [&subs, wp]
@@ -474,7 +461,6 @@ void server_proc(Server1& s1, Server2& s2, std::set<con_sp_t>& connections, mi_s
                         subs.emplace(std::move(e.topic_filter), sp, e.subopts.get_qos(), e.subopts.get_rap());
                     }
                     sp->suback(packet_id, res);
-                    return true;
                 }
             );
             ep.set_v5_unsubscribe_handler( // use v5 handler
@@ -489,7 +475,6 @@ void server_proc(Server1& s1, Server2& s2, std::set<con_sp_t>& connections, mi_s
                     auto sp = wp.lock();
                     BOOST_ASSERT(sp);
                     sp->unsuback(packet_id);
-                    return true;
                 }
             );
         }

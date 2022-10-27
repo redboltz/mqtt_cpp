@@ -41,7 +41,6 @@ BOOST_AUTO_TEST_CASE( connect ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     c->disconnect();
                     BOOST_TEST(c->connected() == true);
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -55,7 +54,6 @@ BOOST_AUTO_TEST_CASE( connect ) {
 
                     c->disconnect();
                     BOOST_TEST(c->connected() == true);
-                    return true;
                 });
             break;
         default:
@@ -107,7 +105,6 @@ BOOST_AUTO_TEST_CASE( connect_no_strand ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     c->disconnect();
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -118,7 +115,6 @@ BOOST_AUTO_TEST_CASE( connect_no_strand ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
                     c->disconnect();
-                    return true;
                 });
             break;
         default:
@@ -167,7 +163,6 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -177,7 +172,6 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
-                    return true;
                 });
             break;
         default:
@@ -201,7 +195,6 @@ BOOST_AUTO_TEST_CASE( keep_alive ) {
             () {
                 MQTT_CHK("h_pingresp");
                 c->disconnect();
-                return true;
             });
         c->set_keep_alive_sec(3);
         c->connect();
@@ -252,7 +245,6 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                             );
                         }
                     );
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -277,7 +269,6 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                             );
                         }
                     );
-                    return true;
                 });
             break;
         default:
@@ -302,7 +293,6 @@ BOOST_AUTO_TEST_CASE( keep_alive_and_send_control_packet ) {
                 MQTT_CHK("h_pingresp");
                 tim.cancel();
                 c->disconnect();
-                return true;
             });
         c->set_keep_alive_sec(3, std::chrono::seconds(3));
         c->connect();
@@ -337,7 +327,6 @@ BOOST_AUTO_TEST_CASE( pingresp_timeout ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -347,7 +336,6 @@ BOOST_AUTO_TEST_CASE( pingresp_timeout ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
-                    return true;
                 });
             break;
         default:
@@ -408,7 +396,6 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     c->disconnect();
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -424,7 +411,6 @@ BOOST_AUTO_TEST_CASE( connect_again ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
                     c->disconnect();
-                    return true;
                 });
             break;
         default:
@@ -479,7 +465,6 @@ BOOST_AUTO_TEST_CASE( nocid ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     c->disconnect();
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -500,7 +485,6 @@ BOOST_AUTO_TEST_CASE( nocid ) {
                     );
                     BOOST_TEST(times == 1);
                     c->disconnect();
-                    return true;
                 });
             break;
         default:
@@ -546,7 +530,6 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::identifier_rejected);
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -571,7 +554,6 @@ BOOST_AUTO_TEST_CASE( nocid_noclean ) {
                     );
                     BOOST_TEST(times == 1);
                     c->force_disconnect();
-                    return true;
                 });
             break;
         default:
@@ -648,7 +630,6 @@ BOOST_AUTO_TEST_CASE( noclean ) {
                     }
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     c->disconnect();
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -679,7 +660,6 @@ BOOST_AUTO_TEST_CASE( noclean ) {
                     }
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
                     c->disconnect();
-                    return true;
                 });
             break;
         default:
@@ -766,7 +746,6 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     b.set_disconnect_delay(std::chrono::seconds(2));
                     c->disconnect(std::chrono::seconds(1));
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -778,7 +757,6 @@ BOOST_AUTO_TEST_CASE( disconnect_timeout ) {
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
                     b.set_disconnect_delay(std::chrono::seconds(2));
                     c->disconnect(std::chrono::seconds(1));
-                    return true;
                 });
             break;
         default:
@@ -828,7 +806,6 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     b.set_disconnect_delay(std::chrono::seconds(1));
                     c->disconnect(std::chrono::seconds(2));
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -840,7 +817,6 @@ BOOST_AUTO_TEST_CASE( disconnect_not_timeout ) {
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
                     b.set_disconnect_delay(std::chrono::seconds(1));
                     c->disconnect(std::chrono::seconds(2));
-                    return true;
                 });
             break;
         default:
@@ -890,7 +866,6 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     b.set_disconnect_delay(std::chrono::seconds(2));
                     c->async_disconnect(std::chrono::seconds(1));
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -902,7 +877,6 @@ BOOST_AUTO_TEST_CASE( async_disconnect_timeout ) {
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
                     b.set_disconnect_delay(std::chrono::seconds(2));
                     c->async_disconnect(std::chrono::seconds(1));
-                    return true;
                 });
             break;
         default:
@@ -963,7 +937,6 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     b.set_disconnect_delay(std::chrono::seconds(1));
                     c->async_disconnect(std::chrono::seconds(2));
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -975,7 +948,6 @@ BOOST_AUTO_TEST_CASE( async_disconnect_not_timeout ) {
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
                     b.set_disconnect_delay(std::chrono::seconds(1));
                     c->async_disconnect(std::chrono::seconds(2));
-                    return true;
                 });
             break;
         default:
@@ -1046,7 +1018,6 @@ BOOST_AUTO_TEST_CASE( async_keep_alive ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -1056,7 +1027,6 @@ BOOST_AUTO_TEST_CASE( async_keep_alive ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
-                    return true;
                 });
             break;
         default:
@@ -1080,7 +1050,6 @@ BOOST_AUTO_TEST_CASE( async_keep_alive ) {
             () {
                 MQTT_CHK("h_pingresp");
                 c->async_disconnect();
-                return true;
             });
         c->set_keep_alive_sec(3);
         c->async_connect();
@@ -1131,7 +1100,6 @@ BOOST_AUTO_TEST_CASE( async_keep_alive_and_send_control_packet ) {
                             );
                         }
                     );
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -1156,7 +1124,6 @@ BOOST_AUTO_TEST_CASE( async_keep_alive_and_send_control_packet ) {
                             );
                         }
                     );
-                    return true;
                 });
             break;
         default:
@@ -1181,7 +1148,6 @@ BOOST_AUTO_TEST_CASE( async_keep_alive_and_send_control_packet ) {
                 MQTT_CHK("h_pingresp");
                 tim.cancel();
                 c->async_disconnect();
-                return true;
             });
         c->set_keep_alive_sec(3, std::chrono::seconds(3));
         c->async_connect();
@@ -1216,7 +1182,6 @@ BOOST_AUTO_TEST_CASE( async_pingresp_timeout ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -1226,7 +1191,6 @@ BOOST_AUTO_TEST_CASE( async_pingresp_timeout ) {
                     MQTT_CHK("h_connack");
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
-                    return true;
                 });
             break;
         default:
@@ -1291,7 +1255,6 @@ BOOST_AUTO_TEST_CASE( async_connect_session_present_empty_store ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -1313,7 +1276,6 @@ BOOST_AUTO_TEST_CASE( async_connect_session_present_empty_store ) {
                         }
                     );
                     BOOST_TEST(ret);
-                    return true;
                 });
             break;
         default:
@@ -1376,7 +1338,6 @@ BOOST_AUTO_TEST_CASE( async_connect_retry_before_cb ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     c->async_disconnect();
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -1387,7 +1348,6 @@ BOOST_AUTO_TEST_CASE( async_connect_retry_before_cb ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
                     c->async_disconnect();
-                    return true;
                 });
             break;
         default:
@@ -1473,7 +1433,6 @@ BOOST_AUTO_TEST_CASE( async_connect_retry_broker_no_connack ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connack_return_code == MQTT_NS::connect_return_code::accepted);
                     c->async_disconnect();
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -1485,7 +1444,6 @@ BOOST_AUTO_TEST_CASE( async_connect_retry_broker_no_connack ) {
                     BOOST_TEST(sp == false);
                     BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
                     c->async_disconnect();
-                    return true;
                 });
             break;
         default:
@@ -1650,7 +1608,6 @@ BOOST_AUTO_TEST_CASE( connect_prop ) {
 
                 c->disconnect(MQTT_NS::v5::disconnect_reason_code::normal_disconnection, {});
                 BOOST_TEST(c->connected() == true);
-                return true;
             });
 
         c->set_close_handler(
@@ -1753,7 +1710,6 @@ BOOST_AUTO_TEST_CASE( disconnect_prop ) {
 
                 c->disconnect(MQTT_NS::v5::disconnect_reason_code::normal_disconnection, std::move(discon_ps));
                 BOOST_TEST(c->connected() == true);
-                return true;
             });
 
         c->set_close_handler(
@@ -1912,7 +1868,6 @@ BOOST_AUTO_TEST_CASE( connack_prop ) {
 
                 c->disconnect();
                 BOOST_TEST(c->connected() == true);
-                return true;
             });
         c->set_close_handler(
             [&chk, &finish, &c]
@@ -1979,7 +1934,6 @@ BOOST_AUTO_TEST_CASE( session_taken_over ) {
                         )
                             }
                 );
-                return true;
             }
         );
         c1->set_v5_disconnect_handler(
@@ -2002,7 +1956,6 @@ BOOST_AUTO_TEST_CASE( session_taken_over ) {
                 BOOST_TEST(sp == true);
                 BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
                 c3->connect();
-                return true;
             }
         );
         c2->set_v5_disconnect_handler(
@@ -2025,7 +1978,6 @@ BOOST_AUTO_TEST_CASE( session_taken_over ) {
                 BOOST_TEST(sp == false);
                 BOOST_TEST(connect_reason_code == MQTT_NS::v5::connect_reason_code::success);
                 c3->disconnect();
-                return true;
             }
         );
         c3->set_close_handler(

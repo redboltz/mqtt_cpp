@@ -52,25 +52,21 @@ BOOST_AUTO_TEST_CASE( simple ) {
                     c->publish("topic1", "retained_contents", MQTT_NS::qos::at_most_once | MQTT_NS::retain::yes);
 
                     pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-                    return true;
                 });
             c->set_puback_handler(
                 []
                 (std::uint16_t) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_pubrec_handler(
                 []
                 (std::uint16_t) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_pubcomp_handler(
                 []
                 (std::uint16_t) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_suback_handler(
                 [&chk, &pid_sub]
@@ -79,7 +75,6 @@ BOOST_AUTO_TEST_CASE( simple ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
-                    return true;
                 });
             c->set_unsuback_handler(
                 [&chk, &c, &pid_unsub]
@@ -87,7 +82,6 @@ BOOST_AUTO_TEST_CASE( simple ) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     c->disconnect();
-                    return true;
                 });
             c->set_publish_handler(
                 [&chk, &c, &pid_unsub]
@@ -103,7 +97,6 @@ BOOST_AUTO_TEST_CASE( simple ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "retained_contents");
                     pid_unsub = c->unsubscribe("topic1");
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -117,25 +110,21 @@ BOOST_AUTO_TEST_CASE( simple ) {
                     c->publish("topic1", "retained_contents", MQTT_NS::qos::at_most_once | MQTT_NS::retain::yes);
 
                     pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-                    return true;
                 });
             c->set_v5_puback_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_pubrec_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_pubcomp_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_suback_handler(
                 [&chk, &pid_sub]
@@ -144,7 +133,6 @@ BOOST_AUTO_TEST_CASE( simple ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
-                    return true;
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
@@ -154,7 +142,6 @@ BOOST_AUTO_TEST_CASE( simple ) {
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
-                    return true;
                 });
             c->set_v5_publish_handler(
                 [&chk, &c, &pid_unsub]
@@ -171,7 +158,6 @@ BOOST_AUTO_TEST_CASE( simple ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "retained_contents");
                     pid_unsub = c->unsubscribe("topic1");
-                    return true;
                 });
             break;
         default:
@@ -237,25 +223,21 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     c->publish("topic1", "retained_contents3", MQTT_NS::qos::at_most_once | MQTT_NS::retain::no);
 
                     pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-                    return true;
                 });
             c->set_puback_handler(
                 []
                 (std::uint16_t) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_pubrec_handler(
                 []
                 (std::uint16_t) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_pubcomp_handler(
                 []
                 (std::uint16_t) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_suback_handler(
                 [&chk, &pid_sub]
@@ -264,7 +246,6 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_0);
-                    return true;
                 });
             c->set_unsuback_handler(
                 [&chk, &c, &pid_unsub]
@@ -272,7 +253,6 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     MQTT_CHK("h_unsuback");
                     BOOST_TEST(packet_id == pid_unsub);
                     c->disconnect();
-                    return true;
                 });
             c->set_publish_handler(
                 [&chk, &c, &pid_unsub]
@@ -288,7 +268,6 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "retained_contents2");
                     pid_unsub = c->unsubscribe("topic1");
-                    return true;
                 });
             break;
         case MQTT_NS::protocol_version::v5:
@@ -304,25 +283,21 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     c->publish("topic1", "retained_contents3", MQTT_NS::qos::at_most_once | MQTT_NS::retain::no);
 
                     pid_sub = c->subscribe("topic1", MQTT_NS::qos::at_most_once);
-                    return true;
                 });
             c->set_v5_puback_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::puback_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_pubrec_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::pubrec_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_pubcomp_handler(
                 []
                 (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) {
                     BOOST_CHECK(false);
-                    return true;
                 });
             c->set_v5_suback_handler(
                 [&chk, &pid_sub]
@@ -331,7 +306,6 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     BOOST_TEST(packet_id == pid_sub);
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_0);
-                    return true;
                 });
             c->set_v5_unsuback_handler(
                 [&chk, &c, &pid_unsub]
@@ -341,7 +315,6 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
                     c->disconnect();
-                    return true;
                 });
             c->set_v5_publish_handler(
                 [&chk, &c, &pid_unsub]
@@ -358,7 +331,6 @@ BOOST_AUTO_TEST_CASE( overwrite ) {
                     BOOST_TEST(topic == "topic1");
                     BOOST_TEST(contents == "retained_contents2");
                     pid_unsub = c->unsubscribe("topic1");
-                    return true;
                 });
             break;
         default:

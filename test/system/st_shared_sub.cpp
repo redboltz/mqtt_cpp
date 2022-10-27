@@ -97,7 +97,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             s1->connect();
-            return true;
         }
     );
 
@@ -108,7 +107,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             s2->connect();
-            return true;
         }
     );
 
@@ -119,7 +117,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             s3->connect();
-            return true;
         }
     );
 
@@ -136,7 +133,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
                     {"$share/sn1/t2", MQTT_NS::qos::at_most_once}
                 }
             );
-            return true;
         }
     );
 
@@ -150,7 +146,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
 
             s2->subscribe("$share/sn1/t2", MQTT_NS::qos::at_most_once);
 
-            return true;
         }
     );
 
@@ -167,7 +162,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
                     {"$share/sn1/t2", MQTT_NS::qos::at_most_once}
                 }
             );
-            return true;
         }
     );
 
@@ -188,7 +182,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
             p1->publish("t1", "contents7", MQTT_NS::qos::at_most_once);
             p1->publish("t2", "contents8", MQTT_NS::qos::at_most_once);
             p1->disconnect();
-            return true;
         }
     );
 
@@ -230,7 +223,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         }
     );
 
@@ -263,7 +255,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         }
     );
 
@@ -305,7 +296,6 @@ BOOST_AUTO_TEST_CASE( qos0 ) {
                 }
             );
             BOOST_TEST(ret);
-            return true;
         }
     );
 
@@ -434,7 +424,6 @@ BOOST_AUTO_TEST_CASE( unsub_target ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             s1->connect();
-            return true;
         }
     );
 
@@ -445,7 +434,6 @@ BOOST_AUTO_TEST_CASE( unsub_target ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             s2->connect();
-            return true;
         }
     );
 
@@ -456,7 +444,6 @@ BOOST_AUTO_TEST_CASE( unsub_target ) {
             BOOST_TEST(sp == false);
             BOOST_TEST(connack_return_code == MQTT_NS::v5::connect_reason_code::success);
             s3->connect();
-            return true;
         }
     );
 
@@ -469,7 +456,6 @@ BOOST_AUTO_TEST_CASE( unsub_target ) {
 
             s1->subscribe("$share/sn1/t1", MQTT_NS::qos::at_most_once);
 
-            return true;
         }
     );
 
@@ -482,7 +468,6 @@ BOOST_AUTO_TEST_CASE( unsub_target ) {
 
             s2->subscribe("$share/sn1/t2", MQTT_NS::qos::at_most_once);
 
-            return true;
         }
     );
 
@@ -495,7 +480,6 @@ BOOST_AUTO_TEST_CASE( unsub_target ) {
 
             s3->subscribe("$share/sn1/t1", MQTT_NS::qos::at_most_once);
 
-            return true;
         }
     );
 
@@ -508,7 +492,6 @@ BOOST_AUTO_TEST_CASE( unsub_target ) {
 
             p1->publish("t1", "contents1", MQTT_NS::qos::at_most_once);
 
-            return true;
         }
     );
 
@@ -527,7 +510,6 @@ BOOST_AUTO_TEST_CASE( unsub_target ) {
             BOOST_TEST(topic == "t1");
             BOOST_TEST(contents == "contents1");
             s2->unsubscribe("$share/sn1/t2");
-            return true;
         }
     );
 
@@ -539,7 +521,6 @@ BOOST_AUTO_TEST_CASE( unsub_target ) {
             BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
 
             p1->publish("t1", "contents2", MQTT_NS::qos::at_most_once);
-            return true;
         }
     );
 
@@ -561,7 +542,6 @@ BOOST_AUTO_TEST_CASE( unsub_target ) {
             s1->disconnect();
             s2->disconnect();
             s3->disconnect();
-            return true;
         }
     );
 

@@ -236,7 +236,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return connect_handler(
+                    connect_handler(
                         force_move(sp),
                         force_move(client_id),
                         force_move(username),
@@ -251,7 +251,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -268,7 +267,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return connect_handler(
+                    connect_handler(
                         force_move(sp),
                         force_move(client_id),
                         force_move(username),
@@ -283,7 +282,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -327,7 +325,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return puback_handler(
+                    puback_handler(
                         force_move(sp),
                         packet_id,
                         v5::puback_reason_code::success,
@@ -338,7 +336,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -351,7 +348,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return puback_handler(
+                    puback_handler(
                         force_move(sp),
                         packet_id,
                         reason_code,
@@ -362,7 +359,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -373,7 +369,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return pubrec_handler(
+                    pubrec_handler(
                         force_move(sp),
                         packet_id,
                         v5::pubrec_reason_code::success,
@@ -384,7 +380,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -397,7 +392,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return pubrec_handler(
+                    pubrec_handler(
                         force_move(sp),
                         packet_id,
                         reason_code,
@@ -408,7 +403,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -419,7 +413,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return pubrel_handler(
+                    pubrel_handler(
                         force_move(sp),
                         packet_id,
                         v5::pubrel_reason_code::success,
@@ -430,7 +424,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -443,7 +436,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return pubrel_handler(
+                    pubrel_handler(
                         force_move(sp),
                         packet_id,
                         reason_code,
@@ -454,7 +447,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -465,7 +457,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return pubcomp_handler(
+                    pubcomp_handler(
                         force_move(sp),
                         packet_id,
                         v5::pubcomp_reason_code::success,
@@ -476,7 +468,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -489,7 +480,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return pubcomp_handler(
+                    pubcomp_handler(
                         force_move(sp),
                         packet_id,
                         reason_code,
@@ -500,7 +491,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -514,7 +504,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return publish_handler(
+                    publish_handler(
                         force_move(sp),
                         packet_id,
                         pubopts,
@@ -527,7 +517,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -544,7 +533,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return publish_handler(
+                    publish_handler(
                         force_move(sp),
                         packet_id,
                         pubopts,
@@ -557,7 +546,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -569,7 +557,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return subscribe_handler(
+                    subscribe_handler(
                         force_move(sp),
                         packet_id,
                         force_move(entries),
@@ -580,7 +568,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -594,7 +581,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return subscribe_handler(
+                    subscribe_handler(
                         force_move(sp),
                         packet_id,
                         force_move(entries),
@@ -605,7 +592,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -617,7 +603,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return unsubscribe_handler(
+                    unsubscribe_handler(
                         force_move(sp),
                         packet_id,
                         force_move(entries),
@@ -628,7 +614,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -642,7 +627,7 @@ public:
                 BOOST_ASSERT(sp);
                 auto p = sp.get();
                 try {
-                    return unsubscribe_handler(
+                    unsubscribe_handler(
                         force_move(sp),
                         packet_id,
                         force_move(entries),
@@ -653,7 +638,6 @@ public:
                     MQTT_LOG("mqtt_broker", error)
                         << MQTT_ADD_VALUE(address, p)
                         << ex.what();
-                    return true;
                 }
             }
         );
@@ -674,7 +658,6 @@ public:
                         }
                     );
                 }
-                return true;
             }
         );
         ep.set_v5_auth_handler(
@@ -683,7 +666,6 @@ public:
              v5::properties props
             ) {
                 if (h_auth_props_) h_auth_props_(force_move(props));
-                return true;
             }
         );
 
@@ -721,43 +703,43 @@ public:
         pubcomp_props_ = force_move(props);
     }
 
-    void set_connect_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_connect_props_handler(move_only_handler<void(v5::properties const&)> h) {
         h_connect_props_ = force_move(h);
     }
 
-    void set_disconnect_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_disconnect_props_handler(move_only_handler<void(v5::properties const&)> h) {
         h_disconnect_props_ = force_move(h);
     }
 
-    void set_publish_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_publish_props_handler(move_only_handler<void(v5::properties const&)> h) {
         h_publish_props_ = force_move(h);
     }
 
-    void set_puback_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_puback_props_handler(move_only_handler<void(v5::properties const&)> h) {
         h_puback_props_ = force_move(h);
     }
 
-    void set_pubrec_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_pubrec_props_handler(move_only_handler<void(v5::properties const&)> h) {
         h_pubrec_props_ = force_move(h);
     }
 
-    void set_pubrel_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_pubrel_props_handler(move_only_handler<void(v5::properties const&)> h) {
         h_pubrel_props_ = force_move(h);
     }
 
-    void set_pubcomp_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_pubcomp_props_handler(move_only_handler<void(v5::properties const&)> h) {
         h_pubcomp_props_ = force_move(h);
     }
 
-    void set_subscribe_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_subscribe_props_handler(move_only_handler<void(v5::properties const&)> h) {
         h_subscribe_props_ = force_move(h);
     }
 
-    void set_unsubscribe_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_unsubscribe_props_handler(move_only_handler<void(v5::properties const&)> h) {
         h_unsubscribe_props_ = force_move(h);
     }
 
-    void set_auth_props_handler(std::function<void(v5::properties const&)> h) {
+    void set_auth_props_handler(move_only_handler<void(v5::properties const&)> h) {
         h_auth_props_ = force_move(h);
     }
 
@@ -815,7 +797,7 @@ private:
      * @param req_client_id - the id that the client wants to use (username will be prepended)
      * @param will - the last-will-and-testiment of the connection, if any.
      */
-    bool connect_handler(
+    void connect_handler(
         con_sp_t spep,
         buffer client_id,
         optional<buffer> noauth_username,
@@ -862,12 +844,12 @@ private:
                 }
             );
 
-            return true;
+            return;
         }
 
         if (client_id.empty()) {
             if (!handle_empty_client_id(spep, client_id, clean_start, connack_props)) {
-                return false;
+                return;
             }
             // A new client id was generated
             client_id = buffer(string_view(spep->get_client_id()));
@@ -1125,8 +1107,6 @@ private:
                 );
             }
         }
-
-        return true;
     }
 
     struct connect_param {
@@ -1174,7 +1154,7 @@ private:
         bool session_present,
         bool authenticated,
         v5::properties props,
-        std::function<void(error_code)> finish = [](error_code){}
+        move_only_handler<void(error_code)> finish = [](error_code){}
     ) {
         // Reply to the connect message.
         switch (ep.get_protocol_version()) {
@@ -1184,7 +1164,7 @@ private:
                 authenticated ? connect_return_code::accepted
                               : connect_return_code::not_authorized,
                 [finish = force_move(finish)]
-                (error_code ec) {
+                (error_code ec) mutable {
                     finish(ec);
                 }
             );
@@ -1201,7 +1181,7 @@ private:
                                   : v5::connect_reason_code::not_authorized,
                     force_move(props),
                     [finish = force_move(finish)]
-                    (error_code ec) {
+                    (error_code ec) mutable {
                         finish(ec);
                     }
                 );
@@ -1214,7 +1194,7 @@ private:
                                   : v5::connect_reason_code::not_authorized,
                     connack_props_,
                     [finish = force_move(finish)]
-                    (error_code ec) {
+                    (error_code ec) mutable {
                         finish(ec);
                     }
                 );
@@ -1462,7 +1442,7 @@ private:
         return close_proc_no_lock(force_move(spep), send_will, rc);
     }
 
-    bool publish_handler(
+    void publish_handler(
         con_sp_t spep,
         optional<packet_id_t> packet_id,
         publish_options pubopts,
@@ -1481,7 +1461,7 @@ private:
         // and/or async_force_disconnect () is called.
         // During async operation, spep is valid but it has already been
         // erased from sessions_
-        if (it == idx.end()) return true;
+        if (it == idx.end()) return;
 
         auto send_pubres =
             [&] (bool authorized = true) {
@@ -1528,7 +1508,7 @@ private:
 
             // Publish not authorized
             send_pubres(false);
-            return true;
+            return;
         }
 
         v5::properties forward_props;
@@ -1564,10 +1544,9 @@ private:
         );
 
         send_pubres();
-        return true;
     }
 
-    bool puback_handler(
+    void puback_handler(
         con_sp_t spep,
         packet_id_t packet_id,
         v5::puback_reason_code /*reason_code*/,
@@ -1581,18 +1560,16 @@ private:
         // and/or async_force_disconnect () is called.
         // During async operation, spep is valid but it has already been
         // erased from sessions_
-        if (it == idx.end()) return true;
+        if (it == idx.end()) return;
 
         // const_cast is appropriate here
         // See https://github.com/boostorg/multi_index/issues/50
         auto& ss = const_cast<session_state&>(*it);
         ss.erase_inflight_message_by_packet_id(packet_id);
         ss.send_offline_messages_by_packet_id_release();
-
-        return true;
     }
 
-    bool pubrec_handler(
+    void pubrec_handler(
         con_sp_t spep,
         packet_id_t packet_id,
         v5::pubrec_reason_code reason_code,
@@ -1606,14 +1583,14 @@ private:
         // and/or async_force_disconnect () is called.
         // During async operation, spep is valid but it has already been
         // erased from sessions_
-        if (it == idx.end()) return true;
+        if (it == idx.end()) return;
 
         // const_cast is appropriate here
         // See https://github.com/boostorg/multi_index/issues/50
         auto& ss = const_cast<session_state&>(*it);
         ss.erase_inflight_message_by_packet_id(packet_id);
 
-        if (is_error(reason_code)) return true;
+        if (is_error(reason_code)) return;
 
         auto& ep = *spep;
 
@@ -1650,10 +1627,9 @@ private:
             BOOST_ASSERT(false);
             break;
         }
-        return true;
     }
 
-    bool pubrel_handler(
+    void pubrel_handler(
         con_sp_t spep,
         packet_id_t packet_id,
         v5::pubrel_reason_code reason_code,
@@ -1667,7 +1643,7 @@ private:
         // and/or async_force_disconnect () is called.
         // During async operation, spep is valid but it has already been
         // erased from sessions_
-        if (it == idx.end()) return true;
+        if (it == idx.end()) return;
 
         auto& ep = *spep;
 
@@ -1705,10 +1681,9 @@ private:
             BOOST_ASSERT(false);
             break;
         }
-        return true;
     }
 
-    bool pubcomp_handler(
+    void pubcomp_handler(
         con_sp_t spep,
         packet_id_t packet_id,
         v5::pubcomp_reason_code /*reason_code*/,
@@ -1722,18 +1697,16 @@ private:
         // and/or async_force_disconnect () is called.
         // During async operation, spep is valid but it has already been
         // erased from sessions_
-        if (it == idx.end()) return true;
+        if (it == idx.end()) return;
 
         // const_cast is appropriate here
         // See https://github.com/boostorg/multi_index/issues/50
         auto& ss = const_cast<session_state&>(*it);
         ss.erase_inflight_message_by_packet_id(packet_id);
         ss.send_offline_messages_by_packet_id_release();
-
-        return true;
     }
 
-    bool subscribe_handler(
+    void subscribe_handler(
         con_sp_t spep,
         packet_id_t packet_id,
         std::vector<subscribe_entry> entries,
@@ -1750,7 +1723,7 @@ private:
         // and/or async_force_disconnect () is called.
         // During async operation, spep is valid but it has already been
         // erased from sessions_
-        if (it == idx.end()) return true;
+        if (it == idx.end()) return;
 
         // The element of sessions_ must have longer lifetime
         // than corresponding subscription.
@@ -1792,7 +1765,7 @@ private:
                 );
             };
 
-        std::vector<std::function<void()>> retain_deliver;
+        std::vector<move_only_handler<void()>> retain_deliver;
         retain_deliver.reserve(entries.size());
 
         // subscription identifier
@@ -1906,13 +1879,12 @@ private:
             break;
         }
 
-        for (auto const& f : retain_deliver) {
+        for (auto& f : retain_deliver) {
             f();
         }
-        return true;
     }
 
-    bool unsubscribe_handler(
+    void unsubscribe_handler(
         con_sp_t spep,
         packet_id_t packet_id,
         std::vector<unsubscribe_entry> entries,
@@ -1929,7 +1901,7 @@ private:
         // and/or async_force_disconnect () is called.
         // During async operation, spep is valid but it has already been
         // erased from sessions_
-        if (it == idx.end()) return true;
+        if (it == idx.end()) return;
 
         // The element of sessions_ must have longer lifetime
         // than corresponding subscription.
@@ -1988,8 +1960,6 @@ private:
             BOOST_ASSERT(false);
             break;
         }
-
-        return true;
     }
 
     /**
@@ -2175,16 +2145,16 @@ private:
     v5::properties pubrec_props_;
     v5::properties pubrel_props_;
     v5::properties pubcomp_props_;
-    std::function<void(v5::properties const&)> h_connect_props_;
-    std::function<void(v5::properties const&)> h_disconnect_props_;
-    std::function<void(v5::properties const&)> h_publish_props_;
-    std::function<void(v5::properties const&)> h_puback_props_;
-    std::function<void(v5::properties const&)> h_pubrec_props_;
-    std::function<void(v5::properties const&)> h_pubrel_props_;
-    std::function<void(v5::properties const&)> h_pubcomp_props_;
-    std::function<void(v5::properties const&)> h_subscribe_props_;
-    std::function<void(v5::properties const&)> h_unsubscribe_props_;
-    std::function<void(v5::properties const&)> h_auth_props_;
+    move_only_handler<void(v5::properties const&)> h_connect_props_;
+    move_only_handler<void(v5::properties const&)> h_disconnect_props_;
+    move_only_handler<void(v5::properties const&)> h_publish_props_;
+    move_only_handler<void(v5::properties const&)> h_puback_props_;
+    move_only_handler<void(v5::properties const&)> h_pubrec_props_;
+    move_only_handler<void(v5::properties const&)> h_pubrel_props_;
+    move_only_handler<void(v5::properties const&)> h_pubcomp_props_;
+    move_only_handler<void(v5::properties const&)> h_subscribe_props_;
+    move_only_handler<void(v5::properties const&)> h_unsubscribe_props_;
+    move_only_handler<void(v5::properties const&)> h_auth_props_;
     bool pingresp_ = true;
     bool connack_ = true;
 };

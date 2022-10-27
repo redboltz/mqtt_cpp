@@ -709,7 +709,7 @@ int main(int argc, char **argv) {
                         MQTT_NS::v5::properties /*props*/) {
                         if (pubopts.get_retain() == MQTT_NS::retain::yes) {
                             locked_cout() << "retained publish received and ignored topic:" << topic_name << std::endl;
-                            return true;
+                            return;
                         }
                         BOOST_ASSERT(rest_times > 0);
                         --rest_times;
@@ -742,8 +742,6 @@ int main(int argc, char **argv) {
                             --ci.recv_times;
                             if (rest_times == 0) finish_proc();
                         }
-
-                        return true;
                     };
 
                 // ==== end local lambda expressions
@@ -764,7 +762,6 @@ int main(int argc, char **argv) {
                             else {
                                 std::cout << "connack error:" << connack_return_code << std::endl;
                             }
-                            return true;
                         }
                     );
                     ci.c->set_v5_connack_handler(
@@ -776,7 +773,6 @@ int main(int argc, char **argv) {
                             else {
                                 std::cout << "connack error:" << reason_code << std::endl;
                             }
-                            return true;
                         }
                     );
 
@@ -796,7 +792,6 @@ int main(int argc, char **argv) {
                                     }
                                 }
                             }
-                            return true;
                         }
                     );
                     ci.c->set_v5_suback_handler(
@@ -817,7 +812,6 @@ int main(int argc, char **argv) {
                                     }
                                 }
                             }
-                            return true;
                         }
                     );
 
@@ -827,7 +821,7 @@ int main(int argc, char **argv) {
                          MQTT_NS::publish_options pubopts,
                          MQTT_NS::buffer topic_name,
                          MQTT_NS::buffer contents) {
-                            return publish_handler(ci, packet_id, pubopts, topic_name, contents, MQTT_NS::v5::properties{});
+                            publish_handler(ci, packet_id, pubopts, topic_name, contents, MQTT_NS::v5::properties{});
                         }
                     );
                     ci.c->set_v5_publish_handler(
@@ -837,7 +831,7 @@ int main(int argc, char **argv) {
                          MQTT_NS::buffer topic_name,
                          MQTT_NS::buffer contents,
                          MQTT_NS::v5::properties props) {
-                            return publish_handler(ci, packet_id, pubopts, topic_name, contents, MQTT_NS::force_move(props));
+                            publish_handler(ci, packet_id, pubopts, topic_name, contents, MQTT_NS::force_move(props));
                         }
                     );
                 }

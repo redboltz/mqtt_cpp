@@ -18,6 +18,7 @@
 #include <mqtt/any.hpp>
 #include <mqtt/message_variant.hpp>
 #include <mqtt/packet_id_type.hpp>
+#include <mqtt/move_only_handler.hpp>
 
 namespace MQTT_NS {
 
@@ -84,10 +85,10 @@ public:
     }
 
     void for_each(
-        std::function<
+        move_only_function<
             // if return true, then erase element
             bool(basic_store_message_variant<PacketIdBytes> const&, any const&)
-        > const& f
+        > f
     ) {
         auto& idx = elems_.template get<tag_seq>();
         auto it = idx.begin();

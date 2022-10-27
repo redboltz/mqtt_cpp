@@ -52,7 +52,7 @@ class session_states;
  * Retained messages do not form part of the Session State in the Server, they are not deleted as a result of a Session ending.
  */
 struct session_state {
-    using will_sender_t = std::function<
+    using will_sender_t = move_only_handler<
         void(
             session_state const& source_ss,
             buffer topic,
@@ -283,7 +283,7 @@ struct session_state {
         }
     }
 
-    void set_clean_handler(std::function<void()> handler) {
+    void set_clean_handler(move_only_handler<void()> handler) {
         clean_handler_ = force_move(handler);
     }
 
@@ -601,7 +601,7 @@ private:
     std::set<packet_id_t> qos2_publish_handled_;
 
     optional<std::string> response_topic_;
-    std::function<void()> clean_handler_;
+    move_only_handler<void()> clean_handler_;
 };
 
 class session_states {
