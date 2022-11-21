@@ -18,6 +18,6 @@ namespace as = boost::asio;
 
 using strand = as::strand<as::io_context::executor_type>;
 
-}
+} // namespace MQTT_NS
 
 #endif // MQTT_STRAND_HPP

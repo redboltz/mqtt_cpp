@@ -8,6 +8,7 @@
 #define MQTT_BROKER_TOPIC_FILTER_HPP
 
 #include <algorithm>
+#include <limits>
 
 #include <mqtt/broker/broker_namespace.hpp>
 #include <mqtt/string_view.hpp>
