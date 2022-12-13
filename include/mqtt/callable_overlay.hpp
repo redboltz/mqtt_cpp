@@ -13,6 +13,7 @@
 #include <mqtt/attributes.hpp>
 #include <mqtt/endpoint.hpp>
 #include <mqtt/move.hpp>
+#include <mqtt/move_only_function.hpp>
 
 namespace MQTT_NS {
 template<typename Impl>
@@ -758,7 +759,7 @@ struct callable_overlay final : public Impl
      *        3.13 PINGREQ – PING request
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using pingreq_handler = std::function<bool()>;
+    using pingreq_handler = move_only_function<bool()>;
 
     /**
      * @brief Pingresp handler
@@ -766,7 +767,7 @@ struct callable_overlay final : public Impl
      *        3.13 PINGRESP – PING response
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using pingresp_handler = std::function<bool()>;
+    using pingresp_handler = move_only_function<bool()>;
 
 
     // MQTT v3_1_1 handlers
@@ -808,7 +809,7 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      *
      */
-    using connect_handler = std::function<
+    using connect_handler = move_only_function<
         bool(buffer client_id,
              optional<buffer> user_name,
              optional<buffer> password,
@@ -828,7 +829,7 @@ struct callable_overlay final : public Impl
      *        3.2.2.3 Connect Return code
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using connack_handler = std::function<bool(bool session_present, connect_return_code return_code)>;
+    using connack_handler = move_only_function<bool(bool session_present, connect_return_code return_code)>;
 
     /**
      * @brief Publish handler
@@ -847,7 +848,7 @@ struct callable_overlay final : public Impl
      *        Published contents
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using publish_handler = std::function<bool(optional<packet_id_t> packet_id,
+    using publish_handler = move_only_function<bool(optional<packet_id_t> packet_id,
                                                publish_options pubopts,
                                                buffer topic_name,
                                                buffer contents)>;
@@ -860,7 +861,7 @@ struct callable_overlay final : public Impl
      *        3.4.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using puback_handler = std::function<bool(packet_id_t packet_id)>;
+    using puback_handler = move_only_function<bool(packet_id_t packet_id)>;
 
     /**
      * @brief Pubrec handler
@@ -870,7 +871,7 @@ struct callable_overlay final : public Impl
      *        3.5.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using pubrec_handler = std::function<bool(packet_id_t packet_id)>;
+    using pubrec_handler = move_only_function<bool(packet_id_t packet_id)>;
 
     /**
      * @brief Pubrel handler
@@ -880,7 +881,7 @@ struct callable_overlay final : public Impl
      *        3.6.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using pubrel_handler = std::function<bool(packet_id_t packet_id)>;
+    using pubrel_handler = move_only_function<bool(packet_id_t packet_id)>;
 
     /**
      * @brief Pubcomp handler
@@ -890,7 +891,7 @@ struct callable_overlay final : public Impl
      *        3.7.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using pubcomp_handler = std::function<bool(packet_id_t packet_id)>;
+    using pubcomp_handler = move_only_function<bool(packet_id_t packet_id)>;
 
     /**
      * @brief Subscribe handler
@@ -902,7 +903,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc385349802<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using subscribe_handler = std::function<bool(packet_id_t packet_id,
+    using subscribe_handler = move_only_function<bool(packet_id_t packet_id,
                                                  std::vector<subscribe_entry> entries)>;
 
     /**
@@ -916,7 +917,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc398718071<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using suback_handler = std::function<bool(packet_id_t packet_id,
+    using suback_handler = move_only_function<bool(packet_id_t packet_id,
                                               std::vector<suback_return_code> qoss)>;
 
     /**
@@ -929,7 +930,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800448<BR>
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using unsubscribe_handler = std::function<bool(packet_id_t packet_id,
+    using unsubscribe_handler = move_only_function<bool(packet_id_t packet_id,
                                                    std::vector<unsubscribe_entry> entries)>;
 
     /**
@@ -939,14 +940,14 @@ struct callable_overlay final : public Impl
      *        3.11.2 Variable header
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using unsuback_handler = std::function<bool(packet_id_t)>;
+    using unsuback_handler = move_only_function<bool(packet_id_t)>;
 
     /**
      * @brief Disconnect handler
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc384800463<BR>
      *        3.14 DISCONNECT – Disconnect notification
      */
-    using disconnect_handler = std::function<void()>;
+    using disconnect_handler = move_only_function<void()>;
 
     // MQTT v5 handlers
 
@@ -993,7 +994,7 @@ struct callable_overlay final : public Impl
      * @return if the handler returns true, then continue receiving, otherwise quit.
      *
      */
-    using v5_connect_handler = std::function<
+    using v5_connect_handler = move_only_function<
         bool(buffer client_id,
              optional<buffer> user_name,
              optional<buffer> password,
@@ -1019,7 +1020,7 @@ struct callable_overlay final : public Impl
      *        3.2.2.3 CONNACK Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_connack_handler = std::function<
+    using v5_connack_handler = move_only_function<
         bool(bool session_present,
              v5::connect_reason_code reason_code,
              v5::properties props)
@@ -1050,7 +1051,7 @@ struct callable_overlay final : public Impl
      *        3.3.2.3 PUBLISH Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_publish_handler = std::function<
+    using v5_publish_handler = move_only_function<
         bool(optional<packet_id_t> packet_id,
              publish_options pubopts,
              buffer topic_name,
@@ -1074,7 +1075,7 @@ struct callable_overlay final : public Impl
      *        3.4.2.2 PUBACK Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_puback_handler = std::function<
+    using v5_puback_handler = move_only_function<
         bool(packet_id_t packet_id,
              v5::puback_reason_code reason_code,
              v5::properties props)
@@ -1096,7 +1097,7 @@ struct callable_overlay final : public Impl
      *        3.5.2.2 PUBREC Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_pubrec_handler = std::function<
+    using v5_pubrec_handler = move_only_function<
         bool(packet_id_t packet_id,
              v5::pubrec_reason_code reason_code,
              v5::properties props)
@@ -1118,7 +1119,7 @@ struct callable_overlay final : public Impl
      *        3.6.2.2 PUBREL Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_pubrel_handler = std::function<
+    using v5_pubrel_handler = move_only_function<
         bool(packet_id_t packet_id,
              v5::pubrel_reason_code reason_code,
              v5::properties props)
@@ -1140,7 +1141,7 @@ struct callable_overlay final : public Impl
      *        3.7.2.2 PUBCOMP Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_pubcomp_handler = std::function<
+    using v5_pubcomp_handler = move_only_function<
         bool(packet_id_t packet_id,
              v5::pubcomp_reason_code reason_code,
              v5::properties props)
@@ -1160,7 +1161,7 @@ struct callable_overlay final : public Impl
      *        3.8.2.1 SUBSCRIBE Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_subscribe_handler = std::function<
+    using v5_subscribe_handler = move_only_function<
         bool(packet_id_t packet_id,
              std::vector<subscribe_entry> entries,
              v5::properties props)
@@ -1181,7 +1182,7 @@ struct callable_overlay final : public Impl
      *        3.9.2.1 SUBACK Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_suback_handler = std::function<
+    using v5_suback_handler = move_only_function<
         bool(packet_id_t packet_id,
              std::vector<v5::suback_reason_code> reasons,
              v5::properties props)
@@ -1202,7 +1203,7 @@ struct callable_overlay final : public Impl
      *        3.10.2.1 UNSUBSCRIBE Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_unsubscribe_handler = std::function<
+    using v5_unsubscribe_handler = move_only_function<
         bool(packet_id_t packet_id,
              std::vector<unsubscribe_entry> entries,
              v5::properties props)
@@ -1223,7 +1224,7 @@ struct callable_overlay final : public Impl
      *        3.11.2.1 UNSUBACK Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_unsuback_handler = std::function<
+    using v5_unsuback_handler = move_only_function<
         bool(packet_id_t,
              std::vector<v5::unsuback_reason_code> reasons,
              v5::properties props)
@@ -1242,7 +1243,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901209<BR>
      *        3.14.2.2 DISCONNECT Properties
      */
-    using v5_disconnect_handler = std::function<
+    using v5_disconnect_handler = move_only_function<
         void(v5::disconnect_reason_code reason_code,
              v5::properties props)
     >;
@@ -1261,7 +1262,7 @@ struct callable_overlay final : public Impl
      *        3.15.2.2 AUTH Properties
      * @return if the handler returns true, then continue receiving, otherwise quit.
      */
-    using v5_auth_handler = std::function<
+    using v5_auth_handler = move_only_function<
         bool(v5::auth_reason_code reason_code,
              v5::properties props)
     >;
@@ -1275,7 +1276,7 @@ struct callable_overlay final : public Impl
      * This handler is called if the client called `disconnect()` and the server closed the socket cleanly.
      * If the socket is closed by other reasons, error_handler is called.
      */
-    using close_handler = std::function<void()>;
+    using close_handler = move_only_function<void()>;
 
     /**
      * @brief Error handler
@@ -1284,7 +1285,7 @@ struct callable_overlay final : public Impl
      *
      * @param ec error code
      */
-    using error_handler = std::function<void(error_code ec)>;
+    using error_handler = move_only_function<void(error_code ec)>;
 
     /**
      * @brief Publish response sent handler
@@ -1294,7 +1295,7 @@ struct callable_overlay final : public Impl
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901026<BR>
      *        2.2.1 Packet Identifier
      */
-    using pub_res_sent_handler = std::function<void(packet_id_t packet_id)>;
+    using pub_res_sent_handler = move_only_function<void(packet_id_t packet_id)>;
 
     /**
      * @brief Serialize publish handler
@@ -1302,7 +1303,7 @@ struct callable_overlay final : public Impl
      *        To restore the message, use restore_serialized_message().
      * @param msg publish message
      */
-    using serialize_publish_message_handler = std::function<void(basic_publish_message<sizeof(packet_id_t)> msg)>;
+    using serialize_publish_message_handler = move_only_function<void(basic_publish_message<sizeof(packet_id_t)> msg)>;
 
     /**
      * @brief Serialize publish handler
@@ -1310,7 +1311,7 @@ struct callable_overlay final : public Impl
      *        To restore the message, use restore_serialized_message().
      * @param msg v5::publish message
      */
-    using serialize_v5_publish_message_handler = std::function<void(v5::basic_publish_message<sizeof(packet_id_t)> msg)>;
+    using serialize_v5_publish_message_handler = move_only_function<void(v5::basic_publish_message<sizeof(packet_id_t)> msg)>;
 
     /**
      * @brief Serialize publish handler
@@ -1320,7 +1321,7 @@ struct callable_overlay final : public Impl
      * @param data      pointer to the serializing message
      * @param size      size of the serializing message
      */
-    using serialize_publish_handler = std::function<void(packet_id_t packet_id, char const* data, std::size_t size)>;
+    using serialize_publish_handler = move_only_function<void(packet_id_t packet_id, char const* data, std::size_t size)>;
 
     /**
      * @brief Serialize pubrel handler
@@ -1330,7 +1331,7 @@ struct callable_overlay final : public Impl
      *        To restore the message, use restore_serialized_message().
      * @param msg pubrel message
      */
-    using serialize_pubrel_message_handler = std::function<void(basic_pubrel_message<sizeof(packet_id_t)> msg)>;
+    using serialize_pubrel_message_handler = move_only_function<void(basic_pubrel_message<sizeof(packet_id_t)> msg)>;
 
     /**
      * @brief Serialize pubrel handler
@@ -1340,7 +1341,7 @@ struct callable_overlay final : public Impl
      *        To restore the message, use restore_serialized_message().
      * @param msg pubrel message
      */
-    using serialize_v5_pubrel_message_handler = std::function<void(v5::basic_pubrel_message<sizeof(packet_id_t)> msg)>;
+    using serialize_v5_pubrel_message_handler = move_only_function<void(v5::basic_pubrel_message<sizeof(packet_id_t)> msg)>;
 
     /**
      * @brief Serialize pubrel handler
@@ -1352,19 +1353,19 @@ struct callable_overlay final : public Impl
      * @param data      pointer to the serializing message
      * @param size      size of the serializing message
      */
-    using serialize_pubrel_handler = std::function<void(packet_id_t packet_id, char const* data, std::size_t size)>;
+    using serialize_pubrel_handler = move_only_function<void(packet_id_t packet_id, char const* data, std::size_t size)>;
 
     /**
      * @brief Remove serialized message
      * @param packet_id packet identifier of the removing message
      */
-    using serialize_remove_handler = std::function<void(packet_id_t packet_id)>;
+    using serialize_remove_handler = move_only_function<void(packet_id_t packet_id)>;
 
     /**
      * @brief Pre-send handler
      *        This handler is called when any mqtt control packet is decided to send.
      */
-    using pre_send_handler = std::function<void()>;
+    using pre_send_handler = move_only_function<void()>;
 
     /**
      * @brief is valid length handler
@@ -1374,7 +1375,7 @@ struct callable_overlay final : public Impl
      * @return true if check is success, otherwise false
      */
     using is_valid_length_handler =
-        std::function<bool(control_packet_type packet_type, std::size_t remaining_length)>;
+        move_only_function<bool(control_packet_type packet_type, std::size_t remaining_length)>;
 
     /**
      * @brief next read handler
@@ -1382,7 +1383,7 @@ struct callable_overlay final : public Impl
      * @param func A callback function that is called when async operation will finish.
      */
     using mqtt_message_processed_handler =
-        std::function<void(any session_life_keeper)>;
+        move_only_function<void(any session_life_keeper)>;
 
 
 
@@ -1879,7 +1880,7 @@ struct callable_overlay final : public Impl
         serialize_remove_handler h_remove) {
         h_serialize_publish_ =
             [h_publish = force_move(h_publish)]
-            (basic_publish_message<sizeof(packet_id_t)> msg) {
+            (basic_publish_message<sizeof(packet_id_t)> msg) mutable {
                 if (h_publish) {
                     auto buf = msg.continuous_buffer();
                     h_publish(msg.packet_id(), buf.data(), buf.size());
@@ -1887,7 +1888,7 @@ struct callable_overlay final : public Impl
             };
         h_serialize_pubrel_ =
             [h_pubrel = force_move(h_pubrel)]
-            (basic_pubrel_message<sizeof(packet_id_t)> msg) {
+            (basic_pubrel_message<sizeof(packet_id_t)> msg) mutable {
                 if (h_pubrel) {
                     auto buf = msg.continuous_buffer();
                     h_pubrel(msg.packet_id(), buf.data(), buf.size());
@@ -1908,7 +1909,7 @@ struct callable_overlay final : public Impl
         serialize_remove_handler h_remove) {
         h_serialize_v5_publish_ =
             [h_publish = force_move(h_publish)]
-            (v5::basic_publish_message<sizeof(packet_id_t)> msg) {
+            (v5::basic_publish_message<sizeof(packet_id_t)> msg) mutable {
                 if (h_publish) {
                     auto buf = msg.continuous_buffer();
                     h_publish(msg.packet_id(), buf.data(), buf.size());
@@ -1916,7 +1917,7 @@ struct callable_overlay final : public Impl
             };
         h_serialize_v5_pubrel_ =
             [h_pubrel = force_move(h_pubrel)]
-            (v5::basic_pubrel_message<sizeof(packet_id_t)> msg) {
+            (v5::basic_pubrel_message<sizeof(packet_id_t)> msg) mutable {
                 if (h_pubrel) {
                     auto buf = msg.continuous_buffer();
                     h_pubrel(msg.packet_id(), buf.data(), buf.size());
@@ -2042,7 +2043,7 @@ struct callable_overlay final : public Impl
      * @brief Get  mqtt_message_processed_handler.
      * @return mqtt_message_processed_handler.
      */
-    mqtt_message_processed_handler get_mqtt_message_processed_handler() const {
+    mqtt_message_processed_handler const& get_mqtt_message_processed_handler() const {
         return h_mqtt_message_processed_;
     }
 
@@ -2066,7 +2067,7 @@ struct callable_overlay final : public Impl
      * @brief Get close handler
      * @return handler
      */
-    close_handler get_close_handler() const {
+    close_handler const& get_close_handler() const {
         return h_close_;
     }
 
@@ -2074,7 +2075,7 @@ struct callable_overlay final : public Impl
      * @brief Get error handler
      * @return handler
      */
-    error_handler get_error_handler() const {
+    error_handler const& get_error_handler() const {
         return h_error_;
     }
 

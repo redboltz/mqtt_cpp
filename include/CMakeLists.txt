@@ -64,7 +64,7 @@ ADD_LIBRARY(check_deps OBJECT EXCLUDE_FROM_ALL ${CHK_MQTT})
 # We don't need to actually run the whole compiler. We're just checking that all the includes are valid
 # So here we ask for only the syntax checking mode to be used.
 # We also don't mind that there might be unused constant variables when doing deps checking.
-TARGET_COMPILE_OPTIONS(check_deps PUBLIC -Wno-unused-const-variable $<IF:$<CXX_COMPILER_ID:MSVC>,/Zs,-fsyntax-only>)
+TARGET_COMPILE_OPTIONS(check_deps PUBLIC -Wno-unneeded-internal-declaration -Wno-unused-const-variable $<IF:$<CXX_COMPILER_ID:MSVC>,/Zs,-fsyntax-only>)
 
 TARGET_LINK_LIBRARIES (check_deps PUBLIC ${PROJECT_NAME})
 
