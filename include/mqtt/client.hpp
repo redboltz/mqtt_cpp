@@ -1088,7 +1088,7 @@ public:
      */
     void connect(v5::properties props, any session_life_keeper = any()) {
         setup_socket(socket_);
-        connect_impl(force_move(props), force_move(session_life_keeper));
+        connect_impl(force_move(props), force_move(session_life_keeper), false);
     }
 
     /**
@@ -1105,7 +1105,7 @@ public:
         boost::system::error_code& ec,
         any session_life_keeper = any()) {
         setup_socket(socket_);
-        connect_impl(force_move(props), force_move(session_life_keeper), ec);
+        connect_impl(force_move(props), force_move(session_life_keeper), ec, false);
     }
 
     /**
@@ -1114,9 +1114,13 @@ public:
      * @param socket The library uses the socket instead of internal generation.
      *               You can configure the socket prior to connect.
      * @param session_life_keeper the passed object lifetime will be kept during the session.
+     * @param underlying_connected If the given socket has aleady been connected, then true.
+     *                             Connecting processes are skipped and send MQTT CONNECT packet.
+     *                             If false then do all underlying connecting process and then
+     *                             send MQTT CONNECT packet.
      */
-    void connect(std::shared_ptr<Socket>&& socket, any session_life_keeper = any()) {
-        connect(force_move(socket), v5::properties{}, force_move(session_life_keeper));
+    void connect(std::shared_ptr<Socket>&& socket, any session_life_keeper = any(), bool underlying_connected = false) {
+        connect(force_move(socket), v5::properties{}, force_move(session_life_keeper), underlying_connected);
     }
 
     /**
@@ -1126,12 +1130,17 @@ public:
      *               You can configure the socket prior to connect.
      * @param ec error code
      * @param session_life_keeper the passed object lifetime will be kept during the session.
+     * @param underlying_connected If the given socket has aleady been connected, then true.
+     *                             Connecting processes are skipped and send MQTT CONNECT packet.
+     *                             If false then do all underlying connecting process and then
+     *                             send MQTT CONNECT packet.
      */
     void connect(
         std::shared_ptr<Socket>&& socket,
         boost::system::error_code& ec,
-        any session_life_keeper = any()) {
-        connect(force_move(socket), v5::properties{}, ec, force_move(session_life_keeper));
+        any session_life_keeper = any(),
+        bool underlying_connected = false) {
+        connect(force_move(socket), v5::properties{}, ec, force_move(session_life_keeper), underlying_connected);
     }
 
     /**
@@ -1143,14 +1152,19 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
      * @param session_life_keeper the passed object lifetime will be kept during the session.
+     * @param underlying_connected If the given socket has aleady been connected, then true.
+     *                             Connecting processes are skipped and send MQTT CONNECT packet.
+     *                             If false then do all underlying connecting process and then
+     *                             send MQTT CONNECT packet.
      */
     void connect(
         std::shared_ptr<Socket>&& socket,
         v5::properties props,
-        any session_life_keeper = any()) {
+        any session_life_keeper = any(),
+        bool underlying_connected = false) {
         socket_ = force_move(socket);
         base::socket_sp_ref() = socket_;
-        connect_impl(force_move(props), force_move(session_life_keeper));
+        connect_impl(force_move(props), force_move(session_life_keeper), underlying_connected);
     }
 
     /**
@@ -1163,15 +1177,20 @@ public:
      *        3.1.2.11 CONNECT Properties
      * @param ec error code
      * @param session_life_keeper the passed object lifetime will be kept during the session.
+     * @param underlying_connected If the given socket has aleady been connected, then true.
+     *                             Connecting processes are skipped and send MQTT CONNECT packet.
+     *                             If false then do all underlying connecting process and then
+     *                             send MQTT CONNECT packet.
      */
     void connect(
         std::shared_ptr<Socket>&& socket,
         v5::properties props,
         boost::system::error_code& ec,
-        any session_life_keeper = any()) {
+        any session_life_keeper = any(),
+        bool underlying_connected = false) {
         socket_ = force_move(socket);
         base::socket_sp_ref() = socket_;
-        connect_impl(force_move(props), force_move(session_life_keeper), ec);
+        connect_impl(force_move(props), force_move(session_life_keeper), ec, underlying_connected);
     }
 
     /**
@@ -1255,7 +1274,7 @@ public:
      */
     void async_connect(v5::properties props, any session_life_keeper, async_handler_t func) {
         setup_socket(socket_);
-        async_connect_impl(force_move(props), force_move(session_life_keeper), force_move(func));
+        async_connect_impl(force_move(props), force_move(session_life_keeper), force_move(func), false);
     }
 
     /**
@@ -1263,9 +1282,13 @@ public:
      * Before calling connect(), call set_xxx member functions to configure the connection.
      * @param socket The library uses the socket instead of internal generation.
      *               You can configure the socket prior to connect.
+     * @param underlying_connected If the given socket has aleady been connected, then true.
+     *                             Connecting processes are skipped and send MQTT CONNECT packet.
+     *                             If false then do all underlying connecting process and then
+     *                             send MQTT CONNECT packet.
      */
-    void async_connect(std::shared_ptr<Socket>&& socket) {
-        async_connect(force_move(socket), v5::properties{}, any(), async_handler_t());
+    void async_connect(std::shared_ptr<Socket>&& socket, bool underlying_connected = false) {
+        async_connect(force_move(socket), v5::properties{}, any(), async_handler_t(), underlying_connected);
     }
 
     /**
@@ -1274,14 +1297,18 @@ public:
      * @param socket The library uses the socket instead of internal generation.
      *               You can configure the socket prior to connect.
      * @param session_life_keeper the passed object lifetime will be kept during the session.
+     * @param underlying_connected If the given socket has aleady been connected, then true.
+     *                             Connecting processes are skipped and send MQTT CONNECT packet.
+     *                             If false then do all underlying connecting process and then
+     *                             send MQTT CONNECT packet.
      */
     template <typename T>
     // to avoid ambiguousness between any and async_handler_t
     std::enable_if_t<
         !std::is_convertible<T, async_handler_t>::value
     >
-    async_connect(std::shared_ptr<Socket>&& socket, T session_life_keeper) {
-        async_connect(force_move(socket), v5::properties{}, force_move(session_life_keeper), async_handler_t());
+    async_connect(std::shared_ptr<Socket>&& socket, T session_life_keeper, bool underlying_connected = false) {
+        async_connect(force_move(socket), v5::properties{}, force_move(session_life_keeper), async_handler_t(), underlying_connected);
     }
 
     /**
@@ -1290,9 +1317,13 @@ public:
      * @param socket The library uses the socket instead of internal generation.
      *               You can configure the socket prior to connect.
      * @param func finish handler that is called when the underlying connection process is finished
+     * @param underlying_connected If the given socket has aleady been connected, then true.
+     *                             Connecting processes are skipped and send MQTT CONNECT packet.
+     *                             If false then do all underlying connecting process and then
+     *                             send MQTT CONNECT packet.
      */
-    void async_connect(std::shared_ptr<Socket>&& socket, async_handler_t func) {
-        async_connect(force_move(socket), v5::properties{}, any(), force_move(func));
+    void async_connect(std::shared_ptr<Socket>&& socket, async_handler_t func, bool underlying_connected = false) {
+        async_connect(force_move(socket), v5::properties{}, any(), force_move(func), underlying_connected);
     }
 
     /**
@@ -1302,9 +1333,13 @@ public:
      *               You can configure the socket prior to connect.
      * @param session_life_keeper the passed object lifetime will be kept during the session.
      * @param func finish handler that is called when the underlying connection process is finished
+     * @param underlying_connected If the given socket has aleady been connected, then true.
+     *                             Connecting processes are skipped and send MQTT CONNECT packet.
+     *                             If false then do all underlying connecting process and then
+     *                             send MQTT CONNECT packet.
      */
-    void async_connect(std::shared_ptr<Socket>&& socket, any session_life_keeper, async_handler_t func) {
-        async_connect(force_move(socket), v5::properties{}, force_move(session_life_keeper), force_move(func));
+    void async_connect(std::shared_ptr<Socket>&& socket, any session_life_keeper, async_handler_t func, bool underlying_connected = false) {
+        async_connect(force_move(socket), v5::properties{}, force_move(session_life_keeper), force_move(func), underlying_connected);
     }
 
     /**
@@ -1315,9 +1350,13 @@ public:
      * @param props properties
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
+     * @param underlying_connected If the given socket has aleady been connected, then true.
+     *                             Connecting processes are skipped and send MQTT CONNECT packet.
+     *                             If false then do all underlying connecting process and then
+     *                             send MQTT CONNECT packet.
      */
-    void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props) {
-        async_connect(force_move(socket), force_move(props), any(), async_handler_t());
+    void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, bool underlying_connected = false) {
+        async_connect(force_move(socket), force_move(props), any(), async_handler_t(), underlying_connected);
     }
 
     /**
@@ -1329,14 +1368,18 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
      * @param session_life_keeper the passed object lifetime will be kept during the session.
+     * @param underlying_connected If the given socket has aleady been connected, then true.
+     *                             Connecting processes are skipped and send MQTT CONNECT packet.
+     *                             If false then do all underlying connecting process and then
+     *                             send MQTT CONNECT packet.
      */
     template <typename T>
     // to avoid ambiguousness between any and async_handler_t
     std::enable_if_t<
         !std::is_convertible<T, async_handler_t>::value
     >
-    async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, T session_life_keeper) {
-        async_connect(force_move(socket), force_move(props), force_move(session_life_keeper), async_handler_t());
+    async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, T session_life_keeper, bool underlying_connected = false) {
+        async_connect(force_move(socket), force_move(props), force_move(session_life_keeper), async_handler_t(), underlying_connected);
     }
 
     /**
@@ -1348,9 +1391,13 @@ public:
      *        See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901046<BR>
      *        3.1.2.11 CONNECT Properties
      * @param func finish handler that is called when the underlying connection process is finished
+     * @param underlying_connected If the given socket has aleady been connected, then true.
+     *                             Connecting processes are skipped and send MQTT CONNECT packet.
+     *                             If false then do all underlying connecting process and then
+     *                             send MQTT CONNECT packet.
      */
-    void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, async_handler_t func) {
-        async_connect(force_move(socket), force_move(props), any(), force_move(func));
+    void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, async_handler_t func, bool underlying_connected = false) {
+        async_connect(force_move(socket), force_move(props), any(), force_move(func), underlying_connected);
     }
 
     /**
@@ -1363,11 +1410,15 @@ public:
      *        3.1.2.11 CONNECT Properties
      * @param session_life_keeper the passed object lifetime will be kept during the session.
      * @param func finish handler that is called when the underlying connection process is finished
+     * @param underlying_connected If the given socket has aleady been connected, then true.
+     *                             Connecting processes are skipped and send MQTT CONNECT packet.
+     *                             If false then do all underlying connecting process and then
+     *                             send MQTT CONNECT packet.
      */
-    void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, any session_life_keeper, async_handler_t func) {
+    void async_connect(std::shared_ptr<Socket>&& socket, v5::properties props, any session_life_keeper, async_handler_t func, bool underlying_connected = false) {
         socket_ = force_move(socket);
         base::socket_sp_ref() = socket_;
-        async_connect_impl(force_move(props), force_move(session_life_keeper), force_move(func));
+        async_connect_impl(force_move(props), force_move(session_life_keeper), force_move(func), underlying_connected);
     }
 
     /**
@@ -1686,7 +1737,8 @@ private:
     void handshake_socket(
         tcp_endpoint<as::ip::tcp::socket, Strand>&,
         v5::properties props,
-        any session_life_keeper) {
+        any session_life_keeper,
+        bool /*underlying_connected*/) {
         start_session(force_move(props), force_move(session_life_keeper));
     }
 
@@ -1695,7 +1747,8 @@ private:
         tcp_endpoint<as::ip::tcp::socket, Strand>&,
         v5::properties props,
         any session_life_keeper,
-        boost::system::error_code& ec) {
+        boost::system::error_code& ec,
+        bool /*underlying_connected*/) {
         start_session(force_move(props), force_move(session_life_keeper));
         ec = boost::system::errc::make_error_code(boost::system::errc::success);
     }
@@ -1706,8 +1759,11 @@ private:
     void handshake_socket(
         ws_endpoint<as::ip::tcp::socket, Strand>& socket,
         v5::properties props,
-        any session_life_keeper) {
-        socket.handshake(host_, path_);
+        any session_life_keeper,
+        bool underlying_connected) {
+        if (!underlying_connected) {
+            socket.handshake(host_, path_);
+        }
         start_session(force_move(props), force_move(session_life_keeper));
     }
 
@@ -1716,9 +1772,15 @@ private:
         ws_endpoint<as::ip::tcp::socket, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
-        boost::system::error_code& ec) {
-        socket.handshake(host_, path_, ec);
-        if (ec) return;
+        boost::system::error_code& ec,
+        bool underlying_connected) {
+        if (!underlying_connected) {
+            ec = boost::system::errc::make_error_code(boost::system::errc::success);
+        }
+        else {
+            socket.handshake(host_, path_, ec);
+            if (ec) return;
+        }
         start_session(force_move(props), force_move(session_life_keeper));
     }
 
@@ -1730,8 +1792,11 @@ private:
     void handshake_socket(
         tcp_endpoint<tls::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
-        any session_life_keeper) {
-        socket.handshake(tls::stream_base::client);
+        any session_life_keeper,
+        bool underlying_connected) {
+        if (!underlying_connected) {
+            socket.handshake(tls::stream_base::client);
+        }
         start_session(force_move(props), force_move(session_life_keeper));
     }
 
@@ -1740,9 +1805,15 @@ private:
         tcp_endpoint<tls::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
-        boost::system::error_code& ec) {
-        socket.handshake(tls::stream_base::client, ec);
-        if (ec) return;
+        boost::system::error_code& ec,
+        bool underlying_connected) {
+        if (underlying_connected) {
+            ec = boost::system::errc::make_error_code(boost::system::errc::success);
+        }
+        else {
+            socket.handshake(tls::stream_base::client, ec);
+            if (ec) return;
+        }
         start_session(force_move(props), force_move(session_life_keeper));
     }
 
@@ -1752,9 +1823,12 @@ private:
     void handshake_socket(
         ws_endpoint<tls::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
-        any session_life_keeper) {
-        socket.next_layer().handshake(tls::stream_base::client);
-        socket.handshake(host_, path_);
+        any session_life_keeper,
+        bool underlying_connected) {
+        if (!underlying_connected) {
+            socket.next_layer().handshake(tls::stream_base::client);
+            socket.handshake(host_, path_);
+        }
         start_session(force_move(props), force_move(session_life_keeper));
     }
 
@@ -1763,11 +1837,17 @@ private:
         ws_endpoint<tls::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
-        boost::system::error_code& ec) {
-        socket.next_layer().handshake(tls::stream_base::client, ec);
-        if (ec) return;
-        socket.handshake(host_, path_, ec);
-        if (ec) return;
+        boost::system::error_code& ec,
+        bool underlying_connected) {
+        if (underlying_connected) {
+            ec = boost::system::errc::make_error_code(boost::system::errc::success);
+        }
+        else {
+            socket.next_layer().handshake(tls::stream_base::client, ec);
+            if (ec) return;
+            socket.handshake(host_, path_, ec);
+            if (ec) return;
+        }
         start_session(force_move(props), force_move(session_life_keeper));
     }
 
@@ -1780,7 +1860,8 @@ private:
         tcp_endpoint<as::ip::tcp::socket, Strand>&,
         v5::properties props,
         any session_life_keeper,
-        async_handler_t func) {
+        async_handler_t func,
+        bool /*underlying_connected*/) {
         async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
     }
 
@@ -1790,7 +1871,12 @@ private:
         ws_endpoint<as::ip::tcp::socket, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
-        async_handler_t func) {
+        async_handler_t func,
+        bool underlying_connected) {
+        if (underlying_connected) {
+            async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
+            return;
+        }
         socket.async_handshake(
             host_,
             path_,
@@ -1818,7 +1904,12 @@ private:
         tcp_endpoint<tls::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
-        async_handler_t func) {
+        async_handler_t func,
+        bool underlying_connected) {
+        if (underlying_connected) {
+            async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
+            return;
+        }
         socket.async_handshake(
             tls::stream_base::client,
             [
@@ -1843,7 +1934,12 @@ private:
         ws_endpoint<tls::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
-        async_handler_t func) {
+        async_handler_t func,
+        bool underlying_connected) {
+        if (underlying_connected) {
+            async_start_session(force_move(props), force_move(session_life_keeper), force_move(func));
+            return;
+        }
         socket.next_layer().async_handshake(
             tls::stream_base::client,
             [
@@ -1884,81 +1980,99 @@ private:
 
     void connect_impl(
         v5::properties props,
-        any session_life_keeper) {
-        as::ip::tcp::resolver r(ioc_);
-        auto eps = r.resolve(host_, port_);
-        as::connect(socket_->lowest_layer(), eps.begin(), eps.end());
+        any session_life_keeper,
+        bool underlying_connected) {
+        if (!underlying_connected) {
+            as::ip::tcp::resolver r(ioc_);
+            auto eps = r.resolve(host_, port_);
+            as::connect(socket_->lowest_layer(), eps.begin(), eps.end());
+        }
         base::set_connect();
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
             set_timer();
         }
-        handshake_socket(*socket_, force_move(props), force_move(session_life_keeper));
+        handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), underlying_connected);
     }
 
     void connect_impl(
         v5::properties props,
         any session_life_keeper,
-        boost::system::error_code& ec) {
-        as::ip::tcp::resolver r(ioc_);
-        auto eps = r.resolve(host_, port_, ec);
-        if (ec) return;
-        as::connect(socket_->lowest_layer(), eps.begin(), eps.end(), ec);
-        if (ec) return;
+        boost::system::error_code& ec,
+        bool underlying_connected) {
+        if (!underlying_connected) {
+            as::ip::tcp::resolver r(ioc_);
+            auto eps = r.resolve(host_, port_, ec);
+            if (ec) return;
+            as::connect(socket_->lowest_layer(), eps.begin(), eps.end(), ec);
+            if (ec) return;
+        }
         base::set_connect();
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
             set_timer();
         }
-        handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), ec);
+        handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), ec, underlying_connected);
     }
 
     void async_connect_impl(
         v5::properties props,
         any session_life_keeper,
-        async_handler_t func) {
-        auto r = std::make_shared<as::ip::tcp::resolver>(ioc_);
-        auto p = r.get();
-        p->async_resolve(
-            host_,
-            port_,
-            [
-                this,
-                self = this->shared_from_this(),
-                props = force_move(props),
-                session_life_keeper = force_move(session_life_keeper),
-                func = force_move(func),
-                r = force_move(r)
-            ]
-            (
-                error_code ec,
-                as::ip::tcp::resolver::results_type eps
-            ) mutable {
-                if (ec) {
-                    if (func) func(ec);
-                    return;
-                }
-                as::async_connect(
-                    socket_->lowest_layer(), eps.begin(), eps.end(),
-                    [
-                        this,
-                        self = force_move(self),
-                        props = force_move(props),
-                        session_life_keeper = force_move(session_life_keeper),
-                        func = force_move(func)
-                    ]
-                    (error_code ec, auto /* unused */) mutable {
-                        if (ec) {
-                            if (func) func(ec);
-                            return;
-                        }
-                        base::set_connect();
-                        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
-                            set_timer();
-                        }
-                        async_handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), force_move(func));
-                    }
-                );
+        async_handler_t func,
+        bool underlying_connected) {
+        if (underlying_connected) {
+            base::set_connect();
+            if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
+                set_timer();
             }
-        );
+            async_handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), force_move(func), underlying_connected);
+        }
+        else {
+            auto r = std::make_shared<as::ip::tcp::resolver>(ioc_);
+            auto p = r.get();
+            p->async_resolve(
+                host_,
+                port_,
+                [
+                    this,
+                    self = this->shared_from_this(),
+                    props = force_move(props),
+                    session_life_keeper = force_move(session_life_keeper),
+                    func = force_move(func),
+                    r = force_move(r),
+                    underlying_connected
+                ]
+                (
+                    error_code ec,
+                    as::ip::tcp::resolver::results_type eps
+                ) mutable {
+                    if (ec) {
+                        if (func) func(ec);
+                        return;
+                    }
+                    as::async_connect(
+                        socket_->lowest_layer(), eps.begin(), eps.end(),
+                        [
+                            this,
+                            self = force_move(self),
+                            props = force_move(props),
+                            session_life_keeper = force_move(session_life_keeper),
+                            func = force_move(func),
+                            underlying_connected
+                        ]
+                        (error_code ec, auto /* unused */) mutable {
+                            if (ec) {
+                                if (func) func(ec);
+                                return;
+                            }
+                            base::set_connect();
+                            if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
+                                set_timer();
+                            }
+                            async_handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), force_move(func), underlying_connected);
+                        }
+                    );
+                }
+            );
+        }
     }
 
 protected:
