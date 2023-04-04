@@ -288,8 +288,8 @@ protected:
                             path_entry(generate_node_id(), parent->first)
                         ).first;
 
-                    parent->second.count.set_plus_child(parent->second.count.has_plus_child() | (t == "+"));
-                    parent->second.count.set_hash_child(parent->second.count.has_hash_child() | (t == "#"));
+                    parent->second.count.set_plus_child(parent->second.count.has_plus_child() || (t == "+"));
+                    parent->second.count.set_hash_child(parent->second.count.has_hash_child() || (t == "#"));
                 }
                 else {
                     increase_count_storage(entry->second.count);
