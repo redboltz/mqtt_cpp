@@ -5037,6 +5037,9 @@ protected:
     bool handle_close_or_error(error_code ec) {
         auto call_handler =
             [this, ec] () mutable {
+                MQTT_LOG("mqtt_impl", trace)
+                    << MQTT_ADD_VALUE(address, this)
+                    << "handle_close_or_error call_handler";
                 connect_requested_ = false;
                 clean_sub_unsub_inflight();
                 if (disconnect_requested_) {
