@@ -166,6 +166,7 @@ struct session_state {
                 << MQTT_ADD_VALUE(address, this)
                 << "session expiry interval timer set";
 
+            std::lock_guard<mutex> g(mtx_tim_session_expiry_);
             tim_session_expiry_ = std::make_shared<as::steady_timer>(timer_ioc_, session_expiry_interval_.value());
             tim_session_expiry_->async_wait(
                 [this, wp = std::weak_ptr<as::steady_timer>(tim_session_expiry_), h = std::forward<SessionExpireHandler>(h)]
@@ -188,6 +189,7 @@ struct session_state {
             << MQTT_ADD_VALUE(address, this)
             << "renew_session expiry";
         session_expiry_interval_ = force_move(v);
+        std::lock_guard<mutex> g(mtx_tim_session_expiry_);
         tim_session_expiry_.reset();
     }
 
@@ -383,6 +385,7 @@ struct session_state {
         as::io_context& timer_ioc,
         optional<MQTT_NS::will> will,
         optional<std::chrono::steady_clock::duration> will_expiry_interval) {
+        std::lock_guard<mutex> g(mtx_tim_will_expiry_);
         tim_will_expiry_.reset();
         will_value_ = force_move(will);
 
@@ -405,6 +408,7 @@ struct session_state {
         MQTT_LOG("mqtt_broker", trace)
             << MQTT_ADD_VALUE(address, this)
             << "clear will. cid:" << client_id_;
+        std::lock_guard<mutex> g(mtx_tim_will_expiry_);
         tim_will_expiry_.reset();
         will_value_ = nullopt;
     }
@@ -543,18 +547,21 @@ private:
         auto opts = will_value_.value().get_qos() | will_value_.value().get_retain();
         auto props = force_move(will_value_.value().props());
         will_value_ = nullopt;
-        if (tim_will_expiry_) {
-            auto d =
-                std::chrono::duration_cast<std::chrono::seconds>(
-                    tim_will_expiry_->expiry() - std::chrono::steady_clock::now()
-                ).count();
-            if (d < 0) d = 0;
-            set_property<v5::property::message_expiry_interval>(
-                props,
-                v5::property::message_expiry_interval(
-                    static_cast<uint32_t>(d)
-                )
-            );
+        {
+            std::shared_lock<mutex> g(mtx_tim_will_expiry_);
+            if (tim_will_expiry_) {
+                auto d =
+                    std::chrono::duration_cast<std::chrono::seconds>(
+                        tim_will_expiry_->expiry() - std::chrono::steady_clock::now()
+                    ).count();
+                if (d < 0) d = 0;
+                set_property<v5::property::message_expiry_interval>(
+                    props,
+                    v5::property::message_expiry_interval(
+                        static_cast<uint32_t>(d)
+                    )
+                );
+            }
         }
         if (will_sender_) {
             will_sender_(
@@ -571,6 +578,7 @@ private:
     friend class session_states;
 
     as::io_context& timer_ioc_;
+    mutex mtx_tim_will_expiry_;
     std::shared_ptr<as::steady_timer> tim_will_expiry_;
     optional<MQTT_NS::will> will_value_;
 
@@ -584,6 +592,7 @@ private:
     std::string username_;
 
     optional<std::chrono::steady_clock::duration> session_expiry_interval_;
+    mutex mtx_tim_session_expiry_;
     std::shared_ptr<as::steady_timer> tim_session_expiry_;
 
     mutable mutex mtx_inflight_messages_;
