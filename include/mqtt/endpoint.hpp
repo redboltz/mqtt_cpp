@@ -5386,12 +5386,16 @@ private:
                     << MQTT_ADD_VALUE(address, this)
                     << "async_clean_shutdown_and_close ec:"
                     << ec.message();
-                tim_shutdown_.cancel();
+                {
+                    LockGuard<Mutex> lck (mtx_tim_shutdown_);
+                    tim_shutdown_.cancel();
+                }
                 connected_ = false;
                 call_handlers();
             }
         );
         // timeout timer set
+        LockGuard<Mutex> lck (mtx_tim_shutdown_);
         tim_shutdown_.expires_after(shutdown_timeout);
         std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
         tim_shutdown_.async_wait(
@@ -5399,7 +5403,7 @@ private:
                 this,
                 wp = force_move(wp),
                 ssp = socket_sp_ref(),
-                call_handlers
+                call_handlers = force_move(call_handlers)
             ]
             (error_code ec) mutable {
                 if (auto sp = wp.lock()) {
@@ -9324,7 +9328,10 @@ private:
         if (on_pingresp()) {
             on_mqtt_message_processed(force_move(session_life_keeper));
         }
-        if (pingresp_timeout_ != std::chrono::steady_clock::duration::zero()) tim_pingresp_.cancel();
+        if (pingresp_timeout_ != std::chrono::steady_clock::duration::zero()) {
+            LockGuard<Mutex> lck (mtx_tim_pingresp_);
+            tim_pingresp_.cancel();
+        }
     }
 
     // process disconnect
@@ -11522,6 +11529,8 @@ private:
         if (pingresp_timeout_ == std::chrono::steady_clock::duration::zero()) return;
         if (tim_pingresp_set_) return;
         tim_pingresp_set_ = true;
+
+        LockGuard<Mutex> lck (mtx_tim_pingresp_);
         tim_pingresp_.expires_after(pingresp_timeout_);
         std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
         tim_pingresp_.async_wait(
@@ -11672,9 +11681,11 @@ private:
     static constexpr std::uint8_t variable_length_continue_flag = 0b10000000;
 
     std::chrono::steady_clock::duration pingresp_timeout_ = std::chrono::steady_clock::duration::zero();
+    Mutex mtx_tim_pingresp_;
     as::steady_timer tim_pingresp_;
     bool tim_pingresp_set_ = false;
 
+    Mutex mtx_tim_shutdown_;
     as::steady_timer tim_shutdown_;
 
     bool auto_map_topic_alias_send_ = false;

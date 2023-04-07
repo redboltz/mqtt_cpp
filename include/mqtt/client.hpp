@@ -1020,7 +1020,7 @@ public:
      */
     void set_keep_alive_sec(std::uint16_t keep_alive_sec, std::chrono::steady_clock::duration ping) {
         if ((ping_duration_ != std::chrono::steady_clock::duration::zero()) && base::connected() && (ping == std::chrono::steady_clock::duration::zero())) {
-            tim_ping_.cancel();
+            cancel_ping_timer();
         }
         keep_alive_sec_ = keep_alive_sec;
         ping_duration_ = force_move(ping);
@@ -1442,23 +1442,26 @@ public:
         v5::disconnect_reason_code reason_code = v5::disconnect_reason_code::normal_disconnection,
         v5::properties props = {}
     ) {
-        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) cancel_ping_timer();
         if (base::connected()) {
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-            tim_close_.expires_after(force_move(timeout));
-            tim_close_.async_wait(
-                [wp = force_move(wp)](error_code ec) {
-                    if (auto sp = wp.lock()) {
-                        if (!ec) {
-                            sp->socket()->post(
-                                [sp] {
-                                    sp->force_disconnect();
-                                }
-                            );
+            {
+                std::lock_guard<std::mutex> g(mtx_tim_close_);
+                tim_close_.expires_after(force_move(timeout));
+                tim_close_.async_wait(
+                    [wp = force_move(wp)](error_code ec) {
+                        if (auto sp = wp.lock()) {
+                            if (!ec) {
+                                sp->socket()->post(
+                                    [sp] {
+                                        sp->force_disconnect();
+                                    }
+                                );
+                            }
                         }
                     }
-                }
-            );
+                );
+            }
             base::disconnect(reason_code, force_move(props));
         }
     }
@@ -1482,7 +1485,7 @@ public:
         v5::disconnect_reason_code reason_code = v5::disconnect_reason_code::normal_disconnection,
         v5::properties props = {}
     ) {
-        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) cancel_ping_timer();
         if (base::connected()) {
             base::disconnect(reason_code, force_move(props));
         }
@@ -1500,23 +1503,26 @@ public:
     void async_disconnect(
         std::chrono::steady_clock::duration timeout,
         async_handler_t func = async_handler_t()) {
-        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) cancel_ping_timer();
         if (base::connected()) {
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-            tim_close_.expires_after(force_move(timeout));
-            tim_close_.async_wait(
-                [wp = force_move(wp)](error_code ec) {
-                    if (auto sp = wp.lock()) {
-                        if (!ec) {
-                            sp->socket()->post(
-                                [sp] {
-                                    sp->force_disconnect();
-                                }
-                            );
+            {
+                std::lock_guard<std::mutex> g(mtx_tim_close_);
+                tim_close_.expires_after(force_move(timeout));
+                tim_close_.async_wait(
+                    [wp = force_move(wp)](error_code ec) {
+                        if (auto sp = wp.lock()) {
+                            if (!ec) {
+                                sp->socket()->post(
+                                    [sp] {
+                                        sp->force_disconnect();
+                                    }
+                                );
+                            }
                         }
                     }
-                }
-            );
+                );
+            }
             base::async_disconnect(force_move(func));
         }
     }
@@ -1543,23 +1549,26 @@ public:
         v5::disconnect_reason_code reason_code,
         v5::properties props,
         async_handler_t func = async_handler_t()) {
-        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) cancel_ping_timer();
         if (base::connected()) {
             std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
-            tim_close_.expires_after(force_move(timeout));
-            tim_close_.async_wait(
-                [wp = force_move(wp)](error_code ec) {
-                    if (auto sp = wp.lock()) {
-                        if (!ec) {
-                            sp->socket()->post(
-                                [sp] {
-                                    sp->force_disconnect();
-                                }
-                            );
+            {
+                std::lock_guard<std::mutex> g(mtx_tim_close_);
+                tim_close_.expires_after(force_move(timeout));
+                tim_close_.async_wait(
+                    [wp = force_move(wp)](error_code ec) {
+                        if (auto sp = wp.lock()) {
+                            if (!ec) {
+                                sp->socket()->post(
+                                    [sp] {
+                                        sp->force_disconnect();
+                                    }
+                                );
+                            }
                         }
                     }
-                }
-            );
+                );
+            }
             base::async_disconnect(reason_code, force_move(props), force_move(func));
         }
     }
@@ -1574,7 +1583,7 @@ public:
      */
     void async_disconnect(
         async_handler_t func = async_handler_t()) {
-        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) cancel_ping_timer();
         if (base::connected()) {
             base::async_disconnect(force_move(func));
         }
@@ -1600,7 +1609,7 @@ public:
         v5::disconnect_reason_code reason_code,
         v5::properties props,
         async_handler_t func = async_handler_t()) {
-        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) cancel_ping_timer();
         if (base::connected()) {
             base::async_disconnect(reason_code, force_move(props), force_move(func));
         }
@@ -1612,8 +1621,11 @@ public:
      * When the endpoint disconnects using force_disconnect(), a will will send.<BR>
      */
     void force_disconnect() {
-        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
-        tim_close_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) cancel_ping_timer();
+        {
+            std::lock_guard<std::mutex> g(mtx_tim_close_);
+            tim_close_.cancel();
+        }
         base::force_disconnect();
     }
 
@@ -1625,8 +1637,11 @@ public:
      */
     void async_force_disconnect(
         async_handler_t func = async_handler_t()) {
-        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
-        tim_close_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) cancel_ping_timer();
+        {
+            std::lock_guard<std::mutex> g(mtx_tim_close_);
+            tim_close_.cancel();
+        }
         base::async_force_disconnect(force_move(func));
     }
 
@@ -1989,7 +2004,7 @@ private:
         }
         base::set_connect();
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
-            set_timer();
+            set_ping_timer();
         }
         handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), underlying_connected);
     }
@@ -2008,7 +2023,7 @@ private:
         }
         base::set_connect();
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
-            set_timer();
+            set_ping_timer();
         }
         handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), ec, underlying_connected);
     }
@@ -2021,7 +2036,7 @@ private:
         if (underlying_connected) {
             base::set_connect();
             if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
-                set_timer();
+                set_ping_timer();
             }
             async_handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), force_move(func), underlying_connected);
         }
@@ -2065,7 +2080,7 @@ private:
                             }
                             base::set_connect();
                             if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
-                                set_timer();
+                                set_ping_timer();
                             }
                             async_handshake_socket(*socket_, force_move(props), force_move(session_life_keeper), force_move(func), underlying_connected);
                         }
@@ -2078,7 +2093,7 @@ private:
 protected:
     void on_pre_send() noexcept override {
         if (ping_duration_ != std::chrono::steady_clock::duration::zero()) {
-            reset_timer();
+            reset_ping_timer();
         }
     }
 
@@ -2094,7 +2109,7 @@ private:
         }
     }
 
-    void set_timer() {
+    void set_ping_timer_no_lock() {
         tim_ping_.expires_after(ping_duration_);
         std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
         tim_ping_.async_wait(
@@ -2106,19 +2121,35 @@ private:
         );
     }
 
-    void reset_timer() {
+    void cancel_timer_no_lock() {
         tim_ping_.cancel();
-        set_timer();
+    }
+
+
+    void set_ping_timer() {
+        std::lock_guard<std::mutex> g(mtx_tim_ping_);
+        set_ping_timer_no_lock();
+    }
+
+    void cancel_ping_timer() {
+        std::lock_guard<std::mutex> g(mtx_tim_ping_);
+        cancel_timer_no_lock();
+    }
+
+    void reset_ping_timer() {
+        std::lock_guard<std::mutex> g(mtx_tim_ping_);
+        cancel_timer_no_lock();
+        set_ping_timer_no_lock();
     }
 
 protected:
     void on_close() noexcept override {
-        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) cancel_ping_timer();
     }
 
     void on_error(error_code ec) noexcept override {
         (void)ec;
-        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) tim_ping_.cancel();
+        if (ping_duration_ != std::chrono::steady_clock::duration::zero()) cancel_ping_timer();
     }
 
     // Ensure that only code that knows the *exact* type of an object
@@ -2152,7 +2183,9 @@ private:
 
     std::shared_ptr<Socket> socket_;
     as::io_context& ioc_;
+    std::mutex mtx_tim_ping_;
     as::steady_timer tim_ping_;
+    std::mutex mtx_tim_close_;
     as::steady_timer tim_close_;
     std::string host_;
     std::string port_;
