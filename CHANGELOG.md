@@ -1,3 +1,12 @@
+## 13.2.0
+* Added locks for timers. (#973)
+* Added logs. (#971)
+* Added pre-opened socket support for client. (#970)
+* Added example for TLS-SNI. (#961)
+* Removed old TS code. (#952)
+* Fixed invalid timing async_shutdown handler call. (#950)
+* Improved cmake settings. (#948)
+
 ## 13.1.0
 * Added clear username and password functionality. (#944)
 * Refined utility tools. (#941, #942)
