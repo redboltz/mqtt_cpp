@@ -5446,9 +5446,9 @@ private:
                 rc,
                 v5::properties{},
                 [sp = force_move(sp)] (error_code) mutable {
-                    sp->socket().post(
-                        [sp = force_move(sp)] {
-                            sp->force_disconnect();
+                    auto p = sp.get();
+                    p->async_force_disconnect(
+                        [sp = force_move(sp)](error_code) {
                         }
                     );
                 }
@@ -5467,9 +5467,9 @@ private:
                 false,
                 rc,
                 [sp = force_move(sp)] (error_code) mutable {
-                    sp->socket().post(
-                        [sp = force_move(sp)] {
-                            sp->force_disconnect();
+                    auto p = sp.get();
+                    p->async_force_disconnect(
+                        [sp = force_move(sp)](error_code) {
                         }
                     );
                 }
@@ -11534,15 +11534,25 @@ private:
         tim_pingresp_.expires_after(pingresp_timeout_);
         std::weak_ptr<this_type> wp(std::static_pointer_cast<this_type>(this->shared_from_this()));
         tim_pingresp_.async_wait(
-            [wp = force_move(wp)](error_code ec) {
+            [this, wp = force_move(wp)](error_code ec) mutable {
                 if (auto sp = wp.lock()) {
                     sp->tim_pingresp_set_ = false;
                     if (!ec) {
-                        sp->socket().post(
-                            [sp] {
-                                sp->force_disconnect();
-                            }
-                        );
+                        if (async_operation_) {
+                            auto p = sp.get();
+                            p->async_force_disconnect(
+                                [sp = force_move(sp)](error_code) {
+                                }
+                            );
+                        }
+                        else {
+                            auto p = sp.get();
+                            p->socket().post(
+                                [sp = force_move(sp)] () {
+                                    sp->force_disconnect();
+                                }
+                            );
+                        }
                     }
                 }
             }
