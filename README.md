@@ -2,7 +2,7 @@
 
 Version 13.2.1 [![Actions Status](https://github.com/redboltz/mqtt_cpp/workflows/CI/badge.svg)](https://github.com/redboltz/mqtt_cpp/actions)[![Build Status](https://dev.azure.com/redboltz/redboltz/_apis/build/status/redboltz.mqtt_cpp?branchName=master)](https://dev.azure.com/redboltz/redboltz/_build/latest?definitionId=6&branchName=master)[![codecov](https://codecov.io/gh/redboltz/mqtt_cpp/branch/master/graph/badge.svg)](https://codecov.io/gh/redboltz/mqtt_cpp)
 
-Important note https://github.com/redboltz/mqtt_cpp/wiki/News.
+**mqtt_cpp has been serious bugfix only status. The new project [async_mqtt](https://github.com/redboltz/async_mqtt) has been started based on mqtt_cpp's experience. New featureas would be added on async_mqtt.**
 
 [MQTT v5 is supported](https://github.com/redboltz/mqtt_cpp/wiki/MQTT-v5) since version 4.0.0.
 
