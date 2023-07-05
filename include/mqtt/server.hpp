@@ -10,6 +10,8 @@
 #include <mqtt/variant.hpp> // should be top to configure variant limit
 
 #include <memory>
+#include <deque>
+
 #include <boost/asio.hpp>
 
 #include <mqtt/namespace.hpp>
@@ -455,6 +457,25 @@ private:
     void do_accept() {
         if (close_request_) return;
         auto& ioc_con = ioc_con_getter_();
+
+        auto username = std::make_shared<optional<std::string>>(); // shared_ptr for username
+        {
+            LockGuard<Mutex> g{*mtx_usernames_};
+            usernames_.push_back(username);
+        }
+        auto verify_cb = [this] // copy capture socket shared_ptr
+            (bool preverified, boost::asio::ssl::verify_context& ctx) {
+                // user can set username in the callback
+                LockGuard<Mutex> g{*mtx_usernames_};
+                BOOST_ASSERT(!usernames_.empty());
+                return verify_cb_with_username_
+                    ? verify_cb_with_username_(preverified, ctx, usernames_.front())
+                    : false;
+        };
+
+        ctx_.set_verify_mode(MQTT_NS::tls::verify_peer);
+        ctx_.set_verify_callback(verify_cb);
+
         auto socket = std::make_shared<socket_t>(ioc_con, ctx_);
 
         auto ps = socket.get();
@@ -464,6 +485,11 @@ private:
             (error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
+                    {
+                        LockGuard<Mutex> g{*mtx_usernames_};
+                        BOOST_ASSERT(!usernames_.empty());
+                        usernames_.pop_front();
+                    }
                     if (h_error_) h_error_(ec, ioc_con);
                     return;
                 }
@@ -483,6 +509,8 @@ private:
                     (error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return; // timer cancelled
+                        // Timeout: usernames_.pop_front() is called
+                        // async_accept or async_handshake error
                         socket->post(
                             [this, socket, connection_error_called, &ioc_con] {
                                 boost::system::error_code close_ec;
@@ -501,19 +529,6 @@ private:
                     }
                 );
                 auto ps = socket.get();
-
-                auto username = std::make_shared<optional<std::string>>(); // shared_ptr for username
-                auto verify_cb_ = [this, username] // copy capture socket shared_ptr
-                    (bool preverified, boost::asio::ssl::verify_context& ctx) {
-                        // user can set username in the callback
-                        return verify_cb_with_username_
-                            ? verify_cb_with_username_(preverified, ctx, username)
-                            : false;
-                };
-
-                ctx_.set_verify_mode(MQTT_NS::tls::verify_peer);
-                ctx_.set_verify_callback(verify_cb_);
-
                 ps->async_handshake(
                     tls::stream_base::server,
                     [
@@ -522,13 +537,17 @@ private:
                         tim,
                         underlying_finished,
                         connection_error_called,
-                        &ioc_con,
-                        username
+                        &ioc_con
                     ]
                     (error_code ec) mutable {
                         *underlying_finished = true;
                         tim->cancel();
                         if (ec) {
+                            {
+                                LockGuard<Mutex> g{*mtx_usernames_};
+                                BOOST_ASSERT(!usernames_.empty());
+                                usernames_.pop_front();
+                            }
                             if (h_connection_error_ && !*connection_error_called) {
                                 h_connection_error_(ec, ioc_con);
                                 *connection_error_called = true;
@@ -536,7 +555,10 @@ private:
                             return;
                         }
                         auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
-                        sp->set_preauthed_user_name(*username);
+                        LockGuard<Mutex> g{*mtx_usernames_};
+                        BOOST_ASSERT(!usernames_.empty());
+                        sp->set_preauthed_user_name(*usernames_.front());
+                        usernames_.pop_front();
                         if (h_accept_) h_accept_(force_move(sp));
                     }
                 );
@@ -561,6 +583,8 @@ private:
     tls::context ctx_;
     protocol_version version_ = protocol_version::undetermined;
     std::chrono::steady_clock::duration underlying_connect_timeout_ = std::chrono::seconds(10);
+    std::shared_ptr<Mutex> mtx_usernames_ = std::make_shared<Mutex>();
+    std::deque<std::shared_ptr<optional<std::string>>> usernames_;
 };
 
 #endif // defined(MQTT_USE_TLS)
@@ -1143,14 +1167,35 @@ private:
     void do_accept() {
         if (close_request_) return;
         auto& ioc_con = ioc_con_getter_();
+
+        auto username = std::make_shared<optional<std::string>>(); // shared_ptr for username
+        {
+            LockGuard<Mutex> g{*mtx_usernames_};
+            usernames_.push_back(username);
+        }
+        auto verify_cb = [this] // copy capture socket shared_ptr
+            (bool preverified, boost::asio::ssl::verify_context& ctx) {
+                 // user can set username in the callback
+                return verify_cb_with_username_
+                    ? verify_cb_with_username_(preverified, ctx, usernames_.front())
+                    : false;
+             };
+
+        ctx_.set_verify_mode(MQTT_NS::tls::verify_peer);
+        ctx_.set_verify_callback(verify_cb);
+
         auto socket = std::make_shared<socket_t>(ioc_con, ctx_);
         auto ps = socket.get();
         acceptor_.value().async_accept(
             ps->next_layer().next_layer(),
-            [this, socket = force_move(socket), &ioc_con]
+            [this, socket = force_move(socket), &ioc_con, username]
             (error_code ec) mutable {
                 if (ec) {
                     acceptor_.reset();
+                    {
+                        LockGuard<Mutex> g{*mtx_usernames_};
+                        usernames_.pop_front();
+                    }
                     if (h_error_) h_error_(ec, ioc_con);
                     return;
                 }
@@ -1170,6 +1215,8 @@ private:
                     (error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return; // timer cancelled
+                        // Timeout: usernames_.pop_front() is called
+                        // async_accept or async_handshake error
                         socket->post(
                             [this, socket, connection_error_called, &ioc_con] {
                                 boost::system::error_code close_ec;
@@ -1189,19 +1236,6 @@ private:
                 );
 
                 auto ps = socket.get();
-
-                auto username = std::make_shared<optional<std::string>>(); // shared_ptr for username
-                auto verify_cb_ = [this, username] // copy capture socket shared_ptr
-                    (bool preverified, boost::asio::ssl::verify_context& ctx) {
-                        // user can set username in the callback
-                        return verify_cb_with_username_
-                            ? verify_cb_with_username_(preverified, ctx, username)
-                            : false;
-                };
-
-                ctx_.set_verify_mode(MQTT_NS::tls::verify_peer);
-                ctx_.set_verify_callback(verify_cb_);
-
                 ps->next_layer().async_handshake(
                     tls::stream_base::server,
                     [
@@ -1217,6 +1251,10 @@ private:
                         if (ec) {
                             *underlying_finished = true;
                             tim->cancel();
+                            {
+                                LockGuard<Mutex> g{*mtx_usernames_};
+                                usernames_.pop_front();
+                            }
                             return;
                         }
                         auto sb = std::make_shared<boost::asio::streambuf>();
@@ -1241,6 +1279,10 @@ private:
                                 if (ec) {
                                     *underlying_finished = true;
                                     tim->cancel();
+                                    {
+                                        LockGuard<Mutex> g{*mtx_usernames_};
+                                        usernames_.pop_front();
+                                    }
                                     if (h_connection_error_ && !*connection_error_called) {
                                         h_connection_error_(ec, ioc_con);
                                         *connection_error_called = true;
@@ -1250,6 +1292,10 @@ private:
                                 if (!boost::beast::websocket::is_upgrade(*request)) {
                                     *underlying_finished = true;
                                     tim->cancel();
+                                    {
+                                        LockGuard<Mutex> g{*mtx_usernames_};
+                                        usernames_.pop_front();
+                                    }
                                     if (h_connection_error_ && !*connection_error_called) {
                                         h_connection_error_(
                                             boost::system::errc::make_error_code(
@@ -1292,6 +1338,10 @@ private:
                                         *underlying_finished = true;
                                         tim->cancel();
                                         if (ec) {
+                                            {
+                                                LockGuard<Mutex> g{*mtx_usernames_};
+                                                usernames_.pop_front();
+                                            }
                                             if (h_connection_error_ && !*connection_error_called) {
                                                 h_connection_error_(ec, ioc_con);
                                                 *connection_error_called = true;
@@ -1299,7 +1349,9 @@ private:
                                             return;
                                         }
                                         auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
-                                        sp->set_preauthed_user_name(*username);
+                                        LockGuard<Mutex> g{*mtx_usernames_};
+                                        sp->set_preauthed_user_name(*usernames_.front());
+                                        usernames_.pop_front();
                                         if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 );
@@ -1328,6 +1380,10 @@ private:
                                         *underlying_finished = true;
                                         tim->cancel();
                                         if (ec) {
+                                            {
+                                                LockGuard<Mutex> g{*mtx_usernames_};
+                                                usernames_.pop_front();
+                                            }
                                             if (h_connection_error_ && *connection_error_called) {
                                                 h_connection_error_(ec, ioc_con);
                                                 *connection_error_called = true;
@@ -1338,7 +1394,9 @@ private:
                                         // a static assertion that socket is a const object when
                                         // TLS is enabled, and WS is enabled, with Boost 1.70, and gcc 8.3.0
                                         auto sp = std::make_shared<endpoint_t>(ioc_con, socket, version_);
-                                        sp->set_preauthed_user_name(*username);
+                                        LockGuard<Mutex> g{*mtx_usernames_};
+                                        sp->set_preauthed_user_name(*usernames_.front());
+                                        usernames_.pop_front();
                                         if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 );
@@ -1371,6 +1429,8 @@ private:
     tls::context ctx_;
     protocol_version version_ = protocol_version::undetermined;
     std::chrono::steady_clock::duration underlying_connect_timeout_ = std::chrono::seconds(10);
+    std::shared_ptr<Mutex> mtx_usernames_ = std::make_shared<Mutex>();
+    std::deque<std::shared_ptr<optional<std::string>>> usernames_;
 };
 
 #endif // defined(MQTT_USE_TLS)
