@@ -7956,7 +7956,11 @@ private:
                         if (
                             [&] {
                                 LockGuard<Mutex> lck(ep_.qos2_publish_handled_mtx_);
-                                return ep_.qos2_publish_handled_.find(*packet_id_) == ep_.qos2_publish_handled_.end();
+                                auto first_publish = ep_.qos2_publish_handled_.find(*packet_id_) == ep_.qos2_publish_handled_.end();
+                                if (first_publish) {
+                                    ep_.qos2_publish_handled_.emplace(*packet_id_);
+                                }
+                                return first_publish;
                             } ()
                         ) {
                             if (handler_call()) {
@@ -7969,10 +7973,6 @@ private:
                                         )
                                     )
                                 );
-                                {
-                                    LockGuard<Mutex> lck(ep_.qos2_publish_handled_mtx_);
-                                    ep_.qos2_publish_handled_.emplace(*packet_id_);
-                                }
                                 ep_.auto_pub_response(
                                     [this] {
                                         if (ep_.connected_) {
