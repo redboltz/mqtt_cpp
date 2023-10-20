@@ -8140,7 +8140,16 @@ private:
                         ep_.pid_man_.release_id(packet_id_);
                         return true;
                     } ();
-                if (erased) ep_.on_serialize_remove(packet_id_);
+                if (erased) {
+                    ep_.on_serialize_remove(packet_id_);
+                }
+                else {
+                    MQTT_LOG("mqtt_impl", error)
+                        << MQTT_ADD_VALUE(address, &ep_)
+                        << "invalid puback received. packet_id:" << packet_id_;
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
                 switch (ep_.version_) {
                 case protocol_version::v3_1_1:
                     if (ep_.on_puback(packet_id_)) {
@@ -8288,6 +8297,13 @@ private:
                         if (is_error(reason_code_)) ep_.pid_man_.release_id(packet_id_);
                         return true;
                     } ();
+                if (!erased) {
+                    MQTT_LOG("mqtt_impl", error)
+                        << MQTT_ADD_VALUE(address, &ep_)
+                        << "invalid pubrec received. packet_id:" << packet_id_;
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
                 {
                     auto res =
                         [&] {
@@ -8647,7 +8663,16 @@ private:
                         ep_.pid_man_.release_id(packet_id_);
                         return true;
                     } ();
-                if (erased) ep_.on_serialize_remove(packet_id_);
+                if (erased) {
+                    ep_.on_serialize_remove(packet_id_);
+                }
+                else {
+                    MQTT_LOG("mqtt_impl", error)
+                        << MQTT_ADD_VALUE(address, &ep_)
+                        << "invalid pubcomp received. packet_id:" << packet_id_;
+                    ep_.call_protocol_error_handlers();
+                    return;
+                }
                 switch (ep_.version_) {
                 case protocol_version::v3_1_1:
                     if (ep_.on_pubcomp(packet_id_)) {
@@ -9993,9 +10018,8 @@ private:
                     // publish store is erased when pubrec is received.
                     // pubrel store is erased when pubcomp is received.
                     // If invalid client send pubrec twice with the same packet id,
-                    // then send corresponding pubrel twice is a possible client/server
-                    // implementation.
-                    // In this case, overwrite store_.
+                    // then send disconnect with protocol_error reason_code (v5), or
+                    // simply close the socket (v3.1.1).
                     if (store_.insert_or_update(
                             packet_id,
                             control_packet_type::pubcomp,
@@ -10794,9 +10818,8 @@ private:
                         // publish store is erased when pubrec is received.
                         // pubrel store is erased when pubcomp is received.
                         // If invalid client send pubrec twice with the same packet id,
-                        // then send corresponding pubrel twice is a possible client/server
-                        // implementation.
-                        // In this case, overwrite store_.
+                        // then send disconnect with protocol_error reason_code (v5), or
+                        // simply close the socket (v3.1.1).
                         MQTT_LOG("mqtt_impl", warning)
                             << MQTT_ADD_VALUE(address, this)
                             << "overwrite pubrel"

@@ -1757,21 +1757,11 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
             cont("h_suback"),
             // publish topic1 QoS2
             cont("h_pubrec"),
-            cont("h_pubcomp"),
             deps("h_publish", "h_suback"),
             // pubrec send twice
-            cont("h_pubrel1"),
-            cont("h_pubrel2"),
-            deps("h_unsuback", "h_pubcomp", "h_pubrel2"),
             // disconnect
-            cont("h_close"),
+            cont("h_error"),
         };
-
-        auto g = MQTT_NS::shared_scope_guard(
-            [&c] {
-                c->unsubscribe("topic1");
-            }
-        );
 
         switch (c->get_protocol_version()) {
         case MQTT_NS::protocol_version::v3_1_1:
@@ -1797,13 +1787,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
                     c->pubrel(packet_id);
                     return true;
                 });
-            c->set_pubcomp_handler(
-                [&chk, g]
-                (packet_id_t) mutable {
-                    MQTT_CHK("h_pubcomp");
-                    g.reset();
-                    return true;
-                });
             c->set_suback_handler(
                 [&chk, &c]
                 (packet_id_t, std::vector<MQTT_NS::suback_return_code> results) {
@@ -1811,13 +1794,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
                     BOOST_TEST(results.size() == 1U);
                     BOOST_TEST(results[0] == MQTT_NS::suback_return_code::success_maximum_qos_2);
                     c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
-                    return true;
-                });
-            c->set_unsuback_handler(
-                [&chk, &c]
-                (packet_id_t) {
-                    MQTT_CHK("h_unsuback");
-                    c->disconnect();
                     return true;
                 });
             c->set_publish_handler(
@@ -1836,23 +1812,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
                     // send pubrec twice
                     c->pubrec(*packet_id);
                     c->pubrec(*packet_id);
-                    return true;
-                });
-            c->set_pubrel_handler(
-                [&chk, &c, g]
-                (packet_id_t packet_id) mutable {
-                    auto ret = MQTT_ORDERED(
-                        [&] {
-                            MQTT_CHK("h_pubrel1");
-                            c->pubcomp(packet_id);
-                        },
-                        [&] () {
-                            MQTT_CHK("h_pubrel2");
-                            c->pubcomp(packet_id);
-                            g.reset();
-                        }
-                    );
-                    BOOST_TEST(ret);
                     return true;
                 });
             break;
@@ -1879,13 +1838,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
                     c->pubrel(packet_id);
                     return true;
                 });
-            c->set_v5_pubcomp_handler(
-                [&chk, g]
-                (packet_id_t, MQTT_NS::v5::pubcomp_reason_code, MQTT_NS::v5::properties /*props*/) mutable {
-                    MQTT_CHK("h_pubcomp");
-                    g.reset();
-                    return true;
-                });
             c->set_v5_suback_handler(
                 [&chk, &c]
                 (packet_id_t, std::vector<MQTT_NS::v5::suback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
@@ -1893,15 +1845,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
                     BOOST_TEST(reasons.size() == 1U);
                     BOOST_TEST(reasons[0] == MQTT_NS::v5::suback_reason_code::granted_qos_2);
                     c->publish("topic1", "topic1_contents", MQTT_NS::qos::exactly_once);
-                    return true;
-                });
-            c->set_v5_unsuback_handler(
-                [&chk, &c]
-                (packet_id_t, std::vector<MQTT_NS::v5::unsuback_reason_code> reasons, MQTT_NS::v5::properties /*props*/) {
-                    MQTT_CHK("h_unsuback");
-                    BOOST_TEST(reasons.size() == 1U);
-                    BOOST_TEST(reasons[0] == MQTT_NS::v5::unsuback_reason_code::success);
-                    c->disconnect();
                     return true;
                 });
             c->set_v5_publish_handler(
@@ -1923,23 +1866,6 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
                     c->pubrec(*packet_id);
                     return true;
                 });
-            c->set_v5_pubrel_handler(
-                [&chk, &c, g]
-                (packet_id_t packet_id, MQTT_NS::v5::pubrel_reason_code, MQTT_NS::v5::properties /*props*/) mutable {
-                    auto ret = MQTT_ORDERED(
-                        [&] {
-                            MQTT_CHK("h_pubrel1");
-                            c->pubcomp(packet_id);
-                        },
-                        [&] () {
-                            MQTT_CHK("h_pubrel2");
-                            c->pubcomp(packet_id);
-                            g.reset();
-                        }
-                    );
-                    BOOST_TEST(ret);
-                    return true;
-                });
             break;
         default:
             BOOST_CHECK(false);
@@ -1947,18 +1873,17 @@ BOOST_AUTO_TEST_CASE( pub_qos2_sub_qos2_protocol_error_resend_pubrec ) {
         }
 
         c->set_close_handler(
-            [&chk, &finish]
-            () {
-                MQTT_CHK("h_close");
-                finish();
-            });
-        c->set_error_handler(
             []
-            (MQTT_NS::error_code) {
+            () {
                 BOOST_CHECK(false);
             });
+        c->set_error_handler(
+            [&chk, &finish]
+            (MQTT_NS::error_code) {
+                MQTT_CHK("h_error");
+                finish();
+            });
 
-        g.reset();
         c->connect();
         ioc.run();
         BOOST_TEST(chk.all());
