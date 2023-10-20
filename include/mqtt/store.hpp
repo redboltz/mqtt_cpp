@@ -179,7 +179,7 @@ private:
                     >
                 >
             >,
-            mi::ordered_non_unique<
+            mi::ordered_unique<
                 mi::tag<tag_packet_id>,
                 mi::const_mem_fun<
                     elem_t, packet_id_t,
