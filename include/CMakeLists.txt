@@ -6,7 +6,7 @@ SET(ROOT_MQTT_TARGET include/mqtt)
 
 ADD_LIBRARY(${PROJECT_NAME} INTERFACE)
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} INTERFACE Threads::Threads Boost::system Boost::date_time)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} INTERFACE Threads::Threads)
 
 IF(MQTT_USE_STATIC_OPENSSL)
     # Unfortunately, cmake doesn't automatically detect that statically linked openssl
