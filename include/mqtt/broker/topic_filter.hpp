@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <cstdint>
 
 #include <mqtt/broker/broker_namespace.hpp>
 #include <mqtt/string_view.hpp>
