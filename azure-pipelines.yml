@@ -153,7 +153,7 @@ steps:
     if (!$?) {
       return Write-Error "cmake failed"
     }
-    cmake --build . --config Release
+    cmake --build . --config Release --verbose
     if (!$?) {
       return Write-Error "cmake --build failed"
     }
