@@ -483,63 +483,65 @@ private:
                 auto tim = std::make_shared<as::steady_timer>(ioc_con);
                 tim->expires_after(underlying_connect_timeout_);
                 tim->async_wait(
-                    [
-                        this,
-                        socket,
-                        tim,
-                        underlying_finished,
-                        connection_error_called,
-                        &ioc_con
-                    ]
-                    (error_code ec) {
-                        if (*underlying_finished) return;
-                        if (ec) return; // timer cancelled
-                        socket->post(
-                            [this, socket, connection_error_called, &ioc_con] {
-                                boost::system::error_code close_ec;
-                                socket->lowest_layer().close(close_ec);
-                                if (h_connection_error_ && !*connection_error_called) {
-                                    h_connection_error_(
-                                        boost::system::errc::make_error_code(
-                                            boost::system::errc::stream_timeout
-                                        ),
-                                        ioc_con
-                                    );
-                                    *connection_error_called = true;
-                                }
+                    as::bind_executor(
+                        socket->get_executor(),
+                        [
+                            this,
+                            socket,
+                            tim,
+                            underlying_finished,
+                            connection_error_called,
+                            &ioc_con
+                        ]
+                        (error_code ec) {
+                            if (*underlying_finished) return;
+                            if (ec) return; // timer cancelled
+                            boost::system::error_code close_ec;
+                            socket->lowest_layer().close(close_ec);
+                            if (h_connection_error_ && !*connection_error_called) {
+                                h_connection_error_(
+                                    boost::system::errc::make_error_code(
+                                        boost::system::errc::stream_timeout
+                                    ),
+                                    ioc_con
+                                );
+                                *connection_error_called = true;
                             }
-                        );
-                    }
+                        }
+                    )
                 );
                 auto ps = socket.get();
 
                 ps->async_handshake(
                     tls::stream_base::server,
-                    [
-                        this,
-                        socket = force_move(socket),
-                        tim,
-                        underlying_finished,
-                        connection_error_called,
-                        &ioc_con,
-                        username
-                    ]
-                    (error_code ec) mutable {
-                        *underlying_finished = true;
-                        tim->cancel();
-                        if (ec) {
-                            if (h_connection_error_ && !*connection_error_called) {
-                                h_connection_error_(ec, ioc_con);
-                                *connection_error_called = true;
+                    as::bind_executor(
+                        ps->get_executor(),
+                        [
+                            this,
+                            socket = force_move(socket),
+                            tim,
+                            underlying_finished,
+                            connection_error_called,
+                            &ioc_con,
+                            username
+                        ]
+                        (error_code ec) mutable {
+                            *underlying_finished = true;
+                            tim->cancel();
+                            if (ec) {
+                                if (h_connection_error_ && !*connection_error_called) {
+                                    h_connection_error_(ec, ioc_con);
+                                    *connection_error_called = true;
+                                }
+                                do_accept();
+                                return;
                             }
+                            auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
+                            sp->set_preauthed_user_name(*username);
+                            if (h_accept_) h_accept_(force_move(sp));
                             do_accept();
-                            return;
                         }
-                        auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
-                        sp->set_preauthed_user_name(*username);
-                        if (h_accept_) h_accept_(force_move(sp));
-                        do_accept();
-                    }
+                    )
                 );
             }
         );
@@ -765,33 +767,32 @@ private:
                 auto tim = std::make_shared<as::steady_timer>(ioc_con);
                 tim->expires_after(underlying_connect_timeout_);
                 tim->async_wait(
-                    [
-                        this,
-                        socket,
-                        tim,
-                        underlying_finished,
-                        connection_error_called,
-                        &ioc_con
-                    ]
-                    (error_code ec) {
-                        if (*underlying_finished) return;
-                        if (ec) return; // timer cancelled
-                        socket->post(
-                            [this, socket, connection_error_called, &ioc_con] {
-                                boost::system::error_code close_ec;
-                                socket->lowest_layer().close(close_ec);
-                                if (h_connection_error_ && !*connection_error_called) {
-                                    h_connection_error_(
-                                        boost::system::errc::make_error_code(
-                                            boost::system::errc::stream_timeout
-                                        ),
-                                        ioc_con
-                                    );
-                                    *connection_error_called = true;
-                                }
+                    as::bind_executor(
+                        socket->get_executor(),
+                        [
+                            this,
+                            socket,
+                            tim,
+                            underlying_finished,
+                            connection_error_called,
+                            &ioc_con
+                        ]
+                        (error_code ec) {
+                            if (*underlying_finished) return;
+                            if (ec) return; // timer cancelled
+                            boost::system::error_code close_ec;
+                            socket->lowest_layer().close(close_ec);
+                            if (h_connection_error_ && !*connection_error_called) {
+                                h_connection_error_(
+                                    boost::system::errc::make_error_code(
+                                        boost::system::errc::stream_timeout
+                                    ),
+                                    ioc_con
+                                );
+                                *connection_error_called = true;
                             }
-                        );
-                    }
+                        }
+                    )
                 );
 
                 auto sb = std::make_shared<boost::asio::streambuf>();
@@ -801,112 +802,121 @@ private:
                     ps->next_layer(),
                     *sb,
                     *request,
-                    [
-                        this,
-                        socket = force_move(socket),
-                        sb,
-                        request,
-                        tim,
-                        underlying_finished,
-                        connection_error_called,
-                        &ioc_con
-                    ]
-                    (error_code ec, std::size_t) mutable {
-                        if (ec) {
-                            *underlying_finished = true;
-                            tim->cancel();
-                            if (h_connection_error_ && !*connection_error_called) {
-                                h_connection_error_(ec, ioc_con);
-                                *connection_error_called = true;
+                    as::bind_executor(
+                        ps->get_executor(),
+                        [
+                            this,
+                            socket = force_move(socket),
+                            sb,
+                            request,
+                            tim,
+                            underlying_finished,
+                            connection_error_called,
+                            &ioc_con
+                        ]
+                        (error_code ec, std::size_t) mutable {
+                            if (ec) {
+                                *underlying_finished = true;
+                                tim->cancel();
+                                if (h_connection_error_ && !*connection_error_called) {
+                                    h_connection_error_(ec, ioc_con);
+                                    *connection_error_called = true;
+                                }
+                                return;
                             }
-                            return;
-                        }
-                        if (!boost::beast::websocket::is_upgrade(*request)) {
-                            *underlying_finished = true;
-                            tim->cancel();
-                            if (h_connection_error_ && !*connection_error_called) {
-                                h_connection_error_(
-                                    boost::system::errc::make_error_code(
-                                        boost::system::errc::protocol_error
-                                    ),
-                                    ioc_con
-                                );
-                                *connection_error_called = true;
+                            if (!boost::beast::websocket::is_upgrade(*request)) {
+                                *underlying_finished = true;
+                                tim->cancel();
+                                if (h_connection_error_ && !*connection_error_called) {
+                                    h_connection_error_(
+                                        boost::system::errc::make_error_code(
+                                            boost::system::errc::protocol_error
+                                        ),
+                                        ioc_con
+                                    );
+                                    *connection_error_called = true;
+                                }
+                                return;
                             }
-                            return;
-                        }
-                        auto ps = socket.get();
+                            auto ps = socket.get();
 
 #if BOOST_BEAST_VERSION >= 248
 
-                        auto it = request->find("Sec-WebSocket-Protocol");
-                        if (it != request->end()) {
-                            ps->set_option(
-                                boost::beast::websocket::stream_base::decorator(
-                                    [name = it->name(), value = it->value()] // name is enum, value is boost::string_view
-                                    (boost::beast::websocket::response_type& res) {
-                                        // This lambda is called before the scope out point *1
-                                        res.set(name, value);
+                            auto it = request->find("Sec-WebSocket-Protocol");
+                            if (it != request->end()) {
+                                ps->set_option(
+                                    boost::beast::websocket::stream_base::decorator(
+                                        [name = it->name(), value = it->value()] // name is enum, value is boost::string_view
+                                        (boost::beast::websocket::response_type& res) {
+                                            // This lambda is called before the scope out point *1
+                                            res.set(name, value);
+                                        }
+                                    )
+                                );
+                            }
+                            ps->async_accept(
+                                *request,
+                                as::bind_executor(
+                                    ps->get_executor(),
+                                    [
+                                        this,
+                                        socket = force_move(socket),
+                                        tim,
+                                        underlying_finished,
+                                        connection_error_called,
+                                        &ioc_con
+                                    ]
+                                    (error_code ec) mutable {
+                                        *underlying_finished = true;
+                                        tim->cancel();
+                                        if (ec) {
+                                            if (h_connection_error_ && !*connection_error_called) {
+                                                h_connection_error_(ec, ioc_con);
+                                            }
+                                            *connection_error_called = true;
+                                            return;
+                                        }
+                                        auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
+                                        if (h_accept_) h_accept_(force_move(sp));
                                     }
                                 )
                             );
-                        }
-                        ps->async_accept(
-                            *request,
-                            [
-                                this,
-                                socket = force_move(socket),
-                                tim,
-                                underlying_finished,
-                                connection_error_called,
-                                &ioc_con
-                            ]
-                            (error_code ec) mutable {
-                                *underlying_finished = true;
-                                tim->cancel();
-                                if (ec) {
-                                    if (h_connection_error_ && !*connection_error_called) {
-                                        h_connection_error_(ec, ioc_con);
-                                    }
-                                    *connection_error_called = true;
-                                    return;
-                                }
-                                auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
-                                if (h_accept_) h_accept_(force_move(sp));
-                            }
-                        );
 
 #else  // BOOST_BEAST_VERSION >= 248
 
-                        ps->async_accept_ex(
-                            *request,
-                            [request, connection_error_called]
-                            (boost::beast::websocket::response_type& m) {
-                                auto it = request->find("Sec-WebSocket-Protocol");
-                                if (it != request->end()) {
-                                    m.insert(it->name(), it->value());
-                                }
-                            },
-                            [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
-                            (error_code ec) mutable {
-                                *underlying_finished = true;
-                                tim->cancel();
-                                if (ec) {
-                                    if (h_connection_error_ && !*connection_error_called) {
-                                        h_connection_error_(ec, ioc_con);
-                                        *connection_error_called = true;
+                            ps->async_accept_ex(
+                                *request,
+                                [request, connection_error_called]
+                                (boost::beast::websocket::response_type& m) {
+                                    auto it = request->find("Sec-WebSocket-Protocol");
+                                    if (it != request->end()) {
+                                        m.insert(it->name(), it->value());
                                     }
-                                    return;
-                                }
-                                auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
-                                if (h_accept_) h_accept_(force_move(sp));
-                            }
-                        );
+                                },
+                                as::bind_executor(
+                                    socket->get_executor(),
+                                    [this, socket = force_move(socket), tim, underlying_finished, &ioc_con]
+                                    (error_code ec) mutable {
+                                        *underlying_finished = true;
+                                        tim->cancel();
+                                        if (ec) {
+                                            if (h_connection_error_ && !*connection_error_called) {
+                                                h_connection_error_(ec, ioc_con);
+                                                *connection_error_called = true;
+                                            }
+                                            return;
+                                        }
+                                        auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
+                                        if (h_accept_) h_accept_(force_move(sp));
+                                    }
+                                )
+                            );
 
 #endif // BOOST_BEAST_VERSION >= 248
 
-                        // scope out point *1
-                    }
+                            // scope out point *1
+                        }
+                    )
                 );
                 do_accept();
             }
@@ -1171,33 +1181,32 @@ private:
                 auto tim = std::make_shared<as::steady_timer>(ioc_con);
                 tim->expires_after(underlying_connect_timeout_);
                 tim->async_wait(
-                    [
-                        this,
-                        socket,
-                        tim,
-                        underlying_finished,
-                        connection_error_called,
-                        &ioc_con
-                    ]
-                    (error_code ec) {
-                        if (*underlying_finished) return;
-                        if (ec) return; // timer cancelled
-                        socket->post(
-                            [this, socket, connection_error_called, &ioc_con] {
-                                boost::system::error_code close_ec;
-                                socket->lowest_layer().close(close_ec);
-                                if (h_connection_error_ && !*connection_error_called) {
-                                    h_connection_error_(
-                                        boost::system::errc::make_error_code(
-                                            boost::system::errc::stream_timeout
-                                        ),
-                                        ioc_con
-                                    );
-                                    *connection_error_called = true;
-                                }
+                    as::bind_executor(
+                        socket->get_executor(),
+                        [
+                            this,
+                            socket,
+                            tim,
+                            underlying_finished,
+                            connection_error_called,
+                            &ioc_con
+                        ]
+                        (error_code ec) {
+                            if (*underlying_finished) return;
+                            if (ec) return; // timer cancelled
+                            boost::system::error_code close_ec;
+                            socket->lowest_layer().close(close_ec);
+                            if (h_connection_error_ && !*connection_error_called) {
+                                h_connection_error_(
+                                    boost::system::errc::make_error_code(
+                                        boost::system::errc::stream_timeout
+                                    ),
+                                    ioc_con
+                                );
+                                *connection_error_called = true;
                             }
-                        );
-                    }
+                        }
+                    )
                 );
 
                 auto ps = socket.get();
@@ -1227,133 +1236,142 @@ private:
                             ps->next_layer(),
                             *sb,
                             *request,
-                            [
-                                this,
-                                socket = force_move(socket),
-                                sb,
-                                request,
-                                tim,
-                                underlying_finished,
-                                connection_error_called,
-                                &ioc_con,
-                                username
-                            ]
-                            (error_code ec, std::size_t) mutable {
-                                if (ec) {
-                                    *underlying_finished = true;
-                                    tim->cancel();
-                                    if (h_connection_error_ && !*connection_error_called) {
-                                        h_connection_error_(ec, ioc_con);
-                                        *connection_error_called = true;
+                            as::bind_executor(
+                                ps->get_executor(),
+                                [
+                                    this,
+                                    socket = force_move(socket),
+                                    sb,
+                                    request,
+                                    tim,
+                                    underlying_finished,
+                                    connection_error_called,
+                                    &ioc_con,
+                                    username
+                                ]
+                                (error_code ec, std::size_t) mutable {
+                                    if (ec) {
+                                        *underlying_finished = true;
+                                        tim->cancel();
+                                        if (h_connection_error_ && !*connection_error_called) {
+                                            h_connection_error_(ec, ioc_con);
+                                            *connection_error_called = true;
+                                        }
+                                        do_accept();
+                                        return;
                                     }
-                                    do_accept();
-                                    return;
-                                }
-                                if (!boost::beast::websocket::is_upgrade(*request)) {
-                                    *underlying_finished = true;
-                                    tim->cancel();
-                                    if (h_connection_error_ && !*connection_error_called) {
-                                        h_connection_error_(
-                                            boost::system::errc::make_error_code(
-                                                boost::system::errc::protocol_error
-                                            ),
-                                            ioc_con
-                                        );
-                                        *connection_error_called = true;
+                                    if (!boost::beast::websocket::is_upgrade(*request)) {
+                                        *underlying_finished = true;
+                                        tim->cancel();
+                                        if (h_connection_error_ && !*connection_error_called) {
+                                            h_connection_error_(
+                                                boost::system::errc::make_error_code(
+                                                    boost::system::errc::protocol_error
+                                                ),
+                                                ioc_con
+                                            );
+                                            *connection_error_called = true;
+                                        }
+                                        do_accept();
+                                        return;
                                     }
-                                    do_accept();
-                                    return;
-                                }
-                                auto ps = socket.get();
+                                    auto ps = socket.get();
 
 #if BOOST_BEAST_VERSION >= 248
 
-                                auto it = request->find("Sec-WebSocket-Protocol");
-                                if (it != request->end()) {
-                                    ps->set_option(
-                                        boost::beast::websocket::stream_base::decorator(
-                                            [name = it->name(), value = it->value()] // name is enum, value is boost::string_view
-                                            (boost::beast::websocket::response_type& res) {
-                                                // This lambda is called before the scope out point *1
-                                                res.set(name, value);
+                                    auto it = request->find("Sec-WebSocket-Protocol");
+                                    if (it != request->end()) {
+                                        ps->set_option(
+                                            boost::beast::websocket::stream_base::decorator(
+                                                [name = it->name(), value = it->value()] // name is enum, value is boost::string_view
+                                                (boost::beast::websocket::response_type& res) {
+                                                    // This lambda is called before the scope out point *1
+                                                    res.set(name, value);
+                                                }
+                                            )
+                                        );
+                                    }
+                                    ps->async_accept(
+                                        *request,
+                                        as::bind_executor(
+                                            ps->get_executor(),
+                                            [
+                                                this,
+                                                socket = force_move(socket),
+                                                tim,
+                                                underlying_finished,
+                                                connection_error_called,
+                                                &ioc_con,
+                                                username
+                                            ]
+                                            (error_code ec) mutable {
+                                                *underlying_finished = true;
+                                                tim->cancel();
+                                                if (ec) {
+                                                    if (h_connection_error_ && !*connection_error_called) {
+                                                        h_connection_error_(ec, ioc_con);
+                                                        *connection_error_called = true;
+                                                    }
+                                                    do_accept();
+                                                    return;
+                                                }
+                                                auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
+                                                sp->set_preauthed_user_name(*username);
+                                                if (h_accept_) h_accept_(force_move(sp));
+                                                do_accept();
                                             }
                                         )
                                     );
-                                }
-                                ps->async_accept(
-                                    *request,
-                                    [
-                                        this,
-                                        socket = force_move(socket),
-                                        tim,
-                                        underlying_finished,
-                                        connection_error_called,
-                                        &ioc_con,
-                                        username
-                                    ]
-                                    (error_code ec) mutable {
-                                        *underlying_finished = true;
-                                        tim->cancel();
-                                        if (ec) {
-                                            if (h_connection_error_ && !*connection_error_called) {
-                                                h_connection_error_(ec, ioc_con);
-                                                *connection_error_called = true;
-                                            }
-                                            do_accept();
-                                            return;
-                                        }
-                                        auto sp = std::make_shared<endpoint_t>(ioc_con, force_move(socket), version_);
-                                        sp->set_preauthed_user_name(*username);
-                                        if (h_accept_) h_accept_(force_move(sp));
-                                        do_accept();
-                                    }
-                                );
 
 #else  // BOOST_BEAST_VERSION >= 248
 
-                                ps->async_accept_ex(
-                                    *request,
-                                    [request]
-                                    (boost::beast::websocket::response_type& m) {
-                                        auto it = request->find("Sec-WebSocket-Protocol");
-                                        if (it != request->end()) {
-                                            m.insert(it->name(), it->value());
-                                        }
-                                    },
-                                    [
-                                        this,
-                                        socket = force_move(socket),
-                                        tim,
-                                        underlying_finished,
-                                        connection_error_called,
-                                        &ioc_con,
-                                        username
-                                    ]
-                                    (error_code ec) mutable {
-                                        *underlying_finished = true;
-                                        tim->cancel();
-                                        if (ec) {
-                                            if (h_connection_error_ && *connection_error_called) {
-                                                h_connection_error_(ec, ioc_con);
-                                                *connection_error_called = true;
+                                    ps->async_accept_ex(
+                                        *request,
+                                        [request]
+                                        (boost::beast::websocket::response_type& m) {
+                                            auto it = request->find("Sec-WebSocket-Protocol");
+                                            if (it != request->end()) {
+                                                m.insert(it->name(), it->value());
                                             }
-                                            do_accept();
-                                            return;
-                                        }
-                                        // TODO: The use of force_move on this line of code causes
-                                        // a static assertion that socket is a const object when
-                                        // TLS is enabled, and WS is enabled, with Boost 1.70, and gcc 8.3.0
-                                        auto sp = std::make_shared<endpoint_t>(ioc_con, socket, version_);
-                                        sp->set_preauthed_user_name(*username);
-                                        if (h_accept_) h_accept_(force_move(sp));
-                                        do_accept();
-                                    }
-                                );
+                                        },
+                                        as::bind_executor(
+                                            ps->get_executor(),
+                                            [
+                                                this,
+                                                socket = force_move(socket),
+                                                tim,
+                                                underlying_finished,
+                                                connection_error_called,
+                                                &ioc_con,
+                                                username
+                                            ]
+                                            (error_code ec) mutable {
+                                                *underlying_finished = true;
+                                                tim->cancel();
+                                                if (ec) {
+                                                    if (h_connection_error_ && *connection_error_called) {
+                                                        h_connection_error_(ec, ioc_con);
+                                                        *connection_error_called = true;
+                                                    }
+                                                    do_accept();
+                                                    return;
+                                                }
+                                                // TODO: The use of force_move on this line of code causes
+                                                // a static assertion that socket is a const object when
+                                                // TLS is enabled, and WS is enabled, with Boost 1.70, and gcc 8.3.0
+                                                auto sp = std::make_shared<endpoint_t>(ioc_con, socket, version_);
+                                                sp->set_preauthed_user_name(*username);
+                                                if (h_accept_) h_accept_(force_move(sp));
+                                                do_accept();
+                                            }
+                                        )
+                                    );
 
 #endif // BOOST_BEAST_VERSION >= 248
 
-                                // scope out point *1
-                            }
+                                    // scope out point *1
+                                }
+                            )
                         );
                     }
                 );
