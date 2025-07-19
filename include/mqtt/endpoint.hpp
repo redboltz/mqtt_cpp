@@ -1100,7 +1100,7 @@ public:
             << MQTT_ADD_VALUE(address, this)
             << "force_disconnect";
 
-        sync_shutdown(socket());
+        sync_force_shutdown(socket());
     }
 
     /**
@@ -5322,6 +5322,31 @@ private:
         MQTT_LOG("mqtt_impl", trace)
             << MQTT_ADD_VALUE(address, this)
             << "clean_shutdown_and_close ec:"
+            << ec.message();
+        connected_ = false;
+    }
+
+    void sync_force_shutdown(MQTT_NS::socket& s) {
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "sync_force_shutdown";
+        if (shutdown_requested_) {
+            MQTT_LOG("mqtt_impl", trace)
+                << MQTT_ADD_VALUE(address, this)
+                << "already shutdowned";
+            return;
+        }
+        shutdown_requested_ = true;
+        mqtt_connected_ = false;
+
+        error_code ec;
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "force_shutdown_and_close";
+        s.force_shutdown_and_close(ec);
+        MQTT_LOG("mqtt_impl", trace)
+            << MQTT_ADD_VALUE(address, this)
+            << "force_shutdown_and_close ec:"
             << ec.message();
         connected_ = false;
     }
