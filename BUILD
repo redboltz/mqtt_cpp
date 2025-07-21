@@ -14,9 +14,10 @@ cc_library(
                "MQTT_STD_SHARED_PTR_ARRAY",
                ],
     deps = [
-        "@boost//:boost_asio_ssl",
+        "@boost//:asio_ssl",
         "@boost//:boost_log",
         "@boost//:system",
     ],
+    linkstatic = True,
     visibility = ["//visibility:public"],
 )
