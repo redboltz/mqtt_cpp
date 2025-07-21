@@ -13,7 +13,7 @@ pr:
   - '*'
 
 pool:
-  vmImage: 'windows-2019'
+  vmImage: 'windows-2022'
 
 strategy:
   matrix:
@@ -132,11 +132,35 @@ steps:
   displayName: 'install openssl'
 
 - powershell: |
+    choco install --confirm --limitoutput --no-progress openssl --version=3.1.1
+    choco install --confirm --limitoutput --no-progress 7zip
+  displayName: 'Install dependencies'
 
-   $Url = "https://sourceforge.net/projects/boost/files/boost-binaries/1.78.0/boost_1_78_0-msvc-14.2-64.exe"
-    (New-Object System.Net.WebClient).DownloadFile($Url, "$env:TEMP\boost.exe")
-    Start-Process -Wait -FilePath "$env:TEMP\boost.exe" "/SILENT","/SP-","/SUPPRESSMSGBOXES","/DIR=C:\hostedtoolcache\windows\Boost\1.78.0\x86_64"
-  displayName: 'install boost'
+- powershell: |
+    $boostVersion = "1.88.0"
+    $boostDirName = "boost_1_88_0"
+    $boostArchive = "$env:TEMP\$boostDirName.7z"
+    $boostUrl = "https://archives.boost.io/release/$boostVersion/source/$boostDirName.7z"
+    $installPrefix = "C:\hostedtoolcache\windows\boost-src"
+
+    Write-Host "Downloading boost via curl..."
+    curl.exe -L -o $boostArchive $boostUrl
+
+    Write-Host "Extracting boost..."
+    & 7z x $boostArchive "-o$env:TEMP\$boostDirName" -y
+
+    cd "$env:TEMP\$boostDirName\$boostDirName"
+    .\bootstrap.bat
+    .\b2 toolset=msvc link=static,shared install `
+        -j2 `
+        --prefix=$installPrefix `
+        --with-container `
+        --with-filesystem `
+        --with-log `
+        --with-program_options `
+        --with-system `
+        --with-test
+  displayName: 'Build boost from source with curl'
 
 - powershell: |
     git submodule update --init --recursive
@@ -146,10 +170,10 @@ steps:
     mkdir build
     cd build
     $env:CL="/D_WIN32_WINNT#0x0601 /DBOOST_THREAD_VERSION#3 /DBOOST_ALLOW_DEPRECATED_HEADERS /DBOOST_ASIO_NO_DEPRECATED"
-    $env:BOOST_ROOT="C:\hostedtoolcache\windows\Boost\1.78.0\x86_64"
+    $env:BOOST_ROOT="C:\hostedtoolcache\windows\Boost\1.88.0\x86_64"
     $env:PATH="$env:BOOST_ROOT\lib64-msvc-14.2;"+$env:PATH
 
-    cmake -A x64 -DMQTT_USE_TLS=$(MQTT_USE_TLS) -DMQTT_USE_WS=$(MQTT_USE_WS) -DMQTT_USE_STR_CHECK=$(MQTT_USE_STR_CHECK) -DMQTT_TEST_1=$(MQTT_TEST_1) -DMQTT_TEST_2=$(MQTT_TEST_2) -DMQTT_TEST_3=$(MQTT_TEST_3) -DMQTT_TEST_4=$(MQTT_TEST_4) -DMQTT_TEST_5=$(MQTT_TEST_5) -DMQTT_TEST_6=$(MQTT_TEST_6) -DMQTT_TEST_7=$(MQTT_TEST_7) -DMQTT_BUILD_EXAMPLES=$(MQTT_BUILD_EXAMPLES) ..
+    cmake -A x64 -G "Visual Studio 17 2022" -DMQTT_USE_TLS=$(MQTT_USE_TLS) -DMQTT_USE_WS=$(MQTT_USE_WS) -DMQTT_USE_STR_CHECK=$(MQTT_USE_STR_CHECK) -DMQTT_TEST_1=$(MQTT_TEST_1) -DMQTT_TEST_2=$(MQTT_TEST_2) -DMQTT_TEST_3=$(MQTT_TEST_3) -DMQTT_TEST_4=$(MQTT_TEST_4) -DMQTT_TEST_5=$(MQTT_TEST_5) -DMQTT_TEST_6=$(MQTT_TEST_6) -DMQTT_TEST_7=$(MQTT_TEST_7) -DMQTT_BUILD_EXAMPLES=$(MQTT_BUILD_EXAMPLES) ..
     if (!$?) {
       return Write-Error "cmake failed"
     }

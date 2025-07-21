@@ -22,7 +22,7 @@ jobs:
           - '-DMQTT_TEST_1=OFF -DMQTT_TEST_2=OFF -DMQTT_TEST_3=OFF -DMQTT_TEST_4=OFF -DMQTT_TEST_5=OFF -DMQTT_TEST_6=OFF -DMQTT_TEST_7=ON  -DMQTT_USE_TLS=ON  -DMQTT_BUILD_EXAMPLES=OFF -DMQTT_USE_WS=OFF -DMQTT_USE_STR_CHECK=ON  -DMQTT_USE_LOG=OFF'
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Install Dependencies
       run: |
         brew install boost openssl
@@ -50,13 +50,13 @@ jobs:
         pattern: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Cache boost
       id: cache-boost
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: usr
-        key: ${{ runner.os }}-boost-20220116
+        key: ${{ runner.os }}-boost-20250721
     - name: Build boost
       if: steps.cache-boost.outputs.cache-hit != 'true'
       run: ./.github/depends/boost.sh -b 64 -t gcc
