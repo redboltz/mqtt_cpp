@@ -1,3 +1,14 @@
+## 13.2.2
+* Fix tls socket can block while doing clean shutdown on a forced disconnect (#1000)
+* Wrapped connection_error_called by socket's strand. (#993)
+* Fixed CMake error on INSTALL(EXPORT ...) when adding the mqtt_cpp package with CPM.cmake (#990)
+* Fixed store_ management. (#988)
+* Fixed qos2_publish_handled_ insertion timing. (#987)
+* Fixed qos2_publish_handled_ invalidly remains issue. (#986)
+* Fixed client certificate treatment. (#983)
+* Fixed client cert verify setting timing. (#982)
+* Refined documents. (#979)
+
 ## 13.2.1
 * Fixed async socket close blocking problem. (#977)
 
