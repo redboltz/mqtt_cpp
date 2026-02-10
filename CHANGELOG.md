@@ -1,3 +1,6 @@
+## 13.2.3
+* Fixed missing CMakeLists.txt version up. (#1003)
+
 ## 13.2.2
 * Fix tls socket can block while doing clean shutdown on a forced disconnect (#1000)
 * Wrapped connection_error_called by socket's strand. (#993)
