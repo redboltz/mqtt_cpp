@@ -1,3 +1,6 @@
+## 13.2.4
+* Added host name verification to the TLS client. The server certificate is now checked against the host passed to the client by default. If the certificate doesn't contain the host name (or IP address) you connect to, the TLS handshake fails. To use a different policy, call `get_ssl_context().set_verify_callback()` before `connect()`.
+
 ## 13.2.3
 * Fixed missing CMakeLists.txt version up. (#1003)
 

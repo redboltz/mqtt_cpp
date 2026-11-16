@@ -85,7 +85,7 @@ bool verify_certificate(
     }
 
     X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-    X509_NAME* name = X509_get_subject_name(cert);
+    X509_NAME const* name = X509_get_subject_name(cert);
 
     std::string verify_field_value;
     auto obj = std::unique_ptr<

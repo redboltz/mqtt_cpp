@@ -356,7 +356,7 @@ int main(int argc, char** argv) {
             std::cout << "[clicrt] depth:" << depth << std::endl;
             if (depth > 0) return true;
             X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-            X509_NAME* name = X509_get_subject_name(cert);
+            X509_NAME const* name = X509_get_subject_name(cert);
             std::string cn;
             cn.resize(0xffff);
             auto size = X509_NAME_get_text_by_NID(name, NID_commonName, &cn[0], static_cast<int>(cn.size()));

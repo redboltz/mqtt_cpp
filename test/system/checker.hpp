@@ -431,7 +431,7 @@ private:
     }
 
     friend
-    checker::cond_var operator"" _c(char const* str, std::size_t length) {
+    checker::cond_var operator""_c(char const* str, std::size_t length) {
         return checker::cond(std::string(str, length));
     }
 
