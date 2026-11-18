@@ -985,6 +985,12 @@ public:
     /**
      * @brief Get boost asio ssl context.
      * @return ssl context
+     *
+     * By default, verify_peer is set and the server certificate is checked
+     * against the host passed to the client (host name verification).<BR>
+     * If you need a different policy (e.g. the certificate doesn't contain the host
+     * name or IP address you connect to), call set_verify_callback() on the returned
+     * context before calling connect(). It replaces the default host name verification.
      */
     tls::context& get_ssl_context() {
         static_assert(has_tls<std::decay_t<decltype(*this)>>::value, "Client is required to support TLS.");
@@ -1679,6 +1685,14 @@ protected:
     {
 #if defined(MQTT_USE_TLS)
         ctx_.set_verify_mode(tls::verify_peer);
+        // Check that the server certificate matches the host to connect.
+        // host_ is referred on each handshake, so set_host() is reflected.
+        // Users can replace this by calling get_ssl_context().set_verify_callback().
+        ctx_.set_verify_callback(
+            [this](bool preverified, tls::verify_context& ctx) {
+                return tls::host_name_verification(host_)(preverified, ctx);
+            }
+        );
 #endif // defined(MQTT_USE_TLS)
         setup_socket(socket_);
     }

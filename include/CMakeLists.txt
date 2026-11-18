@@ -66,6 +66,15 @@ ADD_LIBRARY(check_deps OBJECT EXCLUDE_FROM_ALL ${CHK_MQTT})
 # We also don't mind that there might be unused constant variables when doing deps checking.
 TARGET_COMPILE_OPTIONS(check_deps PUBLIC -Wno-unused-const-variable $<IF:$<CXX_COMPILER_ID:MSVC>,/Zs,-fsyntax-only>)
 
+# Newer clang warns that -c is unused when -fsyntax-only is given.
+# It becomes an error with -Werror, so suppress it.
+TARGET_COMPILE_OPTIONS(
+    check_deps
+    PUBLIC
+    $<$<CXX_COMPILER_ID:Clang>:-Wno-unused-command-line-argument>
+    $<$<CXX_COMPILER_ID:AppleClang>:-Wno-unused-command-line-argument>
+)
+
 TARGET_LINK_LIBRARIES (check_deps PUBLIC ${PROJECT_NAME})
 
 INSTALL(FILES ${HDR_ROOT} DESTINATION ${ROOT_INCLUDE_TARGET})
